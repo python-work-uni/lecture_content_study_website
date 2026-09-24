@@ -1,0 +1,657 @@
+--- Slide 1 ---
+The University of Sydney
+Page 1
+Linux, Networking and 
+the Cloud
+Presented by
+Dr. Huaming Chen
+ELEC3609/9609
+Internet Software Platforms
+2025 S2
+
+--- Slide 2 ---
+The University of Sydney
+Page 2
+We acknowledge the tradition of 
+custodianship and law of the Country on which 
+the University of Sydney campuses stand. 
+We pay our respects to those who have cared 
+and continue to care for Country.
+
+--- Slide 3 ---
+The University of Sydney
+Page 3
+Overview
+ü Linux
+ü Linux Users
+ü Capabilities
+ü SSH
+ü Package Managers
+ü Amazon Web Services
+ü EC2
+ü EBS
+ü VPC
+ü RDS
+ü Route 53
+ü EKS/ECS
+ü Ports & Firewalls
+ü TCP Ports
+ü Firewalls
+ü Security Groups
+ü Elastic Load Balancer
+ü Elastic IPs
+ü Server Applications
+ü Web Servers
+ü Application Interface
+ü Databases
+üVolume Separation
+ü Lab Schedule
+
+--- Slide 4 ---
+The University of Sydney
+Page 4
+Linux
+
+--- Slide 5 ---
+The University of Sydney
+Page 5
+Introduction
+– Linux is an open-source UNIX-like operating system, whose 
+defining feature is the Linux kernel. Released in 1991 by Linus 
+Torvalds.
+– A Linux distribution defines a collection of software that comes pre-
+packaged as a complete operating system.
+– For example:
+– package managers (apt-get or pacman)
+– window managers (GNOME or i3)
+– text editors
+– Linux has become the most widely installed general purpose OS due 
+to the proliferation of Android. It is also the most dominant OS for 
+web servers (>90%).
+
+--- Slide 6 ---
+The University of Sydney
+Page 6
+Linux Users
+– The ‘root’ user (aka the ‘Superuser’) is the most privileged 
+user on a Linux system.
+– While the root user can do anything on the system, other users 
+could have a wider variety of privileges.
+– Programs execute as a particular user.
+– If a program requires special privileges on the system, it may 
+need to execute as the root user.
+– The output of the command ps aux will show you a list of 
+all processes running on the system and the user they are 
+running as.
+
+--- Slide 7 ---
+The University of Sydney
+Page 7
+Program-Specific Linux Users
+– Usually, a program will not need root access to the system, and 
+so will (or at least, it should) run as a different user.
+– If such a program is somehow compromised, it will only be 
+able to perform malicious actions that its running user could 
+perform.
+– For example:
+– Web servers (including nginx) usually run as the www-data user.
+– MySQL programs (including mysqld) usually run as the mysql user.
+– Linux systems often come with a nobody user, which can run 
+programs that require almost no special privileges.
+
+--- Slide 8 ---
+The University of Sydney
+Page 8
+Capabilities
+– Traditional root vs. Capabilities
+– In a classic UNIX/Linux model:
+• root (UID 0) has all privileges.
+• If a process is compromised while running as root, the attacker 
+gains full control of the system.
+– Capabilities split root privileges into smaller, fine-grained units (like 
+CAP_NET_BIND_SERVICE, CAP_SYS_ADMIN, 
+CAP_DAC_OVERRIDE).
+• Each process can be assigned only the subset of privileges it really 
+needs.
+– Why it improves security
+– Least privilege principle
+– Damage containment
+– Reduced attack surface
+
+--- Slide 9 ---
+The University of Sydney
+Page 9
+Capabilities
+– Running nginx:
+– Traditionally: needed root just to bind port 80.
+– With capabilities: run as unprivileged user but grant only 
+CAP_NET_BIND_SERVICE.
+– If nginx is hacked, the attacker cannot:
+• Create raw sockets (CAP_NET_RAW).
+• Mount filesystems (CAP_SYS_ADMIN).
+• Change ownership of files (CAP_CHOWN).
+
+--- Slide 10 ---
+The University of Sydney
+Page 10
+Capabilities
+
+--- Slide 11 ---
+The University of Sydney
+Page 11
+Capabilities
+
+--- Slide 12 ---
+The University of Sydney
+Page 12
+Installing Linux
+– We usually install Linux from a CD image or ISO file.
+– It’s usually best to Google for a local mirror from which to 
+download the ISO for the distribution you want.
+– To try things out locally, you can try installing VirtualBox and 
+inserting the Linux ISO into the virtual machine’s CD-ROM 
+drive.
+
+--- Slide 13 ---
+The University of Sydney
+Page 13
+Linux From Images
+– Depending on your setup, you can often download or use pre-
+existing Linux images.
+– Docker
+• hub.docker.com/_/ubuntu
+– VirtualBox
+• virtualboxes.org/images/ubuntu
+– Amazon Marketplace
+• aws.amazon.com/marketplace
+– Vagrant
+• atlas.vagrantup.com/boxes/search
+
+--- Slide 14 ---
+The University of Sydney
+Page 14
+Secure Shell (SSH)
+– Secure Shell (SSH) is a secure replacement for the old Telnet 
+protocol.
+– SSH enables a user to access the shell or terminal on a remote 
+machine.
+– Essential tool for any web master, since Linux is the dominant 
+server platform on the internet.
+
+--- Slide 15 ---
+The University of Sydney
+Page 15
+SSH Server
+– The most common SSH server software is OpenSSH, which 
+originates from the OpenBSD project.
+– An SSH server:
+– Listens for incoming connections on TCP Port 22.
+– Authenticates connecting users using:
+• Passwords
+• Public/Private Keys
+
+--- Slide 16 ---
+The University of Sydney
+Page 16
+SSH Client
+– Open SSH also provides an SSH client, which is the client-
+side software that connects to the SSH server.
+– There are many alternative clients, depending on the platform 
+you are using.
+– On Linux, you’re best to stick with the default OpenSSH.
+– On Windows however, PuTTY might be a better option.
+
+--- Slide 17 ---
+The University of Sydney
+Page 17
+SSH Keys
+– SSH provides authentication and encryption.
+– The obvious way to log in to SSH is using the password of the 
+remote user. This is bad.
+– Instead, we want to use SSH keys.
+– There are two sets of keys that SSH uses:
+– Server: The server has its own key pair, which allows initial 
+connections to it to be encrypted with its public key. It also allows 
+clients to authenticate the server.
+• Only the server possessing the private key can read incoming 
+connections.
+– Client: Each client has their own key pairs, which are used to 
+authenticate when connecting to the server.
+
+--- Slide 18 ---
+The University of Sydney
+Page 18
+Public Key Crypto & Signatures
+– An encryption and decryption key pair are generated to 
+provide effective authentication. This is achieved by 
+demonstrating possession of the private key without revealing 
+it.
+– Private Key
+• Held by you, never shared.
+• Only you can sign a request 
+with your private key.
+– Public Key
+• Shared publicly.
+• Anyone can verify your 
+signature with your public key.
+
+--- Slide 19 ---
+The University of Sydney
+Page 19
+SSH Server Keys
+– The server typically stores its key pairs as:
+– /etc/ssh/ssh_host_rsa_key
+– /etc/ssh/ssh_host_rsa_key.pub
+– When first connecting to a server that you have never 
+connected to before, you will get a warning like this:
+– By accepting this, a new entry is added to your 
+~/.ssh/known_hosts file.
+
+--- Slide 20 ---
+The University of Sydney
+Page 20
+SSH Server Keys – known_hosts
+– By keeping track of known SSH server public keys, SSH 
+clients can minimise the potential for a MITM attack.
+
+--- Slide 21 ---
+The University of Sydney
+Page 21
+SSH Client Keys
+– To authenticate a particular user on the SSH server, a client 
+proves ownership of a private key, which corresponds to an 
+authorised public key.
+– For example, say we want to connect to a server as the user 
+myuser.
+– On the server, there is a file in myuser’s home directory:
+• /home/myuser/.ssh/authorized_keys
+– This file contains the public keys of anyone who is authorised to 
+connect to the server as this user.
+– The SSH server will check that any client trying to connect possesses 
+the private key corresponding to a public key in that file. If they do, 
+then the connection is authorised.
+
+--- Slide 22 ---
+The University of Sydney
+Page 22
+SSH Agent
+– ssh-agent is a useful program for storing the unencrypted 
+SSH private key in memory.
+– SSH typically reads private keys from ~/.ssh/id_rsa, 
+which is encrypted. Every time SSH is run, it needs the 
+password to use the key.
+– To make things easier, the unencrypted version can be stored 
+in memory by attaching it to a running process.
+– Since we don’t want to store it in every SSH client process, we 
+run ssh-agent to store it for us.
+
+--- Slide 23 ---
+The University of Sydney
+Page 23
+SSH Agent Forwarding
+– ssh-agent runs on the client, and as new SSH processes 
+connect to it, they ask it to perform signing operations using 
+the private key.
+– With the ForwardAgent option, we can allow remote SSH 
+clients to access our local ssh-agent process (and therefore, 
+our unencrypted private key).
+
+--- Slide 24 ---
+The University of Sydney
+Page 24
+Terminal Text Editors
+– Previously, we spoke about text editors like Atom or 
+Notepad++ to use on our desktop.
+– However, since these are graphical applications, we cannot use 
+them on a remote server via SSH.
+– Instead, we need to use a command-line text editor.
+– Typically, you’ll use this to edit configuration files on the remote 
+server.
+
+--- Slide 25 ---
+The University of Sydney
+Page 25
+Terminal Text Editors
+– Many options, with lots of customisability:
+– Nano
+• Very simple, and often the default on many versions of Linux.
+• Familiar editor interface, using arrow keys to navigate.
+• Exit the program using Ctrl+X or write using Ctrl+O.
+– Vim
+• Very flexible, fully-featured text editor. Can be challenging to 
+learn.
+• Edit the file by entering insert mode with ‘i’.
+• Exit a particular mode using ‘esc’.
+• Exit the program using ‘:’ to access commands, then ‘q’ to quit or 
+‘wq’ to write your changes and quit.
+
+--- Slide 26 ---
+The University of Sydney
+Page 26
+Package Managers
+– Ubuntu’s package manager is Advanced Packaging Tool 
+(APT).
+– It is easiest to install software on servers using the package 
+manager, since it can automatically update the software for us.
+– However, we may need to install the software manually if we 
+can’t use the package manager:
+– There is no package for the software we want.
+– The package software is out of date.
+– We want to install into a different location.
+– The software must be compiled with different options than the package 
+manager provides.
+– More information can be found here.
+
+--- Slide 27 ---
+The University of Sydney
+Page 27
+Amazon Web Services (AWS)
+
+--- Slide 28 ---
+The University of Sydney
+Page 28
+Amazon Web Services
+– Amazon Web Services (AWS) is an extremely popular cloud 
+hosting provider.
+– Using AWS removes the need to set up dedicated hardware to 
+host a website, and often takes care of software installation and 
+configuration.
+– AWS provides a wide range of services that can assist in the 
+creation of website infrastructure.
+
+--- Slide 29 ---
+The University of Sydney
+Page 29
+Elastic Compute Cloud (EC2)
+– Provides access to server instances.
+– EC2 is the most common and fundamental of the AWS suite, 
+and you will need to use it for deployment of your project.
+– EC2 instances can be created in one of many availability zones 
+(AZs) located in various regions of the world.
+
+--- Slide 30 ---
+The University of Sydney
+Page 30
+Elastic Block Store (EBS)
+– Provides hard drive volumes that can be attached to EC2 
+instances.
+– Useful for separating your data storage from the server that 
+executes your software.
+– When attaching an EBS volume to an EC2 instance, both the 
+volume and instance must be in the same Availability Zone.
+
+--- Slide 31 ---
+The University of Sydney
+Page 31
+Relational Database Service (RDS)
+– Provides managed database servers.
+– Useful for having a scalable, backed-up version of your data.
+– Supports: Aurora, PostgreSQL, MySQL, MariaDB, Oracle 
+Database and SQL Server.
+– Video: Understanding Amazon Relational Database Service 
+(RDS)
+
+--- Slide 32 ---
+The University of Sydney
+Page 32
+Route 53
+– Provides the ability to route requests to AWS infrastructure.
+– www.example.com => 53.96.54.23
+– Operates a Domain Name System (DNS) web service.
+– Video: Amazon Route 53
+
+--- Slide 33 ---
+The University of Sydney
+Page 33
+Virtual Private Cloud (VPC)
+– Provides support for network segregation and overall greater 
+control over EC2 instances.
+– Very useful tool for web infrastructure, but its configuration 
+can be complex.
+– Not necessary for the project – instead, we will use the 
+default VPC created by AWS.
+– EC2-VPC: Using a VPC within EC2.
+– EC2-Classic: Not using a VPC.
+
+--- Slide 34 ---
+The University of Sydney
+Page 34
+Amazon Elastic Kubernetes Service (EKS)
+– Provides a managed Kubernetes service.
+– Maintains the availability and scalability of the Kubernetes 
+control plane.
+– Integrates with other AWS technologies
+– Video: Deep Dive on Amazon EKS
+
+--- Slide 35 ---
+The University of Sydney
+Page 35
+Amazon Elastic Container Service (ECS)
+– Provides a managed container orchestration service.
+– Amazon’s solution to Kubernetes.
+– Integrates with other AWS technologies
+– Video: Amazon ECS: Core Concepts
+
+--- Slide 36 ---
+The University of Sydney
+Page 36
+Ports & Firewalls
+
+--- Slide 37 ---
+The University of Sydney
+Page 37
+Network Revision: OSI Model
+– The OSI Model is a way to conceptualize network systems, 
+with each layer being an abstraction of the previous.
+– To properly understand interactions between technologies, you 
+should be quite familiar with this model.
+
+--- Slide 38 ---
+The University of Sydney
+Page 38
+Ports & Firewalls
+– All of the software we are running involves responding to 
+network requests.
+– Because of this, it is necessary for us to understand networking 
+concepts and their operation.
+– In particular:
+– TCP/UDP Ports
+• OSI Model – Layer 4
+– Firewalls
+– Load Balancers
+– Public IPs
+• OSI Model – Layer 3
+
+--- Slide 39 ---
+The University of Sydney
+Page 39
+TCP Ports
+– Most web software communicates via the Transmission 
+Control Protocol (TCP).
+– TCP establishes an end-to-end connection and ensures delivery 
+of packets in the order they were sent.
+– We say that applications ‘listen’ on a particular TCP port.
+– This allows multiple applications to run on the same host, with each 
+listening for TCP connections on a different port.
+– Any application can choose to listen on any port, but there are standard 
+port numbers used for particular application types.
+
+--- Slide 40 ---
+The University of Sydney
+Page 40
+TCP Ports - Listening
+– Whenever a network service starts on a host, it attempts to 
+listen on a particular port.
+– Only one running application may listen to a port at a time.
+
+--- Slide 41 ---
+The University of Sydney
+Page 41
+UDP Ports
+– The User Datagram Protocol (UDP) is a connectionless 
+protocol.
+– It is a ‘best-effort’ protocol, and makes no guarantees about 
+packets being in order, or even being delivered at all.
+– UDP has its own set of ports.
+– For example, TCP Port 80 is different from UDP Port 80.
+
+--- Slide 42 ---
+The University of Sydney
+Page 42
+Firewalls
+– A firewall is a security system that can allow or disallow 
+network traffic to pass according to a set of rules.
+– Firewalls come in many shapes and sizes:
+– Your Home Router
+• Makes decisions about incoming/outgoing traffic and prevents 
+attackers from gaining access to your network.
+– Software Firewalls
+• Runs on a host machine and provides rules about the traffic allowed 
+to enter the host.
+
+--- Slide 43 ---
+The University of Sydney
+Page 43
+AWS Security Groups
+– AWS Security Groups (SGs) are sets of firewall rules that can 
+be applied to EC2 instances.
+– When first configuring an EC2 instance, you can either create 
+a new security group or add the instance to an existing security 
+group.
+– To configure a security group, you must specify:
+– Protocol: TCP/UDP/ICMP
+– Port(s): The TCP/UDP port(s) the rule applies to.
+– Source: Which source IP address(es) the rule applies to.
+– The rules are a whitelist, meaning any packets not matching a 
+rule are automatically dropped (disallowed).
+– For development, you may find it useful to add a rule for SSH 
+access from any source (0.0.0.0/0)
+
+--- Slide 44 ---
+The University of Sydney
+Page 44
+Elastic Load Balance (ELB)
+– Provides a load balancing service for EC2 instances.
+– Useful tool for production websites, allowing for easy 
+horizontal scaling.
+– For your project, you should learn how to utilize ELB, 
+configuring it for your deployment.
+https://www.youtube.com/watch?v=D8zi_-816Ig
+
+--- Slide 45 ---
+The University of Sydney
+Page 45
+Elastic IPs
+– When you start an EC2 instance, AWS assigns it a public IP 
+address.
+– If you restart the instance, it can be reassigned to a different IP 
+address, which can make updating dependent configurations 
+very difficult.
+– For example, updating the DNS records.
+– To maintain a consistent IP address between restarts, you can 
+assign the instance an Elastic IP address.
+– Once assigned, the instance will always have this IP whenever it is 
+created
+
+--- Slide 46 ---
+The University of Sydney
+Page 46
+Server Applications
+
+--- Slide 47 ---
+The University of Sydney
+Page 47
+Server Applications
+– You will need to configure several applications on your server 
+in order to deploy a website properly.
+– In particular, you should install:
+– A web server.
+– An application interface.
+– The web application.
+– A database.
+
+--- Slide 48 ---
+The University of Sydney
+Page 48
+Web Servers
+– A web server receives incoming HTTP requests, processes 
+them, and usually provides a HTTP response.
+– There are many types of web server software, including:
+– Apache
+– Nginx
+– IIS
+– Specific details on each of these can be found in the Week 3 
+Lecture.
+
+--- Slide 49 ---
+The University of Sydney
+Page 49
+Recommended Web Server Software: nginx
+– nginx (pronounced ‘engine-X’) is a fast web server that can 
+also act as a reverse proxy.
+– Due to its widespread use and ease of configuration, we highly 
+recommend you use nginx for your project.
+– While nginx can receive and process a HTTP request, it does 
+not interpret web application code.
+– Instead, we ask nginx to proxy_pass HTTP requests to 
+the application interface.
+
+--- Slide 50 ---
+The University of Sydney
+Page 50
+Application Interfaces
+– A web application interface provides a simple interface 
+between a web server and the application server.
+– It runs multiple application ‘workers’ so that the application 
+can process requests concurrently.
+– WSGI is a specification for such an interface, and it is 
+implemented by the uWSGI software.
+– uWSGI is designed for Python programs, and has good 
+support for Django.
+
+--- Slide 51 ---
+The University of Sydney
+Page 51
+Databases
+– Most web applications require persistent storage of data.
+– You will most likely need to install a relational database 
+management system (RDBMS) for your project.
+– We recommend using MySQL, since it is feature-rich and 
+relatively easy to use.
+– PostgreSQL and MariaDB are acceptable alternatives.
+– Regardless of your choice of RDBMS, the rough setup steps 
+will be:
+– Install the DB software.
+– Configure users (username & password).
+– Configure application code to use the DB.
+• Connect using the username & password.
+
+--- Slide 52 ---
+The University of Sydney
+Page 52
+Separation of Data
+– You should always separate your data from your application 
+code.
+– Typically, this involves configuring your DB to save data to a 
+separate volume from where your operating system and web 
+application are installed.
+– If working on EC2, you should utilise a separate EBS volume 
+for database storage.
+– https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-
+attaching-volume.html 
+– With this, you can configure your RDBMS to store data on the 
+new volume.
+– For MySQL:
+• https://www.digitalocean.com/community/tutorials/how-to-move-a-
+mysql-data-directory-to-a-new-location-on-ubuntu-16-04
+
+--- Slide 53 ---
+The University of Sydney
+Page 53
+Your Task
+
+--- Slide 54 ---
+The University of Sydney
+Page 54
+You reached the end of the lecture. 
+Thank you and see you next week.

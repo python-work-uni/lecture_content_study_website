@@ -1,0 +1,242 @@
+================================================================================
+ELEC3609 / ELEC9609: INTERNET SOFTWARE PLATFORMS
+WEEK 2 STUDY GUIDE: WEB FUNDAMENTALS & PROJECT MANAGEMENT
+================================================================================
+
+--------------------------------------------------------------------------------
+1. THE END-TO-END WEB REQUEST LIFECYCLE
+--------------------------------------------------------------------------------
+When a user types a URL (e.g., https://cusp.sydney.edu.au/students) into a browser 
+and hits Enter, a multi-step process is triggered across the client, network, 
+and server stack.
+
+[Step-by-Step Overview]
+
+  CLIENT SIDE (Browser & OS):
+  1. URL Parsing      : Browser breaks URL into scheme, domain, port, and path.
+  2. Cache Check      : Browser checks local cache for pre-saved static assets.
+  3. Network Check    : OS identifies local network configuration via DHCP.
+  4. DNS Resolution   : OS resolves host domain name into an IP address.
+  5. TCP Connection   : OS establishes a TCP connection to the server (Port 80/443).
+  6. HTTP Request     : Browser constructs and sends an HTTP/HTTPS request.
+
+  SERVER SIDE (Infrastructure & Back-End):
+  7. Load Balancing   : Load Balancer / WAF receives TCP traffic, terminates SSL/TLS,
+                        and routes HTTP request to an available App Server.
+  8. Business Logic   : App Server processes request logic and queries Database(s).
+  9. Response Render  : App Server inserts DB data into templates and generates HTTP response.
+
+  CLIENT RENDERING (Browser):
+ 10. Parse Response   : Browser reads status code (e.g., 200 OK) and headers.
+ 11. Asset Fetching   : Browser parses HTML into DOM tree; fetches external CSS, JS, images.
+ 12. Screen Render    : Rendering Engine builds final UI for user display.
+
+
+[URL Anatomy Breakdown]
+Example URL: https://cusp.sydney.edu.au/students/view-unit-page/uos_id/101257
+
+  +----------+---------+--------------------+------------------------------------+
+  | Component| Example | Technical Role     | Description                        |
+  +----------+---------+--------------------+------------------------------------+
+  | Protocol | https://| Scheme             | HyperText Transfer Protocol Secure |
+  | Subdomain| cusp    | Subdomain          | Host division within main domain   |
+  | Domain   | sydney  | Organization Domain| Second-level domain identifier     |
+  | gTLD     | .edu    | Generic TLD        | Top-level category (Education)     |
+  | ccTLD    | .au     | Country Code TLD   | Top-level country domain (Australia)|
+  | Path     | /stud...| Resource Path      | Server file/route path             |
+  +----------+---------+--------------------+------------------------------------+
+
+--------------------------------------------------------------------------------
+2. NETWORK CONFIGURATION, DNS & OSI TRANSPORT LAYER
+--------------------------------------------------------------------------------
+
+[DHCP (Dynamic Host Configuration Protocol)]
+When joining a network, DHCP configures host network parameters:
+1. Local IP Address    : Unique identity of computer on local network.
+2. Subnet Mask         : Defines local network boundary vs. external destinations.
+3. Default Gateway     : Local router interface that forwards non-local network traffic.
+4. Nameservers (DNS)   : IP addresses of DNS servers used to resolve domain names.
+
+[DNS (Domain Name System) Resolution Flow]
+Connections require numeric IP addresses, not domain strings. Resolution sequence:
+  1. Check OS Local DNS Entries (e.g., /etc/hosts).
+  2. Identify Nameservers (e.g., /etc/resolv.conf configured via DHCP).
+  3. Submit UDP request on Port 53 to DNS nameserver.
+  4. Recursive Lookup: Nameservers recursively ask parent DNS servers until the 
+     authoritative server returns the IP matching the domain's A-record.
+
+[OSI Model Layers (Key Reference Points)]
+- Layer 1 (Physical)   : Copper cables, Fiber optics, Coaxial.
+- Layer 2 (Data Link)  : Ethernet, Wi-Fi (IEEE 802.11a/b/g/n).
+- Layer 3 (Network)    : IP protocol, routing between hosts.
+- Layer 4 (Transport)  : TCP / UDP data transfer protocols.
+- Layer 7 (Application): HTTPS, HTTP, SSH, DNS services.
+
+[Transport Layer Protocols: TCP vs. UDP]
+
+  +-------------------+-----------------------------------+-----------------------------------+
+  | Feature           | TCP (Transmission Control Protocol)| UDP (User Datagram Protocol)     |
+  +-------------------+-----------------------------------+-----------------------------------+
+  | Data Unit         | Segments                          | Datagrams                         |
+  | Connection        | Connection-oriented (3-way handshake)| Connectionless (No handshake)  |
+  | Delivery Guarantee| Guaranteed, in-order delivery     | "Best effort", no delivery context|
+  | Error Recovery    | Retransmits missing/corrupted data| No retransmission or ACK          |
+  | Default Ports     | Port 80 (HTTP), Port 443 (HTTPS)  | Port 53 (DNS)                     |
+  | Attack Vector     | TCP SYN Flooding                  | UDP Spoofing / Amplification      |
+  +-------------------+-----------------------------------+-----------------------------------+
+
+--------------------------------------------------------------------------------
+3. SERVER-SIDE ARCHITECTURE & DATABASE DESIGN
+--------------------------------------------------------------------------------
+
+[Typical 3-Tier Web Architecture]
+
+     [ Client / Browser ]
+              | (HTTPS Request via Internet)
+              v
+     +-------------------------------------------------------+
+     | TIER 1: INTERNET-FACING / FRONT-END EDGE SERVICES      |
+     | - WAF / DDoS Protection (e.g., Cloudflare)            |
+     | - Content Delivery Network (CDN) for static assets    |
+     | - Elastic Load Balancer (ELB): SSL Offloading & Routing|
+     +-------------------------------------------------------+
+              | (Internal HTTP routing)
+              v
+     +-------------------------------------------------------+
+     | TIER 2: APPLICATION SERVERS (Back-End Logic)          |
+     | - Workflows, APIs, Business Logic, Auth               |
+     | - Frameworks: Django (Python), Express (JS), Rails    |
+     | - Hosting: EC2 (VMs), Docker (Containers), Lambda     |
+     +-------------------------------------------------------+
+              |                      |
+      (Writes)|                      | (Reads)
+              v                      v
+     +-------------------+  Replication  +-------------------+
+     | MASTER DATABASE   | ------------> | SLAVE REPLICAS    |
+     | (Primary Writes)  | (Async Delay) | (Read-Only Scale) |
+     +-------------------+               +-------------------+
+     +-------------------------------------------------------+
+     | TIER 3: PERSISTENT DATABASE LAYER (Relational / NoSQL)|
+     +-------------------------------------------------------+
+
+[Database Systems: SQL vs. NoSQL]
+
+  1. SQL (Relational Databases):
+     - Structure: Strict relational tables, predefined schemas, explicit primary/foreign keys.
+     - Strengths: Data integrity, complex JOIN queries, ACID transaction compliance.
+     - Examples: MySQL, PostgreSQL, SQLite, MS SQL Server.
+
+  2. NoSQL (Non-Relational Databases):
+     - Structure: Flexible schemas, key-value stores, JSON documents, graph objects.
+     - Strengths: High throughput, scalable horizontal partitioning, dynamic data structures.
+     - Examples: MongoDB (Document), Redis (Key-Value/Cache), DynamoDB (Cloud Key-Value).
+
+[Database Replication: Master/Slave & Slave Drift]
+- Master (Primary): Accepts both READ and WRITE operations. Single primary master prevents write conflicts.
+- Slaves (Replicas): Accept READ operations ONLY. Replicates master changes asynchronously for read-scaling.
+- EXAM CRITICAL: Slave Drift (Replication Delay)
+  * Definition: The temporary time delay between a write execution on the Master DB and propagation to Slave DBs.
+  * Vulnerability: Reading from a Slave DB immediately after writing to the Master DB can return stale data.
+  * Risk: Can cause double billing, inventory over-selling, or authorization race conditions.
+  * Solution: High-stakes business decisions (payments, auth, critical updates) MUST read directly from the Master DB!
+
+[Web Server Software & Technology Stacks]
+
+  Server Engines:
+  - Nginx: Event-driven worker processes; lightweight, low RAM footprint, highly scalable reverse proxy.
+  - Apache: Process/thread-per-request architecture; easy setup but higher memory overhead under heavy load.
+  - IIS: Microsoft web server; historically higher attack vulnerability, less common for open-source web apps.
+
+  Common Software Stacks:
+  - LAMP  : Linux (OS) + Apache (Server) + MySQL (DB) + PHP (Language)
+  - MEAN  : MongoDB (DB) + Express.js (Back-end) + Angular.js (Front-end) + Node.js (Runtime)
+  - LYME  : Linux + Yaws + Mnesia/CouchDB + Erlang
+
+--------------------------------------------------------------------------------
+4. HTTP PROTOCOL, STATUS CODES & CLIENT-SIDE RENDERING
+--------------------------------------------------------------------------------
+
+[HTTP Message Structure]
+- Header: Contains metadata (Cookies, Content-Type, Content-Length, Auth Tokens, Status Codes).
+- Body  : Contains actual payload (HTML document, JSON API payload, images). Optional in GET/HEAD requests.
+
+[HTTP Request Methods]
+- GET     : Requests resource data from server (Headers only, no request body).
+- POST    : Sends data payload to server (Forms, file uploads, dynamic inputs).
+- HEAD    : Same as GET, but server returns ONLY response headers (omits response body).
+- PUT     : Replaces/creates a target resource completely at destination URL.
+- DELETE  : Removes specified target resource from server.
+- OPTIONS : Queries server to discover permitted HTTP request methods on a resource.
+
+[HTTP Response Status Codes]
+
+  +-------+---------------+----------------------------------------------------+
+  | Code  | Category      | Common Examples & Descriptions                     |
+  +-------+---------------+----------------------------------------------------+
+  | 1xx   | Informational | 100 Continue, 101 Switching Protocols              |
+  | 2xx   | Success       | 200 OK (Standard success response)                 |
+  | 3xx   | Redirection   | 301 Moved Permanently, 302 Found (Temp Redirect),  |
+  |       |               | 304 Not Modified (Cached copy valid)               |
+  | 4xx   | Client Error  | 400 Bad Request, 403 Forbidden, 404 Not Found      |
+  | 5xx   | Server Error  | 500 Internal Server Error, 502 Bad Gateway         |
+  +-------+---------------+----------------------------------------------------+
+
+[DOM Construction & Browser Rendering]
+- DOM (Document Object Model): In-memory tree representation of HTML structure constructed by browser.
+- Asset Fetching: Browser executes additional HTTP requests for external CSS (`<link>`) and JS (`<script>`).
+- Browser Rendering Engines:
+  * Blink     : Google Chrome, Brave, modern MS Edge
+  * WebKit    : Apple Safari
+  * Gecko     : Mozilla Firefox
+  * EdgeHTML  : Legacy MS Edge
+
+--------------------------------------------------------------------------------
+5. PROJECT MANAGEMENT & REQUIREMENTS ENGINEERING
+--------------------------------------------------------------------------------
+
+[Project Management Tooling]
+- Written Documentation : Google Docs (Real-time collaboration), LaTeX (Git-friendly, professional formatting), MS Word.
+- Diagramming Tools     : Diagrams.net (Draw.io), Lucidchart, Balsamiq (Wireframing), MS Visio.
+- Workflow Management   : GitHub (Issues/PRs), Jira (Agile/SDLC integration), Phabricator, Asana/Trello, MS Project (Gantt charts).
+
+[Requirements Engineering Process]
+  Step 1: Identify Problems -> Generate explicit problem statements.
+          (Example: "Sellers have difficulty determining optimal item listing prices.")
+  Step 2: Determine Use Cases -> Map problem statements into actor actions.
+          * Actor  : System role (e.g., Buyer, Admin), NOT an individual person.
+          * Action : Discrete, well-defined task executable by an actor.
+
+[Use Case Document Key Fields]
+When documenting use cases in system specifications:
+- Name & Goal        : Short title and objective.
+- Actors             : Initiating and secondary system roles.
+- Preconditions      : Mandatory conditions prior to use case execution.
+- Main Flow          : Step-by-step primary success scenario.
+- Alternative Flows  : Exception handling and error branches.
+- Priority           : Development ranking for Minimum Viable Product (MVP).
+
+[System Modeling Diagrams]
+- Sequence Diagrams : Visualizes chronological order of interactions between actors and objects over time.
+- State Diagrams    : Models entity lifetimes by specifying valid states and allowed transitions (e.g., Draft -> Submitted -> Approved).
+- Wireframes        : Low-fidelity visual layouts ("cartoons") of UI pages. Storyboards link wireframes interactively.
+
+[Software Requirements Specification (SRS)]
+- Definition: Master agreement specifying system functions, constraints, and non-goals between client and team.
+- Critical Benefit: Eliminates "Scope Creep" by establishing a clear definition of project completion.
+- SRS Document Structure:
+  1. Introduction        : Purpose, Definitions, System Overview, References.
+  2. Overall Description : Product Perspective, User Interfaces, Constraints, Assumptions.
+  3. Specific Requirements: Testable granular rules (Functional, External Interfaces, Security, Reliability, Portability).
+
+================================================================================
+EXAM & REVISION CHECKLIST
+================================================================================
+[ ] Can you trace a web request from browser URL bar to screen rendering?
+[ ] What 4 items are assigned to a machine via DHCP?
+[ ] What is the core functional difference between TCP and UDP?
+[ ] Why does "Slave Drift" occur in DB replication, and how do you protect payment reads?
+[ ] Compare SQL vs. NoSQL with 2 real-world technology examples each.
+[ ] Identify the HTTP status code range for Client Errors vs. Server Errors.
+[ ] What purpose does an SRS document serve in managing project scope?
+[ ] What is the difference between a Sequence Diagram and a State Diagram?
+================================================================================

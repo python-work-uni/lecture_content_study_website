@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Human-AI Interaction with Generative AI · Slides</title>
+<meta name="description" content="Slide deck: Human-AI Interaction with Generative AI.">
+<style>
+/* ============================================================
+   DESIGN SYSTEM TOKENS (shared with the notes page)
+   ============================================================ */
+:root{
+  --bg:#fafaf9;
+  --surface:#ffffff;
+  --surface-2:#f2f1ef;
+  --border:#e2e1de;
+  --border-strong:#cfcdc8;
+  --text:#1c1b1a;
+  --text-2:#57534e;
+  --text-3:#78716c;
+  --accent:#1d4ed8;
+  --accent-soft:#eef2ff;
+  --note:#6b7280;
+  --warn:#b45309;
+  --ok:#15803d;
+
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px;
+  --s5:24px; --s6:32px; --s7:48px; --s8:64px; --s9:96px;
+
+  --sans:ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono:ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --measure:68ch;
+  --radius:8px;
+
+  --gap:20px;
+  --sidebar-w:300px;
+  --shell-bg:#f0efec;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#161514; --surface:#1e1d1b; --surface-2:#262522;
+    --border:#33312d; --border-strong:#48453f;
+    --text:#f2f1ef; --text-2:#c4c0b8; --text-3:#948f86;
+    --accent:#8ab4ff; --accent-soft:#1b2438;
+    --note:#8a8f99; --warn:#e0a15a; --ok:#6ee7a0;
+    --shell-bg:#110f0e;
+  }
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--shell-bg);
+  color:var(--text);
+  font-family:var(--sans);
+  overflow:hidden;
+}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+a{color:var(--accent)}
+
+.skip{
+  position:fixed;left:var(--s4);top:-100px;z-index:200;
+  background:var(--accent);color:#fff;padding:var(--s2) var(--s4);
+  border-radius:var(--radius);text-decoration:none;font-weight:600;
+  transition:top .15s ease;
+}
+.skip:focus{top:var(--s2)}
+
+/* ============================================================
+   SHELL: sidebar + stage
+   ============================================================ */
+.deck-shell{
+  display:flex;
+  height:100vh;
+  height:100dvh;
+  width:100%;
+}
+
+/* ---- toggle button (fixed, top-left) ---- */
+.nav-toggle{
+  position:fixed;top:14px;left:14px;z-index:120;
+  width:42px;height:42px;padding:0;
+  display:grid;place-items:center;
+  border:1px solid var(--border);
+  border-radius:11px;
+  background:var(--surface);
+  color:var(--text);
+  cursor:pointer;
+  box-shadow:0 1px 2px rgba(0,0,0,.06),0 6px 16px -10px rgba(0,0,0,.35);
+}
+.nav-toggle:hover{background:var(--surface-2)}
+.nav-toggle svg{width:20px;height:20px;display:block}
+.nav-toggle .icon-close{display:none}
+body:not(.nav-collapsed) .nav-toggle .icon-open{display:none}
+body:not(.nav-collapsed) .nav-toggle .icon-close{display:block}
+
+/* ---- sidebar ---- */
+.sidebar{
+  flex:0 0 var(--sidebar-w);
+  width:var(--sidebar-w);
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  min-width:0;
+  overflow:hidden;
+  transition:flex-basis .28s ease, width .28s ease, opacity .22s ease;
+}
+body.nav-collapsed .sidebar{
+  flex-basis:0;width:0;opacity:0;border-right-color:transparent;
+}
+.sidebar-head{
+  flex:none;
+  padding:18px 16px 12px 66px;
+  border-bottom:1px solid var(--border);
+}
+.sidebar-head .kicker{
+  font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-3);margin:0 0 2px;
+}
+.sidebar-head .name{
+  font-size:.95rem;font-weight:650;color:var(--text);
+  margin:0;line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.sidebar-count{
+  display:block;font-size:.78rem;color:var(--text-3);margin-top:2px;
+  font-variant-numeric:tabular-nums;
+}
+.thumblist{
+  list-style:none;margin:0;padding:12px;
+  overflow-y:auto;overflow-x:hidden;flex:1 1 auto;
+  scrollbar-width:thin;
+  overscroll-behavior:contain;
+}
+.thumblist li{margin:0 0 10px}
+.thumb{
+  display:block;text-decoration:none;color:inherit;
+  padding:8px;border-radius:10px;border:1px solid transparent;
+}
+.thumb:hover{background:var(--surface-2)}
+.thumb-title{
+  display:block;
+  font-size:.78rem;font-weight:600;line-height:1.35;color:var(--text-2);
+  margin:0 0 6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.thumb-frame{
+  display:block;position:relative;overflow:hidden;
+  border:1px solid var(--border);border-radius:7px;
+  background:var(--surface);
+}
+.thumb.active{border-color:color-mix(in srgb, var(--accent) 45%, transparent);background:var(--accent-soft)}
+.thumb.active .thumb-title{color:var(--accent)}
+.thumb.active .thumb-frame{border-color:var(--accent)}
+.thumb-frame > .thumb-clone{
+  position:absolute;top:0;left:0;
+  transform-origin:top left;
+  pointer-events:none;user-select:none;
+  margin:0;border:0;border-radius:0;box-shadow:none;
+  overflow:hidden;height:auto;
+}
+
+/* ---- stage ---- */
+.stage{
+  flex:1 1 auto;min-width:0;
+  display:flex;flex-direction:column;
+  padding:12px 20px 18px;
+}
+.stage-head{
+  flex:none;
+  display:flex;align-items:center;justify-content:space-between;gap:var(--s4);
+  padding:2px 4px 12px 66px;
+  min-height:42px;
+}
+.stage-head .deck-name{
+  font-size:.8rem;font-weight:600;color:var(--text-3);
+  letter-spacing:.03em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.stage-tools{display:flex;align-items:center;gap:var(--s4);flex:none}
+.counter{
+  font-size:.82rem;font-weight:650;color:var(--text-2);
+  font-variant-numeric:tabular-nums;
+}
+.hint{font-size:.78rem;color:var(--text-3)}
+.hint kbd{
+  font-family:var(--mono);font-size:.72rem;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:5px;padding:1px 5px;color:var(--text-2);
+}
+.viewport{flex:1 1 auto;min-height:0;overflow:hidden;position:relative}
+.track{
+  display:flex;gap:var(--gap);height:100%;
+  transition:transform .34s cubic-bezier(.22,.61,.36,1);
+  will-change:transform;
+}
+.progress{
+  flex:none;height:3px;background:var(--border);border-radius:99px;
+  margin:12px 4px 0;overflow:hidden;
+}
+.progress > span{
+  display:block;height:100%;width:0;background:var(--accent);
+  border-radius:99px;transition:width .34s ease;
+}
+
+/* ============================================================
+   SLIDE
+   ============================================================ */
+.slide{
+  flex:0 0 calc((100% - var(--gap)) / 2);
+  height:100%;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:clamp(20px, 2.4vw, 44px);
+  box-shadow:0 1px 2px rgba(0,0,0,.04), 0 18px 40px -34px rgba(0,0,0,.55);
+  scrollbar-width:thin;
+  scroll-behavior:smooth;
+}
+.slide::-webkit-scrollbar{width:9px}
+.slide::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:9px;border:2px solid var(--surface)}
+.slide > *:first-child{margin-top:0}
+.slide::after{content:"";display:block;height:2px}
+
+.slide-title{
+  font-size:clamp(1.25rem, 1.9vw, 1.7rem);
+  line-height:1.22;font-weight:700;letter-spacing:-.015em;
+  margin:0 0 var(--s5);
+  padding-bottom:var(--s3);
+  border-bottom:1px solid var(--border);
+  color:var(--text);
+}
+.slide-title .num{
+  display:inline-block;
+  font-family:var(--mono);font-size:.72em;font-weight:700;
+  color:var(--accent);background:var(--accent-soft);
+  border-radius:7px;padding:.05em .5em;margin-right:.5em;
+  transform:translateY(-.06em);
+}
+
+/* title slide */
+.title-slide{
+  display:flex;flex-direction:column;justify-content:center;
+  background:linear-gradient(160deg, var(--surface) 0%, var(--accent-soft) 130%);
+}
+.title-slide .eyebrow{
+  font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 var(--s4);
+}
+.title-slide h1{
+  font-size:clamp(1.9rem, 3.6vw, 3.1rem);
+  line-height:1.1;font-weight:700;letter-spacing:-.025em;
+  margin:0 0 var(--s6);max-width:22ch;
+}
+.title-slide .lede{
+  font-size:1.02rem;color:var(--text-2);line-height:1.6;
+  border-top:1px solid var(--border);padding-top:var(--s5);
+  max-width:56ch;
+}
+.title-slide .lede p{margin:0 0 var(--s2)}
+.title-slide .lede strong{color:var(--text)}
+
+/* slide body typography */
+.slide p{margin:0 0 var(--s4);max-width:var(--measure);line-height:1.62}
+.slide ul,.slide ol{margin:0 0 var(--s4);padding-left:1.35em;max-width:var(--measure);line-height:1.6}
+.slide li{margin:0 0 var(--s2)}
+.slide li > ul,.slide li > ol{margin:var(--s2) 0 0}
+.slide li:last-child{margin-bottom:0}
+.slide strong{font-weight:650;color:var(--text)}
+.slide em{font-style:italic}
+.slide code{
+  font-family:var(--mono);font-size:.9em;background:var(--surface-2);
+  border:1px solid var(--border);padding:.08em .34em;border-radius:4px;
+  overflow-wrap:anywhere;
+}
+.slide sub,.slide sup{font-size:.72em;line-height:0}
+.slide h3{font-size:1.08rem;font-weight:650;line-height:1.32;margin:var(--s5) 0 var(--s3)}
+.slide h4{font-size:1rem;font-weight:650;margin:var(--s5) 0 var(--s3)}
+.slide h3 + p,.slide h4 + p{margin-top:0}
+
+/* callouts */
+.callout{
+  border-left:4px solid var(--note);background:var(--surface-2);
+  border-radius:0 var(--radius) var(--radius) 0;
+  padding:var(--s4) var(--s5);margin:var(--s4) 0;
+  max-width:var(--measure);color:var(--text-2);font-size:.95rem;line-height:1.6;
+}
+.callout p:last-child{margin-bottom:0}
+.callout.key{border-left-color:var(--accent);background:var(--accent-soft);color:var(--text)}
+.callout.warn{border-left-color:var(--warn)}
+.callout .label{
+  display:block;font-size:.68rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text-3);margin-bottom:var(--s1);
+}
+.callout.key .label{color:var(--accent)}
+
+blockquote.quote{
+  border-left:3px solid var(--border-strong);
+  margin:var(--s4) 0;padding:var(--s2) 0 var(--s2) var(--s5);
+  max-width:var(--measure);font-style:italic;color:var(--text-2);
+  font-size:.98rem;line-height:1.6;
+}
+blockquote.quote p:last-child{margin-bottom:0}
+
+/* protocol blocks */
+.protocol{
+  font-family:var(--mono);font-size:.88rem;line-height:1.95;
+  background:var(--surface-2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:var(--s4) var(--s5);
+  margin:var(--s3) 0 var(--s5);overflow-x:auto;
+}
+.protocol .pl{display:block;white-space:nowrap}
+.protocol .pl + .pl{margin-top:2px}
+.protocol .who{color:var(--accent);font-weight:700}
+
+/* tables */
+.tablewrap{
+  overflow-x:auto;margin:var(--s4) 0 var(--s5);
+  border:1px solid var(--border);border-radius:var(--radius);
+}
+table{border-collapse:collapse;width:100%;font-size:.9rem;background:var(--surface)}
+caption{caption-side:top;text-align:left;padding:0 0 var(--s3);color:var(--text-3);font-size:.78rem}
+th,td{padding:var(--s3) var(--s4);text-align:left;vertical-align:top;border-bottom:1px solid var(--border)}
+thead th{background:var(--surface-2);font-weight:650}
+tbody tr:nth-child(even){background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:none}
+
+/* definition lists */
+dl.defs{margin:var(--s3) 0 var(--s5);max-width:var(--measure)}
+dl.defs dt{font-weight:650;margin-top:var(--s3)}
+dl.defs dt:first-child{margin-top:0}
+dl.defs dd{margin:2px 0 0;padding-left:var(--s4);color:var(--text-2);font-size:.94rem;line-height:1.55}
+
+/* quiz */
+.quiz{
+  border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--surface-2);padding:var(--s5);
+  margin:0 0 var(--s5);
+}
+.quiz:last-child{margin-bottom:0}
+.quiz .q{font-size:1rem;font-weight:650;line-height:1.5;margin:0 0 var(--s3);max-width:var(--measure)}
+.quiz .q .qn{color:var(--accent);margin-right:.35em}
+ul.options{list-style:none;padding-left:0;margin:0 0 var(--s3);max-width:var(--measure)}
+ul.options li{
+  padding:var(--s2) var(--s3);margin:4px 0;border-radius:6px;
+  border:1px solid transparent;color:var(--text-2);font-size:.94rem;line-height:1.5;
+}
+ul.options li.correct{
+  background:color-mix(in srgb, var(--ok) 12%, var(--surface));
+  border-color:color-mix(in srgb, var(--ok) 35%, transparent);
+  color:var(--text);font-weight:600;
+}
+ul.options li.correct::before{content:"✓ ";color:var(--ok);font-weight:800}
+.quiz .explain{
+  border-left:3px solid var(--border-strong);
+  padding:var(--s2) 0 var(--s2) var(--s4);margin:0;
+  font-size:.9rem;color:var(--text-2);max-width:var(--measure);line-height:1.55;
+}
+.quiz .explain p{margin:0}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width:60rem){
+  :root{--gap:14px}
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:0;z-index:90;
+    width:min(84vw, 320px);flex-basis:auto;
+    box-shadow:0 0 0 1px var(--border), 24px 0 60px -30px rgba(0,0,0,.5);
+  }
+  body.nav-collapsed .sidebar{transform:translateX(-102%);opacity:0;width:min(84vw,320px);flex-basis:auto}
+  .stage{padding:12px 12px 16px}
+  .stage-head{padding-left:66px}
+  .slide{flex-basis:100%}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .track{transition:none}
+  .progress > span{transition:none}
+  .slide{scroll-behavior:auto}
+  .sidebar{transition:none}
+}
+@media print{
+  .nav-toggle,.sidebar,.stage-head,.progress{display:none}
+  body{overflow:visible;background:#fff}
+  .deck-shell{display:block;height:auto}
+  .viewport,.track{display:block;height:auto}
+  .slide{flex:none;height:auto;break-after:page;box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to slides</a>
+
+<button id="navToggle" class="nav-toggle" type="button"
+        aria-controls="sidebar" aria-expanded="true" aria-label="Toggle slide navigation">
+  <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+    <path d="M4 6h16M4 12h16M4 18h16"/>
+  </svg>
+  <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+    <path d="M15 6l-6 6 6 6"/>
+  </svg>
+</button>
+
+<div class="deck-shell">
+
+  <aside id="sidebar" class="sidebar" aria-label="Slide navigation">
+    <div class="sidebar-head">
+      <p class="kicker">Slides</p>
+      <p class="name">Human-AI Interaction with Generative AI</p>
+      <span class="sidebar-count" id="sidebarCount">1 / 1</span>
+    </div>
+    <nav aria-label="All slides">
+      <ol class="thumblist" id="thumbList"></ol>
+    </nav>
+  </aside>
+
+  <main id="main" class="stage">
+    <div class="stage-head">
+      <span class="deck-name">ENGG2112 · Week 7 · Human-AI Interaction with Generative AI</span>
+      <div class="stage-tools">
+        <span class="hint"><kbd>←</kbd> <kbd>→</kbd> move · <kbd>N</kbd> nav</span>
+        <span class="counter" id="counter" aria-live="polite">1 / 1</span>
+      </div>
+    </div>
+
+    <div class="viewport">
+      <div class="track" id="track">
+
+        <!-- 1 -->
+        <section class="slide title-slide" data-title="Title">
+          <p class="eyebrow">ENGG2112 · Week 7</p>
+          <h1>Human-AI Interaction with Generative AI</h1>
+          <div class="lede">
+            <p><strong>Professor Mary Lou Maher</strong></p>
+            <p>University of Sydney · Week 7 lecture</p>
+          </div>
+        </section>
+
+        <!-- 2 -->
+        <section class="slide" data-title="Topics">
+          <h2 class="slide-title">Topics</h2>
+          <ul>
+            <li><strong>Common Uses of Generative AI: Is it AGI?</strong></li>
+            <li><strong>Establishing Roles in Structured Prompts</strong></li>
+            <li><strong>Human-AI Levels of Interaction</strong></li>
+            <li><strong>Input and Output types in Generative AI</strong></li>
+            <li><strong>Training using Reinforcement Learning from Human Feedback (RLHF)</strong></li>
+            <li><strong>Enterprise vs Personal Subscription for Gen AI access</strong></li>
+          </ul>
+        </section>
+
+        <!-- 3 -->
+        <section class="slide" data-title="Common Uses of LLMs">
+          <h2 class="slide-title">Common Uses of LLMs</h2>
+          <ul>
+            <li><strong>Content Creation:</strong> LLMs can generate articles, stories, poems, and other written content, helping content creators by providing initial drafts or ideas that can be further refined.</li>
+            <li><strong>Chatbots and Virtual Assistants:</strong> LLMs power sophisticated chatbots and virtual assistants that offer more natural and engaging conversational experiences for customer service, personal assistance, and informational queries.</li>
+            <li><strong>Language Translation:</strong> LLMs can translate text between languages with high accuracy, making global communication easier and more accessible.</li>
+            <li><strong>Educational Tools:</strong> LLMs can create personalized learning materials, generate quiz questions, offer tutoring, mentoring, coaching, and assist with language learning.</li>
+            <li><strong>Search Engines:</strong> LLMs can improve search engine responses by summarising the results of a web search and providing more focussed, conversational answers.</li>
+          </ul>
+        </section>
+
+        <!-- 4 -->
+        <section class="slide" data-title="Personal Uses of AI">
+          <h2 class="slide-title">Personal Uses of AI</h2>
+          <ul>
+            <li><strong>Personalized Recommendations:</strong> By including user preferences and interactions in their context, LLMs can provide personalised content, product recommendations, or advice.</li>
+            <li><strong>Accessibility:</strong> AI can convert text to speech or provide real-time transcription services, making information more accessible to individuals with disabilities.</li>
+            <li><strong>Email and Communication Assistance:</strong> LLMs can help draft, summarize, and manage emails, improving efficiency in personal and professional communication.</li>
+            <li><strong>Fake News Detection and Fact-Checking:</strong> LLMs can assist in identifying and flagging potentially false information, supporting efforts to maintain the integrity of information on the internet.</li>
+          </ul>
+        </section>
+
+        <!-- 5 -->
+        <section class="slide" data-title="Professional Uses of AI">
+          <h2 class="slide-title">Professional Uses of AI</h2>
+          <ul>
+            <li><strong>Programming Assistance:</strong> Tools like GitHub Copilot and Claude Code utilize LLMs to help developers by generating new code, debugging existing code, and perform unit testing based on natural language descriptions.</li>
+            <li><strong>Research: Sentiment Analysis:</strong> LLMs can perform sentiment analysis to gauge public opinion, customer satisfaction, and market trends by analysing social media posts, reviews, and other text data.</li>
+            <li><strong>Legal and Medical Document Analysis:</strong> LLMs can assist professionals by summarising, generating, and analysing legal and medical documents, saving time and improving accuracy.</li>
+            <li><strong>Creative Writing and Scriptwriting:</strong> LLMs can assist writers and filmmakers by generating creative writing prompts, plot ideas, or even entire scripts, offering a new tool for creative exploration.</li>
+            <li><strong>Game Development:</strong> LLMs can be used to generate dynamic dialogues, narratives, and quests in video games, creating more immersive gaming experiences.</li>
+          </ul>
+        </section>
+
+        <!-- 6 -->
+        <section class="slide" data-title="Interacting with LLMs · Context">
+          <h2 class="slide-title">Interacting with LLMs</h2>
+          <h3>Context</h3>
+          <p>Components of a prompt to instruct an LLM to play a role:</p>
+          <ul>
+            <li>Role</li>
+            <li>Goal</li>
+            <li>Constraints</li>
+            <li>Step-by-step instructions</li>
+            <li>Personalisation</li>
+          </ul>
+        </section>
+
+        <!-- 7 -->
+        <section class="slide" data-title="Recursion prompt · 1–3">
+          <h2 class="slide-title">Prompt to learn about recursion</h2>
+          <h4>1. Context</h4>
+          <blockquote class="quote"><p>“I am a second-year computer science student taking a course on data structures and algorithms. I’m learning about recursion, and I find it difficult to understand how a recursive function progresses and returns values.”</p></blockquote>
+          <h4>2. Constraints</h4>
+          <blockquote class="quote"><p>“Keep the explanation under 350 words, use simple Python examples, and avoid introducing advanced concepts.”</p></blockquote>
+          <h4>3. Role Modelling</h4>
+          <blockquote class="quote"><p>“Explain this as an experienced CS tutor who specialises in helping students build intuition for algorithmic thinking.”</p></blockquote>
+        </section>
+
+        <!-- 8 -->
+        <section class="slide" data-title="Recursion prompt · 4–5">
+          <h2 class="slide-title">Prompt to learn about recursion <span class="num">cont.</span></h2>
+          <h4>4. Step-by-Step Process</h4>
+          <blockquote class="quote"><p>“First, define recursion in clear terms. Then walk through a simple recursive function (like computing factorial), showing each call and return step-by-step. Finally, explain why this step-wise breakdown helps with debugging and tracing.”</p></blockquote>
+          <h4>5. Personalisation</h4>
+          <blockquote class="quote"><p>“I often understand concepts better when they are connected to visual or real-world analogies, so include an analogy that helps me picture the recursive process.”</p></blockquote>
+        </section>
+
+        <!-- 9 -->
+        <section class="slide" data-title="Roles for LLMs">
+          <h2 class="slide-title">Roles for LLMs</h2>
+          <p>A role can be set to shape how the model responds:</p>
+          <ul>
+            <li>Mentor</li>
+            <li>Tutor</li>
+            <li>Coach</li>
+            <li>Teammate</li>
+            <li>Student</li>
+            <li>Simulator</li>
+            <li>Tool</li>
+          </ul>
+        </section>
+
+        <!-- 10 -->
+        <section class="slide" data-title="Example: Tutor role prompt">
+          <h2 class="slide-title">Example of a Prompt to set up a Tutor role</h2>
+          <p>You are acting as my tutor for [course name/number], specifically for the topic of [specific topic, e.g., “second-order linear differential equations”]. My course uses [textbook/lecture notes/specific approach, if relevant].</p>
+          <p>Please tutor me using these rules:</p>
+          <ul>
+            <li>Ask me what topic we are covering in this session.</li>
+            <li>Start by asking me what I already understand about this topic.</li>
+            <li>Briefly explain the topic first (max 200 words), and ask if I want more depth.</li>
+            <li>Ask guiding questions about the major concepts and let me attempt each step.</li>
+            <li>Check my understanding before moving to the next concept.</li>
+            <li>If I’m stuck, give me a hint, not the solution.</li>
+            <li>Match your explanations to the level of a 2<sup>nd</sup> year engineering student.</li>
+            <li>Point out if my reasoning is correct even if my final answer is wrong.</li>
+            <li>Do not do an assignment for me. Instead help me do it.</li>
+          </ul>
+        </section>
+
+        <!-- 11 -->
+        <section class="slide" data-title="Levels of Human-AI Interaction">
+          <h2 class="slide-title">Levels of Human-AI Interaction</h2>
+          <div class="tablewrap">
+            <table>
+              <caption>The six levels, from lowest to highest interaction.</caption>
+              <thead>
+                <tr><th scope="col">Level</th><th scope="col">Role of AI</th><th scope="col">Human–AI Relationship</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>1. Information retrieval</td><td>Database / lookup tool</td><td>Minimal interaction</td></tr>
+                <tr><td>2. Task automation</td><td>Utility / assistant</td><td>User directs, AI executes</td></tr>
+                <tr><td>3. Guided generation</td><td>Content generator</td><td>Iterative output refinement</td></tr>
+                <tr><td>4. Thought partnership</td><td>Cognitive collaborator</td><td>Shared sense-making</td></tr>
+                <tr><td>5. Mixed-initiative</td><td>Co-worker</td><td>Both take initiative</td></tr>
+                <tr><td>6. Co-creativity</td><td>Creative partner</td><td>Joint creation and mutual influence</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 12 -->
+        <section class="slide" data-title="Information Retrieval">
+          <h2 class="slide-title">Information Retrieval</h2>
+          <p><strong>Lowest level of interaction.</strong> Users query an LLM much like a more conversational search engine.</p>
+          <p>Examples:</p>
+          <ul>
+            <li>Asking factual questions</li>
+            <li>Requesting definitions or summaries</li>
+            <li>Getting quick clarifications or explanations</li>
+          </ul>
+          <p><strong>Characteristics:</strong></p>
+          <ul>
+            <li>One-off prompts</li>
+            <li>Minimal context</li>
+            <li>AI behaves like an information lookup tool</li>
+          </ul>
+        </section>
+
+        <!-- 13 -->
+        <section class="slide" data-title="Task Automation">
+          <h2 class="slide-title">Task Automation</h2>
+          <p>The AI performs <strong>bounded, well-defined tasks</strong>.</p>
+          <p>Examples:</p>
+          <ul>
+            <li>Drafting emails</li>
+            <li>Rewriting or reformatting text</li>
+            <li>Generating code snippets</li>
+            <li>Translating language</li>
+          </ul>
+          <p><strong>Characteristics:</strong></p>
+          <ul>
+            <li>User sets constraints or requirements</li>
+            <li>AI delivers output with little negotiation</li>
+            <li>Efficiency is the main goal</li>
+          </ul>
+        </section>
+
+        <!-- 14 -->
+        <section class="slide" data-title="Guided Generation">
+          <h2 class="slide-title">Guided Generation</h2>
+          <p>The user provides <strong>structured instructions</strong> and the AI produces substantial creative or analytical work.</p>
+          <p>Examples:</p>
+          <ul>
+            <li>Writing essays or reports from outlines</li>
+            <li>Generating images from prompts</li>
+            <li>Producing multiple content variations</li>
+          </ul>
+          <p><strong>Characteristics:</strong></p>
+          <ul>
+            <li>Back-and-forth refinement</li>
+            <li>User evaluates and directs</li>
+            <li>AI begins to act as a creative generator, not just a tool</li>
+          </ul>
+        </section>
+
+        <!-- 15 -->
+        <section class="slide" data-title="AI and Thought Partner">
+          <h2 class="slide-title">AI and Thought Partner</h2>
+          <p>The AI <strong>helps users reason, brainstorm, or explore ideas</strong>.</p>
+          <p>Examples:</p>
+          <ul>
+            <li>Brainstorming project ideas</li>
+            <li>Iteratively improving drafts</li>
+            <li>Problem-solving through dialogue</li>
+            <li>Asking the AI to critique or compare alternatives</li>
+          </ul>
+          <p><strong>Characteristics:</strong></p>
+          <ul>
+            <li>Sustained conversational interaction</li>
+            <li>Shared sense-making</li>
+            <li>AI supports but does not lead</li>
+          </ul>
+        </section>
+
+        <!-- 16 -->
+        <section class="slide" data-title="Mixed Initiative Collaboration">
+          <h2 class="slide-title">Mixed Initiative Collaboration</h2>
+          <p>The <strong>user and AI both take initiative</strong> in shaping the task or output.</p>
+          <p>Examples:</p>
+          <ul>
+            <li>AI proposing next steps in a design</li>
+            <li>AI identifying missing constraints</li>
+            <li>AI suggesting alternatives or improvements without being prompted</li>
+            <li>Cooperative debugging or code planning</li>
+          </ul>
+          <p><strong>Characteristics:</strong></p>
+          <ul>
+            <li>AI is prompted to introduce ideas autonomously</li>
+            <li>Interaction becomes two-directional</li>
+            <li>Similar to working with a colleague who makes suggestions</li>
+          </ul>
+        </section>
+
+        <!-- 17 -->
+        <section class="slide" data-title="Co-creative Collaboration">
+          <h2 class="slide-title">Co-creative Collaboration</h2>
+          <p><strong>Highest level of collaborative interaction.</strong> AI and human jointly create, influence each other, and build on each other’s ideas.</p>
+          <p>Examples:</p>
+          <ul>
+            <li>Co-designing artworks, stories, or interfaces</li>
+            <li>Using frameworks like COFI (Prof Maher’s framework)</li>
+            <li>AI improvising with humans in creative tasks (music, visual art, narrative)</li>
+          </ul>
+          <p><strong>Characteristics:</strong></p>
+          <ul>
+            <li>Fluid, dynamic collaboration</li>
+            <li>AI contributes original directions</li>
+            <li>Human and AI adapt to each other’s ideas</li>
+            <li>Requires trust, transparency, and shared context</li>
+          </ul>
+        </section>
+
+        <!-- 18 -->
+        <section class="slide" data-title="Example: Thought Partner prompt">
+          <h2 class="slide-title">Example Prompt for a Thought Partner</h2>
+          <p>You are acting as a thought partner for my team’s “AI for Good” project proposal, not as the author of it. We are a team of 4–5 engineering students, and we need to decide: (1) what problem our project addresses, (2) what machine learning techniques we’ll use, (3) what data is available to us, and (4) whether the project is feasible to complete in one semester.</p>
+          <p>Please follow these rules while working with us:</p>
+          <ul>
+            <li><strong>Don’t write our proposal, problem statement, or sections of text for us.</strong> If we ask you to write something outright, redirect us back to thinking it through ourselves — offer a structure or questions instead of finished text.</li>
+            <li><strong>Respond to our ideas rather than replacing them.</strong> When we share an idea, react to it directly: point out strengths, risks, gaps in our reasoning, or things we haven’t considered; don’t just generate a new idea from scratch unless we explicitly ask for options.</li>
+            <li><strong>Push on feasibility.</strong> If we propose something too ambitious for one semester, tell us directly and explain why, rather than being agreeable.</li>
+            <li><strong>Ask us clarifying questions</strong> when our idea is vague, instead of assuming what we mean and running with it.</li>
+            <li><strong>Flag when we’re missing something important,</strong> e.g., if we haven’t thought about data availability, ethical concerns, or how we’d evaluate success.</li>
+            <li>If we ask “what do you think,” give an opinion with reasoning, but frame it as one input for us to weigh, not a decision.</li>
+            <li>Start by asking us to describe the problem we’re considering, and help us think about the scope and direction before moving to ML techniques or data.</li>
+          </ul>
+        </section>
+
+        <!-- 19 -->
+        <section class="slide" data-title="Co-creativity & the COFI framework">
+          <h2 class="slide-title">Co-creativity with a shared product</h2>
+          <blockquote class="quote">
+            <p>Rezwana, Jeba &amp; Maher, Mary. (2022). <em>Designing Creative AI Partners with COFI: A Framework for Modeling Interaction in Human-AI Co-Creative Systems.</em> 10.48550/arXiv.2204.07666.</p>
+          </blockquote>
+          <blockquote class="callout key">
+            <span class="label">Key idea</span>
+            AI interaction is not always text based.
+          </blockquote>
+        </section>
+
+        <!-- 20 -->
+        <section class="slide" data-title="Range of input and output types">
+          <h2 class="slide-title">Range of input and output types for LLMs</h2>
+          <div class="tablewrap">
+            <table>
+              <caption>How each modality reaches the model and what it typically returns.</caption>
+              <thead>
+                <tr><th scope="col">Input modality</th><th scope="col">Typical LLM path (pretrained)</th><th scope="col">Common outputs</th><th scope="col">Notes / Examples</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Text</td><td>Native (tokenized text → LLM)</td><td>Text (NLG, JSON, code)</td><td>Core capability for all LLMs; other modalities are often aligned into text space so the model can reason over them uniformly.</td></tr>
+                <tr><td>Image</td><td>Vision encoder → projector → LLM</td><td>Text (captioning, OCR, VQA); sometimes image via paired generator</td><td>Current frontier models — GPT-5.x, Gemini 3, and Claude (Sonnet/Opus 5) — all accept images natively. Output is still usually text; image generation is handled by a separate tool or model (e.g., DALL·E).</td></tr>
+                <tr><td>Video</td><td>Frame sampling (+ audio) → vision/audio encoders → LLM</td><td>Text (summaries, timestamps), sometimes audio (live)</td><td>Gemini 3 has native video/audio at scale; GPT-5.x and Claude support video via frame-sampling pipelines.</td></tr>
+                <tr><td>Audio (speech)</td><td>Cascaded ASR → LLM or End-to-end multimodal LLM</td><td>Text (transcripts, QA), Audio (TTS / spoken answer)</td><td>End-to-end audio-native models are now common (e.g., GPT-5.x voice mode, Gemini Live).</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- 21 -->
+        <section class="slide" data-title="Text input and output">
+          <h2 class="slide-title">Text input and output</h2>
+          <h3>Input</h3>
+          <ul>
+            <li>Plain text prompts, structured prompts (instructions, templates), long documents (PDF/HTML converted to text), code.</li>
+            <li>Most LLMs are strongest and most mature here.</li>
+            <li>Surveys on LLMs still treat text as the “central” channel into which other modalities are adapted/fused.</li>
+          </ul>
+          <h3>Output</h3>
+          <ul>
+            <li>Natural language, structured text (JSON, tables), code, citations/explanations — standard for all LLMs.</li>
+            <li>Even for multimodal tasks (e.g., caption an image), text output remains the default in most systems and taxonomies.</li>
+          </ul>
+        </section>
+
+        <!-- 22 -->
+        <section class="slide" data-title="Image input and output">
+          <h2 class="slide-title">Image input and output</h2>
+          <h3>Inputs (vision → language)</h3>
+          <ul>
+            <li>Single images (PNG/JPEG) for captioning, OCR, VQA, diagram/table interpretation; high-resolution and multi-image contexts are now standard across most frontier APIs.</li>
+            <li>Anthropic Claude (Sonnet 5/Opus 5), OpenAI GPT-5.x, and Google Gemini 3 all accept images alongside text as a single prompt, with support for multi-image and long-document/mixed visual-text contexts.</li>
+          </ul>
+          <h3>Outputs</h3>
+          <ul>
+            <li>Text describing or reasoning over the image (most common).</li>
+            <li>Some products offer image generation/editing via a paired image model (e.g., diffusion) rather than the same LLM backbone; this is typically exposed as a separate tool even if the UX feels unified.</li>
+          </ul>
+        </section>
+
+        <!-- 23 -->
+        <section class="slide" data-title="Video input and output">
+          <h2 class="slide-title">Video input and output</h2>
+          <h3>Inputs (video → language)</h3>
+          <ul>
+            <li>Short clips (often seconds to a couple of minutes) for scene understanding, key-moment extraction, and multimodal QA.</li>
+            <li>Many production APIs internally sample frames + (optionally) audio for processing.</li>
+          </ul>
+          <h3>Outputs</h3>
+          <ul>
+            <li>Text summaries, timestamped answers, step-by-step explanations; some platforms support audio replies in live settings.</li>
+            <li>The standard output remains text, with audio used in “live” APIs.</li>
+          </ul>
+        </section>
+
+        <!-- 24 -->
+        <section class="slide" data-title="Audio input and output">
+          <h2 class="slide-title">Audio input and output</h2>
+          <h3>Inputs (audio → language)</h3>
+          <ul>
+            <li>Speech/audio waveforms — for transcription, translation, summarisation, speaker or diary cues, and limited paralinguistic analysis.</li>
+            <li>End-to-end “speech LLMs” are emerging, but many products still use cascaded pipelines (ASR → LLM → TTS).</li>
+          </ul>
+          <h3>Outputs</h3>
+          <ul>
+            <li>Text (transcripts, summaries, Q&amp;A).</li>
+            <li>Audio (TTS) for spoken responses; in native multimodal models (e.g., Gemini Live) the same model or tightly integrated runtime yields low-latency voice.</li>
+          </ul>
+        </section>
+
+        <!-- 25 -->
+        <section class="slide" data-title="Rule-Based Chatbots">
+          <h2 class="slide-title">Rule-Based Chatbots</h2>
+          <ul>
+            <li>Follow a fixed set of pre-written rules or decision trees (if user says X, respond with Y)</li>
+            <li>Can only handle inputs that match a pattern the developer anticipated in advance</li>
+            <li>Responses are predictable and consistent — the same input always produces the same output</li>
+            <li>Struggle with typos, slang, or phrasing they weren’t explicitly programmed to recognize</li>
+            <li>Easy to audit and control, since every possible conversation path can be traced</li>
+            <li>Cheap to run and fast to build for narrow, well-defined tasks (e.g., “check my order status”)</li>
+          </ul>
+        </section>
+
+        <!-- 26 -->
+        <section class="slide" data-title="LLM-Based Chatbots">
+          <h2 class="slide-title">LLM-Based Chatbots</h2>
+          <ul>
+            <li>Generate responses using a language model trained on huge amounts of text</li>
+            <li>Can handle open-ended, unanticipated questions and understand varied phrasing, typos, and context</li>
+            <li>Responses are flexible and can adapt tone, follow multi-turn conversation, and reason through novel requests</li>
+            <li>Less predictable — the same question can get slightly different answers each time</li>
+            <li>Harder to fully audit or guarantee correctness, since there’s no fixed decision tree to inspect</li>
+            <li>More computationally expensive to run and requires more oversight (e.g., guardrails against incorrect or inappropriate answers)</li>
+            <li>Example: a modern support assistant that can troubleshoot a novel problem it’s never seen phrased that exact way before</li>
+          </ul>
+        </section>
+
+        <!-- 27 -->
+        <section class="slide" data-title="Rule-based vs LLM-based: key differences">
+          <h2 class="slide-title">Key Differences in Rule-based and LLM-based Chatbots</h2>
+          <ul>
+            <li>Rule-based = narrow but reliable</li>
+            <li>LLM-based = flexible but less predictable</li>
+            <li>Rule-based chatbots fail by going silent or giving a generic fallback</li>
+            <li>LLM chatbots can fail by confidently giving a wrong answer (“hallucinating”)</li>
+          </ul>
+          <blockquote class="callout key">
+            <span class="label">Decision rule</span>
+            Choice of which to use often comes down to: how open-ended is the task, and how costly is a wrong answer?
+          </blockquote>
+        </section>
+
+        <!-- 28 -->
+        <section class="slide" data-title="Comparing LLMs with Image Generators">
+          <h2 class="slide-title">Comparing LLMs with Image Generators</h2>
+          <h3>LLMs</h3>
+          <ul>
+            <li>Trained on text</li>
+            <li>Generate language token-by-token</li>
+            <li>Represent meaning in linguistic embeddings</li>
+            <li>Reason with text and structure</li>
+            <li>Output: text</li>
+          </ul>
+          <h3>Image Generation Models</h3>
+          <ul>
+            <li>Trained on images (often with captions)</li>
+            <li>Generate visuals via diffusion or GAN processes</li>
+            <li>Represent images in pixel or latent space</li>
+            <li>Map text prompts to visual features (not linguistic reasoning)</li>
+            <li>Output: images</li>
+          </ul>
+        </section>
+
+        <!-- 29 -->
+        <section class="slide" data-title="Generating Deepfakes">
+          <h2 class="slide-title">Generating Deepfakes</h2>
+          <p>Deepfakes are created by:</p>
+          <ul>
+            <li>Collecting data (images, video, audio of target)</li>
+            <li>Preprocessing (face extraction, alignment)</li>
+            <li>Training a GAN or similar model to learn the target’s visual/voice patterns</li>
+            <li>Generating synthetic media (face swaps, voice clones, reenactments)</li>
+            <li>Post-processing to improve realism</li>
+          </ul>
+          <p>They rely primarily on GANs, diffusion models, and neural rendering to produce hyper-realistic synthetic videos, images, and audio.</p>
+          <p>Deepfakes are realistic because these models learn:</p>
+          <ul>
+            <li>Facial micro-movements</li>
+            <li>Voice tone, rhythm, and accent</li>
+            <li>Behavioral patterns</li>
+            <li>Lighting and texture cues</li>
+          </ul>
+          <p>Thanks to adversarial training, generators learn to minimise the subtle artifacts that give fakes away.</p>
+        </section>
+
+        <!-- 30 -->
+        <section class="slide" data-title="Code training · Step 1 Pretrained Transformer">
+          <h2 class="slide-title">How are LLMs trained to generate and debug code?</h2>
+          <h3>Step 1: Pretrained Transformer Model</h3>
+          <ul>
+            <li>Start with a Transformer pretrained on large text corpora.</li>
+            <li>Most code-generating models begin as general Transformer-based language models, trained on massive text datasets.</li>
+            <li>Transformer models are particularly effective for sequence generation, including text and code.</li>
+            <li>These models learn to predict the next token in a sequence, building strong representations of patterns, syntax, and structure in text.</li>
+            <li>This pretrained “text reasoning ability” becomes the foundation for later code specialisation.</li>
+          </ul>
+        </section>
+
+        <!-- 31 -->
+        <section class="slide" data-title="Code training · Step 2 Code datasets">
+          <h2 class="slide-title">Step 2: Train or Fine-Tune on Large Code Datasets</h2>
+          <p>To generate Python specifically, models are exposed to Python code corpora, which may include:</p>
+          <ul>
+            <li>Public GitHub repositories</li>
+            <li>Documentation</li>
+            <li>Programming tutorials</li>
+            <li>Unit tests</li>
+            <li>Competitive programming datasets</li>
+          </ul>
+          <p>During this stage, the model learns:</p>
+          <ul>
+            <li>Python syntax</li>
+            <li>Programming idioms and patterns</li>
+            <li>Data structures and libraries</li>
+            <li>Error-checking patterns</li>
+            <li>Multi-file context and import structure</li>
+          </ul>
+        </section>
+
+        <!-- 32 -->
+        <section class="slide" data-title="Code training · Step 3 Autoregressive">
+          <h2 class="slide-title">Step 3: Autoregressive Training</h2>
+          <p>Most code-generation models use autoregressive training:</p>
+          <ul>
+            <li>Input: a partial sequence of code</li>
+            <li>Model predicts the next token</li>
+            <li>Loss is computed against the ground-truth next token</li>
+            <li>Model parameters update via gradient descent</li>
+          </ul>
+          <p>This teaches the model to:</p>
+          <ul>
+            <li>Write syntactically valid Python</li>
+            <li>Continue code logically</li>
+            <li>Maintain indentation and block structure</li>
+            <li>Produce functional code snippets</li>
+          </ul>
+          <p>Transformers excel at long-range dependencies in code, such as matching function definitions to later calls.</p>
+        </section>
+
+        <!-- 33 -->
+        <section class="slide" data-title="Code training · Step 4 RLHF">
+          <h2 class="slide-title">Step 4: Reinforcement Learning from Human Feedback</h2>
+          <p>Modern code-generation systems often undergo further refinement:</p>
+          <h3>Instruction fine-tuning</h3>
+          <p>Models are trained on datasets where prompts describe a desired coding task and outputs contain correct code solutions. This improves responsiveness to natural-language instructions.</p>
+          <h3>Reinforcement Learning from Human Feedback (RLHF)</h3>
+          <p>Human reviewers rate model-generated solutions based on:</p>
+          <ul>
+            <li>Correctness</li>
+            <li>Readability</li>
+            <li>Security</li>
+            <li>Efficiency</li>
+          </ul>
+          <p>This tuning helps prioritise correct, high-quality code.</p>
+        </section>
+
+        <!-- 34 -->
+        <section class="slide" data-title="RLHF explained">
+          <h2 class="slide-title">RLHF</h2>
+          <p>RLHF is a way of training an AI model using human <strong>opinions</strong> about quality — instead of only a fixed set of “correct” examples.</p>
+          <h3>Traditional Training</h3>
+          <p>The model studies a fixed set of labeled examples — each input paired with one “correct” output — and learns to reproduce that pattern.</p>
+          <h3>RLHF</h3>
+          <p>The model produces several candidate outputs. Humans compare them and say which is better. The model is then nudged to produce more outputs like the preferred ones.</p>
+          <h3>Think of it like a code review</h3>
+          <p>A senior engineer doesn’t grade code against one single answer key. They look at a few working solutions and say which one they’d rather ship.</p>
+          <h3>Why it matters for engineering teams</h3>
+          <p>Good code isn’t just syntactically correct — it’s readable, secure, and idiomatic. Those qualities are easier for a human to recognize than to write down as strict rules.</p>
+        </section>
+
+        <!-- 35 -->
+        <section class="slide" data-title="Open Source vs Closed Source LLMs">
+          <h2 class="slide-title">Open Source LLMs &amp; Closed Source LLMs</h2>
+          <p>Open Source LLMs (Language Models) and Closed Source LLMs refer to two different types of language models based on their availability and accessibility to the public.</p>
+          <p><strong>Open Source LLMs</strong> are language models whose source code is publicly available and can be freely accessed, used, modified, and distributed by anyone. Open source models encourage collaboration, transparency, and community involvement.</p>
+          <p><strong>Closed Source LLMs</strong> are language models whose source code is not publicly available. They are developed and maintained by organisations or companies that typically keep the underlying code proprietary and closed to the public. These models are often developed as commercial products and may require licenses or subscriptions for their use.</p>
+        </section>
+
+        <!-- 36 -->
+        <section class="slide" data-title="Enterprise vs Personal subscription">
+          <h2 class="slide-title">Enterprise vs Personal subscription to ChatGPT</h2>
+          <p>The differences between personal (Free, Plus, Pro) and enterprise (Business, Enterprise, Team) ChatGPT accounts are significant. They determine who owns the data, how it is stored, how it is shared, whether it is used for training, and what security guarantees exist.</p>
+          <h3>Enterprise / Business / Team (Workspace Accounts)</h3>
+          <ul>
+            <li>Your data is not used for training OpenAI models by default.</li>
+            <li>Applies to ChatGPT Business, Enterprise, Healthcare, Edu, Teachers, and Team plans.</li>
+            <li>Inputs and outputs are fully excluded unless an admin explicitly opts in.</li>
+          </ul>
+          <h3>Personal Accounts (Free, Plus, Pro)</h3>
+          <ul>
+            <li>Conversations may be used for training, unless the user manually opts out.</li>
+            <li>Personal user data is retained for abuse monitoring even if history is deleted.</li>
+          </ul>
+        </section>
+
+        <!-- 37 -->
+        <section class="slide" data-title="Tutorials this week">
+          <h2 class="slide-title">Tutorials this week</h2>
+          <ul>
+            <li>Create a range of prompts for intentional structured use of LLMs for personal learning and for supporting teamwork.</li>
+            <li>Develop a thought partner prompt to explore your project ideas and converge on an agreed problem to address as a group.</li>
+          </ul>
+          <blockquote class="callout">
+            <span class="label">Reminder</span>
+            Survey for this lecture.
+          </blockquote>
+        </section>
+
+      </div>
+    </div>
+
+    <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var slides   = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var track    = document.getElementById("track");
+  var viewport = document.querySelector(".viewport");
+  var list     = document.getElementById("thumbList");
+  var counter  = document.getElementById("counter");
+  var sidebarCount = document.getElementById("sidebarCount");
+  var progressBar  = document.getElementById("progressBar");
+  var toggle   = document.getElementById("navToggle");
+  var body     = document.body;
+
+  var index = 0;
+  var slideW = 0, slideH = 0;
+  var rail = []; // thumbnail frames, parallel to slides
+
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- build sidebar previews ---------- */
+  slides.forEach(function(slide, i){
+    var title = slide.getAttribute("data-title") || ("Slide " + (i + 1));
+
+    var li = document.createElement("li");
+    var a  = document.createElement("a");
+    a.className = "thumb";
+    a.href = "#";
+    a.setAttribute("role", "button");
+    a.setAttribute("aria-label", "Go to slide " + (i + 1) + ": " + title);
+
+    var t = document.createElement("span");
+    t.className = "thumb-title";
+    t.textContent = (i + 1) + ". " + title;
+
+    var frame = document.createElement("span");
+    frame.className = "thumb-frame";
+    frame.setAttribute("aria-hidden", "true");
+
+    var clone = slide.cloneNode(true);
+    clone.classList.add("thumb-clone");
+    clone.removeAttribute("data-title");
+    clone.removeAttribute("id");
+    clone.querySelectorAll("[id]").forEach(function(el){ el.removeAttribute("id"); });
+    clone.querySelectorAll("a, button, input, [tabindex]").forEach(function(el){
+      el.setAttribute("tabindex", "-1");
+    });
+    frame.appendChild(clone);
+
+    a.appendChild(t);
+    a.appendChild(frame);
+    a.addEventListener("click", function(e){ e.preventDefault(); go(i); });
+    li.appendChild(a);
+    list.appendChild(li);
+
+    rail.push(frame);
+  });
+
+  /* ---------- measurement ---------- */
+  function measure(){
+    if(!slides.length) return;
+    var r = slides[0].getBoundingClientRect();
+    slideW = r.width;
+    slideH = r.height;
+    if(!slideW) return;
+
+    var frameW = rail.length ? rail[0].clientWidth : 0;
+    if(!frameW) return;
+    var scale = frameW / slideW;
+
+    rail.forEach(function(frame){
+      var clone = frame.firstElementChild;
+      clone.style.width  = slideW + "px";
+      clone.style.height = slideH + "px";
+      clone.style.transform = "scale(" + scale + ")";
+      frame.style.height = Math.round(slideH * scale) + "px";
+    });
+  }
+
+  function gapSize(){
+    var g = parseFloat(getComputedStyle(track).gap);
+    return isNaN(g) ? 0 : g;
+  }
+
+  /* ---------- positioning ---------- */
+  function position(){
+    var step = slideW + gapSize();
+    track.style.transform = "translateX(" + (-index * step) + "px)";
+  }
+
+  function go(i){
+    if(!slides.length) return;
+    index = Math.max(0, Math.min(slides.length - 1, i));
+
+    slides.forEach(function(s, j){ s.classList.toggle("is-active", j === index); });
+    rail.forEach(function(f, j){
+      var a = f.parentElement;
+      if(a) a.classList.toggle("active", j === index);
+    });
+
+    position();
+
+    var active = list.querySelectorAll(".thumb")[index];
+    if(active){
+      if(active.scrollIntoView){
+        active.scrollIntoView({ block:"nearest", inline:"nearest" });
+      }
+    }
+
+    var label = (index + 1) + " / " + slides.length;
+    counter.textContent = label;
+    sidebarCount.textContent = label;
+    progressBar.style.width = (slides.length > 1 ? (index / (slides.length - 1)) * 100 : 100) + "%";
+  }
+
+  /* ---------- sidebar toggle ---------- */
+  function toggleNav(){
+    var collapsed = body.classList.toggle("nav-collapsed");
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    /* re-measure after the width transition settles */
+    window.setTimeout(function(){ measure(); go(index); }, reduceMotion ? 0 : 300);
+  }
+
+  toggle.addEventListener("click", toggleNav);
+
+  /* ---------- keyboard ---------- */
+  document.addEventListener("keydown", function(e){
+    if(e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if(k === "ArrowRight" || k === "ArrowDown" || k === "PageDown" || k === " " || k === "Spacebar"){
+      e.preventDefault();
+      go(index + 1);
+    } else if(k === "ArrowLeft" || k === "ArrowUp" || k === "PageUp"){
+      e.preventDefault();
+      go(index - 1);
+    } else if(k === "Home"){
+      e.preventDefault(); go(0);
+    } else if(k === "End"){
+      e.preventDefault(); go(slides.length - 1);
+    } else if(k === "n" || k === "N"){
+      e.preventDefault(); toggleNav();
+    }
+  });
+
+  /* ---------- responsive recalculation ---------- */
+  var resizeTimer = null;
+  function onResize(){
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(function(){ measure(); go(index); }, 120);
+  }
+  window.addEventListener("resize", onResize);
+
+  if(window.ResizeObserver){
+    var ro = new ResizeObserver(function(){
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(function(){ measure(); go(index); }, 120);
+    });
+    ro.observe(viewport);
+  }
+
+  /* ---------- init ---------- */
+  function init(){
+    if(window.innerWidth < 960){
+      body.classList.add("nav-collapsed");
+      toggle.setAttribute("aria-expanded", "false");
+    }
+    measure();
+    go(0);
+  }
+
+  if(document.fonts && document.fonts.ready){
+    document.fonts.ready.then(function(){ measure(); position(); });
+  }
+  window.addEventListener("load", function(){ measure(); go(index); });
+  init();
+})();
+</script>
+</body>
+</html>

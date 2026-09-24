@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Security and Privacy · Slides</title>
+<meta name="description" content="Slide deck: AI Security and Privacy.">
+<style>
+/* ============================================================
+   DESIGN SYSTEM TOKENS (shared with the notes page)
+   ============================================================ */
+:root{
+  --bg:#fafaf9;
+  --surface:#ffffff;
+  --surface-2:#f2f1ef;
+  --border:#e2e1de;
+  --border-strong:#cfcdc8;
+  --text:#1c1b1a;
+  --text-2:#57534e;
+  --text-3:#78716c;
+  --accent:#1d4ed8;
+  --accent-soft:#eef2ff;
+  --note:#6b7280;
+  --warn:#b45309;
+  --ok:#15803d;
+
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px;
+  --s5:24px; --s6:32px; --s7:48px; --s8:64px; --s9:96px;
+
+  --sans:ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono:ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --measure:68ch;
+  --radius:8px;
+
+  --gap:20px;
+  --sidebar-w:300px;
+  --shell-bg:#f0efec;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#161514; --surface:#1e1d1b; --surface-2:#262522;
+    --border:#33312d; --border-strong:#48453f;
+    --text:#f2f1ef; --text-2:#c4c0b8; --text-3:#948f86;
+    --accent:#8ab4ff; --accent-soft:#1b2438;
+    --note:#8a8f99; --warn:#e0a15a; --ok:#6ee7a0;
+    --shell-bg:#110f0e;
+  }
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--shell-bg);
+  color:var(--text);
+  font-family:var(--sans);
+  overflow:hidden;
+}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+a{color:var(--accent)}
+
+.skip{
+  position:fixed;left:var(--s4);top:-100px;z-index:200;
+  background:var(--accent);color:#fff;padding:var(--s2) var(--s4);
+  border-radius:var(--radius);text-decoration:none;font-weight:600;
+  transition:top .15s ease;
+}
+.skip:focus{top:var(--s2)}
+
+/* ============================================================
+   SHELL: sidebar + stage
+   ============================================================ */
+.deck-shell{
+  display:flex;
+  height:100vh;
+  height:100dvh;
+  width:100%;
+}
+
+/* ---- toggle button (fixed, top-left) ---- */
+.nav-toggle{
+  position:fixed;top:14px;left:14px;z-index:120;
+  width:42px;height:42px;padding:0;
+  display:grid;place-items:center;
+  border:1px solid var(--border);
+  border-radius:11px;
+  background:var(--surface);
+  color:var(--text);
+  cursor:pointer;
+  box-shadow:0 1px 2px rgba(0,0,0,.06),0 6px 16px -10px rgba(0,0,0,.35);
+}
+.nav-toggle:hover{background:var(--surface-2)}
+.nav-toggle svg{width:20px;height:20px;display:block}
+.nav-toggle .icon-close{display:none}
+body:not(.nav-collapsed) .nav-toggle .icon-open{display:none}
+body:not(.nav-collapsed) .nav-toggle .icon-close{display:block}
+
+/* ---- sidebar ---- */
+.sidebar{
+  flex:0 0 var(--sidebar-w);
+  width:var(--sidebar-w);
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  min-width:0;
+  overflow:hidden;
+  transition:flex-basis .28s ease, width .28s ease, opacity .22s ease;
+}
+body.nav-collapsed .sidebar{
+  flex-basis:0;width:0;opacity:0;border-right-color:transparent;
+}
+.sidebar-head{
+  flex:none;
+  padding:18px 16px 12px 66px;
+  border-bottom:1px solid var(--border);
+}
+.sidebar-head .kicker{
+  font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-3);margin:0 0 2px;
+}
+.sidebar-head .name{
+  font-size:.95rem;font-weight:650;color:var(--text);
+  margin:0;line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.sidebar-count{
+  display:block;font-size:.78rem;color:var(--text-3);margin-top:2px;
+  font-variant-numeric:tabular-nums;
+}
+.thumblist{
+  list-style:none;margin:0;padding:12px;
+  overflow-y:auto;overflow-x:hidden;flex:1 1 auto;
+  scrollbar-width:thin;
+  overscroll-behavior:contain;
+}
+.thumblist li{margin:0 0 10px}
+.thumb{
+  display:block;text-decoration:none;color:inherit;
+  padding:8px;border-radius:10px;border:1px solid transparent;
+}
+.thumb:hover{background:var(--surface-2)}
+.thumb-title{
+  display:block;
+  font-size:.78rem;font-weight:600;line-height:1.35;color:var(--text-2);
+  margin:0 0 6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.thumb-frame{
+  display:block;position:relative;overflow:hidden;
+  border:1px solid var(--border);border-radius:7px;
+  background:var(--surface);
+}
+.thumb.active{border-color:color-mix(in srgb, var(--accent) 45%, transparent);background:var(--accent-soft)}
+.thumb.active .thumb-title{color:var(--accent)}
+.thumb.active .thumb-frame{border-color:var(--accent)}
+.thumb-frame > .thumb-clone{
+  position:absolute;top:0;left:0;
+  transform-origin:top left;
+  pointer-events:none;user-select:none;
+  margin:0;border:0;border-radius:0;box-shadow:none;
+  overflow:hidden;height:auto;
+}
+
+/* ---- stage ---- */
+.stage{
+  flex:1 1 auto;min-width:0;
+  display:flex;flex-direction:column;
+  padding:12px 20px 18px;
+}
+.stage-head{
+  flex:none;
+  display:flex;align-items:center;justify-content:space-between;gap:var(--s4);
+  padding:2px 4px 12px 66px;
+  min-height:42px;
+}
+.stage-head .deck-name{
+  font-size:.8rem;font-weight:600;color:var(--text-3);
+  letter-spacing:.03em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.stage-tools{display:flex;align-items:center;gap:var(--s4);flex:none}
+.counter{
+  font-size:.82rem;font-weight:650;color:var(--text-2);
+  font-variant-numeric:tabular-nums;
+}
+.hint{font-size:.78rem;color:var(--text-3)}
+.hint kbd{
+  font-family:var(--mono);font-size:.72rem;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:5px;padding:1px 5px;color:var(--text-2);
+}
+.viewport{flex:1 1 auto;min-height:0;overflow:hidden;position:relative}
+.track{
+  display:flex;gap:var(--gap);height:100%;
+  transition:transform .34s cubic-bezier(.22,.61,.36,1);
+  will-change:transform;
+}
+.progress{
+  flex:none;height:3px;background:var(--border);border-radius:99px;
+  margin:12px 4px 0;overflow:hidden;
+}
+.progress > span{
+  display:block;height:100%;width:0;background:var(--accent);
+  border-radius:99px;transition:width .34s ease;
+}
+
+/* ============================================================
+   SLIDE
+   ============================================================ */
+.slide{
+  flex:0 0 calc((100% - var(--gap)) / 2);
+  height:100%;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:clamp(20px, 2.4vw, 44px);
+  box-shadow:0 1px 2px rgba(0,0,0,.04), 0 18px 40px -34px rgba(0,0,0,.55);
+  scrollbar-width:thin;
+  scroll-behavior:smooth;
+}
+.slide::-webkit-scrollbar{width:9px}
+.slide::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:9px;border:2px solid var(--surface)}
+.slide > *:first-child{margin-top:0}
+.slide::after{content:"";display:block;height:2px}
+
+.slide-title{
+  font-size:clamp(1.25rem, 1.9vw, 1.7rem);
+  line-height:1.22;font-weight:700;letter-spacing:-.015em;
+  margin:0 0 var(--s5);
+  padding-bottom:var(--s3);
+  border-bottom:1px solid var(--border);
+  color:var(--text);
+}
+.slide-title .num{
+  display:inline-block;
+  font-family:var(--mono);font-size:.72em;font-weight:700;
+  color:var(--accent);background:var(--accent-soft);
+  border-radius:7px;padding:.05em .5em;margin-right:.5em;
+  transform:translateY(-.06em);
+}
+
+/* title slide */
+.title-slide{
+  display:flex;flex-direction:column;justify-content:center;
+  background:linear-gradient(160deg, var(--surface) 0%, var(--accent-soft) 130%);
+}
+.title-slide .eyebrow{
+  font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 var(--s4);
+}
+.title-slide h1{
+  font-size:clamp(1.9rem, 3.6vw, 3.1rem);
+  line-height:1.1;font-weight:700;letter-spacing:-.025em;
+  margin:0 0 var(--s6);max-width:22ch;
+}
+.title-slide .lede{
+  font-size:1.02rem;color:var(--text-2);line-height:1.6;
+  border-top:1px solid var(--border);padding-top:var(--s5);
+  max-width:56ch;
+}
+.title-slide .lede p{margin:0 0 var(--s2)}
+.title-slide .lede strong{color:var(--text)}
+
+/* slide body typography */
+.slide p{margin:0 0 var(--s4);max-width:var(--measure);line-height:1.62}
+.slide ul,.slide ol{margin:0 0 var(--s4);padding-left:1.35em;max-width:var(--measure);line-height:1.6}
+.slide li{margin:0 0 var(--s2)}
+.slide li > ul,.slide li > ol{margin:var(--s2) 0 0}
+.slide li:last-child{margin-bottom:0}
+.slide strong{font-weight:650;color:var(--text)}
+.slide em{font-style:italic}
+.slide code{
+  font-family:var(--mono);font-size:.9em;background:var(--surface-2);
+  border:1px solid var(--border);padding:.08em .34em;border-radius:4px;
+  overflow-wrap:anywhere;
+}
+.slide sub,.slide sup{font-size:.72em;line-height:0}
+.slide h3{font-size:1.08rem;font-weight:650;line-height:1.32;margin:var(--s5) 0 var(--s3)}
+.slide h4{font-size:1rem;font-weight:650;margin:var(--s5) 0 var(--s3)}
+.slide h3 + p,.slide h4 + p{margin-top:0}
+
+/* callouts */
+.callout{
+  border-left:4px solid var(--note);background:var(--surface-2);
+  border-radius:0 var(--radius) var(--radius) 0;
+  padding:var(--s4) var(--s5);margin:var(--s4) 0;
+  max-width:var(--measure);color:var(--text-2);font-size:.95rem;line-height:1.6;
+}
+.callout p:last-child{margin-bottom:0}
+.callout.key{border-left-color:var(--accent);background:var(--accent-soft);color:var(--text)}
+.callout.warn{border-left-color:var(--warn)}
+.callout .label{
+  display:block;font-size:.68rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text-3);margin-bottom:var(--s1);
+}
+.callout.key .label{color:var(--accent)}
+
+blockquote.quote{
+  border-left:3px solid var(--border-strong);
+  margin:var(--s4) 0;padding:var(--s2) 0 var(--s2) var(--s5);
+  max-width:var(--measure);font-style:italic;color:var(--text-2);
+  font-size:.98rem;line-height:1.6;
+}
+blockquote.quote p:last-child{margin-bottom:0}
+
+/* protocol blocks */
+.protocol{
+  font-family:var(--mono);font-size:.88rem;line-height:1.95;
+  background:var(--surface-2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:var(--s4) var(--s5);
+  margin:var(--s3) 0 var(--s5);overflow-x:auto;
+}
+.protocol .pl{display:block;white-space:nowrap}
+.protocol .pl + .pl{margin-top:2px}
+.protocol .who{color:var(--accent);font-weight:700}
+
+/* tables */
+.tablewrap{
+  overflow-x:auto;margin:var(--s4) 0 var(--s5);
+  border:1px solid var(--border);border-radius:var(--radius);
+}
+table{border-collapse:collapse;width:100%;font-size:.9rem;background:var(--surface)}
+caption{caption-side:top;text-align:left;padding:0 0 var(--s3);color:var(--text-3);font-size:.78rem}
+th,td{padding:var(--s3) var(--s4);text-align:left;vertical-align:top;border-bottom:1px solid var(--border)}
+thead th{background:var(--surface-2);font-weight:650}
+tbody tr:nth-child(even){background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:none}
+
+/* definition lists */
+dl.defs{margin:var(--s3) 0 var(--s5);max-width:var(--measure)}
+dl.defs dt{font-weight:650;margin-top:var(--s3)}
+dl.defs dt:first-child{margin-top:0}
+dl.defs dd{margin:2px 0 0;padding-left:var(--s4);color:var(--text-2);font-size:.94rem;line-height:1.55}
+
+/* quiz */
+.quiz{
+  border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--surface-2);padding:var(--s5);
+  margin:0 0 var(--s5);
+}
+.quiz:last-child{margin-bottom:0}
+.quiz .q{font-size:1rem;font-weight:650;line-height:1.5;margin:0 0 var(--s3);max-width:var(--measure)}
+.quiz .q .qn{color:var(--accent);margin-right:.35em}
+ul.options{list-style:none;padding-left:0;margin:0 0 var(--s3);max-width:var(--measure)}
+ul.options li{
+  padding:var(--s2) var(--s3);margin:4px 0;border-radius:6px;
+  border:1px solid transparent;color:var(--text-2);font-size:.94rem;line-height:1.5;
+}
+ul.options li.correct{
+  background:color-mix(in srgb, var(--ok) 12%, var(--surface));
+  border-color:color-mix(in srgb, var(--ok) 35%, transparent);
+  color:var(--text);font-weight:600;
+}
+ul.options li.correct::before{content:"✓ ";color:var(--ok);font-weight:800}
+.quiz .explain{
+  border-left:3px solid var(--border-strong);
+  padding:var(--s2) 0 var(--s2) var(--s4);margin:0;
+  font-size:.9rem;color:var(--text-2);max-width:var(--measure);line-height:1.55;
+}
+.quiz .explain p{margin:0}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width:60rem){
+  :root{--gap:14px}
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:0;z-index:90;
+    width:min(84vw, 320px);flex-basis:auto;
+    box-shadow:0 0 0 1px var(--border), 24px 0 60px -30px rgba(0,0,0,.5);
+  }
+  body.nav-collapsed .sidebar{transform:translateX(-102%);opacity:0;width:min(84vw,320px);flex-basis:auto}
+  .stage{padding:12px 12px 16px}
+  .stage-head{padding-left:66px}
+  .slide{flex-basis:100%}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .track{transition:none}
+  .progress > span{transition:none}
+  .slide{scroll-behavior:auto}
+  .sidebar{transition:none}
+}
+@media print{
+  .nav-toggle,.sidebar,.stage-head,.progress{display:none}
+  body{overflow:visible;background:#fff}
+  .deck-shell{display:block;height:auto}
+  .viewport,.track{display:block;height:auto}
+  .slide{flex:none;height:auto;break-after:page;box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to slides</a>
+
+<button id="navToggle" class="nav-toggle" type="button"
+        aria-controls="sidebar" aria-expanded="true" aria-label="Toggle slide navigation">
+  <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+    <path d="M4 6h16M4 12h16M4 18h16"/>
+  </svg>
+  <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+    <path d="M15 6l-6 6 6 6"/>
+  </svg>
+</button>
+
+<div class="deck-shell">
+
+  <aside id="sidebar" class="sidebar" aria-label="Slide navigation">
+    <div class="sidebar-head">
+      <p class="kicker">Slides</p>
+      <p class="name">AI Security and Privacy</p>
+      <span class="sidebar-count" id="sidebarCount">1 / 1</span>
+    </div>
+    <nav aria-label="All slides">
+      <ol class="thumblist" id="thumbList"></ol>
+    </nav>
+  </aside>
+
+  <main id="main" class="stage">
+    <div class="stage-head">
+      <span class="deck-name">ENGG2112 · Week 6 · AI Security and Privacy</span>
+      <div class="stage-tools">
+        <span class="hint"><kbd>←</kbd> <kbd>→</kbd> move · <kbd>N</kbd> nav</span>
+        <span class="counter" id="counter" aria-live="polite">1 / 1</span>
+      </div>
+    </div>
+
+    <div class="viewport">
+      <div class="track" id="track">
+
+        <section class="slide title-slide" data-title="AI Security and Privacy">
+          <p class="eyebrow">ENGG2112 · Week 6</p>
+          <h1>AI Security and Privacy</h1>
+          <div class="lede">
+            <p><strong>Professor Mary Lou Maher</strong></p>
+            <p>Lecture slides generated from the Week 6 lecture PDF.</p>
+          </div>
+        </section>
+
+        <section class="slide" data-title="Topics">
+          <h2 class="slide-title">Topics</h2>
+          <ul>
+            <li>Differences between AI for security and security of AI</li>
+            <li>Advantages and disadvantages of AI in cybersecurity in case studies. Data privacy ethical and legal issues that arise from widespread availability of Generative AI</li>
+            <li>Deepfakes: How AI correctness in GANs leads to deepfakes.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="AI for Security">
+          <h2 class="slide-title">AI for Security</h2>
+          <dl class="defs">
+            <dt>AI for Security</dt>
+            <dd>AI is the tool used to enhance security</dd>
+            <dt>Security of AI</dt>
+            <dd>AI is the asset being protected</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="AI in Cybersecurity">
+          <h2 class="slide-title">AI in Cybersecurity</h2>
+          <p>Cybersecurity uses a combination of technologies, processes, and policies to safeguard devices and information from threats like malware, phishing, and ransomware.</p>
+          <p>Effective cybersecurity involves multiple layers of defense, including physical security, software tools, and user awareness to mitigate risks.</p>
+        </section>
+
+        <section class="slide" data-title="How AI improves security outcomes">
+          <h3>How AI improves security outcomes</h3>
+          <ul>
+            <li>Uses AI techniques to detect, prevent, and respond to threats</li>
+            <li>Analyses large volumes of data faster than humans</li>
+            <li>Identifies anomalies and patterns in:
+              <ul>
+                <li>Network traffic</li>
+                <li>User behaviour</li>
+                <li>System Logs</li>
+              </ul>
+            </li>
+            <li>Applications include:
+              <ul>
+                <li>Intrusion and malware detection</li>
+                <li>Fraud detection</li>
+                <li>Threat intelligence and automated incident response</li>
+              </ul>
+            </li>
+          </ul>
+          <blockquote class="callout">
+            <span class="label">Source</span>
+            Retrieved from https://www.fortinet.com/resources/cyberglossary/artificial-intelligence-in-cybersecurity
+          </blockquote>
+        </section>
+
+        <section class="slide" data-title="Why Cybersecurity Is Central to AI Safety">
+          <h3>Why Cybersecurity Is Central to AI Safety</h3>
+          <dl class="defs">
+            <dt>Impact of Vulnerabilities</dt>
+            <dd>A single cybersecurity flaw can trigger large-scale exploitation affecting millions across interconnected systems.</dd>
+            <dt>AI's Role in Security</dt>
+            <dd>AI enhances cybersecurity by automating code analysis and reducing asymmetry between defenders and attackers.</dd>
+            <dt>Dual-Use Risk</dt>
+            <dd>Vulnerability discovery is valuable for defense but risky if weaponized, illustrating dual-use challenges in AI safety.</dd>
+            <dt>Governance and Structural Risk</dt>
+            <dd>Managing AI capabilities requires governance on access and disclosure to address systemic cybersecurity risks effectively.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="Traditional Cybersecurity Before Advanced AI">
+          <h4>Traditional Cybersecurity Before Advanced AI</h4>
+          <dl class="defs">
+            <dt>Reliance on Human Expertise</dt>
+            <dd>Traditional cybersecurity depended heavily on skilled engineers manually auditing complex source code.</dd>
+            <dt>Limitations of Automated Tools</dt>
+            <dd>Static analysis and fuzz testing improved detection but missed subtle and complex vulnerabilities.</dd>
+            <dt>Challenges and Vulnerability Backlogs</dt>
+            <dd>Traditional methods left many vulnerabilities undiscovered for years, increasing security risks.</dd>
+            <dt>Need for AI Integration</dt>
+            <dd>AI emerged to address scalability and complexity limits inherent in traditional security approaches.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="What AI Adds to Cybersecurity Capabilities">
+          <h4>What AI Adds to Cybersecurity Capabilities</h4>
+          <dl class="defs">
+            <dt>Advanced AI Reasoning</dt>
+            <dd>Modern AI analyzes large codebases like human experts, enabling system-level reasoning beyond pattern matching.</dd>
+            <dt>Vulnerability Discovery</dt>
+            <dd>AI uncovers hidden and complex vulnerabilities missed by traditional automated tools, improving threat detection.</dd>
+            <dt>Double-Edged Impact</dt>
+            <dd>AI can generate exploits useful for defense but also lowers barriers for attackers, posing safety challenges.</dd>
+            <dt>Accelerated Cybersecurity Tempo</dt>
+            <dd>AI compresses the time between vulnerability discovery and exploitation, necessitating integrated safety measures.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="AI for Security Case Studies">
+          <h2 class="slide-title">AI for Security Case Studies</h2>
+          <p>Real-world examples of AI used defensively — and the governance that keeps it safe.</p>
+        </section>
+
+        <section class="slide" data-title="Google Project Zero and DeepMind's Big Sleep">
+          <h3>Case Study: Google Project Zero and DeepMind's Big Sleep</h3>
+          <dl class="defs">
+            <dt>AI-Augmented Vulnerability Discovery</dt>
+            <dd>Big Sleep enhances human researchers by mimicking hypothesis-driven code analysis and testing in secure environments.</dd>
+            <dt>Collaborative Interdisciplinary Approach</dt>
+            <dd>The project combines expert vulnerability research with advanced AI, showcasing the value of interdisciplinary collaboration.</dd>
+            <dt>Safety and Responsible Use</dt>
+            <dd>Big Sleep operates in controlled research contexts emphasizing defensive use and responsible vulnerability disclosure.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="Big Sleep in Action: Discovering a Real Zero-Day">
+          <h4>Big Sleep in Action: Discovering a Real Zero-Day</h4>
+          <dl class="defs">
+            <dt>Autonomous Zero-Day Discovery</dt>
+            <dd>Big Sleep autonomously found a subtle memory safety flaw in SQLite, previously undetected by traditional testing.</dd>
+            <dt>Significance for AI Safety</dt>
+            <dd>This discovery shows AI can exceed traditional security tools but requires careful ethical governance.</dd>
+            <dt>Coordinated Response and Governance</dt>
+            <dd>Success depended on governance ensuring the flaw was responsibly disclosed and swiftly patched.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="Why Big Sleep Is a Positive AI Safety Example">
+          <h4>Why Big Sleep Is a Positive AI Safety Example</h4>
+          <dl class="defs">
+            <dt>Proactive Vulnerability Detection</dt>
+            <dd>Big Sleep was used proactively to identify vulnerabilities before attackers could exploit them.</dd>
+            <dt>Restricted Trusted Access</dt>
+            <dd>Access to Big Sleep was limited to trusted security teams to minimize misuse risks.</dd>
+            <dt>Human Accountability</dt>
+            <dd>Humans were responsible for validation, disclosure, and remediation within a safety framework.</dd>
+            <dt>Systemic Benefit</dt>
+            <dd>Patching widely used components improved security for many downstream users.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="Anthropic's Project Glasswing">
+          <h3>Case Study: Anthropic's Project Glasswing</h3>
+          <p>Claude Mythos demonstrated <strong>advanced ability</strong> to discover and chain software vulnerabilities effectively.</p>
+          <p>Project Glasswing <strong>limits model access</strong> to trusted organizations to defensively identify and fix vulnerabilities. Anthropic shifted focus from alignment alone to <strong>containment</strong> and controlled deployment for safer AI use.</p>
+          <p>Project Glasswing emphasizes a <strong>defender-first approach</strong>, differing in scale and coordination from similar projects.</p>
+          <blockquote class="callout">
+            <span class="label">Article</span>
+            In The Conversation about Mythos, 13 April 2026 —
+            https://theconversation.com/claude-mythos-and-project-glasswing-whyan-ai-superhacker-has-the-tech-world-on-alert-280374
+          </blockquote>
+        </section>
+
+        <section class="slide" data-title="Claude Mythos and Project Glasswing">
+          <h3>Claude Mythos and Project Glasswing: Why an AI Superhacker Has the Tech World on Alert</h3>
+          <p>Exploring cybersecurity threats and AI innovations' growing impact.</p>
+        </section>
+
+        <section class="slide" data-title="What Is Project Glasswing?">
+          <h4>What Is Project Glasswing?</h4>
+          <dl class="defs">
+            <dt>Defensive Cybersecurity Initiative</dt>
+            <dd>Project Glasswing uses AI to proactively identify and fix cybersecurity vulnerabilities before attackers exploit them.</dd>
+            <dt>Collaborative Vulnerability Sharing</dt>
+            <dd>Findings from software scans are responsibly shared with maintainers to develop timely security patches.</dd>
+            <dt>Collective Digital Defense</dt>
+            <dd>Glasswing fosters cooperation among organizations to strengthen the overall digital ecosystem against AI threats.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="Who Is Involved in Glasswing">
+          <h4>Who Is Involved in Glasswing</h4>
+          <dl class="defs">
+            <dt>Tech Industry Leaders</dt>
+            <dd>Major tech companies form the backbone of Glasswing, addressing systemic digital security risks worldwide.</dd>
+            <dt>Open-Source Organizations</dt>
+            <dd>Open-source groups like the Linux Foundation help protect essential software maintained by small teams.</dd>
+            <dt>Financial Institutions</dt>
+            <dd>Financial firms such as JPMorgan Chase participate to secure critical financial digital systems.</dd>
+            <dt>Cross-Sector Collaboration</dt>
+            <dd>Glasswing highlights the importance of collaboration across sectors to combat advanced AI-driven cyber threats.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="The AI Superhacker Narrative">
+          <h2 class="slide-title">The AI Superhacker Narrative</h2>
+          <p>How a restricted, capable model reframes trust, governance, and digital resilience.</p>
+        </section>
+
+        <section class="slide" data-title="What Is Claude Mythos?">
+          <h4>What Is Claude Mythos?</h4>
+          <dl class="defs">
+            <dt>Advanced Code Analysis</dt>
+            <dd>Claude Mythos excels in analyzing code for bugs and transforming them into functional exploits, enabling deeper cybersecurity insights.</dd>
+            <dt>Wide Vulnerability Discovery</dt>
+            <dd>Mythos has identified vulnerabilities across major operating systems and web browsers, surpassing previous AI capabilities.</dd>
+            <dt>Restricted Access Model</dt>
+            <dd>The model is a gated AI tool available only to trusted partners, reflecting concerns about its powerful offensive potential.</dd>
+            <dt>Implications for AI Governance</dt>
+            <dd>Mythos challenges current AI safety and cybersecurity paradigms, emphasizing the need for thoughtful governance and control.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="Why the Tech World Is Alarmed">
+          <h4>Why the Tech World Is Alarmed</h4>
+          <dl class="defs">
+            <dt>AI Accelerates Cyberattacks</dt>
+            <dd>AI like Mythos can be exploited to quickly uncover hidden vulnerabilities that humans and traditional tools miss.</dd>
+            <dt>Scale and Efficiency of AI</dt>
+            <dd>Unlike human hackers, AI analyzes vast codebases rapidly, lowering effort required for sophisticated attacks.</dd>
+            <dt>Widespread Impact Risk</dt>
+            <dd>Vulnerabilities in common software components risk cascading effects across millions of systems worldwide.</dd>
+            <dt>Urgency for Countermeasures</dt>
+            <dd>Cybersecurity must evolve to address AI-driven threats before offensive capabilities surpass defenses.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="Examples of Major Vulnerabilities Found">
+          <h4>Examples of Major Vulnerabilities Found</h4>
+          <dl class="defs">
+            <dt>OpenBSD* Long-Undetected Flaw</dt>
+            <dd>Mythos discovered a 27-year-old vulnerability in OpenBSD, despite its strong security reputation.</dd>
+            <dt>FFmpeg** Hidden Weakness</dt>
+            <dd>A 16-year-old flaw in FFmpeg was found by Mythos, highlighting hidden risks in widely used software.</dd>
+            <dt>Linux*** Kernel Exploit Chain</dt>
+            <dd>Mythos chained multiple Linux kernel vulnerabilities to gain full system control, demonstrating advanced attack methods.</dd>
+          </dl>
+          <blockquote class="callout">
+            <span class="label">Notes</span>
+            <p>* OpenBSD is a free, secure, and portable Unix-like operating system based on 4.4BSD, focusing on proactive security, code correctness, and integrated cryptography.</p>
+            <p>** FFmpeg is a free, open-source software suite and industry-standard command-line tool used to record, convert, stream, and edit multimedia files.</p>
+            <p>*** Linux is a free, open-source operating system kernel created by Linus Torvalds in 1991, which acts as the core of a computer system, managing hardware resources like CPU, memory, and devices.</p>
+          </blockquote>
+        </section>
+
+        <section class="slide" data-title="Can Mythos Act Autonomously?">
+          <h4>Can Mythos Act Autonomously?</h4>
+          <dl class="defs">
+            <dt>Low Risk of Autonomous Harm</dt>
+            <dd>Mythos is unlikely to act independently in harmful ways or develop its own malicious goals.</dd>
+            <dt>Risk of Human-Directed Misuse</dt>
+            <dd>The main danger lies in how effectively Mythos can perform harmful tasks when directed by humans.</dd>
+            <dt>Importance of AI Governance</dt>
+            <dd>Access control, auditing, and usage restrictions are crucial to prevent unethical AI deployment.</dd>
+            <dt>Controlled Deployment Environment</dt>
+            <dd>Project Glasswing provides a controlled setting to ensure AI is used for ethical, defensive purposes.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="Why Anthropic Is Keeping Mythos Restricted">
+          <h4>Why Anthropic Is Keeping Mythos Restricted</h4>
+          <dl class="defs">
+            <dt>Risk of Premature Release</dt>
+            <dd>Anthropic views Mythos's advanced capabilities as too risky for public release without strong safeguards.</dd>
+            <dt>Preventing Cybersecurity Threats</dt>
+            <dd>Restricting Mythos helps stop malicious actors from exploiting vulnerabilities and shifting cybersecurity balance.</dd>
+            <dt>Responsible AI Stewardship</dt>
+            <dd>Anthropic treats Mythos as high-risk technology requiring careful control rather than a commercial product.</dd>
+            <dt>Challenging Industry Norms</dt>
+            <dd>The decision reflects a philosophy favoring restraint and coordination over rapid, open deployment.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="Why This Development Matters">
+          <h4>Why This Development Matters</h4>
+          <dl class="defs">
+            <dt>AI Advances in Cybersecurity</dt>
+            <dd>AI like Mythos enables systematic vulnerability discovery, challenging traditional cybersecurity defenses.</dd>
+            <dt>Reassessing Security Strategies</dt>
+            <dd>Automated vulnerability discovery demands new defense strategies and raises concerns about access and coordination.</dd>
+            <dt>Dual-Use AI Challenges</dt>
+            <dd>AI's power poses both risks and defense benefits, requiring balanced governance and ethical management.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="From Tools to Capabilities: A Governance Shift">
+          <h4>From Tools to Capabilities: A Governance Shift</h4>
+          <dl class="defs">
+            <dt>Governance Beyond Tools</dt>
+            <dd>AI governance must focus on underlying capabilities, not just tools and outputs, to manage risks effectively.</dd>
+            <dt>Limitations of Post-Hoc Mitigation</dt>
+            <dd>Traditional software fixes harms after release, but AI vulnerabilities require proactive governance measures.</dd>
+            <dt>Central Governance Mechanisms</dt>
+            <dd>Access control, capability evaluation, and pre-release decision-making are essential for safe AI deployment.</dd>
+            <dt>Cybersecurity as a Model</dt>
+            <dd>Cybersecurity highlights the need for strict governance as misuse consequences can be immediate and severe.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="Implications">
+          <h4>Implications</h4>
+          <dl class="defs">
+            <dt>Rapid AI Advances in Cybersecurity</dt>
+            <dd>AI capabilities in cybersecurity are progressing faster than expected, surpassing many expert predictions.</dd>
+            <dt>Responsible AI Stewardship</dt>
+            <dd>Limiting AI access demonstrates responsible development contrasting with typical fast deployments in the industry.</dd>
+            <dt>Proactive Cyber Defense Models</dt>
+            <dd>Initiatives like Project Glasswing try to align AI tools with defensive cybersecurity goals to manage emerging risks.</dd>
+            <dt>Governance Shapes Technological Impact</dt>
+            <dd>The impact of AI hinges on governance decisions around access, collaboration, and responsibility in cybersecurity.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="AI, Cybersecurity, Risk, and Safety">
+          <h4>AI, Cybersecurity, Risk, and Safety</h4>
+          <dl class="defs">
+            <dt>AI's Role in Cybersecurity</dt>
+            <dd>AI has become central in cybersecurity, reshaping risk and enhancing defense capabilities at a global scale.</dd>
+            <dt>Dual-Use Risk of AI</dt>
+            <dd>The same AI systems can improve security or accelerate cyber attacks if misused or poorly governed.</dd>
+            <dt>Cybersecurity in the AI Safety Context</dt>
+            <dd>Cybersecurity grounds AI safety concepts, linking technical excellence with ethical responsibility and risk trade-offs.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="Design Principles for Safe Defensive AI">
+          <h4>Design Principles for Safe Defensive AI</h4>
+          <dl class="defs">
+            <dt>Restricted Access and Control</dt>
+            <dd>Safe AI design mandates restricted access to powerful systems to prevent misuse and unauthorized exploitation.</dd>
+            <dt>Human Oversight and Accountability</dt>
+            <dd>Human supervision at critical AI decision points ensures accountability and corrects potential errors or risks early.</dd>
+            <dt>Responsible Disclosure Norms</dt>
+            <dd>Adhering to disclosure norms promotes transparency and responsible communication of AI vulnerabilities and updates.</dd>
+            <dt>Avoiding Unsafe Anti-Patterns</dt>
+            <dd>Unsafe practices like unrestricted public release or lack of rollback risk undermine AI security and trust.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="Implications for Engineers and Researchers">
+          <h4>Implications for Engineers and Researchers</h4>
+          <dl class="defs">
+            <dt>Beyond Technical Skills</dt>
+            <dd>Engineers must combine technical expertise with judgment to decide what AI developments should be built or restricted.</dd>
+            <dt>Ethical and Safety Dilemmas</dt>
+            <dd>Discovering vulnerabilities or advanced methods poses ethical challenges that require careful consideration and responsibility.</dd>
+            <dt>Responsible Practice</dt>
+            <dd>Practitioners should consider downstream impacts, access control, and collaborate with institutions to ensure safe AI use.</dd>
+            <dt>Professionalism Through Restraint</dt>
+            <dd>Recognizing when to refuse or restrain AI deployment is a mark of professionalism and ethical responsibility.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="Implications for AI Safety Education">
+          <h4>Implications for AI Safety Education</h4>
+          <dl class="defs">
+            <dt>Comprehensive AI Safety Training</dt>
+            <dd>Students must learn to build models and understand failure modes, risk analysis, and governance for safe AI deployment.</dd>
+            <dt>Cybersecurity as Teaching Domain</dt>
+            <dd>Cybersecurity offers a concrete domain where AI safety lessons on misuse consequences are accessible and accepted.</dd>
+            <dt>Integration of Perspectives</dt>
+            <dd>AI safety education should blend technical, institutional, and ethical views to prepare students for restricted system environments.</dd>
+            <dt>Use of Real Case Studies</dt>
+            <dd>Employing real-world cases enables practical frameworks for responsible AI decision-making beyond abstract theory.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="AI Privacy">
+          <h2 class="slide-title">AI Privacy</h2>
+          <p>Protecting individuals' data used in AI systems from misuse or unintended disclosure.</p>
+        </section>
+
+        <section class="slide" data-title="Understanding AI Privacy">
+          <h4>Understanding AI Privacy</h4>
+          <p><strong>Purpose:</strong> <em>Protecting individuals' data used in AI systems from misuse or unintended disclosure</em></p>
+          <h4>Concerns</h4>
+          <ul>
+            <li>Data leakage during training/testing</li>
+            <li>Identity privacy of individuals in data sets</li>
+            <li>Risk of re-identification from generated outputs</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Challenges to Privacy in AI">
+          <h4>Challenges to Privacy in AI</h4>
+          <h4>Data Collection and Use</h4>
+          <ul>
+            <li>Large datasets may contain personal information</li>
+            <li>Data sourced from public or private sources without consent</li>
+          </ul>
+          <h4>Model Training Risks</h4>
+          <ul>
+            <li>Embedding sensitive data in model weights</li>
+            <li>Extracting personal data from trained models (model inversion attacks)</li>
+            <li>Generation of Harmful Content</li>
+          </ul>
+          <h4>Ethical and Legal Considerations</h4>
+          <p><strong>Ethical Challenges:</strong></p>
+          <ul>
+            <li>Consent for using individuals' images/data</li>
+            <li>Accountability for malicious use</li>
+          </ul>
+          <p><strong>Regulations &amp; Laws:</strong></p>
+          <ul>
+            <li><strong>General Data Protection Regulation (GDPR)</strong>
+              <ul>
+                <li>Enacted in the European Union (EU) on May 25, 2018.</li>
+                <li>One of the strictest and most influential privacy laws worldwide.</li>
+                <li>Applies to organizations anywhere, if they target or collect data related to EU residents.</li>
+              </ul>
+            </li>
+            <li><strong>California Privacy Rights Act (CPRA)</strong> governing data privacy rights passed in 2018</li>
+            <li><strong>The Lei Geral de Proteção de Dados, or LGPD</strong>, is a data privacy regulation passed by the National Congress of Brazil in 2018.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="GDPR Core Principles">
+          <h4>GDPR Core Principles</h4>
+          <dl class="defs">
+            <dt>Lawfulness, Fairness, and Transparency</dt>
+            <dd>Data processing must be legal, fair, and clear to the individual.</dd>
+            <dt>Purpose Limitation</dt>
+            <dd>Data collected only for specified, explicit, and legitimate purposes.</dd>
+            <dt>Data Minimization</dt>
+            <dd>Only necessary data should be collected.</dd>
+            <dt>Accuracy</dt>
+            <dd>Personal data must be kept accurate and up-to-date.</dd>
+            <dt>Storage Limitation</dt>
+            <dd>Data should only be retained as long as necessary.</dd>
+            <dt>Integrity and Confidentiality</dt>
+            <dd>Data must be processed securely to prevent unauthorized access/loss.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="GDPR: Key Rights for Data Subjects">
+          <h4>GDPR: Key Rights for Data Subjects</h4>
+          <dl class="defs">
+            <dt>Right to be Informed</dt>
+            <dd>Know how your data is used.</dd>
+            <dt>Right of Access</dt>
+            <dd>Request a copy of your data.</dd>
+            <dt>Right to Rectification</dt>
+            <dd>Correct inaccurate data.</dd>
+            <dt>Right to Erasure</dt>
+            <dd>("Right to be Forgotten"): Request deletion of your data under specific conditions.</dd>
+            <dt>Right to Data Portability</dt>
+            <dd>Transfer your data to another provider.</dd>
+            <dt>Right to Object</dt>
+            <dd>Stop your data from being used for specific purposes like marketing.</dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="GDPR vs CCPA vs LGPD: Key Rights Comparison">
+          <h4>GDPR vs CCPA vs LGPD: Key Rights Comparison</h4>
+          <dl class="defs">
+            <dt>GDPR Comprehensive Rights</dt>
+            <dd>GDPR provides extensive rights including data access, correction, erasure, restriction, objection, portability, and automated decision protections.</dd>
+            <dt>CCPA Consumer Focus</dt>
+            <dd>CCPA emphasizes consumer transparency, choice, data deletion, opt-out of data sale, and non-discrimination protections.</dd>
+            <dt>LGPD Alignment and Transparency</dt>
+            <dd>LGPD aligns with GDPR, focusing on data access, correction, anonymization, portability, consent revocation, and clear transparency.</dd>
+          </dl>
+          <h4>Data Privacy Rights Comparison</h4>
+        </section>
+
+        <section class="slide" data-title="Deepfakes as a Privacy Concern">
+          <h2 class="slide-title">Deepfakes as a Privacy Concern</h2>
+          <h4>What are Deepfakes?</h4>
+          <ul>
+            <li>AI-generated realistic images or videos of people</li>
+            <li>Created using generative models, often GANs</li>
+          </ul>
+          <h4>Privacy Concerns</h4>
+          <ul>
+            <li>Unauthorized use of individuals' likenesses</li>
+            <li>Potential defamation, blackmail, misinformation</li>
+            <li>Difficulty in removing deepfake data from the internet</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Adversarial Networks">
+          <h2 class="slide-title">Adversarial Networks</h2>
+          <p>Generative Adversarial Networks (GANs) — the mechanics behind deepfakes.</p>
+        </section>
+
+        <section class="slide" data-title="The Two Competing Models">
+          <h4>The Two Competing Models</h4>
+          <p>GANs consist of two neural networks trained together:</p>
+          <dl class="defs">
+            <dt>Generator</dt>
+            <dd>
+              <ul>
+                <li>Produces synthetic data (images, audio, video, text)</li>
+                <li>Goal: create outputs that look <em>real</em></li>
+              </ul>
+            </dd>
+            <dt>Discriminator</dt>
+            <dd>
+              <ul>
+                <li>Evaluates inputs and decides whether they are <em>real</em> (from training data) or <em>fake</em> (from the generator)</li>
+                <li>Goal: correctly identify fakes</li>
+              </ul>
+            </dd>
+          </dl>
+        </section>
+
+        <section class="slide" data-title="The Adversarial Training Loop">
+          <h4>The Adversarial Training Loop</h4>
+          <ul>
+            <li>The <strong>generator makes errors</strong> (produces outputs the discriminator can spot)</li>
+            <li>The <strong>discriminator detects those errors</strong></li>
+            <li>Feedback is used to <strong>reduce errors in the generator</strong></li>
+            <li>This cycle repeats thousands or millions of times</li>
+          </ul>
+          <p>Over time:</p>
+          <ul>
+            <li>The discriminator becomes <em>less able to tell the difference</em></li>
+            <li>The generator's outputs become <em>increasingly realistic</em></li>
+          </ul>
+          <blockquote class="callout key">
+            <span class="label">Key idea</span>
+            When the discriminator can no longer reliably distinguish real from fake, the generator is considered <strong>successful</strong>.
+          </blockquote>
+        </section>
+
+        <section class="slide" data-title="Deep Fakes as a By-Product of Error Reduction">
+          <h4>Deep Fakes as a By-Product of Error Reduction</h4>
+          <p>Deep fakes emerge because GANs:</p>
+          <ul>
+            <li>Learn fine-grained patterns in faces, voices, gestures, and speech</li>
+            <li>Reduce visual or auditory artifacts that reveal manipulation</li>
+            <li>Optimise specifically for <strong>human perceptual realism</strong></li>
+          </ul>
+          <p>As error approaches zero:</p>
+          <ul>
+            <li>Fake faces look real</li>
+            <li>Synthetic voices sound authentic</li>
+            <li>Fabricated videos appear convincing</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Risks: Misinformation (Unintentional Harm)">
+          <h4>Risks: Misinformation (Unintentional Harm)</h4>
+          <p>GAN-generated content can be:</p>
+          <ul>
+            <li>Used mistakenly as real</li>
+            <li>Shared without malicious intent</li>
+            <li>Believed because it <em>looks and sounds right</em></li>
+          </ul>
+          <h4>Examples:</h4>
+          <ul>
+            <li>Fake images used in news reporting</li>
+            <li>Altered videos shared on social media</li>
+            <li>Synthetic audio misattributed to real people</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Risks: Disinformation (Deliberate Harm)">
+          <h4>Risks: Disinformation (Deliberate Harm)</h4>
+          <p>Because adversarial networks can produce <strong>high-credibility fakes</strong>, they are powerful tools for intentional deception:</p>
+          <ul>
+            <li>Political manipulation</li>
+            <li>Fake evidence or fabricated statements</li>
+            <li>Impersonation and scams</li>
+            <li>Erosion of trust in genuine media</li>
+          </ul>
+          <blockquote class="callout warn">
+            <span class="label">Warning</span>
+            Here, low error equals <strong>high persuasive power</strong>.
+          </blockquote>
+        </section>
+
+        <section class="slide" data-title="The Deeper Risk: Loss of Trust">
+          <h4>The Deeper Risk: Loss of Trust</h4>
+          <p>As adversarial realism improves:</p>
+          <ul>
+            <li>People can no longer easily trust what they see or hear</li>
+            <li>Genuine evidence can be dismissed as "just another deep fake"</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Scenario: From Adversarial Correctness to Loss of Trust">
+          <h4>Scenario: From Adversarial Correctness to Loss of Trust</h4>
+          <p>A media company uses a <strong>GAN-based video system</strong> to generate realistic video content for fast news explainers and reconstructions.</p>
+          <p>The system was trained on thousands of hours of real news footage.</p>
+          <p>Its goal is to <strong>reduce visual and audio errors</strong> so generated videos are indistinguishable from real recordings.</p>
+          <p>"Correctness" is defined internally as:</p>
+          <blockquote class="quote"><p>The discriminator can no longer tell real footage from generated footage</p></blockquote>
+          <p>During a breaking news event, the system generates a video of a public official making a short statement that <em>reconstructs</em> what was "likely said," based on:</p>
+          <ul>
+            <li>Past speeches</li>
+            <li>Voice patterns</li>
+            <li>Facial movements</li>
+          </ul>
+          <p>The generated video:</p>
+          <ul>
+            <li>Looks real</li>
+            <li>Sounds real</li>
+            <li>Matches known communication style</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Disinformation becomes possible">
+          <h4>Disinformation becomes possible</h4>
+          <ul>
+            <li>Later, malicious actors realise:
+              <ul>
+                <li>They can generate similar videos with targeted messages</li>
+                <li>The system's strength—minimal error—makes deception easy</li>
+              </ul>
+            </li>
+          </ul>
+          <p>They deliberately:</p>
+          <ul>
+            <li>Release fabricated statements</li>
+            <li>Time releases to influence public opinion</li>
+            <li>Rely on realism to bypass scepticism</li>
+          </ul>
+          <p>This becomes <strong>disinformation</strong>:</p>
+          <ul>
+            <li>False content</li>
+            <li>Shared intentionally</li>
+            <li>Designed to mislead</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Trust Begins to Collapse">
+          <h4>Trust Begins to Collapse</h4>
+          <p>Once the deep fake is exposed:</p>
+          <ul>
+            <li>The company issues a correction</li>
+            <li>But damage is already done</li>
+          </ul>
+          <p>Public reaction shifts:</p>
+          <ul>
+            <li>"You can't trust video anymore"</li>
+            <li>Real footage is questioned</li>
+            <li>Genuine evidence is dismissed as "probably fake"</li>
+          </ul>
+          <p>This leads to:</p>
+          <ul>
+            <li>Erosion of trust in media</li>
+            <li>Confusion about what is real</li>
+            <li>Increased cynicism toward legitimate information</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Adversarial AI &quot;Correctness&quot; Optimises the Wrong Thing">
+          <h4>Adversarial AI "Correctness" Optimises the Wrong Thing</h4>
+          <ul>
+            <li>Correctness = low detectable error</li>
+            <li>Success = indistinguishability from reality</li>
+            <li>There is no concept of truth, intent, or context</li>
+          </ul>
+          <blockquote class="callout key">
+            <span class="label">Key idea</span>
+            The system performs exactly as designed.
+          </blockquote>
+        </section>
+
+        <section class="slide" data-title="Summary">
+          <h2 class="slide-title">Summary</h2>
+          <dl class="defs">
+            <dt>AI Enhances Cybersecurity</dt>
+            <dd>AI improves cybersecurity by enabling proactive vulnerability discovery and reducing systemic risk effectively.</dd>
+            <dt>Governance and Oversight</dt>
+            <dd>Effective governance including access control, oversight, and coordination is critical for maximizing AI benefits.</dd>
+            <dt>Beyond Alignment</dt>
+            <dd>Alignment alone is not enough; capability containment and institutional responsibility are essential.</dd>
+          </dl>
+        </section>
+
+      </div>
+    </div>
+
+    <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var slides   = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var track    = document.getElementById("track");
+  var viewport = document.querySelector(".viewport");
+  var list     = document.getElementById("thumbList");
+  var counter  = document.getElementById("counter");
+  var sidebarCount = document.getElementById("sidebarCount");
+  var progressBar  = document.getElementById("progressBar");
+  var toggle   = document.getElementById("navToggle");
+  var body     = document.body;
+
+  var index = 0;
+  var slideW = 0, slideH = 0;
+  var rail = []; // thumbnail frames, parallel to slides
+
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- build sidebar previews ---------- */
+  slides.forEach(function(slide, i){
+    var title = slide.getAttribute("data-title") || ("Slide " + (i + 1));
+
+    var li = document.createElement("li");
+    var a  = document.createElement("a");
+    a.className = "thumb";
+    a.href = "#";
+    a.setAttribute("role", "button");
+    a.setAttribute("aria-label", "Go to slide " + (i + 1) + ": " + title);
+
+    var t = document.createElement("span");
+    t.className = "thumb-title";
+    t.textContent = (i + 1) + ". " + title;
+
+    var frame = document.createElement("span");
+    frame.className = "thumb-frame";
+    frame.setAttribute("aria-hidden", "true");
+
+    var clone = slide.cloneNode(true);
+    clone.classList.add("thumb-clone");
+    clone.removeAttribute("data-title");
+    clone.removeAttribute("id");
+    clone.querySelectorAll("[id]").forEach(function(el){ el.removeAttribute("id"); });
+    clone.querySelectorAll("a, button, input, [tabindex]").forEach(function(el){
+      el.setAttribute("tabindex", "-1");
+    });
+    frame.appendChild(clone);
+
+    a.appendChild(t);
+    a.appendChild(frame);
+    a.addEventListener("click", function(e){ e.preventDefault(); go(i); });
+    li.appendChild(a);
+    list.appendChild(li);
+
+    rail.push(frame);
+  });
+
+  /* ---------- measurement ---------- */
+  function measure(){
+    if(!slides.length) return;
+    var r = slides[0].getBoundingClientRect();
+    slideW = r.width;
+    slideH = r.height;
+    if(!slideW) return;
+
+    var frameW = rail.length ? rail[0].clientWidth : 0;
+    if(!frameW) return;
+    var scale = frameW / slideW;
+
+    rail.forEach(function(frame){
+      var clone = frame.firstElementChild;
+      clone.style.width  = slideW + "px";
+      clone.style.height = slideH + "px";
+      clone.style.transform = "scale(" + scale + ")";
+      frame.style.height = Math.round(slideH * scale) + "px";
+    });
+  }
+
+  function gapSize(){
+    var g = parseFloat(getComputedStyle(track).gap);
+    return isNaN(g) ? 0 : g;
+  }
+
+  /* ---------- positioning ---------- */
+  function position(){
+    var step = slideW + gapSize();
+    track.style.transform = "translateX(" + (-index * step) + "px)";
+  }
+
+  function go(i){
+    if(!slides.length) return;
+    index = Math.max(0, Math.min(slides.length - 1, i));
+
+    slides.forEach(function(s, j){ s.classList.toggle("is-active", j === index); });
+    rail.forEach(function(f, j){
+      var a = f.parentElement;
+      if(a) a.classList.toggle("active", j === index);
+    });
+
+    position();
+
+    var active = list.querySelectorAll(".thumb")[index];
+    if(active){
+      if(active.scrollIntoView){
+        active.scrollIntoView({ block:"nearest", inline:"nearest" });
+      }
+    }
+
+    var label = (index + 1) + " / " + slides.length;
+    counter.textContent = label;
+    sidebarCount.textContent = label;
+    progressBar.style.width = (slides.length > 1 ? (index / (slides.length - 1)) * 100 : 100) + "%";
+  }
+
+  /* ---------- sidebar toggle ---------- */
+  function toggleNav(){
+    var collapsed = body.classList.toggle("nav-collapsed");
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    /* re-measure after the width transition settles */
+    window.setTimeout(function(){ measure(); go(index); }, reduceMotion ? 0 : 300);
+  }
+
+  toggle.addEventListener("click", toggleNav);
+
+  /* ---------- keyboard ---------- */
+  document.addEventListener("keydown", function(e){
+    if(e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if(k === "ArrowRight" || k === "ArrowDown" || k === "PageDown" || k === " " || k === "Spacebar"){
+      e.preventDefault();
+      go(index + 1);
+    } else if(k === "ArrowLeft" || k === "ArrowUp" || k === "PageUp"){
+      e.preventDefault();
+      go(index - 1);
+    } else if(k === "Home"){
+      e.preventDefault(); go(0);
+    } else if(k === "End"){
+      e.preventDefault(); go(slides.length - 1);
+    } else if(k === "n" || k === "N"){
+      e.preventDefault(); toggleNav();
+    }
+  });
+
+  /* ---------- responsive recalculation ---------- */
+  var resizeTimer = null;
+  function onResize(){
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(function(){ measure(); go(index); }, 120);
+  }
+  window.addEventListener("resize", onResize);
+
+  if(window.ResizeObserver){
+    var ro = new ResizeObserver(function(){
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(function(){ measure(); go(index); }, 120);
+    });
+    ro.observe(viewport);
+  }
+
+  /* ---------- init ---------- */
+  function init(){
+    if(window.innerWidth < 960){
+      body.classList.add("nav-collapsed");
+      toggle.setAttribute("aria-expanded", "false");
+    }
+    measure();
+    go(0);
+  }
+
+  if(document.fonts && document.fonts.ready){
+    document.fonts.ready.then(function(){ measure(); position(); });
+  }
+  window.addEventListener("load", function(){ measure(); go(index); });
+  init();
+})();
+</script>
+</body>
+</html>

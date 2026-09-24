@@ -1,0 +1,453 @@
+================================================================================
+ELEC3609 / ELEC9609: INTERNET SOFTWARE PLATFORMS
+WEEK 8 STUDY GUIDE: LINUX, NETWORKING & CLOUD INFRASTRUCTURE (AWS)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. LINUX OPERATING SYSTEM FUNDAMENTALS & PROCESS PRIVILEGES
+--------------------------------------------------------------------------------
+Linux is an open-source, UNIX-like operating system kernel created by Linus Torvalds 
+in 1991. Today, Linux is the standard foundation for internet infrastructure, powering 
+Android (the most widely installed general-purpose OS) and over 90% of all web servers worldwide.
+
+[Linux Kernel vs. Distributions]
+- Linux Kernel: The core interface between hardware and software system processes.
+- Linux Distribution (Distro): A complete OS package combining the Linux kernel with 
+  system software, package managers (e.g., APT, Pacman), window managers (e.g., GNOME, i3), 
+  and administrative utilities. Examples: Ubuntu, Debian, CentOS, Arch Linux.
+
+--------------------------------------------------------------------------------
+[Linux Users & Process Privilege Scoping]
+--------------------------------------------------------------------------------
+In Linux, every program executes under the authority of a specific user account. 
+Understanding user privileges is critical to securing web application deployments.
+
+1. The Root User (`root` / Superuser):
+   - User ID (UID): 0.
+   - Possesses absolute, unrestricted privileges over the system (can modify any file, 
+     kill any process, and bind to any network port).
+
+2. Program-Specific (Unprivileged) Users:
+   - Principle of Least Privilege: Applications should NEVER run as `root` unless 
+     strictly required. If a server process running as `root` is compromised, 
+     the attacker gains complete system administrative control.
+   - Dedicated Service Users:
+     * Web Servers (Nginx / Apache): Run as `www-data`.
+     * Relational Database (MySQL): Runs as `mysql`.
+     * Sandboxed / Minimal Tasks: Runs as `nobody` (almost zero system privileges).
+   - Benefit of Scoping: If Nginx is hacked via a software flaw, the attacker is 
+     trapped inside the low-privilege `www-data` account and cannot read system 
+     shadow passwords or alter system configurations.
+
+3. Process Monitoring:
+   - Command: `ps aux`
+   - Purpose: Displays all active system processes, their Process IDs (PIDs), CPU/Memory 
+     usage, and the user account under which each process is running.
+
+--------------------------------------------------------------------------------
+[Linux Capabilities: Modern Fine-Grained Security]
+--------------------------------------------------------------------------------
+Memory Retention Tip: Remember "Capabilities = Slicing Root into Small Pieces".
+
+In traditional UNIX, privilege management was binary: a process was either `root` (all-powerful) 
+or non-root (restricted). To bind a web server to standard HTTP port 80 or HTTPS port 443 
+(ports < 1024 are "privileged ports"), the process historically had to launch as `root`.
+
+Linux Capabilities divide monolithic `root` privileges into distinct, fine-grained units:
+
++-------------------------+------------------------------------------------------------------+
+| Capability Name         | Specific Granted Privilege                                       |
++-------------------------+------------------------------------------------------------------+
+| CAP_NET_BIND_SERVICE    | Bind a socket to privileged network ports (port numbers < 1024). |
+| CAP_SYS_ADMIN           | Perform system administration tasks (mount filesystems, etc.).   |
+| CAP_DAC_OVERRIDE        | Bypass file Read, Write, and Execute permission checks.          |
+| CAP_NET_RAW             | Create raw and packet sockets (used for packet sniffing/spoofing)|
+| CAP_CHOWN               | Arbitrarily change file Ownership (UID/GID assignments).         |
++-------------------------+------------------------------------------------------------------+
+
+Real-World Application (Nginx Security Hardening):
+- Traditional Setup: Run Nginx as `root` just to bind to Port 80. (High Risk!)
+- Capabilities Setup: Run Nginx as unprivileged user `www-data`, but assign only `CAP_NET_BIND_SERVICE`.
+- Impact: If Nginx is compromised, the attacker CANNOT create raw sockets (`CAP_NET_RAW`), 
+  mount drives (`CAP_SYS_ADMIN`), or modify file permissions (`CAP_CHOWN`).
+
+--------------------------------------------------------------------------------
+[Linux Deployment & Installation Environments]
+--------------------------------------------------------------------------------
+1. ISO Images & Virtual Machines: Installing Linux locally using hypervisors like 
+   VirtualBox by mounting an ISO installer image file into a virtual CD-ROM drive.
+2. Pre-packaged Cloud & Container Images:
+   - Docker: `hub.docker.com` (Lightweight container environments like Ubuntu, Alpine).
+   - VirtualBox Images: `virtualboxes.org` (Pre-installed virtual disk images).
+   - AWS Marketplace: `aws.amazon.com/marketplace` (Pre-configured server AMIs).
+   - Vagrant: `vagrantup.com` (Reproducible local developer VM environments).
+
+
+--------------------------------------------------------------------------------
+2. SECURE SHELL (SSH) & REMOTE ADMINISTRATION ARCHITECTURE
+--------------------------------------------------------------------------------
+SSH (Secure Shell) is the cryptographic network protocol used to securely access 
+and manage command-line terminals on remote Linux servers over untrusted networks.
+
+[SSH vs. Legacy Protocols]
+- Telnet (Legacy): Transmits command data and passwords in plain text over TCP Port 23. (Insecure!)
+- SSH (Modern): Encrypts all tunnel communications, terminal input/output, and authentication credentials over TCP Port 22.
+
+[SSH Client & Server Ecosystem]
+- SSH Server: OpenSSH (`sshd`) runs on the server, listening on TCP Port 22.
+- SSH Clients: OpenSSH `ssh` client (Linux/macOS), PuTTY (Windows).
+
+--------------------------------------------------------------------------------
+[SSH Key-Based Authentication Architecture]
+--------------------------------------------------------------------------------
+While SSH supports password authentication, password logins are vulnerable to brute-force 
+attacks. Best practice requires SSH Public-Key Cryptography.
+
+Key Pair Roles:
+1. Private Key (`~/.ssh/id_rsa`):
+   - Kept strictly secret on your local client machine. NEVER shared or transferred.
+   - Used to generate cryptographic digital signatures proving your identity.
+2. Public Key (`~/.ssh/id_rsa.pub`):
+   - Shared freely with external servers.
+   - Placed on the remote server in the authorized keys file: `/home/username/.ssh/authorized_keys`.
+
+Authentication Challenge-Response Flow:
+1. Client initiates connection: `ssh username@remote_server_ip`
+2. Server checks `/home/username/.ssh/authorized_keys` for registered public keys.
+3. Server issues a cryptographic challenge.
+4. Client signs the challenge using its local Private Key.
+5. Server verifies the signature using the matching Public Key. Access is granted 
+   WITHOUT transmitting the private key over the network!
+
+--------------------------------------------------------------------------------
+[Preventing Man-In-The-Middle (MITM) Attacks: Server Host Keys]
+--------------------------------------------------------------------------------
+Just as clients have key pairs, the SSH Server possesses host key pairs stored in `/etc/ssh/`:
+- `/etc/ssh/ssh_host_rsa_key` (Private Host Key)
+- `/etc/ssh/ssh_host_rsa_key.pub` (Public Host Key)
+
+Host Key Verification Flow:
+1. When connecting to an SSH server for the FIRST time, the client receives the server's public key fingerprint.
+2. Accepting the key saves the host key into the local client file: `~/.ssh/known_hosts`.
+3. Subsequent Connections: The client verifies that the server's host key matches `~/.ssh/known_hosts`.
+4. MITM Defense: If an attacker intercepts the connection or impersonates the server IP, 
+   the host key will not match `known_hosts`, triggering a strict security warning and blocking access.
+
+--------------------------------------------------------------------------------
+[SSH Key Management: SSH Agent & Agent Forwarding]
+--------------------------------------------------------------------------------
+1. `ssh-agent`:
+   - Problem: Secure private keys on disk are encrypted with passphrases, requiring you 
+     to type your passphrase on every single SSH connection.
+   - Solution: `ssh-agent` is a background program that decrypts your private key once 
+     and holds it securely in local memory. Connected SSH processes query `ssh-agent` 
+     to perform cryptographic signing automatically.
+
+2. SSH Agent Forwarding (`ForwardAgent` option):
+   - Scenario: You connect from your local PC to Server A (Bastion/Jump Box), and from Server A 
+     you need to SSH into Server B (Private Database Server).
+   - Risk: Placing your private key file onto intermediate Server A exposes it if Server A is compromised.
+   - Mechanism: `ForwardAgent` allows remote client processes on Server A to pass signature requests 
+     back through the encrypted SSH tunnel to your local PC's `ssh-agent`.
+   - Result: You can jump across remote servers seamlessly without storing private keys on remote host disks!
+
+--------------------------------------------------------------------------------
+[Terminal Text Editors & Package Management]
+--------------------------------------------------------------------------------
+Command-Line Text Editors (Required for remote server administration via SSH):
+- Nano: Simple, modeless editor. Uses visible menu shortcuts (`Ctrl+O` to write/save, `Ctrl+X` to exit).
+- Vim: Modal editor optimized for speed and control.
+  * Enter Edit Mode: Press `i` (Insert mode).
+  * Exit Edit Mode: Press `Esc`.
+  * Command Mode: Type `:` followed by `w` (write/save), `q` (quit), `wq` (save & quit), `q!` (force quit without saving).
+
+Package Managers (Ubuntu APT - Advanced Packaging Tool):
+- Primary Command: `apt-get install <package_name>`
+- Benefits: Automatically downloads, manages dependencies, and updates software binary packages.
+- When Manual Source Compilation is Required:
+  1. Software is not available in official distro repositories.
+  2. Repository package version is outdated.
+  3. Custom compilation flags/modules are required.
+  4. Software must be installed to non-standard custom directory paths.
+
+
+--------------------------------------------------------------------------------
+3. AMAZON WEB SERVICES (AWS) CLOUD INFRASTRUCTURE
+--------------------------------------------------------------------------------
+AWS is an industry-leading cloud platform that provides on-demand virtual compute, 
+storage, database, and networking infrastructure, eliminating the need for physical hardware.
+
+[Core AWS Services Overview]
+
++--------------------+---------------------------------------------------------------------+
+| AWS Service        | Core Functionality & Web Infrastructure Role                        |
++--------------------+---------------------------------------------------------------------+
+| EC2 (Elastic       | Scalable Virtual Server instances hosted across global Regions and   |
+| Compute Cloud)     | Availability Zones (AZs). Core compute unit for applications.       |
+|                    |                                                                     |
+| EBS (Elastic       | Persistent Virtual Hard Drive volumes attached to EC2 instances.    |
+| Block Store)       | CRITICAL REQUIREMENT: EBS Volume and EC2 Instance MUST be in the   |
+|                    | SAME Availability Zone (AZ).                                        |
+|                    |                                                                     |
+| RDS (Relational    | Managed relational database instances (MySQL, PostgreSQL, MariaDB, |
+| Database Service)  | Aurora, Oracle, SQL Server). Provides auto-backups and scaling.     |
+|                    |                                                                     |
+| Route 53           | Scalable Domain Name System (DNS) web service. Maps human domain    |
+|                    | names (e.g. example.com) to public IP addresses.                    |
+|                    |                                                                     |
+| VPC (Virtual       | Virtual Network Segregation environment. Allows custom subnets,    |
+| Private Cloud)     | routing tables, and network access control lists.                   |
+|                    |                                                                     |
+| ELB (Elastic Load  | Automatically distributes incoming web traffic across multiple EC2  |
+| Balancer)          | instances for horizontal scaling and fault tolerance.               |
+|                    |                                                                     |
+| EKS / ECS          | Managed container orchestration engines (EKS = Managed Kubernetes;  |
+| Container Services | ECS = AWS Native Elastic Container Service).                        |
++--------------------+---------------------------------------------------------------------+
+
+--------------------------------------------------------------------------------
+[Elastic IPs (EIP) vs. Dynamic EC2 IPs]
+--------------------------------------------------------------------------------
+- Default EC2 Public IP Behavior: Every time an EC2 instance is stopped or restarted, 
+  AWS re-assigns a NEW dynamic public IP address to the instance.
+- Operational Problem: Dynamically changing IPs break DNS A-records, external firewall 
+  whitelists, and frontend configuration files!
+- Solution (Elastic IP): An Elastic IP is a static IPv4 address allocated to your AWS account. 
+  Once associated with an EC2 instance, the instance retains the exact same public IP address 
+  across stops, reboots, and restarts.
+
+
+--------------------------------------------------------------------------------
+4. NETWORKING, PORTS & FIREWALL ARCHITECTURE
+--------------------------------------------------------------------------------
+
+[OSI Model Layer Breakdown for Web Infrastructure]
+- Layer 3 (Network Layer): Handles Logical Addressing (IP Addresses) and routing across networks.
+- Layer 4 (Transport Layer): Handles End-to-End Communication and Port Multiplexing (TCP / UDP).
+
+--------------------------------------------------------------------------------
+[Transport Protocols: TCP vs. UDP]
+--------------------------------------------------------------------------------
+
++-----------------------+----------------------------------+----------------------------------+
+| Feature               | TCP (Transmission Control)       | UDP (User Datagram)              |
++-----------------------+----------------------------------+----------------------------------+
+| Connection Type       | Connection-Oriented (3-way hand- | Connectionless                   |
+|                       | shake required).                 |                                  |
+| Delivery Guarantee    | Guaranteed ordered delivery with | Best-effort; packets may be lost,|
+|                       | retransmissions & flow control.  | delayed, or arrive out of order. |
+| Overhead              | Higher protocol overhead.        | Minimal latency and overhead.    |
+| Typical Web Uses      | HTTP (80), HTTPS (443), SSH (22),| DNS (53), Video Streaming, Voice |
+|                       | MySQL (3306), Postgres (5432).   | over IP (VoIP), Online Gaming.   |
++-----------------------+----------------------------------+----------------------------------+
+
+The Golden Rule of Port Binding:
+Network applications "listen" on specific TCP or UDP ports. 
+ONLY ONE running application process can listen to a specific TCP or UDP port on a 
+single host IP interface at any given time.
+
+--------------------------------------------------------------------------------
+[AWS Security Groups: Stateful Cloud Firewalls]
+--------------------------------------------------------------------------------
+An AWS Security Group (SG) acts as a virtual stateful firewall controlling inbound and 
+outbound traffic for EC2 instances.
+
+Key Characteristics & Rules:
+1. Strict Whitelist Architecture: Security Group rules are WHITELISTS ONLY. There are no "deny" rules. 
+   Any incoming packet that does not match an explicit allow rule is automatically DROPPED.
+2. Rule Configuration Parameters:
+   - Protocol: TCP, UDP, ICMP, or All.
+   - Port Range: Specific port (e.g., 80) or range (e.g., 8000-8080).
+   - Source CIDR Block: Defines allowed source IPs (e.g., `0.0.0.0/0` for universal public access, 
+     or `203.0.113.5/32` for a single specific IP address).
+
+Common Port & Security Group Rule Reference:
++---------------+-----------+-----------------------+----------------------------------+
+| Service       | Port      | Protocol              | Recommended Security Group Source|
++---------------+-----------+-----------------------+----------------------------------+
+| SSH           | 22        | TCP                   | Admin IP (`X.X.X.X/32`) or any   |
+| HTTP          | 80        | TCP                   | Public (`0.0.0.0/0`)             |
+| HTTPS         | 443       | TCP                   | Public (`0.0.0.0/0`)             |
+| MySQL DB      | 3306      | TCP                   | Only EC2 SG ID (Internal only)   |
++---------------+-----------+-----------------------+----------------------------------+
+
+
+--------------------------------------------------------------------------------
+5. PRODUCTION WEB SERVER ARCHITECTURE & DEPLOYMENT STACK
+--------------------------------------------------------------------------------
+Deploying a robust, scalable web application requires coordinating four distinct server layers.
+
+[The Complete 4-Tier Web Stack Architecture]
+
+   [ Internet Client / Web Browser ]
+                  |
+                  | HTTP / HTTPS Request (Port 80 / 443)
+                  v
++----------------------------------------------------+
+| Tier 1: Web Server (Nginx)                         |
+| - Serves static assets (CSS, JS, Images)           |
+| - SSL/TLS Termination                              |
+| - Acts as Reverse Proxy (`proxy_pass`)             |
++----------------------------------------------------+
+                  |
+                  | Internal Socket / HTTP Proxy Pass (e.g. 127.0.0.1:8000)
+                  v
++----------------------------------------------------+
+| Tier 2: Application Interface (uWSGI / Gunicorn)  |
+| - Implements WSGI specification                    |
+| - Manages concurrent Python worker processes       |
++----------------------------------------------------+
+                  |
+                  | Python Web Framework Execution
+                  v
++----------------------------------------------------+
+| Tier 3: Web Application Code (Django / Flask)      |
+| - Executes business logic                          |
+| - Renders dynamic HTML / JSON API responses        |
++----------------------------------------------------+
+                  |
+                  | Database Queries (TCP Port 3306)
+                  v
++----------------------------------------------------+
+| Tier 4: Database Server (MySQL / PostgreSQL)       |
+| - Manages persistent data storage                  |
+| - Located on dedicated separate EBS volume         |
++----------------------------------------------------+
+
+--------------------------------------------------------------------------------
+[Web Server Layer: Nginx & Reverse Proxying]
+--------------------------------------------------------------------------------
+Nginx (pronounced "Engine-X") is an event-driven, high-performance web server.
+
+Why Nginx Needs an Application Interface:
+Nginx handles raw HTTP connections exceptionally well, but it CANNOT execute web application 
+code (such as Python/Django) directly.
+
+The `proxy_pass` Mechanism:
+Instead of trying to interpret Python, Nginx acts as a Reverse Proxy. It intercepts incoming 
+HTTP requests from the public internet and forwards (`proxy_pass`) them internally to the 
+uWSGI application server.
+
+Sample Nginx Configuration Snippet (`/etc/nginx/sites-available/default`):
+```nginx
+server {
+    listen 80;
+    server_name example.com;
+
+    # Serve static assets directly from disk
+    location /static/ {
+        alias /var/www/app/static/;
+    }
+
+    # Pass dynamic requests to uWSGI application server
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        include proxy_params;
+    }
+}
+```
+
+--------------------------------------------------------------------------------
+[Application Interface Layer: WSGI & uWSGI]
+--------------------------------------------------------------------------------
+- WSGI (Web Server Gateway Interface): A standardized Python specification (PEP 3333) 
+  defining how web servers communicate with Python applications.
+- uWSGI: A high-performance application server software that implements the WSGI protocol.
+- Function: uWSGI spawns and manages a pool of worker processes, enabling the application 
+  to handle hundreds of concurrent requests in parallel.
+
+--------------------------------------------------------------------------------
+[Separation of Data: Volume Separation Strategy]
+--------------------------------------------------------------------------------
+A critical architectural mistake is storing database data files on the system root 
+operating system volume.
+
+The Rule: ALWAYS separate persistent data from your application code and OS.
+
+Implementation Strategy on AWS EC2:
+1. Attach a separate, dedicated EBS volume to the EC2 instance (e.g., mounted at `/mnt/db_volume`).
+2. Re-configure the RDBMS (MySQL/PostgreSQL) data directory path to store database files 
+   on the dedicated EBS volume (e.g. moving `/var/lib/mysql` to `/mnt/db_volume/mysql`).
+
+Benefits of Data Separation:
+- Instance Resilience: If the EC2 root OS crashes or requires re-imaging, the database volume 
+  remains completely intact and can be re-attached to a fresh server.
+- Scalability: The database EBS volume can be snapshotted, backed up, or expanded in size 
+  independently of the OS root disk.
+- Performance: Spreads disk I/O operations across separate storage controllers.
+
+
+--------------------------------------------------------------------------------
+6. SUMMARY CHEAT SHEET & ACTIVE RECALL QUESTIONS
+--------------------------------------------------------------------------------
+
+[Core Concept Quick Reference Cheat Sheet]
+
++-----------------------+--------------------------------------------------------------------+
+| Concept / Tool        | Core Definition & Primary Takeaway                                 |
++-----------------------+--------------------------------------------------------------------+
+| Linux Kernel          | Open-source core OS engine created by Linus Torvalds in 1991.     |
+| Root User (UID 0)     | Monolithic superuser with total system privileges; avoid running   |
+|                       | web applications directly as root.                                 |
+| Capabilities          | Slices root privileges into discrete units (e.g.                   |
+|                       | CAP_NET_BIND_SERVICE) to enforce least privilege.                  |
+| SSH (TCP Port 22)     | Secure encrypted terminal protocol replacing Telnet.               |
+| SSH Key Pair          | Authentication using Private Key (`id_rsa`) and Public Key         |
+|                       | (`authorized_keys`).                                               |
+| `ssh-agent`           | Holds decrypted private key passphrases in memory; `ForwardAgent`  |
+|                       | forwards agent across jump hosts.                                  |
+| AWS EC2               | Elastic Compute Cloud virtual servers in specific AZs.             |
+| AWS EBS               | Persistent block storage drives; MUST be in the same AZ as EC2.    |
+| AWS Security Group    | Whitelist-only stateful cloud firewall controlling IP/Port access. |
+| Elastic IP (EIP)      | Permanent static public IPv4 address assigned to an AWS account.   |
+| Nginx Reverse Proxy   | Forwards HTTP requests to app servers via `proxy_pass`.            |
+| WSGI / uWSGI          | Interface managing dynamic Python application worker processes.    |
+| Volume Separation     | Decoupling DB storage onto dedicated EBS volumes to protect data.  |
++-----------------------+--------------------------------------------------------------------+
+
+--------------------------------------------------------------------------------
+[Active Recall Self-Testing Quiz]
+--------------------------------------------------------------------------------
+
+1. Q: Why is running a web server like Nginx as the `root` user considered a major security risk?
+   A: If Nginx has a security flaw (e.g. Remote Code Execution), an attacker gaining control of 
+      an Nginx process running as `root` gains full administrative control of the entire OS. 
+      Running under an unprivileged user (like `www-data`) strictly limits potential damage.
+
+2. Q: How do Linux Capabilities improve application security compared to the traditional root model?
+   A: Capabilities break `root` power into ~40 fine-grained privileges. An application can be granted 
+      only the specific privilege it needs (e.g., `CAP_NET_BIND_SERVICE` to bind port 80) without 
+      granting dangerous abilities like mounting drives (`CAP_SYS_ADMIN`) or raw sniffing (`CAP_NET_RAW`).
+
+3. Q: What key constraint must be satisfied when attaching an AWS EBS volume to an EC2 instance?
+   A: Both the EBS volume and the target EC2 instance MUST be located within the exact same Availability Zone (AZ).
+
+4. Q: How does public-key authentication in SSH verify a user without transmitting the private key?
+   A: The server encrypts a challenge/verifies a digital signature using the client's public key stored in 
+      `~/.ssh/authorized_keys`. The client uses its local private key to sign the challenge. The private key 
+      never leaves the client machine.
+
+5. Q: What is the purpose of the `~/.ssh/known_hosts` file?
+   A: It stores the public key fingerprints of verified remote SSH servers. If a server's host key changes 
+      unexpectedly during connection, SSH alerts the user of a potential Man-In-The-Middle (MITM) attack.
+
+6. Q: Why should an Elastic IP (EIP) be used for production AWS EC2 web servers?
+   A: Standard EC2 public IPs change every time an instance stops or restarts. An Elastic IP provides a 
+      permanent, static public IPv4 address that persists across restarts, keeping DNS records stable.
+
+7. Q: How does an AWS Security Group handle incoming network traffic by default?
+   A: Security Groups operate as strict WHITELISTS. All incoming traffic is implicitly DENIED unless 
+      an explicit allow rule matching the protocol, port, and source IP CIDR block exists.
+
+8. Q: Why is Nginx combined with uWSGI instead of running Python Django code directly inside Nginx?
+   A: Nginx is an HTTP server and reverse proxy, but it cannot directly interpret or execute Python 
+      application code. Nginx uses `proxy_pass` to route dynamic requests to uWSGI, which manages Python 
+      WSGI worker processes.
+
+9. Q: What is the primary benefit of moving a database directory (e.g. `/var/lib/mysql`) onto a separate EBS volume?
+   A: Data separation ensures persistent storage is decoupled from the OS. If the OS crashes or requires 
+      re-creation, the database volume remains unaffected and can be attached to a new server instance.
+
+================================================================================
+END OF WEEK 8 STUDY GUIDE
+================================================================================

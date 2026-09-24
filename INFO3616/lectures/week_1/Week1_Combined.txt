@@ -1,0 +1,370 @@
+================================================
+INFO3616 – Study Guide
+Week 1 - Introduction to Security Engineering
+================================================
+
+OVERVIEW
+--------
+This study guide covers Week 1 of INFO3616 Cybersecurity Engineering, introducing the fundamentals of Security Engineering. We explore what security engineering is, how it differs from safety and reliability engineering, a four-component security engineering framework (Policy, Mechanisms, Assurance, Incentives), key security goals (confidentiality, integrity, authenticity, authorization, accountability, non-repudiation, deniability, availability, privacy), fundamental security design principles, and security attacks (passive vs active, attack vectors, surfaces, trees, and threat actors).
+
+------------------------------------------------
+SECTION 1: What is Security Engineering?
+------------------------------------------------
+
+Engineering is the application of science and maths to solve problems. While scientists and inventors develop theories and innovations, engineers apply these discoveries to the real world.
+
+Security engineering means conceiving, designing, and implementing hardware and software that produces only the expected answers, even when confronted with malice, error, or mischance. It goes beyond simple fault tolerance (safety engineering, reliability engineering). A secure system tolerates the activities of the opponent, but there is no such thing as a perfectly secure system. Security is multi-faceted and requires cross-disciplinary expertise.
+
+💡 **Programming Satan's Computer**: "Our task is to program a computer that gives answers which are subtly and maliciously wrong at the most inconvenient possible moment." — Anderson & Needham. The problem is the presence of a hostile opponent who can alter messages at will.
+
+💡 **Historical Example**: The Enigma machine in WWII — Germans believed it was unbreakable, yet Allied cryptanalysts (including Alan Turing) cracked its codes. This highlighted the importance of anticipating adversary strategies.
+
+Distributed systems are systems where components on different networked computers communicate by passing messages (client-server, peer-to-peer, cloud computing, decentralized models).
+
+------------------------------------------------
+SECTION 2: Security Engineering vs Safety vs Reliability Engineering
+------------------------------------------------
+
+🧠 **Safety Engineering**: Prevents accidents, ensures systems operate without causing harm to people, property, or environment. Identifies hazards, assesses risks, designs safety features.
+
+🧠 **Reliability Engineering**: Ensures systems perform intended functions without failure over a specified period. Goal: enhance dependability and availability, minimize downtime.
+
+🧠 **Security Engineering**: Considers a hostile opponent (malice). Neither safety nor reliability engineering considers an adversary.
+
+Examples:
+- Chemical plant preventing toxic gas release → **Safety Engineering**
+- Sensor network monitoring equipment to prevent breakdowns → **Reliability Engineering**
+- Bank protecting customer data from cyberattacks → **Security Engineering**
+- Aircraft component failure analysis → **Reliability Engineering**
+- Hospital backup power systems → **Reliability Engineering**
+- Factory emergency shutdown procedures → **Safety Engineering**
+- Government multi-factor authentication → **Security Engineering**
+- Secure coding practices and penetration testing → **Security Engineering**
+
+------------------------------------------------
+SECTION 3: A Framework for Security Engineering
+------------------------------------------------
+
+To build dependable distributed systems, four things must come together: **Policy, Mechanisms, Assurance, and Incentives** (interconnected).
+
+**Policy** — What we mean to achieve (what it means to keep the system secure). Set by higher management for business continuity and compliance. Examples: "Customer data must be stored only within our data centres." "Only authorized employees must access client personal information." Policies do not define how to implement them.
+
+**Mechanisms** — Machinery to implement policies: encryption for confidentiality, tamper-resistant hardware for physical security, cryptographic hashes for integrity. For beginners, it's all about machinery, but it's only one aspect.
+
+**Assurance** — How much reliance you can place on each mechanism and how well they work together. Examples: time to break RSA-2048 (trillions of years classical, ~10 seconds quantum). Security engineers must estimate assurances. Mechanisms secure today may not be secure tomorrow.
+
+**Incentives** — Motives of defenders and attackers. Attackers: state actors, cybercriminals/ransomware groups, script kiddies, hacktivists. Understanding threats and prioritizing defenses = Threat Modelling. Security costs money — incentives help decide degree of security needed.
+
+💡 **Case Study: 2013 Target (US) Data Breach** — 40M credit/debit cards, 70M personal info stolen via malware in POS systems.
+- **Policy failure**: Granted network access to HVAC contractor Fazio Mechanical without verifying security practices
+- **Mechanism**: FireEye detected threats, but no incident response mechanisms to react
+- **Assurance**: FireEye reliable, but SSO without least privilege allowed "Pass-the-hash" attacks
+- **Incentives**: Target was lucrative (holiday season); security team failed to act on FireEye alarms; management prioritized operations over customer notification
+
+------------------------------------------------
+SECTION 4: Security Goals
+------------------------------------------------
+
+Security goals define security policies. Sometimes overlap between goals.
+
+### Confidentiality and Secrecy
+Preserves authorized restrictions on information access/disclosure. Loss = unauthorized disclosure. Access control is a form of confidentiality. Secrecy = effect of mechanisms limiting principals who can access info (cryptography, access controls). Confidentiality = obligation to protect others' secrets. We simplify: don't distinguish secrecy vs confidentiality.
+
+### Data/Message Integrity
+Effect of a mechanism allowing a verifier to check if message modified in transit or data altered since last legitimate update. Loss = unauthorized modification/destruction. Cannot effectively defend against modification in transit (attacker can flip bits). Important effect: we can detect changes. Close to tamper-evident, NOT tamper-resistance (hardware capability to withstand modification attempts).
+
+### Authenticity
+Allows verifier to determine originator of message/data. Verifies users are who they claim, inputs from trusted sources. Effective implementation implies integrity AND freshness. NOT the same as authentication (process of identifying a party).
+
+🔑 **Authenticity = Integrity + Freshness**
+- Integrity: message not altered in transit
+- Freshness: message is new, not a replay of old message
+
+### Authorisation
+Verifier determines if entity allowed to execute action or access data. Often uses authentication but doesn't imply it. Example: cinema ticket = authorization, not identity. Closely linked to access control and accountability.
+
+### Accountability
+Verifier determines which entity responsible for certain action. Traces actions through system. Implies authorization, access control, may imply authentication. Closely related to non-repudiation. Needs logging (auditable, verifier can access/trust logs) and log protection.
+
+### Non-repudiation
+Entity cannot successfully deny responsibility. Core = legal concept (cannot deny sending/receiving transaction). In law: plausible evidence suffices, not cryptographic proof. Supported by accountability. In crypto: requires authenticity, integrity, secure timestamping (extremely hard).
+
+### Deniability
+Capability to reject notion of responsibility. Opposite of non-repudiation. Often more useful (highly confidential communication). Can be partially achieved by cryptographic means. Security understanding ≠ court interpretation.
+
+### Availability
+System capability to provide services when needed, even during attack/error/mishap. Loss = disruption of access. DDoS = attacks against availability. May trade lower security for higher availability (e.g., warfare: comms availability > confidentiality). Hard to achieve (asymmetric systems, huge attack surface).
+
+### Privacy
+Entity's right to control what info relating to themselves they release/hide. Aspects: static data (released datasets), dynamic data (DB queries), network privacy. Privacy ≠ Anonymity.
+
+🔑 **Privacy vs Anonymity**:
+- **Privacy**: Alice joins health forum with real name/address but controls visibility; data protected, accessible by authorized personnel
+- **Anonymity**: Bob uses pseudonym "HealthSeeker123", no real info, forum doesn't log IP — identity completely unknown
+
+------------------------------------------------
+SECTION 5: Fundamental Security Design Principles
+------------------------------------------------
+
+### Economy of Mechanism
+Design should be as simple and small as possible. Easier to test/verify. Complex design = more opportunities for adversaries.
+**Example**: UNIX modular, small codebase → Linux/macOS heritage. Windows Vista: complex features, large codebase → larger attack surface.
+
+### Fail-safe Defaults
+Access decisions based on permission, not exclusion. Default = lack of access. Protection scheme identifies conditions where access permitted. Better failure mode than default permit.
+**Example**: File permissions default deny, require explicit grant. POODLE attack exploits SSL/TLS fallback to SSL 3.0 when negotiation fails.
+
+### Complete Mediation
+Every access checked against access control mechanism. No reliance on cached decisions. In continuous systems, careful propagation of authority changes.
+**Example**: Zero Trust Networks — every request validated against policies, irrespective of previous authorization. No trust based on network location.
+
+### Open Design
+Security mechanism design should be open, not secret. Keys secret, algorithms open to public scrutiny. NIST standardization philosophy.
+**Example**: CSS (DVD encryption) kept algorithm secret → no public scrutiny → Frank Stevenson published 3 exploits (1999) → DeCSS created to bypass. Security through obscurity fails.
+**Kerkhoff's Principle**: Cryptographic system secure even if everything except key is public knowledge.
+
+### Separation of Privilege
+Multiple privilege attributes required for access to restricted resource.
+**Example**: Multi-factor auth (password + smart card). Or program divided into parts limited to specific privileges.
+**UNIX Example**: Root access requires BOTH root password AND wheel group membership (GID 0).
+
+### Least Privilege
+Every process/user operates with least set of privileges necessary.
+**Example**: Role-based access control. Temporal aspect: admins have special privileges only when necessary.
+**Apache Example**: "www-data" user runs web server with minimal permissions (read web directory, write logs). No admin privileges. Compromise limited to web server context.
+
+### Least Common Mechanism
+Minimize functions shared by different users, providing mutual security. Reduces unintended communication paths, easier to verify.
+**Example**: Passwords must not be reused between different systems/services.
+
+### Psychological Acceptability
+Security mechanisms should not unduly interfere with user work while meeting authorized access needs. If mechanisms hinder usability, users turn them off. Should be transparent or minimal obstruction. Must reflect user's mental model of protection.
+**Example**: Fingerprint/facial recognition for device access = high security + ease of use.
+
+### Isolation
+Public access systems isolated from critical resources (data, processes) to prevent disclosure/tampering. High sensitivity → limit systems storing data, isolate physically or logically. Individual user processes/files isolated from each other.
+**Example**: Apple Secure Enclave — hardware coprocessor in SoC handles encryption/decryption/key management independently from main processor. Even if OS compromised, keys/operations remain secure. Protects biometric data (Face ID, Touch ID).
+
+### Encapsulation
+Specific form of isolation based on object-oriented functionality. Encapsulates procedures and data objects in own domain. Internal structure accessible only to protected subsystem procedures. Procedures called only at designated entry points.
+**Example**: Healthcare database — access via stored procedures (GetPatientRecord) and views (PublicPatientInfo), not direct table queries. Enforces access control, business rules, data integrity, auditing/logging.
+
+### Modularity
+Security functions as separate, protected modules AND modular architecture for mechanism design.
+**Example**: AWS KMS — centralized managed cryptographic module used by S3, EBS, RDS, Lambda. Centralization ensures consistent encryption. Module protected from tampering. Modular architecture allows updates without disrupting dependent services.
+
+### Layering (Defense in Depth)
+Multiple, overlapping protection approaches addressing people, technology, operational aspects. Failure of one layer ≠ unprotected system. Multiple barriers between adversary and protected info/services.
+**Example**: Corporate network: MFA → Role-based access → Patch management → Antivirus → Firewalls → Encryption → Security training. Phishing steals password? Still need MFA, access controls, antivirus.
+
+### Least Astonishment
+Program/UI should respond in way least likely to astonish user. Authorization mechanism transparent, intuitive understanding of security goals → mechanisms.
+**Example**: JavaScript `parseInt("010")` defaulted to base 8 (octal) vs convention of base 10 → developer confusion/bugs. Fixed in ECMAScript 5.
+
+------------------------------------------------
+SECTION 6: Security Attacks
+------------------------------------------------
+
+A security attack compromises security of information owned by an organization. Classification: **Passive** vs **Active** attacks (X.800, RFC 4949).
+
+### Passive Attacks
+Attempt to learn/use information from system but don't affect system resources. Eavesdropping/monitoring transmissions. Goal: obtain transmitted information.
+- **Release of message contents**
+- **Traffic Analysis**
+
+### Active Attacks
+Attempt to alter system resources or affect operation. Modification of data stream or creation of false stream. Sub-categories:
+- **Replay**: Capture and retransmit message
+- **Masquerade**: Impersonate another entity
+- **Data Modification**: Alter message contents
+- **Denial of Service**: Prevent legitimate use
+
+### Common Cryptography Actors
+- **Alice (A)**: Sender/originator
+- **Bob (B)**: Recipient/intended receiver
+- **Eve (E)**: Eavesdropper (intercepts, tries to decipher)
+- **Mallory (M)**: Malicious attacker (intercepts, alters, disrupts)
+- **Trent (T)**: Trusted third party (e.g., certification authority)
+
+### Attack Vector
+Specific method/pathway for unauthorized access.
+- **Phishing**: Fraudulent emails/messages from trusted source → trick into revealing info or clicking malicious links
+- **Malware**: Software to harm/exploit devices/services/networks. Via email attachments, downloads, OS vulnerabilities
+- **Person-in-the-Middle (PitM)**: Intercept communication between two parties to steal/manipulate data
+
+### Attack Surface
+Reachable and exploitable vulnerabilities in a system. Categories:
+- **Network attack surface**: Vulnerabilities over enterprise/WAN/Internet (protocol vulns, DoS, comms disruption, intruder attacks)
+- **Software attack surface**: Vulnerabilities in application/utility/OS code (focus: web server software)
+- **Human attack surface**: Vulnerabilities from personnel/outsiders (social engineering, human error, trusted insiders)
+
+Attack surface analysis = useful for assessing threat scale/severity. Systematic analysis → awareness of where mechanisms needed. Smaller surface = harder for adversary.
+
+### Attack Tree
+Branching, hierarchical data structure representing potential techniques for exploiting vulnerabilities. Documents attacks in structured form revealing key vulnerabilities. Guides system design and countermeasure choice/strength.
+**Example**: Internet banking authentication attack tree — root = compromise user account. Leaf nodes = events comprising attacks (user credential compromise, injection of commands, credential guessing, security policy violation, use of known authenticated session).
+
+### Who Is the Opponent?
+Understanding nature/motivations crucial for effective defenses.
+- **Criminals**: Botnet herders, malware developers, spam senders, bulk account compromise, targeted attackers, cash-out gangs, ransomware. Motivation: financial gain.
+- **Internal attacks**: Fraud/malicious activities by insiders (employees, contractors) misusing access.
+- **State actors**: Nation-state sponsored attacks.
+- **Whistle-blowers**: Disclose information.
+- **Hacktivists and hate campaigns**: Ideological/political motivations.
+- **AI (Soon)**: Emerging threat category.
+
+------------------------------------------------
+SECTION 7: Applying the Security Framework — Bank Security Case Study
+------------------------------------------------
+
+**Policy**
+- Overall goal: Maintaining correct account balances
+- Sub-goals: Safeguard integrity/confidentiality/availability of ATMs, online banking; ensure accountability of bank-to-bank transfers
+- Huge attack surface: many apps, many people, insider attacks
+
+**Mechanisms**
+- Strong bookkeeping procedures and access control (backend)
+- Anomaly detection systems (unusual transactions)
+- Four-eyes principle: large transfers need ≥2 authorizations
+- ATMs use strong cryptographic protocols for authentication
+
+**Assurance**
+- Confidence depends on mechanism effectiveness
+- Biggest threat: insiders (petty theft)
+- Neither bookkeeping nor cryptography defends against phishing customers or spear-phishing employees
+- Anomaly detection difficult: unusual transfers can be legitimate
+
+**Incentives**
+- Attackers: get customer money without detection risk; series of transfers to lose trail/make money irrecoverable
+- Employees: need careful screening/vetting; common attack vector
+
+------------------------------------------------
+SECTION 8: Security Is a Process, Not a Product
+------------------------------------------------
+
+- History teaches all products come with flaws
+- Many facets of security → not enough to build/buy product and "have security"
+- Many other factors: users, admins, insiders, need to link systems
+- Environment is dynamic, not static:
+  - Change in business value → change in attacker incentive
+  - Need to update systems, work with others
+  - Huge complexity of systems secured by a "security product"
+
+------------------------------------------------
+KEY TAKEAWAYS
+------------------------------------------------
+1. Security engineering builds systems that remain dependable despite malice, error, or mischance — it goes beyond safety and reliability by assuming a hostile opponent.
+2. The four-pillar framework (Policy, Mechanisms, Assurance, Incentives) is essential for designing and assessing distributed system security.
+3. Security goals (confidentiality, integrity, authenticity, authorization, accountability, non-repudiation, deniability, availability, privacy) define what we want to achieve and often overlap.
+4. The 13 fundamental design principles (economy of mechanism, fail-safe defaults, complete mediation, open design, separation of privilege, least privilege, least common mechanism, psychological acceptability, isolation, encapsulation, modularity, layering, least astonishment) guide secure system development.
+5. Attacks are classified as passive (eavesdropping, traffic analysis) or active (replay, masquerade, modification, DoS); understanding attack vectors, surfaces, and trees helps prioritize defenses.
+6. Threat actors include criminals, insiders, state actors, hacktivists, and increasingly AI-driven threats — each with different incentives.
+7. The Target breach case study shows how failures across all four framework pillars (policy, mechanisms, assurance, incentives) enable major incidents.
+8. Security is an ongoing process, not a product — the environment is dynamic, attackers adapt, and systems must continuously evolve.
+
+------------------------------------------------
+TERMS TO KNOW
+------------------------------------------------
+Security Engineering: Conceiving, designing, and implementing hardware/software that produces only expected answers even under malice, error, or mischance.
+Distributed System: Components on different networked computers communicating by passing messages.
+Policy: Defines what we want to achieve (security goals), set by management for business continuity and compliance.
+Mechanisms: Tools/machinery to implement policies (encryption, tamper-resistant hardware, cryptographic hashes).
+Assurance: Confidence in mechanisms' reliability and how well they work together.
+Incentives: Motives of defenders and attackers; understanding these drives threat modeling and resource allocation.
+Threat Modelling: Methodical process of understanding possible threats and prioritizing defense mechanisms.
+Confidentiality: Preserving authorized restrictions on information access and disclosure.
+Integrity: Ability to detect unauthorized modification of data in transit or at rest.
+Authenticity: Ability to verify the originator of a message or data item; implies integrity and freshness.
+Freshness: Proof that a message is new and not a replay.
+Authorization: Determining if an entity is allowed to execute an action or access data.
+Accountability: Ability to trace actions to a responsible entity; requires auditable, protected logging.
+Non-repudiation: Entity cannot deny responsibility for an action; legal concept supported by accountability.
+Deniability: Capability to reject responsibility; opposite of non-repudiation.
+Availability: System capability to provide services when needed, even during attack.
+Privacy: Entity's right to control information relating to themselves.
+Anonymity: State of being unidentified/unidentifiable within a context.
+Passive Attack: Eavesdropping/monitoring transmissions without affecting resources.
+Active Attack: Modifying data stream or creating false stream (replay, masquerade, modification, DoS).
+Attack Vector: Specific method/pathway for unauthorized access (phishing, malware, PitM).
+Attack Surface: Reachable and exploitable vulnerabilities (network, software, human).
+Attack Tree: Hierarchical structure representing potential attack techniques.
+Economy of Mechanism: Keep security design simple and small for easier verification.
+Fail-safe Defaults: Default deny; access based on explicit permission.
+Complete Mediation: Every access checked against authority; no cached decisions.
+Open Design: Security mechanisms open to public scrutiny; only keys secret.
+Separation of Privilege: Multiple privilege attributes required for access.
+Least Privilege: Operate with minimum necessary privileges.
+Least Common Mechanism: Minimize shared functions between users.
+Psychological Acceptability: Security should not unduly hinder usability.
+Isolation: Public systems separated from critical resources.
+Encapsulation: Object-oriented isolation via controlled entry points.
+Modularity: Security functions as separate, protected modules.
+Layering (Defense in Depth): Multiple overlapping protection approaches.
+
+------------------------------------------------
+MNEMONICS
+------------------------------------------------
+**PILAMES**: Policy, Incentives, Layering, Assurance, Mechanisms, Economy of mechanism, Separation of privilege — the 7 pillars to remember
+**CIA Triad**: Confidentiality, Integrity, Availability — classic security goals
+**AIDA**: Authorization, Integrity, Deniability, Accountability — extended security goals
+**PAM**: Passive vs Active vs Masquerade — attack classification
+**SILK**: Separation, Isolation, Least privilege, Kernel (modularity) — design principles mnemonic
+
+------------------------------------------------
+WORKED EXAMPLES
+------------------------------------------------
+### Example 1: Classify Engineering Discipline
+A hospital installs backup generators to keep life-support machines running during power outages.
+→ **Answer**: Reliability Engineering (ensuring continuous operation without failure)
+
+A factory puts safety barriers around hazardous machinery and trains workers on emergency shutdown procedures.
+→ **Answer**: Safety Engineering (preventing harm to people)
+
+A bank implements multi-factor authentication and encryption to protect customer accounts from hackers.
+→ **Answer**: Security Engineering (defending against malicious opponents)
+
+### Example 2: Target Breach Framework Analysis
+Using the 4-pillar framework:
+- **Policy**: Failed to vet third-party HVAC contractor's security posture
+- **Mechanisms**: FireEye detected malware but no incident response process to act on alerts
+- **Assurance**: SSO without least privilege allowed pass-the-hash attacks; anomaly detection couldn't distinguish legitimate vs fraudulent transactions
+- **Incentives**: Attackers targeted holiday shopping season for maximum profit; security team lacked incentive to respond to alerts; management prioritized operations over disclosure
+
+### Example 3: Apply Design Principles
+**Scenario**: A web application stores user passwords in plaintext in a shared database table accessible by all microservices.
+**Violations**:
+- Least Privilege: Services don't need direct password access
+- Least Common Mechanism: Shared password table creates unintended communication paths
+- Encapsulation: Passwords should be accessed only via controlled procedures (hashing/verification)
+- Fail-safe Defaults: Default should be no access to password data
+**Fix**: Use dedicated auth service with bcrypt hashing; other services call verify API; no direct DB access.
+
+### Example 4: Attack Tree for Online Banking
+Root: Compromise User Account
+├── Credential Theft
+│   ├── Phishing (fake login page)
+│   ├── Keylogger malware
+│   └── Social engineering (phone call)
+├── Credential Guessing
+│   ├── Brute force
+│   └── Credential stuffing (reuse from other breaches)
+├── Session Hijacking
+│   ├── Session fixation
+│   └── XSS stealing session cookie
+└── Insider Threat
+    ├── Malicious employee
+    └── Compromised admin credentials
+
+------------------------------------------------
+EXAM FOCUS
+------------------------------------------------
+1. **Define Security Engineering** and explain how it differs from Safety Engineering and Reliability Engineering.
+2. **Name and describe the four components** of the Security Engineering Framework (Policy, Mechanisms, Assurance, Incentives).
+3. **List and briefly explain 5 security goals** from the lecture (confidentiality, integrity, authenticity, authorization, accountability, non-repudiation, deniability, availability, privacy).
+4. **Distinguish between passive and active attacks** with one example of each.
+5. **What is an attack vector vs attack surface vs attack tree?**
+6. **State and give an example of 3 fundamental security design principles** (e.g., Economy of Mechanism, Fail-safe Defaults, Complete Mediation, Open Design, etc.).
+7. **Explain Kerckhoff's Principle** and how it relates to Open Design.
+8. **Using the 4-pillar framework, analyze a security incident** (like the Target breach or a hypothetical scenario).
+9. **Why is "Security a Process, Not a Product"?** Explain with examples.
+10. **What is the difference between Privacy and Anonymity?** Give an example of each.

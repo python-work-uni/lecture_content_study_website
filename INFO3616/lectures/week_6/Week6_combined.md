@@ -1,0 +1,488 @@
+# Week 6 — Cryptographic Hashes, MACs, and Digital Signatures
+
+> Consolidated from **Week6_Notes.pdf** and **Week6_slides.pdf**.
+> Cybersecurity Engineering — INFO3616, School of Computer Science, The University of Sydney.
+> Lecturers: Dr Suranga Seneviratne, Dr Thilini Dahanayaka. September 3, 2026.
+
+## Recommended Reading
+
+**Cryptography and Network Security (7th Edition — William Stallings)**
+
+- **Chapter 11** — Cryptographic Hash Functions
+- **Chapter 12** — Message Authentication Codes
+- **Chapter 13** — Digital Signatures
+
+> These lecture notes are given to you to assist with understanding the lecture content better. This content is prepared based on the above book chapters. You are not allowed to upload this material to any internet source or share it with anyone else.
+
+## Agenda
+
+- Cryptographic hash functions
+- Requirements and security
+- Secure Hash Algorithm (SHA)
+- Message Authentication Code (MAC)
+- Digital Signatures
+
+---
+
+# 1 Hash Functions
+
+A hash function is a **one-way function** that accepts a variable-length block of data _M_ as input and produces a fixed-size hash value _h_ = _H_(_M_). The output is referred to by different names depending on context: digest, hash, hash value, checksum, CRC, and more. Given that the input space of a hash function is significantly larger than its output space, **collisions are inevitable**. A "good" hash function has the property that applying it to a large set of inputs produces outputs that are evenly distributed and emulate randomness.
+
+**Commonly used hash functions:**
+
+- Cyclic Redundancy Check (CRC) (CRC-16, CRC-32, …)
+- MD5 (Message Digest)
+- SHA-1, SHA-2, SHA-3 (Secure Hash Algorithm)
+- RIPEMD160
+
+CRC was not designed for cryptography. MD5 and SHA-1 were designed for cryptography but were found to be insufficient (MD5 no longer used; SHA-1 in phase-out).
+
+**Goal:** Integrity — we want to ascertain that a received message is the same as the one that was sent.
+
+**Idea:** define a function to create a checksum ("hash function"):
+
+- Sender applies the hash function to the message and obtains a checksum ("hash value").
+- Sender encrypts the message and sends it together with the hash value of the plaintext.
+- Receiver decrypts the message, applies the hash function, and compares with the transmitted hash value.
+- If the hash values match, the plaintext must be correct.
+
+The principle objective of hash functions in cryptography is **data integrity**. At a conceptual level: a predefined hash function generates a checksum for a message; the sender hashes the message, may encrypt it for confidentiality, and sends both the (encrypted) message and its hash. The receiver decrypts, recalculates the hash, and compares. If they match, the message remained unaltered in transit. For this to hold:
+
+- **a.** An attacker cannot deduce the original message from the hash (would compromise confidentiality).
+- **b.** An attacker must not be able to find a plaintext that results in the same hash (otherwise the plaintext can be replaced without changing the hash, making alteration undetectable).
+
+Hash functions satisfying these criteria are **cryptographic hash functions**. The input of variable length is padded to an integer multiple of a predetermined fixed length (the **block size**). The padding incorporates the length of the original message in bits — this **length field** is a security measure that increases the difficulty for an attacker to produce _H_(_a_) = _H_(_b_), _a ≠ b_. The message then undergoes hashing, producing _h_.
+
+**What we are trying to prevent:** In order to communicate securely we normally want both confidentiality and integrity. With hash functions, for integrity we want to prevent:
+
+- The attacker obtaining the plaintext from the hash value alone (defeats encryption, though not integrity itself).
+- The attacker finding a bit sequence with the same hash value (decryption of a bit sequence may yield implausible plaintext, but plausibility is not a good way to determine integrity).
+
+## 1.1 Applications of Cryptographic Hash Functions
+
+### 1.1.1 Message Authentication
+
+Message authentication verifies the integrity of a message; often there is an additional requirement to confirm the sender's claimed identity. When a hash function is used for message authentication, the resulting value is commonly termed a **message digest**.
+
+The sender generates a hash value from the message and sends both the hash and the message. On receipt, the receiver performs the same hash computation and compares. A disparity implies either the message or the hash was altered.
+
+However, this basic method is vulnerable to **person-in-the-middle attacks**: an attacker (Darth) who intercepts Alice's message can replace the original message and alter the message digest to match. Bob will not detect the change. This problem is **origin authentication** (closely related to integrity). To prevent it, the message digest generated by Alice must be protected.
+
+**Message Authentication Codes (MACs)** — also known as **keyed hash functions** — are a common way to achieve message authentication (integrity + origin authentication). MACs rely on a **shared secret key** between communicating parties. They generate a hash value (the MAC) incorporating both the message and the secret key, transmitted alongside the message. An attacker cannot alter the MAC without the secret key, and the verifying party can ascertain the sender's identity since only parties privy to the key can produce the MAC. See Section 2.
+
+### 1.1.2 Digital Signatures
+
+Digital signatures operate similarly to MACs but rely on **public-key cryptography** rather than a shared secret key. The hash value of a message is encrypted with the sender's **private key** and transmitted with the message. Anyone who knows the sender's **public key** can verify the integrity of the message and confirm it came from the expected sender. An attacker aiming to modify the message and/or hash would need the sender's private key. See Section 3.
+
+**Other applications:** one-way password files, intrusion detection, virus detection, and pseudorandom number generators (PRNG) / pseudorandom functions (PRF).
+
+## 1.2 Security Requirements for Cryptographic Hash Functions
+
+**Preimage:** A specific input value that produces a particular output when passed through a given hash function. For _h_ = _H_(_x_), _x_ is the preimage of _h_.
+
+**Collision:** If two different inputs produce identical hash values under the same hash function, i.e. _H_(_a_) = _H_(_b_), _a ≠ b_.
+
+Formally, the security requirements are:
+
+1. Preimage resistance
+2. Second preimage resistance
+3. Collision resistance
+
+### 1.2.1 Preimage Resistance
+
+**Goal:** If the attacker knows an output hash value, we don't want them to find an input that produces it.
+
+Given a randomly chosen _y_ from _H_'s range of output values, it is computationally infeasible to find an _x_ such that _H_(_x_) = _y_.
+
+**Note:** It is not impossible — brute force is always possible — but computational infeasibility makes it far too hard in practice. This property is important if the confidentiality of the original message is required: if preimage resistance is violated, an attacker can infer the original message from the hash.
+
+### 1.2.2 Second Preimage Resistance
+
+**Goal:** If the attacker is given an input value, they cannot find another input with the same output hash value.
+
+Given a randomly chosen _x_, it is computationally infeasible to find an _x′_, _x′ ≠ x_, such that _H_(_x_) = _H_(_x′_).
+
+If compromised, an attacker could substitute the original message with a forged one yielding the same hash.
+
+### 1.2.3 Collision Resistance
+
+**Goal:** The attacker should be unable to find any two input values with the same output hash value.
+
+It is computationally infeasible to find a pair (_x, x′_), _x ≠ x′_, such that _H_(_x_) = _H_(_x′_).
+
+**Note:** Collision resistance implies second preimage resistance (but not preimage resistance). A successful second-preimage attack implies a successful collision attack; a successful collision can sometimes be all the attacker needs.
+
+### 1.2.4 Pseudo-randomness
+
+Pseudo-randomness is the property of a sequence that appears random but is generated deterministically. It is not traditionally listed as a requirement, but it is implied: cryptographic hash functions are used for key derivation and pseudorandom number generation, and the three resistance properties depend on the randomness of the output. Verify that a given hash function indeed produces output that appears pseudorandom, e.g.:
+
+```sh
+sh-3.2# echo "CYBERSECURITY ENGINEERING" | sha256sum
+605d08ba60312b5e8b79105bc4f31ee8c269b956cada4821c9e22876bab917e5
+sh-3.2# echo "CYBERSECURITY ENGINEERING" | md5sum
+ca00a2f980e354eb1ff97c4305aaed2e
+```
+
+A function that fulfils preimage resistance, second-preimage resistance, and collision resistance is called a **cryptographic hash function**. We then have a (feasibility-conditioned) guarantee that the attacker cannot obtain plaintexts and cannot easily find bogus inputs with the same hash values.
+
+### 1.2.5 Birthday Attack
+
+If _n_ random people are invited to a party, there is more than a 50% chance of two sharing a birthday if _n ≥ 23_. This is far fewer than most people intuitively expect — we are not asking whether someone matches a *specific* birthday, but whether any two match each other, giving vastly more opportunities for a match.
+
+**Birthday Problem:** "If there are 365 days in a year, how many people must be in a room before there is a 50% chance that two share the same birthday?" Answer: just 23.
+
+Sketchy proof — add people one by one and track the probability that all birthdays remain unique. After _k_ people, P(no match) = 1 · (364/365) · … · ((365−k+1)/365):
+
+| k | P(no match) |
+|---|---|
+| 20 | 58.9% |
+| 22 | 52.4% |
+| 23 | 49.3% |
+| 25 | 43.1% |
+
+**Generalised Birthday Attack:** If random variables are chosen from a uniform distribution in the range 0 through _N −_ 1, the probability that a repeated element is encountered exceeds 50% after _√N_ choices.
+
+**Applied to hashes:** For an _n_-bit output there are 2<sup>_n_</sup> possible values, so an attacker needs only about **2<sup>_n_/2</sup>** attempts for a >50% chance of a collision. For a 64-bit output that is just 2<sup>32</sup> — trivially achievable on modern hardware. This is why output length is a hard security requirement; currently the accepted minimum is _n ≥_ 160 bits (2<sup>80</sup> attempts), which remains computationally infeasible today.
+
+### 1.2.6 Relationships Among Properties
+
+- **Collision resistance implies second preimage resistance** — any function hard to find collisions in is also hard to find a second input matching a given hash, but the reverse does not always hold.
+- **Preimage resistance stands apart** — a function can be preimage resistant without being collision/second-preimage resistant, and vice versa; no strict implication runs between them.
+- **Collision resistance is the strongest of the two related properties** — breaking second preimage resistance also breaks collision resistance; collision resistance is harder to satisfy and harder to attack. Collision resistance is the hardest property to satisfy but the easiest to attack, because the attacker has maximum freedom (only needs *any* two colliding inputs, no specific target).
+
+### 1.2.7 Resistance Properties Required for Applications
+
+| Application | Preimage Resistant | Second Preimage Resistant | Collision Resistant |
+|---|---|---|---|
+| Hash + digital signature | Yes | Yes | Yes<sup>1</sup> |
+| Intrusion detection and virus detection | | Yes | |
+| Hash + symmetric encryption | | | |
+| One-way password file | Yes | | |
+| MAC | Yes | Yes | Yes<sup>1</sup> |
+
+<sup>1</sup> Resistance required if an attacker is able to mount a chosen message attack.
+
+## 1.3 Secure Hash Algorithm (SHA)
+
+The Secure Hash Algorithm (SHA) is the most prevalent hash function. Developed by NIST and introduced as FIPS 180 in 1993, the initial iterations (SHA-0, SHA-1, 160-bit output) have fallen out of favour due to susceptibility to collisions. In 2001/2002, NIST produced SHA-2 with variants SHA-224, SHA-256, SHA-384, SHA-512. In 2015, NIST announced the latest member, SHA-3, with variants SHA3-224, SHA3-256, SHA3-384, SHA3-512.
+
+| Algorithm | Message size | Block size | Word size | Digest size |
+|---|---|---|---|---|
+| SHA-1 | _<_2<sup>64</sup> | 512 | 32 | 160 |
+| SHA-224 | _<_2<sup>64</sup> | 512 | 32 | 224 |
+| SHA-256 | _<_2<sup>64</sup> | 512 | 32 | 256 |
+| SHA-384 | _<_2<sup>128</sup> | 1024 | 64 | 384 |
+| SHA-512 | _<_2<sup>128</sup> | 1024 | 64 | 512 |
+| SHA-512/224 | _<_2<sup>128</sup> | 1024 | 64 | 224 |
+| SHA-512/256 | _<_2<sup>128</sup> | 1024 | 64 | 256 |
+
+### 1.3.1 SHA-2
+
+SHA-512 takes an input message with a maximum length of less than 2<sup>128</sup> bits and produces a 512-bit message digest, processing the input in 1024-bit blocks. **Padding procedure:**
+
+- The original message of _L_ bits is padded with a single 1 bit followed by enough 0 bits so the total length is congruent to 896 mod 1024, leaving room at the end.
+- A 128-bit encoding of the original length _L_ is appended, bringing the padded message to an exact multiple of 1024 bits.
+- The padded message is split into _N_ blocks of 1024 bits each: _M₁, M₂, …, Mₜ_ — the "plaintext blocks" feeding the compression chain.
+- _H₀_ (IV) is a fixed, publicly-specified 512-bit constant defined in the standard. It is not secret and not random.
+
+**Inside the compression function _F_:**
+
+- _F_ unpacks _H<sub>i-1</sub>_ into eight 64-bit working registers _a–h_, transformed across **80 rounds**.
+- The message schedule expands the 1024-bit block _M<sub>i</sub>_ into 80 round words _W₀–W₇₉_, analogous to the AES key schedule turning one key into many round keys.
+- Each round mixes in one _W<sub>t</sub>_ and one public constant _K<sub>t</sub>_; six of the eight registers just shift along, so only two new values are computed per round.
+- **Davies–Meyer feedforward:** after round 79, the final _a–h_ are added mod 2<sup>64</sup> back to the original _H<sub>i-1</sub>_. The result of those eight additions is _H<sub>i</sub>_, passed to the next block.
+
+**Applications:** widely implemented in security applications and protocols (TLS/SSL, SSH, IPSec, …); validates and signs digital certificates and documents; verifies transactions in cryptocurrencies (e.g., Bitcoin uses SHA-256).
+
+### 1.3.2 SHA-3
+
+SHA-3 uses a **sponge construction** rather than SHA-2's register-based compression:
+
+- **Single unified state** of _r + c_ bits passed through permutation _f_. Unlike SHA-2's eight working registers, there is one big state repeatedly permuted.
+- **Absorbing phase:** each message block XORs into the top _r_ bits of the state, then _f_ scrambles the entire state. The bottom _c_ bits are never directly touched by the message input, protecting the security margin.
+- **Squeezing phase:** output is read from the top _r_ bits; _f_ is applied between each read. As many bits as needed can be squeezed out, making SHA-3 naturally an **extendable output function**.
+- **Rate _r_ vs capacity _c_ is a tunable tradeoff:** larger _r_ means faster hashing but smaller _c_ means lower security. Different SHA-3 variants just change this split.
+- **No length-extension vulnerability:** in SHA-2 an attacker who knows _H_(_m_) can compute _H_(_m_ ‖ extra) without knowing _m_ — the sponge structure eliminates this because the hidden _c_ bits make the full state unrecoverable from the output.
+
+---
+
+# 2 Message Authentication Code (MAC)
+
+Message authentication verifies that a received message comes from the said source and has not been altered. Any message-authentication or digital-signature mechanism has two levels of functionality: a lower-level function that generates an **authenticator** (a value used to authenticate a message), and a higher-level authentication protocol that uses this primitive so a recipient can authenticate a message. Authenticator-generating functions fall under three classes:
+
+- **Hash function:** using hash functions alone may not provide message authentication, as unprotected hash values are susceptible to person-in-the-middle attacks.
+- **Message encryption:**
+  - **Symmetric encryption:** encrypting with the shared key ensures confidentiality and lets B confirm the message originated from A, as the secret key is known only to A and B. However, an attacker can modify the ciphertext's bit pattern without knowing the key; if the original message was a bit sequence, the receiver cannot detect the alteration because the modified ciphertext still decrypts into a valid bit sequence.
+  - **Public-key encryption:** straightforward use ensures confidentiality but lacks authentication — anyone can encrypt a forged message with B's public key and substitute it undetected. To provide authentication, A can encrypt with their private key and B decrypts with A's public key (this does **not** provide confidentiality, as anyone can use A's public key to access the plaintext). This lets B confirm origin, but has the same limitation as symmetric: an attacker can modify the message without knowing A's private key, potentially going undetected if the altered ciphertext corresponds to a legitimate message. To achieve both confidentiality and authentication, A encrypts _M_ first with their private key (digital signature) then with B's public key — but the complex public-key algorithm must then be executed **four times** instead of two per communication.
+- **Message authentication code (MAC).**
+
+**Why MACs when we already have hashes?** Hashes are keyless — anyone, including an attacker, can compute a valid hash for a forged message, so they prove the message wasn't corrupted but can't prove who sent it. A MAC fixes this by incorporating a secret key: think of it as a **keyed hash**.
+
+A MAC is a fixed-size tag generated using a secret key shared between the parties, appended to the original message. MACs are also known as **cryptographic checksums**.
+
+_MAC_ = _C_(_K_, _M_)
+
+_M_ = input message, _C_ = MAC function, _K_ = shared key, _MAC_ = message authentication code.
+
+The message and MAC are transmitted together. The recipient recomputes the MAC using the shared key and compares. If the MACs match, assuming the key is known only to sender and receiver:
+
+1. The recipient is assured the message was not altered — any alteration without modifying the MAC causes a mismatch, and the attacker cannot produce a valid MAC without the key.
+2. The recipient is assured of the message's **origin**, as no other party has the key.
+3. If the message includes a **sequence number** (e.g., HDLC, X.25, TCP), the recipient can verify the sequence's integrity; an attacker cannot alter it undetected.
+
+This process does **not** provide confidentiality. Confidentiality can be added by encrypting either before or after the MAC algorithm.
+
+## 2.1 Requirements for Message Authentication Codes
+
+The intuition: given the MAC _t_ for a message _m_, an attacker should not be able to generate a valid MAC for a different message. A MAC function should satisfy:
+
+1. It must have the resistance properties of a cryptographic hash function.
+2. It must be computationally infeasible to predict a correct MAC _t′_ for a message _m′ ≠ m_, even when allowed to know any other combinations of (_m, t_).
+
+A cryptographic hash function fulfils the first requirement; incorporating a secret _s_ addresses the second, provided the resistance properties are upheld.
+
+> **Note:** While MACs based on symmetric block ciphers exist, this course focuses on MACs derived from cryptographic hash functions.
+
+## 2.2 HMAC (Hash-Based Message Authentication Code)
+
+While several methods have been proposed for integrating a secret key into a hash algorithm, the most widely used is **HMAC**. Published as RFC 2104, HMAC is the obligatory MAC for IP security, is used in Internet protocols including SSL, and is ratified as NIST standard FIPS 198.
+
+_HMAC_(_K_, _M_) = _H_[(_K_ ⊕ _opad_) ‖ _H_[(_K_ ⊕ _ipad_) ‖ _M_]]
+
+- _H_ can be any cryptographic hash function (e.g., SHA-3, SHA-2, MD5, SHA-1)
+- _K_ is the shared secret key
+- _M_ is the input message
+- _ipad_ and _opad_ are publicly known constant bit strings required for HMAC's security proof (their precise values matter little)
+
+**Structure notation:** _H_ = embedded hash function, _M_ = message input, _b_ = number of bits in a block, _L_ = number of blocks in _M_, _K_ = secret key, _K⁺_ = _K_ padded with zeros on the left to match _b_, _IV_ = initial value input to the hash function, _Y<sub>i</sub>_ = _i_-th block of _M_ (0 ≤ _i_ ≤ _L−1_), _ipad_ = 00110110 (36<sub>16</sub>) repeated _b_/8 times, _opad_ = 01011100 (5C<sub>16</sub>) repeated _b_/8 times, _n_ = length of hash code produced by _H_.
+
+**HMAC algorithm:**
+
+1. Append zeros to the left end of _K_ to create a _b_-bit string _K⁺_ (e.g., if _K_ is 160 bits and _b_ = 512, append 44 zeroes).
+2. XOR _K⁺_ with _ipad_ to produce the _b_-bit block _S<sub>i</sub>_.
+3. Append _M_ to _S<sub>i</sub>_.
+4. Apply _H_ to the stream from step 3.
+5. XOR _K⁺_ with _opad_ to produce the _b_-bit block _S₀_.
+6. Append the hash result from step 4 to _S₀_.
+7. Apply _H_ to the stream from step 6 and output the result.
+
+## 2.3 Security of HMAC
+
+The security of a MAC based on an embedded hash function depends on the cryptographic strength of that hash function (and key size). The appeal of HMAC is that its designers proved an **exact relationship** between the strength of the embedded hash function and the strength of HMAC.
+
+**Question:** According to the birthday paradox, 2<sup>64</sup> attempts have at least a 50% chance of producing a collision in MD5 (128-bit output), which looks feasible today. Can we use MD5 for HMAC?
+
+**Answer: Yes.** To attack MD5, the attacker can choose any set of messages and work offline on a dedicated facility to find a collision — because the attacker knows the algorithm and default IV. However, when attacking HMAC, the attacker cannot generate (message, code) pairs offline without the secret key _K_. They must observe a sequence of messages generated by HMAC under the same key. This requires 2<sup>64</sup> observed blocks (2<sup>72</sup> bits) generated with the same key. On a 1-Gbps link, this requires observing a continuous stream with no key change for about **150,000 years** — infeasible today. If speed is a concern, HMAC-MD5 can be used over HMAC-SHA-1.
+
+## 2.4 Applications of HMAC
+
+HMAC is widely used wherever two parties share a secret key and need to verify both authenticity and integrity — not just that a message arrived uncorrupted, but that it came from a trusted sender.
+
+- **API Request Signing (e.g., AWS Signature V4):** the client signs the full request (URL, headers, body, timestamp) with HMAC using a shared secret; the server recomputes the signature independently. A mismatch means the request was tampered with or replayed. Provides integrity and replay protection on top of standard authentication.
+  - **Note:** HMAC alone does not guarantee confidentiality — the message is still readable. In practice this happens over an encrypted TLS connection, which handles confidentiality separately.
+- Other applications include **JSON Web Tokens (JWT)** signing and **One-Time Passwords (HOTP/TOTP)** generation.
+
+## 2.5 Authenticated Encryption (AE)
+
+So far confidentiality (encryption) and authenticity (MAC) have been treated as separate, and combining them correctly is tricky and error-prone. **Authenticated encryption** is an encryption system that simultaneously provides both confidentiality and authenticity (integrity) in a single operation — ensuring data remains private while protected from tampering. A MAC alone only guarantees integrity and authenticity, not confidentiality, leaving data vulnerable to exposure if not encrypted. AE also addresses developer mistakes when using encryption and MAC separately (incorrect ordering or improper implementation). By integrating encryption and authentication, AE reduces these errors.
+
+**Authenticated Encryption with Associated Data (AEAD)** extends AE by allowing additional data (associated data) that is authenticated but **not** encrypted — sent in plaintext but included in the integrity check (e.g., headers, metadata). The MAC tag computation and encryption can be performed in parallel, making AEAD schemes efficient. AEAD is defined for both block and stream ciphers. The security of the construction depends on how tightly the two are coupled — ideally, no plaintext is released until integrity is verified.
+
+### 2.5.1 Four Approaches
+
+- **Hashing followed by encryption (H→E):** compute _h_ = _H_(_M_), then encrypt the message plus hash: _E_(_K,_(_M_ ‖ _h_)).
+- **Authentication followed by encryption (A→E, MAC-then-Encrypt):** requires two keys. Compute _T_ = _MAC_(_K₁, M_), then encrypt the message plus tag: _E_(_K₂,_[_M_ ‖ _T_]). Used in SSL/TLS. Send **Enc<sub>k1</sub>(m, MAC<sub>k2</sub>(m))**.
+- **Encryption followed by authentication (E→A, Encrypt-then-MAC):** requires two keys. Compute _C_ = _E_(_K₂, M_), then _T_ = _MAC_(_K₁, C_) to yield (_C, T_). Used in IPSec; can withstand stronger attacks; considered the strongest. Send **Enc<sub>k1</sub>(m), MAC<sub>k2</sub>(Enc<sub>k1</sub>(m))**.
+- **Independently encrypt and authenticate (E + A, MAC-and-Encrypt):** requires two keys. Compute _C_ = _E_(_K₂, M_) and _T_ = _MAC_(_K₁, M_) to yield (_C, T_); operations can be performed in either order. Used in SSH. Send **Enc<sub>k1</sub>(m), MAC<sub>k2</sub>(m)**.
+
+### 2.5.2 Example AEAD — Galois/Counter Mode (GCM)
+
+- Designed to be parallelizable for high throughput with low cost and low latency. Follows the **Encrypt-then-MAC** paradigm.
+  - The message is encrypted in a variant of CTR mode.
+  - The resulting ciphertext is multiplied with key material and message-length information over GF(2<sup>128</sup>) to generate the authenticator tag.
+  - The standard also specifies a MAC-only mode, known as **Galois MAC**.
+- Makes use of two functions:
+  - **GHASH** — a keyed hash function.
+  - **GCTR** — CTR mode with counters determined by simple increment-by-one.
+- Currently the strongest and most widely used block-cipher AEAD mode; highly efficient due to parallelism. However it is **very brittle in implementation** — nonce reuse, for example, can completely break security. Always use a well-vetted library rather than implementing it yourself.
+
+### 2.5.3 Example AEAD — Counter with CBC-MAC (CCM)
+
+- Standardized by NIST to support the security requirements of IEEE 802.11 WiFi networks.
+- A carefully engineered variation of MAC-and-Encrypt: computes CMAC over the message first to generate a tag, then encrypts both the message and tag using CTR mode.
+- Unlike naive MAC-and-Encrypt, CCM is considered secure because the construction is tightly specified. But it is **sequential** (the MAC must complete before encryption begins), making it less efficient than GCM.
+- A single key _K_ is used for both encryption and MAC. This is safe for the same reason as GCM: the two uses are carefully separated by design and accounted for in the security proof.
+- Widely used in constrained environments like IoT and WiFi (802.11).
+
+---
+
+# 3 Digital Signatures
+
+A digital signature is arguably the most significant development from work on public-key cryptography. While MACs rely on a shared symmetric key, digital signatures use public-key cryptography to achieve a similar objective.
+
+## 3.1 The Need for Digital Signatures
+
+- Hashes give us integrity, but no notion of who sent the message. MACs give integrity + authenticity, but rely on a shared secret key — both parties must already have agreed on a key.
+- This creates a fundamental limitation:
+  - **Cannot prove to a third party that Alice sent the message** — Bob could have computed the same MAC himself, so a judge or external verifier cannot distinguish.
+  - **Do not scale** — if Alice wants to communicate with 1000 people, she needs 1000 different keys.
+  - **No non-repudiation** — Alice can later deny sending the message, with no way to prove otherwise.
+- Digital signatures solve this via asymmetric (public-key) cryptography — Alice signs with her private key, anyone verifies with her public key:
+  - No shared secret needed.
+  - A third party can verify the signature independently.
+  - Alice cannot deny signing — providing **non-repudiation**.
+
+## 3.2 Basic Operation
+
+Consider Bob sending a message to Alice. Bob doesn't prioritise confidentiality but wants to assure Alice the message is from him. Bob employs a secure hash function (e.g., SHA-512) to compute the message hash. The hash value, along with Bob's private key, is input to a **digital signature generation algorithm**, producing a short block — the digital signature. Bob sends the message with the attached signature.
+
+Upon receiving the message and signature, Alice first calculates the hash of the message and provides the hash value and **Bob's public key** as inputs to a **digital signature verification algorithm**. If it returns valid:
+
+- Alice is assured the message was **signed by Bob** — no one else has his private key, which is needed to create a signature verifiable with his public key.
+- Alice is assured the **integrity** of the message — without Bob's private key, no one can alter the message to produce a hash verifiable with Bob's public key.
+
+**Caveat:** This only works if the verifier can be certain the public key she has actually belongs to Bob. A forged or substituted public key breaks all guarantees. This is the problem of **public-key authentication**, solved by PKI — covered later under Digital Certificates.
+
+## 3.3 Approaches to Digital Signatures
+
+Two main approaches, both using SHA for hashing: **RSA** and **DSA**.
+
+### 3.3.1 Digital Signature Algorithm (DSA) Approach
+
+DSA was proposed in 1991 and published by NIST via FIPS 186. It makes use of SHA and provides **only** the digital signature function — unlike RSA, DSA cannot be used for encryption or key exchange. It is a dedicated signature-only scheme derived from ElGamal signatures; NIST standardized it as a signature-only primitive, intentionally excluding the encryption capability ElGamal supports.
+
+- The message _M_ is hashed to generate a hash code.
+- The hash code is input to a signature function along with a random number _k_ generated for this particular signature.
+- The signature function also depends on the sender's private key (_PR<sub>a</sub>_) and a set of parameters known to a group of communicating principals — a **global public key** (_PU<sub>G</sub>_).
+- The resulting signature consists of two components, _s_ and _r_.
+- At the receiver, the incoming message's hash code is generated and input to a verification function that depends on the global public key and the sender's public key (_PU<sub>a</sub>_). The output equals signature component _r_ if valid. Only the sender, with knowledge of the private key, could have produced a valid signature.
+
+**Domain parameters:** Let _p_ be prime, _q_ a prime divisor of (_p−1_), and _g_ an element of order _q_ in ℤ<sub>p</sub>. Domain parameters _PU<sub>G</sub>_ = (_p, q, g_) are shared by all users. The user's **private key** is _x_, a random/pseudorandom integer with 0 < _x_ < _q_. The signature function uses the sender's private key, the global parameters, the message hash, and a per-message random _k_ unique for each signing. In DSA, a user computes two quantities, _r_ and _s_, as functions of the public key components (_p, q, g_), the private key (_x_), the hash _H_(_M_), and the random integer _k_.
+
+> The exam expectation is only the high-level ideas of DSA; refer to the textbook for full detail.
+
+### 3.3.2 RSA Approach
+
+In 2013, an expanded FIPS-186 (FIPS-186-4) was proposed to incorporate digital signature algorithms based on RSA. In the RSA approach:
+
+- The message to be signed is input to a hash function producing a secure fixed-length hash code.
+- This hash code is **encrypted using the sender's private key** to form the signature.
+- Both the message and signature are transmitted.
+- The recipient hashes the message and decrypts the signature using the sender's public key. If the calculated hash code matches the decrypted signature, the signature is valid.
+- Because only the sender knows the private key, only the sender could have produced a valid signature.
+- Recall: RSA is a general-purpose public-key scheme — it can also be used for encryption and key exchange.
+
+---
+
+# 4 Practice Quiz
+
+**Question 1:** Cryptographic hash functions are used to ensure confidentiality and integrity in communications. Which of the following is TRUE regarding cryptographic hash functions?
+
+- **a)** A cryptographic hash function must satisfy preimage resistance.
+- **b)** It is possible to find cryptographic hash functions that are collision-free.
+- **c)** Cryptographic hash functions can not provide origin authentication.
+- **d)** Cryptographic hash functions are used to ensure confidentiality and integrity in communications.
+
+*Explanation:*
+- *(a) Correct — a cryptographic hash function must satisfy pre-image resistance, second pre-image resistance, and collision resistance.*
+- *(b) Incorrect — hash functions map longer, potentially variable-length sequences to shorter sequences, so collisions are bound to happen as the input space is much larger than the output space.*
+- *(c) Correct — cryptographic hash functions do not provide origin authentication; we need digital signatures or MACs for that.*
+- *(d) Incorrect — cryptographic hash functions ensure integrity only.*
+
+**Question 2:** "Given a hash function H, with n possible outputs and a specific value H(x), if H is applied to k random inputs, what must be the value of k so that the probability that at least one input y satisfies H(y) = H(x) is 0.5", is a reference to the .............
+
+- **a)** Authentication code
+- **b)** Collision resistant
+- **c)** Big-endian
+- **d)** Birthday attack
+
+*Explanation: This question checked whether you know how the "birthday attack" is applicable to cryptographic hash functions. All the other answers are unrelated.*
+
+**Question 3:** The MAC does not provide a digital signature because both the sender and receiver share the same key. TRUE or FALSE.
+
+- **a)** TRUE
+- **b)** FALSE
+
+*Explanation: This is true. MACs start with the premise that there is a shared key established already.*
+
+**Question 4:** Confidentiality can be provided by performing message encryption ............ the MAC algorithm.
+
+- **a)** Before
+- **b)** Before or after
+- **c)** After
+- **d)** During
+
+*Explanation: This is related to the four "MAC"/"encrypt" scenarios we discussed. Either you can calculate MAC and then encrypt, or you can encrypt and calculate the MAC.*
+
+**Question 5:** An important characteristic of the MAC algorithm is that it needs to be reversible. TRUE or FALSE.
+
+- **a)** TRUE
+- **b)** FALSE
+
+*Explanation: Like hashes, the MAC has to be irreversible. Therefore, the statement is false.*
+
+**Question 6:** To create a ............, a user calculates two quantities, r and s, that are functions of the public key components (p, q, g), the user's private key (x), the hash code of the message H(M), and an additional integer k that should be generated randomly or pseudorandomly and be unique for each signing.
+
+- **a)** Signature
+- **b)** Hash authentication
+- **c)** Secret key
+- **d)** Global key
+
+*Explanation: The process describes the DSA digital signature algorithm. Therefore, the answer is A. We didn't cover this part in detail in the lecture. Please refer to the textbook content on the DSA algorithm. The expectation at the exam is only the high-level ideas of DSA.*
+
+**Question 7:** In the digital signature algorithm, the user's ............ is represented by x, which is a random or pseudorandom integer with 0 < x < q.
+
+- **a)** Per message secret number
+- **b)** Private key
+- **c)** Global key
+- **d)** Public key
+
+*Explanation: In DSA the user's private key is a random number generated by the user and is commonly denoted by x. We didn't cover this part in detail in the lecture. Please refer to the textbook content on the DSA algorithm. The expectation at the exam is only the high-level ideas of DSA.*
+
+**Question 8:** A good hash function has the property that "the results of applying the function to a large set of inputs will produce outputs that are evenly distributed and apparently random". TRUE or FALSE.
+
+- **a)** TRUE
+- **b)** FALSE
+
+*Explanation: This is a desired property of a hash function, even if we do not directly stipulate it. The outputs of the hash function must appear random.*
+
+**Question 9:** You are given the below string.
+
+"5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8"
+
+This string is in hex (i.e., 2 hex characters represent a byte). Which hashing algorithm is the most likely to have produced this result if you suspect it is an output of a hash function?
+
+- **a)** SHA-1
+- **b)** SHA-224
+- **c)** SHA-256
+- **d)** SHA-512
+
+*Explanation: Using the given information, we can calculate the length of the string. There are a total of 40 characters in the string. Two hex characters represent a byte, so the total length is 20 bytes. That means the total length is 160 bits. Out of the hash functions we discussed, only SHA-1 results in 160-bit outputs.*
+
+**Question 10:** Consider the same hash value again.
+
+"5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8"
+
+We already know that hash values are theoretically reversible. Rainbow tables pre-compute hash values for common words and store them as lookup tables. Use an online hash lookup table to find the actual plaintext corresponding to this hash.
+
+Example online tool: https://sha1.gromweb.com/
+
+What is the correct plaintext corresponding to the given hash?
+
+- **a)** Password
+- **b)** ChangeMe
+- **c)** password
+- **d)** querty
+
+*Explanation: The online tool will return "password" as the plaintext. In practice, to defend against rainbow table lookups, we use salt (a random string concatenated with the original plaintext before calculating the hash).*
+
+---
+
+# 5 Recap
+
+- Cryptographic hash function basics
+- Security requirements for cryptographic hash functions
+- Secure Hash Algorithm (SHA-2, SHA-3)
+- Message Authentication Codes and HMAC
+- AE/AEAD (CCM and GCM block modes)
+- Digital Signatures (RSA, DSA)

@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 7 — Authentication and Key Distribution · INFO3616</title>
+<meta name="description" content="Consolidated lecture notes for INFO3616 Week 7: authentication and key distribution — KDCs, certificates, PKI, AKE and Kerberos.">
+<style>
+/* ============================================================
+   DESIGN SYSTEM TOKENS
+   ============================================================ */
+:root{
+  /* colour */
+  --bg:#fafaf9;
+  --surface:#ffffff;
+  --surface-2:#f2f1ef;
+  --border:#e2e1de;
+  --border-strong:#cfcdc8;
+  --text:#1c1b1a;
+  --text-2:#57534e;
+  --text-3:#78716c;
+  --accent:#1d4ed8;
+  --accent-soft:#eef2ff;
+  --note:#6b7280;
+  --warn:#b45309;
+  --ok:#15803d;
+
+  /* spacing scale 4/8/12/16/24/32/48/64/96 */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px;
+  --s5:24px; --s6:32px; --s7:48px; --s8:64px; --s9:96px;
+
+  /* type */
+  --sans:ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono:ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* layout */
+  --container:min(92vw, 78rem);
+  --measure:70ch;
+  --radius:8px;
+  --nav-h:52px;
+}
+
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#161514;
+    --surface:#1e1d1b;
+    --surface-2:#262522;
+    --border:#33312d;
+    --border-strong:#48453f;
+    --text:#f2f1ef;
+    --text-2:#c4c0b8;
+    --text-3:#948f86;
+    --accent:#8ab4ff;
+    --accent-soft:#1b2438;
+    --note:#8a8f99;
+    --warn:#e0a15a;
+    --ok:#6ee7a0;
+  }
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  font-size:1.0625rem;
+  line-height:1.7;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{width:var(--container);margin-inline:auto;padding-inline:var(--s5)}
+
+/* ============================================================
+   SKIP LINK + TOP NAV
+   ============================================================ */
+.skip{
+  position:absolute;left:var(--s4);top:-100px;z-index:100;
+  background:var(--accent);color:#fff;padding:var(--s2) var(--s4);
+  border-radius:var(--radius);text-decoration:none;font-weight:600;
+  transition:top .15s ease;
+}
+.skip:focus{top:var(--s2)}
+
+.topbar{
+  position:sticky;top:0;z-index:50;
+  background:rgba(250,250,249,.9);
+  -webkit-backdrop-filter:blur(10px);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border);
+}
+@media (prefers-color-scheme: dark){
+  .topbar{background:rgba(22,21,20,.9)}
+}
+.topbar .wrap{
+  display:flex;align-items:center;gap:var(--s4);
+  min-height:var(--nav-h);
+}
+.topbar .brand{
+  font-size:.81rem;font-weight:650;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--text-3);white-space:nowrap;
+}
+.navlinks{
+  display:flex;gap:var(--s1);list-style:none;margin:0;padding:0;
+  overflow-x:auto;scrollbar-width:thin;-webkit-overflow-scrolling:touch;
+}
+.navlinks a{
+  display:block;white-space:nowrap;text-decoration:none;
+  color:var(--text-2);font-size:.875rem;font-weight:500;
+  padding:var(--s2) var(--s3);border-radius:6px;
+}
+.navlinks a:hover{background:var(--surface-2);color:var(--text)}
+.navlinks a[aria-current="true"]{color:var(--accent);background:var(--accent-soft);font-weight:650}
+
+/* ============================================================
+   PAGE HEADER
+   ============================================================ */
+.pageheader{padding:var(--s9) 0 var(--s7)}
+.pageheader .eyebrow{
+  font-size:.81rem;font-weight:650;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 var(--s3);
+}
+.pageheader h1{
+  font-size:clamp(2rem, 4.5vw, 2.44rem);
+  line-height:1.15;font-weight:700;letter-spacing:-.02em;
+  margin:0 0 var(--s5);max-width:22ch;
+}
+.meta{
+  margin:0;padding:var(--s5) 0 0;border-top:1px solid var(--border);
+  color:var(--text-2);font-size:.94rem;line-height:1.7;max-width:var(--measure);
+}
+.meta p{margin:0 0 var(--s1)}
+.meta strong{color:var(--text)}
+
+/* ============================================================
+   SECTIONS + HEADINGS
+   ============================================================ */
+main{padding-bottom:var(--s9)}
+.sec{
+  margin-top:var(--s9);
+  padding-top:var(--s8);
+  border-top:1px solid var(--border);
+}
+.sec-head{
+  display:flex;align-items:baseline;gap:var(--s4);
+  margin-bottom:var(--s6);
+}
+.sec-num{
+  flex:none;
+  font-family:var(--mono);font-size:1rem;font-weight:700;
+  color:var(--accent);
+  background:var(--accent-soft);
+  border:1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius:999px;
+  min-width:2.1rem;height:2.1rem;
+  display:inline-flex;align-items:center;justify-content:center;
+  transform:translateY(.35rem);
+}
+h2{font-size:clamp(1.6rem,3.2vw,1.95rem);line-height:1.2;font-weight:700;letter-spacing:-.015em;margin:0}
+h3{
+  font-size:1.45rem;line-height:1.3;font-weight:650;letter-spacing:-.01em;
+  margin:var(--s7) 0 var(--s4);
+}
+h4{
+  font-size:1.15rem;line-height:1.35;font-weight:650;
+  margin:var(--s6) 0 var(--s3);
+}
+h2 + p, h3 + p, h4 + p, h2 + ul, h3 + ul, h4 + ul{margin-top:0}
+p{margin:0 0 var(--s5);max-width:var(--measure)}
+:target{scroll-margin-top:calc(var(--nav-h) + var(--s4))}
+
+/* ============================================================
+   LISTS
+   ============================================================ */
+ul,ol{margin:0 0 var(--s5);padding-left:1.4em;max-width:var(--measure)}
+li{margin:0 0 var(--s2)}
+li > ul, li > ol{margin:var(--s2) 0 0}
+li:last-child{margin-bottom:0}
+ul.plain{list-style:none;padding-left:0}
+
+dl.defs{margin:0 0 var(--s5);max-width:var(--measure)}
+dl.defs dt{font-weight:650;margin-top:var(--s4)}
+dl.defs dt:first-child{margin-top:0}
+dl.defs dd{margin:var(--s1) 0 0;padding-left:var(--s4);color:var(--text-2)}
+
+/* ============================================================
+   INLINE + CODE
+   ============================================================ */
+strong{font-weight:650;color:var(--text)}
+em{font-style:italic}
+a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+a:hover{text-decoration-thickness:2px}
+code{
+  font-family:var(--mono);font-size:.9em;
+  background:var(--surface-2);border:1px solid var(--border);
+  padding:.1em .35em;border-radius:4px;
+  overflow-wrap:anywhere;
+}
+sub,sup{font-size:.72em;line-height:0}
+
+/* ============================================================
+   CALLOUTS + QUOTES
+   ============================================================ */
+.callout{
+  border-left:4px solid var(--note);
+  background:var(--surface);
+  border-radius:0 var(--radius) var(--radius) 0;
+  padding:var(--s5) var(--s6);
+  margin:var(--s6) 0;
+  max-width:var(--measure);
+  color:var(--text-2);
+  font-size:.98rem;
+}
+.callout p:last-child{margin-bottom:0}
+.callout.note{border-left-color:var(--note)}
+.callout.key{
+  border-left-color:var(--accent);
+  background:var(--accent-soft);
+  color:var(--text);
+}
+.callout.warn{border-left-color:var(--warn)}
+.callout .label{
+  display:block;font-size:.75rem;font-weight:700;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--text-3);margin-bottom:var(--s2);
+}
+.callout.key .label{color:var(--accent)}
+
+blockquote.quote{
+  border-left:3px solid var(--border-strong);
+  margin:var(--s6) 0;
+  padding:var(--s2) 0 var(--s2) var(--s6);
+  max-width:var(--measure);
+  font-style:italic;
+  color:var(--text-2);
+}
+blockquote.quote p:last-child{margin-bottom:0}
+
+/* ============================================================
+   PROTOCOL BLOCKS
+   ============================================================ */
+.protocol{
+  font-family:var(--mono);
+  font-size:.94rem;
+  line-height:2;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:var(--s5) var(--s5);
+  margin:var(--s5) 0 var(--s6);
+  overflow-x:auto;
+}
+.protocol .pl{display:block;white-space:nowrap}
+.protocol .pl + .pl{margin-top:var(--s1)}
+.protocol .who{color:var(--accent);font-weight:700}
+
+/* ============================================================
+   TABLES
+   ============================================================ */
+.tablewrap{
+  overflow-x:auto;margin:var(--s6) 0;
+  border:1px solid var(--border);border-radius:var(--radius);
+}
+table{border-collapse:collapse;width:100%;font-size:.94rem;background:var(--surface)}
+caption{
+  caption-side:top;text-align:left;padding:0 0 var(--s3);
+  color:var(--text-3);font-size:.81rem;font-weight:500;
+}
+th,td{padding:var(--s3) var(--s4);text-align:left;vertical-align:top;border-bottom:1px solid var(--border)}
+thead th{background:var(--surface-2);font-weight:650;color:var(--text)}
+tbody tr:nth-child(even){background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:none}
+
+/* ============================================================
+   QUIZ
+   ============================================================ */
+.quiz{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);padding:var(--s6);margin:var(--s6) 0}
+.quiz .q{
+  font-size:1.06rem;font-weight:650;line-height:1.5;margin:0 0 var(--s4);
+  max-width:var(--measure);
+}
+.quiz .q .qn{color:var(--accent)}
+ul.options{list-style:none;padding-left:0;margin:0 0 var(--s4);max-width:var(--measure)}
+ul.options li{
+  padding:var(--s2) var(--s3);margin:var(--s2) 0;
+  border-radius:6px;border:1px solid transparent;color:var(--text-2);
+}
+ul.options li.correct{
+  background:color-mix(in srgb, var(--ok) 12%, var(--surface));
+  border-color:color-mix(in srgb, var(--ok) 35%, transparent);
+  color:var(--text);font-weight:600;
+}
+ul.options li.correct::before{content:"✓ ";color:var(--ok);font-weight:800}
+.quiz .explain{
+  border-left:3px solid var(--border-strong);
+  padding:var(--s2) 0 var(--s2) var(--s4);
+  margin:0;font-size:.94rem;color:var(--text-2);max-width:var(--measure);
+}
+.quiz .explain p{margin:0}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.sitefooter{
+  border-top:1px solid var(--border);
+  margin-top:var(--s9);padding:var(--s7) 0 var(--s8);
+  color:var(--text-3);font-size:.875rem;
+}
+.sitefooter p{margin:0 0 var(--s1);max-width:none}
+
+/* ============================================================
+   PRINT
+   ============================================================ */
+@media print{
+  .topbar,.skip{display:none}
+  body{background:#fff;color:#000;font-size:11pt}
+  .sec{break-inside:avoid-page;border-top:1px solid #ccc}
+  .callout,.quiz,.protocol,.tablewrap{break-inside:avoid}
+  a{color:#000}
+}
+
+/* ============================================================
+   NARROW SCREENS
+   ============================================================ */
+@media (max-width:60rem){
+  .topbar .brand{display:none}
+  .quiz{padding:var(--s5)}
+  .callout{padding:var(--s4) var(--s5)}
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <div class="wrap">
+    <span class="brand">INFO3616 · Week 7</span>
+    <nav aria-label="Document sections">
+      <ul class="navlinks">
+        <li><a href="#sec-1">1 Key Distribution</a></li>
+        <li><a href="#sec-2">2 Symmetric</a></li>
+        <li><a href="#sec-3">3 Asymmetric</a></li>
+        <li><a href="#sec-4">4 Certificates</a></li>
+        <li><a href="#sec-5">5 PKIs</a></li>
+        <li><a href="#sec-6">6 Authentication</a></li>
+        <li><a href="#sec-7">7 AKE</a></li>
+        <li><a href="#sec-8">8 Kerberos</a></li>
+        <li><a href="#sec-9">9 Quiz</a></li>
+        <li><a href="#sec-10">10 Recap</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <header class="pageheader">
+    <p class="eyebrow">Cybersecurity Engineering · INFO3616</p>
+    <h1>Week 7 — Authentication and Key Distribution</h1>
+    <div class="meta">
+      <p>Consolidated from <strong>Week7_Notes.pdf</strong> and <strong>Week7_slides.pdf</strong>.</p>
+      <p>Cybersecurity Engineering — INFO3616, School of Computer Science, The University of Sydney.</p>
+      <p>Lecturers: Dr Suranga Seneviratne, Dr Thilini Dahanayaka. September 10, 2026.</p>
+    </div>
+  </header>
+</div>
+
+<main id="main">
+<div class="wrap">
+
+  <!-- ================= FRONT MATTER ================= -->
+  <section class="sec" aria-labelledby="h-reading" id="reading">
+    <div class="sec-head"><h2 id="h-reading">Recommended Reading</h2></div>
+
+    <p><strong>Cryptography and Network Security (7th Edition — William Stallings)</strong></p>
+    <ul>
+      <li><strong>Chapter 14</strong> — Key Management and Distribution</li>
+      <li><strong>Chapter 15</strong> — User Authentication</li>
+    </ul>
+
+    <p><strong>Security Engineering (3rd Edition — Ross Anderson)</strong></p>
+    <ul>
+      <li><strong>Chapter 4</strong> — Protocols</li>
+    </ul>
+
+    <blockquote class="callout note">
+      <span class="label">Note</span>
+      These lecture notes are given to you to assist with understanding the lecture content better. This content is prepared based on the above book chapters. You are not allowed to upload this material to any internet source or share it with anyone else.
+    </blockquote>
+  </section>
+
+  <section class="sec" aria-labelledby="h-agenda">
+    <div class="sec-head"><h2 id="h-agenda">Agenda</h2></div>
+    <ul>
+      <li>Symmetric key distribution (using symmetric encryption)</li>
+      <li>Symmetric key distribution (using asymmetric encryption)</li>
+      <li>Public-key/asymmetric key distribution and digital certificates</li>
+      <li>Public-key infrastructure</li>
+      <li>Personal identity authentication</li>
+      <li>Authentication and key establishment (AKE)</li>
+      <li>Remote user-authentication and Kerberos</li>
+    </ul>
+  </section>
+
+  <!-- ================= 1 ================= -->
+  <section class="sec" id="sec-1" aria-labelledby="h-1">
+    <div class="sec-head"><span class="sec-num" aria-hidden="true">1</span><h2 id="h-1">The Problem of Key Distribution</h2></div>
+
+    <p>So far, we discussed how we can use encryption to keep our data and communications confidential. For example, symmetric key cryptography (e.g., AES) and asymmetric key cryptography (e.g., RSA). The commonality is that they all require a key to encrypt information. However, one last factor is missing: how do individuals or entities obtain the keys they need for secure communication?</p>
+
+    <p>For example, in symmetric key encryption we assumed that both parties have access to a shared key. In public key encryption, we assumed that the sender knows the receiver's public key. But how does this work in practice? How can we make sure that these assumptions are realistic? This is the <strong>key distribution problem</strong>: the challenge of securely establishing shared secret keys (or authentic public keys) between parties who wish to communicate securely, without relying on a pre-existing secure channel to do so.</p>
+
+    <p>No matter which primitive we use, a <strong>bootstrapping problem</strong> remains:</p>
+    <ul>
+      <li><strong>Diffie-Hellman key exchange</strong> — need to know the other party's public key in a reliable way.</li>
+      <li><strong>MACs/AES</strong> — need a pre-shared symmetric key.</li>
+      <li><strong>Hybrid cryptography</strong> — need to know the other party's public key in a reliable way.</li>
+    </ul>
+
+    <p>This lecture addresses that bootstrapping problem.</p>
+
+    <p>In the discussions that follow, we always assume the Dolev-Yao model for our attacker. Formerly defining an attacker's capability is called <em>threat modelling</em>. Recall that in the cryptography overview, we discussed the types of attackers, defining four varying capabilities of the attacker (e.g., has access to ciphertext only, can query and get some ciphertext decrypted).</p>
+
+    <h3>1.1 Dolev-Yao Model</h3>
+    <p>We upgrade to the Dolev-Yao model, which is a stronger, more realistic adversary that reflects real-world network conditions where the attacker controls the medium entirely ("the attacker carries the message"). The Dolev-Yao attacker <strong>has full control over the network</strong>, with capabilities such as:</p>
+    <ul>
+      <li>Eavesdropping on any message in transit</li>
+      <li>Delaying, deleting, modifying, replaying, and injecting messages</li>
+      <li>Impersonating any legitimate party</li>
+    </ul>
+
+    <p>However, the attacker's ability is <strong>fundamentally constrained by cryptography</strong>:</p>
+    <ul>
+      <li>Cannot modify an integrity-protected message without the receiver noticing</li>
+      <li>Cannot decrypt a message encrypted with a key they don't hold</li>
+    </ul>
+
+    <p>Intuitively, this represents the type of attacker we typically envision in the context of secure electronic communication.</p>
+
+    <h3>1.2 Boyd's Theorem</h3>
+    <blockquote class="quote">
+      <p>Assuming the absence of a secure channel, two entities cannot establish an authenticated session without the existence of an entity that can mediate between the two and which both parties trust and have a secure channel with.</p>
+    </blockquote>
+
+    <p>In short, Alice and Bob cannot securely establish keys between them if they do not already have existing, established keys. Thus, how do we create a "safe channel" for them to share their keys? The only way is 'introduction' via a third party, with which both Alice and Bob have established keys already.</p>
+
+    <h3>1.3 Diffie-Hellman Is Not Enough</h3>
+    <p>Diffie-Hellman key exchange is secure <strong>if the attacker is passive</strong>. With an <strong>active attacker</strong>, we need to protect the Diffie-Hellman key exchange with some form of origin authentication. For instance:</p>
+    <ul>
+      <li>A Message Authentication Code (MAC) requires a previously exchanged symmetric key.</li>
+      <li>A digital signature requires a known public key and a correct mapping between the entity/origin and the key.</li>
+    </ul>
+
+    <p>This implies that Diffie-Hellman can still be utilized, but it necessitates additional protections. Importantly, we need the above protection only to protect the Diffie-Hellman exchange — once the exchange has been completed securely once, we do have a secure channel. Diffie-Hellman provides <strong>forward secrecy</strong>, meaning that the session keys used to encrypt and decrypt information change frequently and automatically. This ongoing process ensures that even if the most recent key or the long-term key is breached, a minimal amount of sensitive data is exposed.</p>
+
+    <h4>Forward Secrecy / Perfect Forward Secrecy</h4>
+    <p><strong>Forward Secrecy (FS) / Perfect Forward Secrecy (PFS)</strong> is a property of secure communication protocols that ensures the compromise of long-term keys does not compromise the confidentiality of past session keys. In simpler terms, even if an attacker gains access to a server's private key or other long-term credentials, they should not be able to decrypt past communications. This is achieved by generating unique session keys for each communication session, which are independent of the long-term keys. FS and PFS are used interchangeably and mean the same thing.</p>
+
+    <p><strong>Ephemeral Diffie-Hellman (DHE)</strong> or <strong>Ephemeral Elliptic-Curve Diffie-Hellman (ECDHE)</strong> refer to the use of Diffie-Hellman key exchange to establish ephemeral keys — meaning that for each session, a new, temporary key is generated. This key is used exclusively for that session and is discarded afterwards. Because each session uses a unique and independent key, even if the long-term private key used to authenticate the session (such as a key used in a digital signature) is later compromised, the attacker cannot recover the session keys or decrypt past communications. This property is what ensures forward secrecy.</p>
+
+    <h3>1.4 Options for Key Establishment / Distribution</h3>
+    <ul>
+      <li><strong>Without a third party:</strong> Secure physical shipment of keys is indeed a method, but it's not practical. It is expensive and not scalable to internet-scale, so it is only done for high-value communication — e.g., with embassies, some device pairings with QR codes.</li>
+      <li><strong>With a third party:</strong>
+        <ul>
+          <li><strong>Symmetric case:</strong> Key Distribution Centers (KDCs) facilitate the exchange.</li>
+          <li><strong>Asymmetric case:</strong> Public Key Infrastructures (PKI) play the crucial role.</li>
+        </ul>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ================= 2 ================= -->
+  <section class="sec" id="sec-2" aria-labelledby="h-2">
+    <div class="sec-head"><span class="sec-num" aria-hidden="true">2</span><h2 id="h-2">Symmetric Key Distribution (Using Symmetric Encryption)</h2></div>
+
+    <p>Two parties wishing to communicate securely face a bootstrapping problem: how do they share a key without already having one? For symmetric encryption to work, the two parties must share the same key, and that key must be protected from access by others. Furthermore, frequent key changes are usually desirable to limit the amount of data compromised if an attacker learns the key. Following Boyd's theorem, this means that you need a trusted third party. The solution is to introduce a <strong>Key Distribution Center (KDC)</strong> — a mutually trusted third party. Each party shares a long-term master key with the KDC (established out-of-band), and the KDC uses these to broker <strong>session keys</strong> for individual communications.</p>
+
+    <h3>2.1 Key Hierarchy</h3>
+    <p>The use of a key distribution center is based on the use of a hierarchy of keys. At a minimum, two levels of keys are used:</p>
+    <ul>
+      <li><strong>Master key:</strong> shared between the KDC and each end system or user. Distributed non-cryptographically — e.g., physical delivery, or bundled with managed software. Long-lived; used only to protect session keys. For example, in the case of the KDC, the keys may have been physically copied by your IT department when they installed and configured your laptop.</li>
+      <li><strong>Session key:</strong> used for actual communication between end systems. Obtained from the KDC and transmitted encrypted under the master key. Typically used for the duration of a logical connection, such as a frame relay connection or a transport layer connection, and then discarded. Short-lived; one per logical connection.</li>
+    </ul>
+
+    <h3>2.2 Key Distribution Centers (KDCs)</h3>
+    <p>KDCs are among the <strong>most important technologies</strong> we use. Even new technologies like OpenID and OAuth fall into this category. KDCs are the basis for the famous Kerberos protocol, which is utilized across numerous operating systems, including Windows, Linux, UNIX, macOS, AIX, and Solaris (Active Directory relies on Kerberos).</p>
+
+    <p>A KDC generates and distributes session keys. It is always online and has long-term keys established with its members. These keys can be pre-configured by admins or, in practice, derived from a strong password.</p>
+
+    <p><strong>How a KDC works:</strong> Entity A sends a request to the KDC for a symmetric key to be used as a session key for communication with B. The KDC generates a symmetric session key and then encrypts this session key with the master key it shares with A, sending it to A. Similarly, the KDC encrypts the session key with the master key it shares with B and sends it to B. Alternatively, the KDC can send both encrypted key values to A, who then forwards the session key, encrypted with the master key shared by the KDC and B, to B.</p>
+
+    <h3>2.3 A Key Distribution Scenario</h3>
+    <p>The above idea is further illustrated in the key distribution scenario. The scenario assumes that each user shares a <strong>unique master key</strong> with the key distribution center (KDC).</p>
+
+    <p>Assume that user A wishes to establish a <strong>logical connection</strong> with B and requires a <strong>one-time session key</strong> to protect the data transmitted over the connection. A has a master key, <em>K<sub>a</sub></em>, known only to itself and the KDC; similarly, B shares the master key <em>K<sub>b</sub></em> with the KDC. The following steps occur:</p>
+
+    <ol>
+      <li>A issues a request to the KDC for a session key to protect a logical connection to B. The message includes the identity of A and B and a unique identifier, <em>N<sub>1</sub></em>, for this transaction, which we refer to as a <strong>nonce</strong>. The nonce may be a timestamp, a counter, or a random number; the minimum requirement is that it differs with each request. Also, to prevent masquerade, it should be difficult for an opponent to guess the nonce. Thus, a random number is a good choice for a nonce.</li>
+
+      <li>The KDC responds with a message encrypted using <em>K<sub>a</sub></em>. Thus, A is the only one who can successfully read the message, and A knows that it originated at the KDC. The message includes two items intended for A:
+        <ul>
+          <li>The one-time session key, <em>K<sub>s</sub></em>, to be used for the session</li>
+          <li>The original request message, including the nonce, to enable A to match this response with the appropriate request and also ensures the freshness</li>
+        </ul>
+        <p>Thus, A can verify that its original request was not altered before reception by the KDC and, because of the nonce, that this is not a replay of some previous request.</p>
+        <p>In addition, the message includes two items intended for B:</p>
+        <ul>
+          <li>The one-time session key, <em>K<sub>s</sub></em>, to be used for the session</li>
+          <li>An identifier of A (e.g., its network address), <em>ID<sub>A</sub></em></li>
+        </ul>
+        <p>These last two items are encrypted with <em>K<sub>b</sub></em> (the master key that the KDC shares with B). They are to be sent to B to establish the connection and prove A's identity.</p>
+      </li>
+
+      <li>A stores the session key for use in the upcoming session and forwards to B the information that originated at the KDC for B, namely, <em>E</em>(<em>K<sub>b</sub></em>, [<em>K<sub>s</sub></em>∥<em>ID<sub>A</sub></em>]). Because this information is encrypted with <em>K<sub>b</sub></em>, it is protected from eavesdropping. B now knows the session key (<em>K<sub>s</sub></em>), knows that the other party is A (from <em>ID<sub>A</sub></em>), and knows that the information originated at the KDC (because it is encrypted using <em>K<sub>b</sub></em>).</li>
+    </ol>
+
+    <p>At this point, a session key has been securely delivered to A and B, and they may begin their protected exchange. However, two additional steps are desirable:</p>
+    <ol start="4">
+      <li>Using the newly minted session key for encryption, B sends a nonce, <em>N<sub>2</sub></em>, to A.</li>
+      <li>Also, using <em>K<sub>s</sub></em>, A responds with <em>f</em>(<em>N<sub>2</sub></em>), where <em>f</em> is a function that performs some transformation on <em>N<sub>2</sub></em> (e.g., adding one).</li>
+    </ol>
+
+    <p>These steps assure B that the original message it received (step 3) was not a replay. Note that the actual key distribution involves only steps 1 through 3, but that steps 4 and 5, as well as step 3, perform an authentication function.</p>
+
+    <blockquote class="callout key">
+      <span class="label">Key idea</span>
+      This is also called the <strong>Needham-Schroeder Protocol</strong> (we will revisit this again in detail later).
+    </blockquote>
+  </section>
+
+  <!-- ================= 3 ================= -->
+  <section class="sec" id="sec-3" aria-labelledby="h-3">
+    <div class="sec-head"><span class="sec-num" aria-hidden="true">3</span><h2 id="h-3">Symmetric Key Distribution (Using Asymmetric Encryption)</h2></div>
+
+    <p>Because of the inefficiency of public-key cryptosystems, they are almost never used for the direct encryption of sizable blocks of data, but are limited to relatively small blocks. One of the most important uses of a public-key cryptosystem is to encrypt secret keys for distribution. We know that we can use hybrid cryptography if we reliably know the public key of the receiver. However, simply advertising the public key doesn't work and is vulnerable to person-in-the-middle attacks.</p>
+
+    <h3>3.1 Person-In-The-Middle Attack</h3>
+    <p>Any attempt to distribute public keys naively can result in a Person-in-the-Middle attack:</p>
+    <ol>
+      <li>A generates a public/private key pair {<em>PU<sub>a</sub>, PR<sub>a</sub></em>} and transmits a message intended for B consisting of <em>PU<sub>a</sub></em> and an identifier of A, <em>ID<sub>A</sub></em>.</li>
+      <li>D intercepts the message, creates its own public/private key pair {<em>PU<sub>d</sub>, PR<sub>d</sub></em>} and transmits <em>PU<sub>d</sub></em>∥<em>ID<sub>A</sub></em> to B.</li>
+      <li>B generates a secret key, <em>K<sub>s</sub></em>, and transmits E(<em>PU<sub>d</sub>, K<sub>s</sub></em>).</li>
+      <li>D intercepts the message and learns <em>K<sub>s</sub></em> by computing D(<em>PR<sub>d</sub></em>, E(<em>PU<sub>d</sub>, K<sub>s</sub></em>)).</li>
+      <li>D transmits E(<em>PU<sub>a</sub>, K<sub>s</sub></em>) to A.</li>
+    </ol>
+    <p>The result is that both A and B know <em>K<sub>s</sub></em> and are unaware that <em>K<sub>s</sub></em> has also been revealed to D. A and B can now exchange messages using <em>K<sub>s</sub></em>. D no longer actively interferes with the communications channel but simply eavesdrops. Knowing <em>K<sub>s</sub></em>, D can decrypt all messages, and both A and B are unaware of the problem. Thus, this simple protocol is only useful in an environment where the only threat is eavesdropping.</p>
+
+    <h3>3.2 Symmetric Key Distribution with Confidentiality and Authentication</h3>
+    <p>The solution for the PITM attack is to provide protection against both active and passive attacks — in this scenario, we are using nonces. We begin at a point when it is assumed that A and B have exchanged public keys by one of the schemes described subsequently in this chapter. Then the following steps occur:</p>
+    <ol>
+      <li>A uses B's public key to encrypt a message to B containing an identifier of A (<em>ID<sub>A</sub></em>) and a nonce (<em>N<sub>1</sub></em>), which is used to identify this transaction uniquely.</li>
+      <li>B sends a message to A encrypted with <em>PU<sub>a</sub></em> and containing A's nonce (<em>N<sub>1</sub></em>) as well as a new nonce generated by B (<em>N<sub>2</sub></em>). Because only B could have decrypted message (1), the presence of <em>N<sub>1</sub></em> in message (2) assures A that the correspondent is B.</li>
+      <li>A returns <em>N<sub>2</sub></em>, encrypted using B's public key, to assure B that its correspondent is A.</li>
+      <li>A selects a secret key <em>K<sub>s</sub></em> and sends <em>M</em> = E(<em>PU<sub>b</sub></em>, E(<em>PR<sub>a</sub>, K<sub>s</sub></em>)) to B. Encryption of this message with B's public key ensures that only B can read it; encryption with A's private key ensures that only A could have sent it.</li>
+      <li>B computes D(<em>PU<sub>a</sub></em>, D(<em>PR<sub>b</sub>, M</em>)) to recover the secret key.</li>
+    </ol>
+    <p>The result is that this scheme ensures both confidentiality and authentication in the exchange of a secret key.</p>
+
+    <h3>3.3 A Hybrid Scheme</h3>
+    <p>Another way to use public-key encryption to distribute secret keys is a hybrid approach in use on IBM mainframes. This scheme retains the use of a key distribution center (KDC) that shares a secret master key with each user and distributes secret session keys encrypted with the master key. A public-key scheme is used to distribute the master keys. The addition of a public-key layer provides a secure, efficient means of distributing master keys. This is an advantage in a configuration in which a single KDC serves a widely distributed set of users.</p>
+  </section>
+
+  <!-- ================= 4 ================= -->
+  <section class="sec" id="sec-4" aria-labelledby="h-4">
+    <div class="sec-head"><span class="sec-num" aria-hidden="true">4</span><h2 id="h-4">Public-Key Distribution and Certificates</h2></div>
+
+    <h3>4.1 Public-Key Distribution Schemes</h3>
+    <p>Several techniques have been proposed for the distribution of public keys. Virtually all these proposals can be grouped into the following general schemes:</p>
+    <ul>
+      <li><strong>Public announcement:</strong> On the face of it, the point of public-key encryption is that the public key is public. Thus, if there is some broadly accepted public-key algorithm, such as RSA, any participant can send their public key to any other participant or broadcast the key to the community at large. For example, because of the growing popularity of PGP (Pretty Good Privacy), which makes use of RSA, many PGP users have adopted the practice of appending their public key to messages that they send to public forums, such as USENET newsgroups and Internet mailing lists. Although this approach is convenient, it has a major <strong>weakness</strong>: anyone can forge such a public announcement.</li>
+
+      <li><strong>Publicly available directory:</strong> A greater degree of security can be achieved by maintaining a publicly available dynamic directory of public keys. Maintenance and distribution of the public directory would have to be the responsibility of some trusted entity or organization. Such a scheme would need an authority which maintains a directory with a name and public key entry for each participant. This scheme is clearly more secure than individual public announcements but still has <strong>vulnerabilities</strong>. If an adversary succeeds in obtaining or computing the private key of the directory authority, the adversary could authoritatively pass out counterfeit public keys and subsequently impersonate any participant and eavesdrop on messages sent to any participant. Another way to achieve the same end is for the adversary to tamper with the records kept by the authority.</li>
+
+      <li><strong>Public-key authority:</strong> Stronger security for public-key distribution can be achieved by providing tighter control over the distribution of public keys from the directory. A typical scenario is based on the Needham-Schroeder protocol. The public-key authority scheme is attractive, yet it has some <strong>drawbacks</strong>. The public-key authority could be somewhat of a bottleneck in the system, for a user must appeal to the authority for a public key for every other user that it wishes to contact. As before, the directory of names and public keys maintained by the authority is vulnerable to tampering.</li>
+
+      <li><strong>Public-key certificates (best option):</strong> An alternative approach is to use certificates that can be used by participants to exchange keys without contacting a public-key authority, in a way that is as reliable as if the keys were obtained directly from a public-key authority. The central idea is using <strong>certificates</strong>, used in Public Key Infrastructures (PKIs). This is the better option and what we use today.</li>
+    </ul>
+
+    <h3>4.2 Certificate Creation</h3>
+    <p>In essence, a certificate consists of a public key (PU), an identifier (ID) of the key owner, and the whole block signed by a trusted third party. Typically, the third party is a certificate authority (CA), such as a government agency or a financial institution, that is trusted by the user community.</p>
+
+    <p>A user can present their public key to the authority in a secure manner and obtain a certificate. The user can then publish the certificate. Anyone needing this user's public key can obtain the certificate and verify that it is valid by way of the attached trusted signature. A participant can also convey its key information to another by transmitting its certificate. Other participants can verify that the certificate was created by the authority.</p>
+
+    <p>Each participant applies to the certificate authority, supplying a public key and requesting a certificate. Application must be in person or by some form of secure authenticated communication. For participant A, the authority provides a certificate of the form <em>CA</em> = E(<em>PR<sub>auth</sub></em>, [<em>T</em>∥<em>ID<sub>A</sub></em>∥<em>PU<sub>a</sub></em>]), where <em>PR<sub>auth</sub></em> is the private key used by the authority and <em>T</em> is a timestamp.</p>
+
+    <p>A may then pass this certificate on to any other participant, who reads and verifies the certificate as follows: D(<em>PU<sub>auth</sub></em>, <em>CA</em>) = D(<em>PU<sub>auth</sub></em>, E(<em>PR<sub>auth</sub></em>, [<em>T</em>∥<em>ID<sub>A</sub></em>∥<em>PU<sub>a</sub></em>])) = (<em>T</em>∥<em>ID<sub>A</sub></em>∥<em>PU<sub>a</sub></em>). The recipient uses the authority's public key, <em>PU<sub>auth</sub></em>, to decrypt the certificate. Because the certificate is readable only using the authority's public key, this verifies that the certificate came from the certificate authority. The elements <em>ID<sub>A</sub></em> and <em>PU<sub>a</sub></em> provide the recipient with the name and public key of the certificate's holder. The timestamp <em>T</em> is used to verify whether the certificate is still valid.</p>
+
+    <p>The timestamp counters the following scenario: A's private key is learned by an adversary. A generates a new private/public key pair and applies to the certificate authority for a new certificate. Meanwhile, the adversary replays the old certificate to B. If B then encrypts messages using the compromised old public key, the adversary can read those messages.</p>
+
+    <p>In this context, the compromise of a private key is comparable to the loss of a credit card. The owner cancels the credit card number but is at risk until all possible communicants are aware that the old credit card is obsolete. Thus, the timestamp serves as something like an expiration date. If a certificate is sufficiently old, it is assumed to be expired.</p>
+
+    <h3>4.3 X.509 Certificate</h3>
+    <p><strong>Definition of a certificate:</strong> A certificate is a cryptographic binding between an identifier and a public key that is to be associated with that identifier. An issuer creates the binding and takes the role of a trusted third party (TTP), in accordance with Boyd's theorem.</p>
+
+    <p><strong>X.509:</strong> One scheme has become universally accepted for formatting public-key certificates: the X.509 standard. X.509 defines the format of public-key certificates and is based on the use of public-key cryptography and digital signatures. It is used in many modern cryptographic protocols on the Internet, including IP security, transport layer security (TLS), and S/MIME. The standard does not dictate the use of a specific digital signature algorithm nor a specific hash function.</p>
+
+    <p>The certificate for Bob's public key includes unique identifying information for Bob, Bob's public key, and identifying information about the CA, plus other information. This information is then signed by computing a hash value of the information and generating a digital signature using the hash value and the CA's private key. X.509 indicates that the signature is formed by encrypting the hash value. The current version of X.509 does not dictate a specific digital signature algorithm. An example certificate can be seen in Google Chrome for ChatGPT.</p>
+  </section>
+
+  <!-- ================= 5 ================= -->
+  <section class="sec" id="sec-5" aria-labelledby="h-5">
+    <div class="sec-head"><span class="sec-num" aria-hidden="true">5</span><h2 id="h-5">Public Key Infrastructures (PKIs)</h2></div>
+
+    <p>RFC 4949 (Internet Security Glossary) defines public-key infrastructure (PKI) as the set of hardware, software, people, policies, and procedures needed to create, manage, store, distribute, and revoke digital certificates based on asymmetric cryptography. The principal objective for developing a PKI is to enable secure, convenient, and efficient acquisition of public keys.</p>
+
+    <p>Let's say Bob wants to securely encrypt messages for Alice. To do this, Bob needs to know Alice's public key. Similarly, Alice needs Bob's public key to verify any digital signatures from him. This problem — how does Bob know a given public key is actually Alice's public key? — is addressed by using Public Key Infrastructures (PKI).</p>
+
+    <p>PKI revolves around the use of certificates. A certificate binds an entity's identity to their public key, and a trusted authority (the "trust anchor") digitally signs this binding to ensure its validity.</p>
+
+    <p>However, in practice, Bob may not have a certificate that Alice can verify directly. Instead, Bob presents a <strong>certificate chain</strong>, which allows Alice to trace the trust back to a common trusted entity. For example, imagine there is a certificate authority (CA) <em>I1</em> that issues a certificate to <em>I2</em>, a subordinate CA. <em>I2</em> then issues a certificate to Bob, represented as <em>X</em>. In this case, the chain of trust is: <em>I1 → I2 → X</em>. Each arrow represents a certificate issued by the previous entity. Alice can verify Bob's certificate <em>X</em> by following this chain of trust from <em>X</em>, through <em>I2</em>, up to <em>I1</em>, which she trusts.</p>
+
+    <p>This process is known as <strong>certificate chaining</strong>, where each link in the chain establishes trust, and the top-most certificate authority (CA) is trusted by all parties involved.</p>
+
+    <h3>5.1 Identity Verification</h3>
+    <p>You would need some formal proof to verify your identity, raising the question of which verification process is universally acceptable. The issuance process embeds a critical step. Recall that the issuer, or Certificate Authority (CA), is a trusted third party, such as a government agency or financial institution, that the user community trusts. Before issuing a certificate, the issuer must ensure that they are issuing it to the correct identity and that the identity indeed holds the particular key.</p>
+
+    <p>There are industry-agreed steps that must be carried out, which vary depending on the purpose of the certificate and its value:</p>
+    <ul>
+      <li><strong>Baseline verification</strong> — often used for domains like 'suranga.me'. Involves proof of ownership where the CA requests the domain operator to place a specific file on the web server or to be able to receive an email under that domain name. It's noteworthy that this method relies on technologies that might be insecure for identity verification.</li>
+      <li><strong>Extended verification</strong> — involves the use of legal documents, background checks, and high-assurance certificates. Though this is a more expensive and rigorous approach, it is still implemented due to its thoroughness in confirming an entity's legitimacy, providing a higher level of "human" trust.</li>
+    </ul>
+
+    <h3>5.2 Hierarchical PKIs</h3>
+    <p>In all variants of hierarchical PKIs, the issuer is called 'Certificate Authority' (CA). CAs are responsible for issuing certificates. The naive idea is that we can have one global issuer trusted by everyone. However, this is not that practical. What if there are too many requests?</p>
+
+    <p>There are other reasons. First, determining which global authority is deemed trustworthy for the role poses a significant challenge. Moreover, the verification steps must be universally agreed upon, complicating the process further. The issue of a global namespace, such as distinguishing between individuals with common names like "John Smith," necessitates unique global identifiers akin to passports. Identity verification in different jurisdictions can be different, and there is too much centralization. Therefore, relying on a single certificate authority is impractical.</p>
+
+    <h3>5.3 Pragmatic 'Solution' to the Problem of a Global CA</h3>
+    <p>The solution involves allowing multiple CAs and accepting them all as equals. However, this introduces a new challenge: how to establish user trust in these CAs. The approach is to include the public keys of 'trusted' CAs with the operating system and/or browser. Consequently, users don't have the option to select which CAs they trust, as the nature of the verification process is determined by agreements between vendors and CAs.</p>
+
+    <h3>5.4 Root Stores</h3>
+    <p>Root stores hold the certificates of trusted Certificate Authorities (CAs), called the <strong>root certificate store</strong>. For example, your browser — Firefox or Chrome — will have a setup of root certificates called the root certificate store.</p>
+    <ul>
+      <li><strong>The repository:</strong> Root stores hold the certificates of trusted CAs, which are considered 'trusted' to issue certificates to legitimate entities.</li>
+      <li><strong>Trust anchors:</strong> These stores specifically contain the <strong>self-signed Root Certificates</strong> that serve as the mathematical "starting point" for all validation chains. Root certificates are self-signed because they are the apex of the hierarchy; they cannot be verified mathematically via a higher authority and must be trusted by decree through pre-installation. This is sometimes called the "trust gap" — you cannot verify a Root CA through a chain.</li>
+      <li><strong>Application use:</strong> Every application that uses X.509 certificates (e.g., browsers) or the Operating System itself must maintain a root store. Operating systems such as Windows, Apple, and Linux all have their own root stores, as do browsers.</li>
+      <li><strong>Verification:</strong> To trust Alice, Bob's computer checks every signature in the chain until it hits a pre-installed Root.</li>
+    </ul>
+
+    <p>Not all CAs are in root stores. A common browser error ("cert data message") occurs because the certificate is not signed by any trusted cert in your root store — i.e., the root of the chain is not in your root certificate store, so you can't verify any certificates whose chain of trust ends there.</p>
+
+    <h3>5.5 Intermediate Certificates</h3>
+    <p>Certificates signed by the root certificate are called intermediate certificates. Most websites typically possess certificates that are signed by these intermediate certificates, not directly by the root certificate itself.</p>
+
+    <p>Intermediate certificates are "middle-link" certificates that are neither the trusted Root nor the final End-Entity. They form a bridge in the Chain of Trust, positioned between the root certificate and the end-entity certificate. There are two primary reasons for using intermediate certificates:</p>
+    <ol>
+      <li><strong>Delegated authority (sub-CAs):</strong> To delegate signing authority to another organization, department, or geographical region, creating what is known as a sub-CA. This enables a hierarchical "web of trust" without requiring every user to contact the main Root CA directly.</li>
+      <li><strong>Risk mitigation and root protection:</strong> The intermediate certificate is operated by the same organization as the root. The root certificate's private key can be kept offline in a highly secure, air-gapped location (often a physical safe). Online day-to-day operations, such as issuing new certificates, are conducted using the private key of the intermediate certificate. If an intermediate CA is compromised, it can be revoked without needing to replace the Root CA in every user's Root Store — a process that would take years.</li>
+    </ol>
+
+    <h3>5.6 PKI X.509 Model</h3>
+    <p>X.509 defines a framework for the provision of authentication services by the X.500 directory to its users. The directory may serve as a repository of public-key certificates. Each certificate contains the public key of a user and is signed with the private key of a trusted certification authority. In addition, X.509 defines alternative authentication protocols based on the use of public-key certificates. X.509 standard defines certificate format, certificate revocation lists (CRLs) and hierarchical PKI with certificate chains.</p>
+
+    <p>While X.509 defines the "data structure" of a certificate, the PKIX model defines how that data moves across the global internet. The Internet Engineering Task Force (IETF) Public Key Infrastructure X.509 (PKIX) working group has proposed the PKI X.509 (called PKIX) model (RFC 5280) to ensure different vendors (e.g., Microsoft, Google, Cisco) can all interoperate using the same rules. PKIX defines the entire ecosystem:</p>
+    <ul>
+      <li><strong>Certificate Revocation Lists (CRLs):</strong> The "blacklist" of certificates that were compromised before their expiry date.</li>
+      <li><strong>Online Certificate Status Protocol (OCSP):</strong> A real-time way for Bob to ask the CA, "Is Alice's key still valid right now?"</li>
+      <li><strong>Trust models:</strong> PKIX formalizes the Hierarchical PKI structure, establishing the technical "rules of the road" for Certificate Authorities.</li>
+    </ul>
+
+    <h3>5.7 Certificate Revocation</h3>
+    <p>It's important to be cautious with certificates. Note that a certificate is merely a signed statement that the binding between identity and key was valid at the time of issuing. There is always the possibility that the key could become compromised later. We must invalidate a certificate if the "trust foundation" collapses before the expiration date:</p>
+    <ul>
+      <li><strong>Private key compromise:</strong> The key is stolen, leaked, or suspected of being accessed by an unauthorized party (e.g., a server breach).</li>
+      <li><strong>Identity fraud/change:</strong> It is discovered that the identity verification was flawed, the domain ownership changed, or the entity (company/employee) no longer exists.</li>
+      <li><strong>CA compromise:</strong> The Certificate Authority that issued the cert is itself compromised, making all its "promises" untrustworthy.</li>
+    </ul>
+
+    <p>To be sure the binding remains valid at the time of verification, it is necessary to perform a revocation check. This process typically involves checking a Certificate Revocation List (CRL) or using the Online Certificate Status Protocol (OCSP) to confirm that the certificate has not been revoked and is still trustworthy for use.</p>
+
+    <h4>Certificate Revocation Lists (CRLs)</h4>
+    <p>A CRL is a list of certificates that are considered revoked.</p>
+    <ul>
+      <li>Should be issued, updated and maintained by every CA</li>
+      <li>Certificates are identified by serial number</li>
+      <li>Every CRL must be timestamped and signed</li>
+    </ul>
+    <p>Technically, a browser (client) should download the CRL (and update it after the given time), and look up a host certificate every time it connects to a server. However, this is too slow and not done (anymore) in practice.</p>
+
+    <h4>Online Certificate Status Protocol (OCSP) and OCSP Stapling</h4>
+    <p>Because CRLs can be massive and stale, we use the Online Certificate Status Protocol (OCSP) for live, per-certificate status checks. OCSP allows live revocation checks over the network, which is a query-response model. The CRL is hosted server-side rather than on the local host. Query = lookup of a certificate in a server-side CRL-like data structure. Response contains cert status that must be signed.</p>
+    <ul>
+      <li><strong>Standard OCSP (client-side check):</strong>
+        <ul>
+          <li>Mechanism: The client (Bob) queries the CA's "OCSP Responder" with a certificate serial number.</li>
+          <li>Response: The CA returns a signed status (Good, Revoked, or Unknown).</li>
+          <li>Drawbacks: Slows down the initial connection (latency) and leaks Bob's browsing history to the CA (privacy).</li>
+        </ul>
+      </li>
+      <li><strong>OCSP Stapling (server-side solution):</strong>
+        <ul>
+          <li>Mechanism: The server (Alice) fetches the signed OCSP response from the CA periodically and "staples" it to the certificate during the handshake.</li>
+          <li>The staple: Bob receives both the certificate and the proof of validity in one go.</li>
+          <li>Benefits: Zero extra latency for Bob and total privacy from the CA.</li>
+        </ul>
+      </li>
+    </ul>
+
+    <h3>5.8 Problems of X.509</h3>
+    <p>There have been numerous known cases where tricksters have managed to deceive CAs into issuing certificates for domains they did not own by presenting a forged identity. Additionally, there have been instances where CAs themselves were compromised.</p>
+    <ul>
+      <li><strong>Verification failures (identity fraud):</strong> Adversaries have successfully convinced CAs of forged identities, obtaining valid certificates for domains they do not own (e.g., the Comodo and DigiNotar incidents). Direct attacks on CA infrastructure have also allowed hackers to issue fraudulent certificates at will.</li>
+      <li><strong>Systemic weaknesses revealed by research:</strong>
+        <ul>
+          <li><strong>Lax certification practices:</strong> Many CAs prioritize speed and profit over rigorous identity verification.</li>
+          <li><strong>Operator mismanagement:</strong> Many website administrators deploy certificates with errors, such as mismatched domain names or expired chains.</li>
+          <li><strong>High-value bias:</strong> Effective X.509 deployment is often only seen in top-tier, high-value websites; the "long tail" of the internet remains poorly secured.</li>
+        </ul>
+      </li>
+      <li><strong>Equally trusted roots:</strong> In modern browsers, all pre-installed Root CAs are equally trusted. A compromise of a single, obscure CA in a distant jurisdiction can be used to issue a fake certificate for any global domain.</li>
+    </ul>
+
+    <p>In response to these challenges, many helper technologies have been developed since.</p>
+  </section>
+
+  <!-- ================= 6 ================= -->
+  <section class="sec" id="sec-6" aria-labelledby="h-6">
+    <div class="sec-head"><span class="sec-num" aria-hidden="true">6</span><h2 id="h-6">Authentication</h2></div>
+
+    <p>Authentication is one of the key security goals and serves as a preliminary step before access control can be enforced, when discussing users and privileges. To interact with the filesystem, a user must first log in; this login process is a form of authentication. Successful authentication then leads to authorization, which grants the user permission to access certain resources or perform specific actions.</p>
+
+    <blockquote class="quote">
+      <p><strong>Definition by Menezes et al.:</strong> "Authentication is the process whereby one party is assured (through the acquisition of corroborative evidence) of the identity of a second party involved in a protocol, and that the second has actually participated."</p>
+    </blockquote>
+
+    <p>Note the elements needed to ascertain the identity:</p>
+    <ul>
+      <li><strong>Corroborative evidence</strong></li>
+      <li><strong>Process between (at least) two parties</strong></li>
+      <li><strong>Involvement and participation of the second party</strong></li>
+    </ul>
+
+    <h3>6.1 Corroborative Evidence</h3>
+    <p>Corroborative evidence means the factors that are unique to an entity. Classic categorization into 3 categories:</p>
+    <ol>
+      <li><strong>Possession</strong> — something the entity/user has. For example, a physical key, or a phone to send SMS messages to. Possession sounds like a good way to authenticate an entity or user, however, the common problem is the loss of the physical device. For instance, when using a phone for authentication, the device is typically identified by its phone number. However, SMS messages used for authentication can be rerouted due to vulnerabilities in the global signaling network, SS7, which handles SMS among other services. These vulnerabilities mean that simply possessing a device may not provide sufficient assurance to authenticate an entity or user reliably.</li>
+
+      <li><strong>Inherence</strong> — something the user is. For instance, biometrics: fingerprints, iris scan, face and voice recognition. People once believed that biometrics were secure because, generally, biometric data cannot be changed. However, some can be easily inferred or duplicated. For example, it is possible to capture a fingerprint using a standard camera, an attack method that has been successfully demonstrated. Biometric authentication methods are theoretically more susceptible to forgery via recordings as technology evolves (generative AI, 3D printing) to better capture and reproduce biometric data. The major risk with biometrics is that unlike a password or a phone number, you cannot simply change your fingerprint or other biometric identifiers if they are compromised. This permanence makes biometrics a potentially vulnerable authentication method if the data is intercepted or replicated.</li>
+
+      <li><strong>Knowledge</strong> — something the user knows. Such as passwords and security questions (mother's maiden name, etc.). These can be used stand-alone or in combination. We already discussed the usability and strength of passwords, and databases of cracked passwords exist. The security questions used for account recovery are often very standard and predictable, offering limited options that can be easily guessed. Common questions like "What is your mother's maiden name?" can be vulnerable to attacks, especially in certain cultures where common surnames like Smith, Chang, Kim, or Schmidt may apply. Similarly, answers to questions like "What was your first car?" could be guessed with popular choices such as Golf, Yaris, or Corolla. Additionally, social networks can provide a rich source of personal information that can be used to answer these security questions, further compromising the effectiveness of this security measure.</li>
+    </ol>
+
+    <h3>6.2 Multi-factor Authentication</h3>
+    <p>Requiring multiple factors for authentication enhances security by combining information from different categories, such as knowledge (something you know) and inherence (something you are). A specific example of this is two-factor authentication (2FA), which typically involves a password combined with a code sent via text to a phone. This setup significantly increases security, requiring a highly motivated attacker and typically thwarting broad, non-targeted attacks.</p>
+
+    <p>However, the choice of factors should be carefully considered based on the context and specific security needs. For example, while possession (something you have, like a phone) is a strong factor due to its physical nature, there's also the risk of loss. In scenarios where a user might lose their phone, this could compromise their ability to authenticate. Therefore, it's crucial to select authentication factors that balance security with practical considerations like user behavior and potential risks.</p>
+
+    <p>2FA has become standard today for high-value sites such as webmail providers and social networks. MFA often includes mechanisms that check for plausibility. For example, if a login request comes from an unusual country, one that the user has never logged in from before, or if there are multiple failed login attempts, or if the IP address is from a range known to be the origin of other attacks, then MFA might be triggered or additional authentication factors may be required. For instance, the user might need to enter their password, receive a code on their phone, and get an access token sent via email. Implementation must follow the principle of <strong>psychological acceptability</strong>, ensuring that the authentication process does not overly burden or frustrate the user, which is crucial for maintaining user compliance and overall security integrity.</p>
+
+    <p>Multi-factor authentication (MFA) has several limitations:</p>
+    <ul>
+      <li>MFA places a bigger onus on the user. Remember psychological acceptability! An attacker can trick the user into sending their OTP and so on; he/she can bypass multi-factor authentication. Generally, MFA is more readily accepted in high-value, high-risk scenarios.</li>
+      <li>MFA with factors from the same category is not guaranteed stronger. For instance, admin asks for two passwords (which may both be weak) — this leads to no change at all to the security.</li>
+      <li>Social engineering can still easily overcome multiple factors. Tactics like phone scams can still trick users into disclosing crucial security information, such as passwords and codes.</li>
+    </ul>
+
+    <h3>6.3 One-Time Passwords</h3>
+    <p>Strengthening the authentication process can be effectively achieved using One-Time Passwords (OTPs), which are valid for only one login session. This method prevents attackers from reusing captured passwords. Examples of systems using dynamic OTPs include Google Authenticator, Microsoft OTP, and Yubikey.</p>
+
+    <p>There are two types of OTPs:</p>
+    <ol>
+      <li><strong>Static OTP:</strong> An indexed list of OTPs is given to the user.</li>
+      <li><strong>Dynamic OTP:</strong> Follows a challenge-response principle where the OTP generated depends on the specific challenge presented.</li>
+    </ol>
+
+    <p>OTP serves as a form of possession and can be done as MFA. For instance, when making a high-value purchase, a bank might require an OTP before processing the payment. This OTP might be generated by a device the user possesses or in response to a challenge code provided by a website, ensuring the OTP is context-specific and secure.</p>
+
+    <h3>6.4 Console Login vs. Network Login</h3>
+    <p>Console login or network login is an example of a <strong>process between (at least) two parties</strong>.</p>
+    <ul>
+      <li><strong>Console login:</strong> The principle of participation is guaranteed by the requirement that someone or something must physically input the password, typically via a keyboard. This interaction guarantees active participation in the authentication process. Even USB attack devices face rate-limiting delays — UNIX systems implement a slight delay between password attempts to defend against rapid, automated password-guessing attacks.</li>
+      <li><strong>Network login — the participation problem:</strong> No physical presence → difficult to prove active participation. Key issues:
+        <ul>
+          <li>Credentials transmitted over the network can be captured.</li>
+          <li>Replay attacks: intercepted credentials are reused later.</li>
+          <li>Cannot distinguish a legitimate user actively logging in, malware sending stored credentials, or an attacker replaying captured data.</li>
+        </ul>
+      </li>
+    </ul>
+
+    <blockquote class="callout key">
+      <span class="label">Implication</span>
+      Network authentication requires additional mechanisms (challenge-response, nonces, time-based tokens) to cryptographically prove fresh, active participation beyond just "knowing" the password.
+    </blockquote>
+
+    <h3>6.5 Authentication Protocols</h3>
+    <p>Network communication heavily relies on protocols, which dictate how layers interact with each other. Previously, we applied cryptography primarily to single messages. However, for effective authentication over a network, a more robust approach is necessary, involving a sequence of steps. This sequence forms a protocol, and when cryptographic protection is incorporated, it becomes a <strong>cryptographic protocol</strong>. Creating secure cryptographic protocols is challenging. Even with flawless cryptographic operations, vulnerabilities can still exist due to loopholes in protocol design. For example, an attacker could intercept a password and reuse it in subsequent requests, known as a replay attack, where even an encrypted password could be replayed.</p>
+
+    <h3>6.6 Person-in-the-Middle</h3>
+    <p>Alice tries to send password <em>p</em> to Bob, encrypted with <em>k</em>. An attacker can just record <em>c</em> = <em>Enc<sub>k</sub></em>(<em>p</em>) and replay it later. Bob does not actually know if Alice has participated. Neither MACs nor signatures help since they can be replayed as well. We must somehow bind the transmission of the password to the <strong>current communication</strong>.</p>
+
+    <p>To bind the transmission of the password to the current communication, we need to design or <strong>build protocols</strong>. We first construct cryptographic protocols from primitives:</p>
+    <ul>
+      <li><strong>Cryptographically secure random numbers</strong> — an essential ingredient in all that follows.</li>
+      <li><strong>Cryptographic hash functions</strong> — give us MACs (by mixing in a shared secret).</li>
+      <li><strong>Public-key cryptography</strong> — gives us key exchange over certain untrusted channels, confidentiality (typically achieved through hybrid cryptography, where symmetric keys are encrypted with a public key), and origin authentication and data integrity.</li>
+      <li><strong>Symmetric-key cryptography</strong> — gives us confidentiality (secures actual data transfers by encrypting the data), and origin authentication and data integrity achieved using MACs.</li>
+    </ul>
+  </section>
+
+  <!-- ================= 7 ================= -->
+  <section class="sec" id="sec-7" aria-labelledby="h-7">
+    <div class="sec-head"><span class="sec-num" aria-hidden="true">7</span><h2 id="h-7">Authentication and Key Establishment (AKE)</h2></div>
+
+    <h3>7.1 Constructing an Authentication Protocol</h3>
+    <p>Alice (<em>A</em>) wants to authenticate to Bob (<em>B</em>). <em>A</em> must prove to <em>B</em> possession or knowledge of something that no one but <em>A</em> can have. We will assume they have a shared, secret key <em>k<sub>A,B</sub></em>, and Bob has a way to verify Alice's password.</p>
+
+    <p><strong>Naive Attempt #1: Send the encrypted password.</strong> Protocol: <code>A → B: c = Enc<sub>k</sub>(p)</code>. Problem: replay attack. Attacker C intercepts <em>c</em> and replays it: <code>C → B: c</code>. Bob accepts C as Alice! C doesn't need to know <em>p</em> or <em>k</em>, just replays <em>c</em>.</p>
+
+    <p><strong>Naive Attempt #2: Add a Message Authentication Code (MAC).</strong> Protocol: <code>A → B: c, MAC<sub>kA,B</sub>(c)</code>. Why still not secure: MAC prevents tampering but NOT replay. Attacker C can still capture and replay both <em>c</em> and <em>MAC<sub>kA,B</sub>(c)</em>: <code>C → B: c, MAC<sub>kA,B</sub>(c)</code>. Bob verifies the MAC successfully and accepts C as Alice!</p>
+
+    <blockquote class="callout key">
+      <span class="label">Key insight</span>
+      We need a way to ensure freshness and prove active participation, not just knowledge of the key.
+    </blockquote>
+
+    <p><strong>Challenge-Response with Nonces:</strong> In the following, let <em>{m}</em> denote an encrypted and integrity-protected message. A nonce is a 'random number used once'. We play:</p>
+    <div class="protocol">
+      <span class="pl"><span class="who">A → B:</span> N<sub>A</sub></span>
+      <span class="pl"><span class="who">B → A:</span> {N<sub>A</sub>, N<sub>B</sub>}</span>
+      <span class="pl"><span class="who">A → B:</span> {N<sub>A</sub>, N<sub>B</sub> + 1}</span>
+    </div>
+
+    <p><em>B</em> has assurance now that <em>A</em> has participated and reacted to precisely the second message, because she was able to read <em>N<sub>B</sub></em> (the challenge) and increment it (response). Note: nonces can be replaced with timestamps in some cases, but we do not show this here.</p>
+
+    <h3>7.2 AKE: Authentication and Key Establishment</h3>
+    <p>Most protocols combine authentication and key establishment, typically through one of two methods: either by creating a password and securely encrypting and sending it, or by utilizing a Diffie-Hellman key exchange. There are multiple approaches:</p>
+    <ul>
+      <li><strong>Password-based methods</strong> (with challenge-response to prevent replay)
+        <ul>
+          <li>Use nonces/timestamps to ensure freshness</li>
+          <li>Derive session keys from the password exchange</li>
+          <li>Examples: encrypted key exchange protocols</li>
+        </ul>
+      </li>
+      <li><strong>Diffie-Hellman based methods</strong>
+        <ul>
+          <li>Establish shared secret without a pre-shared password</li>
+          <li>Combine with authentication (certificates, signatures)</li>
+          <li>Examples: TLS, SSH key exchange</li>
+        </ul>
+      </li>
+    </ul>
+
+    <p>There are critical engineering principles to ensure robust security:</p>
+    <ul>
+      <li>Always generate 'session keys' from your actual, master keys</li>
+      <li>Use the session keys for one communication 'session', then delete them</li>
+      <li>Never reuse session keys</li>
+      <li>Both parties should be involved in the key creation</li>
+    </ul>
+
+    <p>The idea of a <strong>simple AKE</strong> is to use long-term asymmetric keys to protect short-term symmetric keys. In the simplest hybrid crypto approach, Alice generates symmetric key <em>k</em> and sends it encrypted with Bob's public key. A better schema for hybrid crypto involves both sides in key creation: even if one chooses a poor key half by accident, the scheme remains secure. Variants of this are in use, but are being phased out.</p>
+
+    <h3>7.3 AKE with Diffie-Hellman</h3>
+    <p><strong>Diffie-Hellman recap:</strong></p>
+    <p>Let <em>p</em> be prime, and <em>g</em> a generator for ℤ<sub>p</sub><sup>*</sup>.</p>
+
+    <div class="tablewrap">
+      <table>
+        <caption>Diffie-Hellman key exchange between Alice and Bob.</caption>
+        <thead>
+          <tr><th scope="col">Alice</th><th scope="col">Bob</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Choose random value <em>a &lt; p</em></td><td>Choose random value <em>b &lt; p</em></td></tr>
+          <tr><td>Compute <em>X = g<sup>a</sup> mod p</em></td><td>Compute <em>Y = g<sup>b</sup> mod p</em></td></tr>
+          <tr><td>Send <em>X</em> to Bob</td><td>Send <em>Y</em> to Alice</td></tr>
+          <tr><td>Compute <em>k = Y<sup>a</sup> mod p</em></td><td>Compute <em>k = X<sup>b</sup> mod p</em></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p><em>Y<sup>a</sup> mod p = (g<sup>b</sup>)<sup>a</sup> = g<sup>ab</sup> = (g<sup>a</sup>)<sup>b</sup> = X<sup>b</sup> mod p</em> — both sides obtain the same <em>k</em> value. DH key exchange allows key establishment over an insecure channel, under a passive attacker.</p>
+
+    <p>In practice, we <strong>sign</strong> Diffie-Hellman values. Alice and Bob do all the steps the same, except that when they send <em>X</em> and <em>Y</em>, they also send them with <em>sig<sub>A</sub>(x)</em> and <em>sig<sub>B</sub>(y)</em>. This protects against an active attacker trying to modify them. Alice and Bob use their (long-term secret) private keys for that, e.g., RSA keys.</p>
+
+    <h3>7.4 Forward Secrecy</h3>
+    <p>Using Diffie-Hellman every time we run a protocol gives us fresh session keys every time ('ephemeral' keys). But we must choose fresh <em>a</em>, <em>b</em> every time and delete old ones!</p>
+
+    <p>This is <strong>Forward Secrecy</strong>: even if an attacker obtains the long-term signing keys, messages encrypted with session keys will remain secure. When the attacker learns one pair (<em>a<sub>i</sub>, b<sub>i</sub></em>), all messages protected with (<em>a<sub>j</sub>, b<sub>j</sub></em>), <em>i ≠ j</em> are still secure. Forward Secrecy (often called Perfect Forward Secrecy, or PFS) is a property of key-agreement protocols that ensures a session key will not be compromised even if the long-term private keys (the "master keys") are compromised in the future.</p>
+
+    <h3>7.5 Modern APIs</h3>
+    <p>In cryptography and protocols, there are too many ways to make mistakes, ranging from the use of inadequate key lengths and poor random value generation to improper padding or block modes, along with a myriad of other pitfalls. Common developer errors include:</p>
+    <ul>
+      <li>Poor key lengths or weak random values (predictable seeds)</li>
+      <li>Wrong or no padding (leading to padding oracle attacks)</li>
+      <li>Insecure block cipher modes (ECB mode reveals patterns)</li>
+      <li>Mixing encryption and authentication incorrectly</li>
+      <li>Reusing nonces/IVs with stream ciphers</li>
+    </ul>
+
+    <p>Modern API design philosophy: don't give developers dangerous choices — make safe defaults the only option. Real-world examples: libsodium/NaCl, AWS Encryption SDK, Google Tink, and TLS 1.3 (which removed weak cipher suites entirely — no RSA key exchange, no CBC mode).</p>
+
+    <p>What modern APIs cannot prevent are semantic flaws in the protocol. This is why we use standardized protocols that have been thoroughly vetted, such as the Kerberos protocol.</p>
+  </section>
+
+  <!-- ================= 8 ================= -->
+  <section class="sec" id="sec-8" aria-labelledby="h-8">
+    <div class="sec-head"><span class="sec-num" aria-hidden="true">8</span><h2 id="h-8">Kerberos</h2></div>
+
+    <h3>8.1 Needham-Schroeder Protocol</h3>
+    <p>The basic idea of the Needham-Schroeder protocol involves an intermediary 'Authentication Server' that facilitates communication between two parties, such as Alice and Bob. This protocol is designed to establish a session key between two users over an insecure network. There are several variants of this protocol, with Kerberos being one of the most well-known examples. The version we will focus on specifically utilizes symmetric keys. Essentially, the Needham-Schroeder protocol serves as a method for constructing a Key Distribution Centre (KDC), which is crucial for managing the distribution of keys in a secure manner.</p>
+
+    <p>The protocol proceeds as follows:</p>
+    <ol>
+      <li><strong>Initiate; nonce identifies the session:</strong>
+        <div class="protocol"><span class="pl">A → AS: ID<sub>A</sub>, ID<sub>B</sub>, N<sub>1</sub></span></div>
+      </li>
+      <li><strong>AS creates session key <em>K<sub>s</sub></em>; encrypts with shared with Bob ('ticket'):</strong>
+        <div class="protocol"><span class="pl">AS → A: E(K<sub>a</sub>,[K<sub>s</sub>∥ID<sub>A</sub>∥ID<sub>B</sub>∥N<sub>1</sub>]) ∥ E(K<sub>b</sub>,[K<sub>s</sub>∥ID<sub>A</sub>])</span></div>
+      </li>
+      <li><strong>Forward the ticket:</strong>
+        <div class="protocol"><span class="pl">A → B: E(K<sub>b</sub>,[K<sub>s</sub>∥ID<sub>A</sub>])</span></div>
+      </li>
+      <li><strong>Prove knowledge of session key (freshness!):</strong>
+        <div class="protocol"><span class="pl">B → A: E(K<sub>s</sub>, N<sub>2</sub>)</span></div>
+      </li>
+      <li><strong>Prove knowledge of session key and nonce</strong> (<em>f</em> is a generic function that modifies the value of the nonce):
+        <div class="protocol"><span class="pl">A → B: E(K<sub>s</sub>, f(N<sub>2</sub>))</span></div>
+      </li>
+    </ol>
+
+    <h3>8.2 Kerberos Protocol</h3>
+    <p>Kerberos is a widely-used protocol for authentication and access control, with much deployment as a backend protocol. Instead of implementing complex authentication protocols on each server, Kerberos centralizes this process with an authentication server. This server's primary function is to authenticate users to servers and vice versa, which is similar to the function of the Needham-Schroeder protocol.</p>
+
+    <p>Kerberos is built on Needham-Schroeder and has remarkable features:</p>
+    <ul>
+      <li>A ticket concept that allows users to access services securely</li>
+      <li>Users first authenticate with a password and then request access to a server</li>
+      <li>Tickets are assigned a lifetime, enforced by timestamps, after which reauthentication is necessary</li>
+      <li>The capability to federate several administrative domains, making it versatile for use across different organizational structures</li>
+    </ul>
+
+    <p>To address the issue of ticket-granting tickets being captured and misused before their expiration, a strategy is employed where the Authentication Server (AS) provides both the client and the Ticket Granting Server (TGS) with a secret piece of information securely. This method ensures that even if a ticket is stolen, the thief cannot use it without also having access to the secret information. The client then verifies its identity to the TGS by revealing this secret, doing so in a secure manner. A practical and efficient approach to managing this secret information is to use an encryption key, known as a session key in the context of Kerberos. This session key serves as both the secret and the means of secure communication, effectively safeguarding the integrity of the authentication process.</p>
+
+    <p>The Kerberos exchanges among the parties are:</p>
+    <ol>
+      <li><strong>Client requests ticket-granting ticket:</strong>
+        <div class="protocol"><span class="pl">Client (C) → AS: ID<sub>c</sub>∥ID<sub>tgs</sub>∥TS<sub>1</sub></span></div>
+        <dl class="defs">
+          <dt><em>ID<sub>c</sub></em></dt><dd>client identity</dd>
+          <dt><em>ID<sub>tgs</sub></em></dt><dd>tells AS that user requests access to TGS</dd>
+          <dt><em>TS<sub>1</sub></em></dt><dd>allows AS to verify that client's clock is synchronized with that of AS</dd>
+        </dl>
+      </li>
+
+      <li><strong>AS returns ticket-granting ticket:</strong>
+        <div class="protocol"><span class="pl">AS → C: E(K<sub>c</sub>,[K<sub>c,tgs</sub>∥ID<sub>tgs</sub>∥TS<sub>2</sub>∥Lifetime<sub>2</sub>∥Ticket<sub>tgs</sub>])</span></div>
+        <dl class="defs">
+          <dt><em>K<sub>c</sub></em></dt><dd>encryption is based on user's password, enabling AS and client to verify password, and protecting contents of message</dd>
+          <dt><em>K<sub>c,tgs</sub></em></dt><dd>copy of session key accessible to client created by AS to permit secure exchange between client and TGS without requiring them to share a permanent key</dd>
+          <dt><em>ID<sub>tgs</sub></em></dt><dd>confirms that this ticket is for the TGS</dd>
+          <dt><em>TS<sub>2</sub></em></dt><dd>informs client of time this ticket was issued</dd>
+          <dt><em>Lifetime<sub>2</sub></em></dt><dd>informs client of the lifetime of this ticket</dd>
+          <dt><em>Ticket<sub>tgs</sub></em></dt><dd>ticket to be used by client to access TGS</dd>
+        </dl>
+      </li>
+
+      <li><strong>Client requests service-granting ticket:</strong>
+        <div class="protocol"><span class="pl">C → TGS: ID<sub>v</sub>∥Ticket<sub>tgs</sub>∥Authenticator<sub>c</sub></span></div>
+        <dl class="defs">
+          <dt><em>ID<sub>v</sub></em></dt><dd>tells TGS that user requests access to server V</dd>
+          <dt><em>Ticket<sub>tgs</sub></em></dt><dd>assures TGS that this user has been authenticated by AS</dd>
+          <dt><em>Authenticator<sub>c</sub></em></dt><dd>generated by client to validate ticket</dd>
+        </dl>
+      </li>
+
+      <li><strong>TGS returns service-granting ticket:</strong>
+        <div class="protocol"><span class="pl">TGS → C: E(K<sub>c,tgs</sub>,[K<sub>c,v</sub>∥ID<sub>v</sub>∥TS<sub>4</sub>∥Ticket<sub>v</sub>])</span></div>
+        <dl class="defs">
+          <dt><em>K<sub>c,tgs</sub></em></dt><dd>key shared only by client and TGS to protect content of message</dd>
+          <dt><em>K<sub>c,v</sub></em></dt><dd>session key for client and server V</dd>
+          <dt><em>ID<sub>v</sub></em></dt><dd>confirm ticket is for server V</dd>
+          <dt><em>Ticket<sub>v</sub></em></dt><dd>ticket to access server V</dd>
+        </dl>
+      </li>
+
+      <li><strong>Client requests service:</strong>
+        <div class="protocol"><span class="pl">C → V: Ticket<sub>v</sub>∥Authenticator<sub>c</sub></span></div>
+        <dl class="defs">
+          <dt><em>Ticket<sub>v</sub></em></dt><dd>assures server that this user has been authenticated by AS</dd>
+        </dl>
+      </li>
+
+      <li><strong>Optional authentication of server to client, service granted:</strong>
+        <div class="protocol"><span class="pl">V → C: E(K<sub>c,v</sub>,[TS<sub>5</sub> + 1])</span></div>
+        <dl class="defs">
+          <dt><em>K<sub>c,v</sub></em></dt><dd>assures client that this message is from V</dd>
+          <dt><em>TS<sub>5</sub> + 1</em></dt><dd>assures C that this is not a replay of an old reply</dd>
+        </dl>
+      </li>
+    </ol>
+  </section>
+
+  <!-- ================= 9 ================= -->
+  <section class="sec" id="sec-9" aria-labelledby="h-9">
+    <div class="sec-head"><span class="sec-num" aria-hidden="true">9</span><h2 id="h-9">Practice Quiz</h2></div>
+
+    <article class="quiz">
+      <p class="q"><span class="qn">Question 1:</span> ........... refers to the means of delivering a key to two parties who wish to exchange data without allowing others to see the key.</p>
+      <ul class="options">
+        <li>a) Manual key delivery</li>
+        <li>b) Key distribution technique</li>
+        <li>c) Session key delivery</li>
+        <li class="correct">d) Confidential key distribution</li>
+      </ul>
+      <blockquote class="explain">
+        <p><em>Explanation:</em> This is the textbook definition of key distribution. We discussed there are two ways to do key distribution: manual or the use of a trusted third party. The session key established happens after the master key has been established. "Confidential key distribution" doesn't refer to anything meaningful.</p>
+      </blockquote>
+    </article>
+
+    <article class="quiz">
+      <p class="q"><span class="qn">Question 2:</span> The principal objective for developing a ........... acquisition of public keys.</p>
+      <ul class="options">
+        <li>a) KTC</li>
+        <li>b) CRL</li>
+        <li>c) PKI</li>
+        <li class="correct">d) KDC</li>
+      </ul>
+      <blockquote class="explain">
+        <p><em>Explanation:</em> The machinery we have to distribute public keys is called PKI or the Public Key Infrastructure.</p>
+      </blockquote>
+    </article>
+
+    <article class="quiz">
+      <p class="q"><span class="qn">Question 3:</span> Digital signature certification is needed by an independent authority because;</p>
+      <ul class="options">
+        <li class="correct">a) The private key claimed by a sender may not be actually theirs</li>
+        <li>b) It is safe</li>
+        <li>c) It gives confidence to a business</li>
+        <li class="correct">d) The authority checks and assures customers that the public key indeed belongs to the business which claims its ownership.</li>
+      </ul>
+      <blockquote class="explain">
+        <p><em>Explanation:</em> The idea of the certificates is that there is this trusted third party who can vouch for a given public key, that they have verified the owner's identity, and that the given public key is indeed theirs. Therefore, the correct answer is D. B and C are vague and lack technical backing. A is incorrect because we never share private keys.</p>
+      </blockquote>
+    </article>
+
+    <article class="quiz">
+      <p class="q"><span class="qn">Question 4:</span> Kerberos consists of a/an ...........</p>
+      <ul class="options">
+        <li>a) Authorization Server</li>
+        <li>a) Client Server</li>
+        <li class="correct">a) Authentication Server</li>
+        <li>a) Mail Server</li>
+      </ul>
+      <blockquote class="explain">
+        <p><em>Explanation:</em> We discussed two key elements of the Kerberos protocol. Authentication server and the Ticket Granting Server. Based on the given answers, the correct answer is "C. Authentication Server."</p>
+      </blockquote>
+    </article>
+
+    <article class="quiz">
+      <p class="q"><span class="qn">Question 5:</span> Kerberos is based on the Needham-Schroeder Protocol. TRUE/FALSE.</p>
+      <ul class="options">
+        <li class="correct">a) TRUE</li>
+        <li>b) FALSE</li>
+      </ul>
+      <blockquote class="explain">
+        <p><em>Explanation:</em> Kerberos is based on the basic Needham-Schroeder Protocol with more advanced features like using timestamps, separating the authentication function from the ticket-granting function etc. Therefore, the correct answer is TRUE.</p>
+      </blockquote>
+    </article>
+
+    <article class="quiz">
+      <p class="q"><span class="qn">Question 6:</span> The Kerberos protocol protects against which of the following attacks?</p>
+      <ul class="options">
+        <li>a) Dictionary Attacks</li>
+        <li>b) Replay Attacks</li>
+        <li class="correct">c) Denial of Service Attacks</li>
+        <li class="correct">d) Person in the Middle Attacks</li>
+      </ul>
+      <blockquote class="explain">
+        <p><em>Explanation:</em> Kerberos is an authenticated key exchange protocol that uses a KDC (Key Distribution Center). Therefore, the primary attack it tries to mitigate is the person-in-the-middle attack.</p>
+      </blockquote>
+    </article>
+
+    <article class="quiz">
+      <p class="q"><span class="qn">Question 7:</span> Consider the below two statements.</p>
+      <p class="q">i) Perfect Forward Secrecy is a feature of specific key agreement protocols that assures that session keys will not be compromised even if long-term secrets used in the session key exchange are compromised.</p>
+      <p class="q">ii) Signed Diffie-Hellman Key exchange can provide Perfect Forward Secrecy.</p>
+      <p class="q">Which of the below correctly represents the TRUE/FALSE nature of the two statements?</p>
+      <ul class="options">
+        <li>a) FALSE, FALSE</li>
+        <li>b) FALSE, TRUE</li>
+        <li>c) TRUE, FALSE</li>
+        <li class="correct">d) TRUE, TRUE</li>
+      </ul>
+      <blockquote class="explain">
+        <p><em>Explanation:</em> Both statements are true. The first is the textbook definition of Perfect Forward Secrecy. The second is true because we can use DH key exchange to establish session keys. So, even if private and public key pairs were compromised, the attackers can't recover session keys.</p>
+      </blockquote>
+    </article>
+
+    <article class="quiz">
+      <p class="q"><span class="qn">Question 8:</span> ................ is an integer value unique within the issuing CA that is unambiguously associated with this certificate.</p>
+      <ul class="options">
+        <li>a) Signature identifier</li>
+        <li>b) Version</li>
+        <li>c) Serial number</li>
+        <li>d) Issuer unique identifier</li>
+      </ul>
+      <blockquote class="explain">
+        <p><em>Explanation:</em> We discussed this during the format of the X.509 certificate and the CRL part. A serial number uniquely identifies a certificate within a certificate authority.</p>
+      </blockquote>
+    </article>
+
+    <article class="quiz">
+      <p class="q"><span class="qn">Question 9:</span> The authenticator that is used as a possession factor is a ................</p>
+      <ul class="options">
+        <li>a) Fingerprint</li>
+        <li>b) Token</li>
+        <li>c) PIN</li>
+        <li>d) Secret question answer</li>
+      </ul>
+      <blockquote class="explain">
+        <p><em>Explanation:</em> The fingerprint is inherence. PIN and secret question answers are knowledge. Token refers to possession, something like a hardware token (e.g. a Yubikey).</p>
+      </blockquote>
+    </article>
+
+    <article class="quiz">
+      <p class="q"><span class="qn">Question 10:</span> ................ is a procedure that allows communicating parties to verify that the contents of a received message have not been altered and that the source is authentic.</p>
+      <ul class="options">
+        <li>a) Identification</li>
+        <li>b) Message authentication</li>
+        <li>c) Verification</li>
+        <li>d) User authentication</li>
+      </ul>
+      <blockquote class="explain">
+        <p><em>Explanation:</em> This is not something we directly discussed this week. I included it to differentiate message authentication from user authentication. The description describes message authentication.</p>
+      </blockquote>
+    </article>
+  </section>
+
+  <!-- ================= 10 ================= -->
+  <section class="sec" id="sec-10" aria-labelledby="h-10">
+    <div class="sec-head"><span class="sec-num" aria-hidden="true">10</span><h2 id="h-10">Recap</h2></div>
+    <ul>
+      <li>Symmetric key distribution (using symmetric encryption)</li>
+      <li>Symmetric key distribution (using asymmetric encryption)</li>
+      <li>Public-key/asymmetric key distribution and digital certificates</li>
+      <li>Public-key infrastructure</li>
+      <li>Personal identity authentication</li>
+      <li>Authentication and key establishment (AKE)</li>
+      <li>Remote user-authentication and Kerberos</li>
+    </ul>
+  </section>
+
+</div>
+</main>
+
+<footer class="sitefooter">
+  <div class="wrap">
+    <p>INFO3616 Cybersecurity Engineering — Week 7: Authentication and Key Distribution.</p>
+    <p>Consolidated from Week7_Notes.pdf and Week7_slides.pdf · The University of Sydney.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var links = Array.prototype.slice.call(document.querySelectorAll('.navlinks a'));
+  if(!links.length || !('IntersectionObserver' in window)) return;
+  var targets = links.map(function(a){
+    var el = document.querySelector(a.getAttribute('href'));
+    return el ? {link:a, el:el} : null;
+  }).filter(Boolean);
+  function setActive(id){
+    links.forEach(function(a){
+      a.removeAttribute('aria-current');
+      if(a.getAttribute('href') === '#' + id) a.setAttribute('aria-current','true');
+    });
+  }
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){ if(e.isIntersecting) setActive(e.target.id); });
+  }, {rootMargin:'-15% 0px -70% 0px', threshold:0});
+  targets.forEach(function(t){ obs.observe(t.el); });
+})();
+</script>
+</body>
+</html>

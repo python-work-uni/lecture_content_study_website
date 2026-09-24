@@ -1,0 +1,294 @@
+================================================================================
+ELEC3609 / ELEC9609: INTERNET SOFTWARE PLATFORMS
+WEEK 5 STUDY GUIDE: CLIENT-SERVER COMMUNICATION & BACKEND DEVELOPMENT
+================================================================================
+
+--------------------------------------------------------------------------------
+1. CLIENT-SERVER DATA FORMATS: XML vs. JSON
+--------------------------------------------------------------------------------
+Client-server communication requires agreed formats and transport mechanisms.
+Common mechanisms include Sockets, Remote Procedure Calls (RPC), and Pipes.
+
+[MIME Types (Multipurpose Internet Mail Extensions)]
+- Maintained by IANA (Internet Assigned Numbers Authority).
+- Determines the exact file format and content encoding sent over the network.
+- Format: `type/subtype`
+- Common Examples:
+  * `text/html`         -> Webpages (HTML markup)
+  * `text/css`          -> Cascading Style Sheets
+  * `application/json`  -> Structured JSON data
+  * `image/png`         -> Portable Network Graphics image
+
+--------------------------------------------------------------------------------
+[Extensible Markup Language (XML)]
+--------------------------------------------------------------------------------
+- Definition: A markup language (not a programming language) that defines rules 
+  for encoding documents in a format that is both human-readable and machine-readable.
+- Key Purpose: Self-descriptive; designed to carry and transport data, NOT display data.
+- Schema Concept: XML allows defining schemas (contracts) between client & server.
+
+XML Terminology & Components:
+1. Markup: Structural elements enclosed by `<` and `>` or entity references (`&` and `;`).
+2. Content: The raw data enclosed inside markup.
+3. Tags:
+   - Start tag:          `<section>`
+   - End tag:            `</section>`
+   - Empty-element tag: `<img src="dog.jpg"/>`
+4. Attribute: Key-value pairs inside start/empty tags providing metadata.
+   - Example: `<img src="dog.jpg" alt="woof"/>`
+
+Document Type Declaration (DOCTYPE) & Document Type Definition (DTD):
+- DOCTYPE links to a DTD, which establishes the strict rules/schema for allowed 
+  fields and hierarchy.
+
+DTD Syntax Breakdown:
+- `<!ELEMENT book (title, chapter+)>`   -> A `book` must contain 1 `title` and 1 or more `chapter`s (+)
+- `<!ELEMENT chapter (heading, paragraph*)>` -> A `chapter` has 1 `heading` and 0 or more `paragraph`s (*)
+- `<!ELEMENT heading (#PCDATA)>`        -> Parsed Character Data (raw text)
+- `<!ELEMENT paragraph (#PCDATA)>`      -> Parsed Character Data (raw text)
+- `<!ATTLIST book language CDATA #REQUIRED author CDATA #REQUIRED>`
+  * Defines required string attributes (`language` and `author`) for `book`.
+
+DTD Symbol Quick Reference:
+  * `+`  -> 1 or more (one to many)
+  * `*`  -> 0 or more (zero to many)
+  * `?`  -> 0 or 1 (optional)
+  * `#PCDATA` -> Parsable text content
+
+--------------------------------------------------------------------------------
+[JavaScript Object Notation (JSON)]
+--------------------------------------------------------------------------------
+- Definition: An open-standard text format for representing structured data based 
+  on JavaScript object literal syntax.
+- Characteristics: Lightweight, human-readable, and completely language-independent.
+- Primary Uses:
+  1. API Request/Response Payloads (REST APIs)
+  2. Data Serialization & Deserialization
+  3. Software Configuration Files (e.g., package.json, settings.json)
+
+[XML vs. JSON Comparison]
++---------------------+---------------------------------+----------------------------------+
+| Feature             | XML                             | JSON                             |
++---------------------+---------------------------------+----------------------------------+
+| Structure           | Tag-based tree hierarchy        | Key-Value pairs & Arrays         |
+| Verbosity           | High (closing tags required)    | Low (compact syntax)             |
+| Parsing Overhead    | Higher (requires DOM/SAX parser)| Native JS object parsing (fast)  |
+| Schema Support      | Strict DTD / XML Schema (XSD)   | Optional (JSON Schema)           |
+| Primary Web Use     | Legacy systems, enterprise SOAP | Modern RESTful Web APIs          |
++---------------------+---------------------------------+----------------------------------+
+
+
+--------------------------------------------------------------------------------
+2. HTTP PROTOCOL, HEADERS & COOKIE MANAGEMENT
+--------------------------------------------------------------------------------
+Hypertext Transfer Protocol (HTTP) is a stateless client-server request-response 
+protocol powering web interactions.
+
+[HTTP Request Methods]
+Consistency and proper semantic usage of HTTP methods is essential for web development:
+
++---------+---------------------------------+---------------+------------------+
+| Method  | Description                     | Safe (Read)   | Idempotent       |
++---------+---------------------------------+---------------+------------------+
+| GET     | Retrieves resource data         | YES           | YES              |
+| POST    | Submits data / Creates resource | NO            | NO               |
+| PUT     | Creates or replaces a resource  | NO            | YES              |
+| PATCH   | Performs partial modifications  | NO            | NO               |
+| DELETE  | Removes specified resource      | NO            | YES              |
+| OPTIONS | Queries supported HTTP methods  | YES           | YES              |
+| HEAD    | GET request returning NO body   | YES           | YES              |
++---------+---------------------------------+---------------+------------------+
+* Note: Idempotent means calling the request multiple times produces the same result.
+
+--------------------------------------------------------------------------------
+[Key HTTP Request/Response Headers]
+--------------------------------------------------------------------------------
+1. Content Negotiation Headers:
+   - Request `Accept`: Specifies MIME types acceptable in response (e.g., `Accept: application/json`).
+   - Response `Content-Type`: Tells browser how to interpret response body (e.g., `Content-Type: text/html`).
+
+2. Metadata & Origin Headers:
+   - Request `Referer`: Contains URL of previous webpage that linked to current request.
+     * Example: User clicks link on `google.com` -> request header `Referer: https://www.google.com/`.
+   - Request `User-Agent`: Identifies client software characteristics (Browser, OS, Rendering Engine).
+
+--------------------------------------------------------------------------------
+[HTTP Cookies & Authentication Flow]
+--------------------------------------------------------------------------------
+HTTP is stateless. Cookies allow servers to store stateful information in the user's browser.
+
+Headers Controlling Cookies:
+- Response Header: `Set-Cookie: token=abc123xyz`  (Server directs browser to store cookie)
+- Request Header:  `Cookie: token=abc123xyz`      (Browser automatically includes cookie in future requests)
+
+[5-Step Cookie Authentication Flow]
+  Step 1: User visits site for first time -> Request sent (No Cookie).
+  Step 2: User submits credentials (username/password) -> POST Request (No Cookie).
+  Step 3: Server verifies user & generates token -> Response: `Set-Cookie: authToken=xyz987`.
+  Step 4: User navigates to protected page -> Browser sends: `Cookie: authToken=xyz987`.
+  Step 5: Server inspects `authToken`, identifies user, and grants access.
+
+[Essential Security Flag Attributes for Cookies]
+- `HttpOnly`: Prevents client-side JavaScript (e.g. `document.cookie`) from accessing cookie; 
+  protects against Cross-Site Scripting (XSS) session hijacking.
+- `Secure`: Ensures cookie is transmitted ONLY over encrypted HTTPS connections.
+- `SameSite`: Controls cross-site request sending (`Strict`, `Lax`, `None`); defends against 
+  Cross-Site Request Forgery (CSRF).
+
+
+--------------------------------------------------------------------------------
+3. BACKEND ARCHITECTURE & DATA MODELLING
+--------------------------------------------------------------------------------
+Data modelling defines and analyzes how data requirements are structured in a system.
+
+[3 Steps of Data Modelling]
+1. Identify Detailed Requirements (entities, attributes, relationships).
+2. Normalize Entities (eliminate duplicate data and ensure relational consistency).
+3. Draft Data Model / Entity Relationship Diagram (ERD using UML & Crow's Foot notation).
+
+--------------------------------------------------------------------------------
+[Database Entities, Primary Keys & Foreign Keys]
+--------------------------------------------------------------------------------
+- Model / Entity: Maps to a single table in a relational database. Describes field types 
+  (String, Numeric, Boolean, Date/Time).
+- Primary Key (PK): Unique identifier column (usually `id`) for each row in a database table.
+- Foreign Key (FK): Field referencing PK of another model to establish relationships.
+
+Relationship Types:
+1. One-to-Many (1:N):
+   - Expressed directly using a Foreign Key on the "child/many" side.
+   - Analogy: A mother can have many children, but each child has only one biological mother.
+   - TIL Example: A `Post` contains a Foreign Key referencing its creator (`User`).
+
+2. Many-to-Many (M:N):
+   - Cannot be expressed in a single key; requires an Intermediate/Junction Table containing 
+     FKs to both models.
+   - Analogy: An Author can write many Books; a Book can have many co-authors.
+   - TIL Example: A `Post` can have many `Tags`; a `Tag` can apply to many `Posts`.
+
+--------------------------------------------------------------------------------
+[Case Study: TIL ("Today I Learned") Domain Model]
+--------------------------------------------------------------------------------
+Requirements Breakdown:
+- User: Sign up with `username` and `password`.
+- Post: Contains `subject`, `content`, `post_date`, `visibility` (public vs private).
+- Tag: Free-form text label dynamically created when first used.
+
+ERD Entity Structure:
+  +------------------+       1 : N       +------------------+
+  |      USER        | ----------------> |       POST       |
+  +------------------+                   +------------------+
+  | id (PK)          |                   | id (PK)          |
+  | username         |                   | subject          |
+  | password         |                   | content          |
+  +------------------+                   | post_date        |
+                                         | user_id (FK) ----+---> References User
+                                         +------------------+
+                                                   |
+                                                   | M : N (via Junction Table)
+                                                   v
+                                         +------------------+
+                                         |     POST_TAG     |
+                                         +------------------+
+                                         | post_id (FK)     |
+                                         | tag_id (FK)      |
+                                         +------------------+
+                                                   ^
+                                                   |
+                                         +------------------+
+                                         |       TAG        |
+                                         +------------------+
+                                         | id (PK)          |
+                                         | name             |
+                                         +------------------+
+
+--------------------------------------------------------------------------------
+[MVC vs. MVT Architectural Patterns]
+--------------------------------------------------------------------------------
+Web applications separate concerns into architectural tiers.
+
+Model-View-Controller (MVC):
+- Model: Data layer & business logic (Database interaction).
+- View: Renders presentation layer (HTML UI output).
+- Controller: Processes incoming request, executes business logic, updates Model & View.
+
+Model-View-Template (MVT - Django Standard):
+- Model: Manages data structure and database connection (same as MVC).
+- View: Handles HTTP request processing, calls business logic, returns response (Acts like MVC Controller!).
+- Template: HTML/DTL files defining visual presentation (Acts like MVC View!).
+
++----------------------+--------------------+-------------------------------------------+
+| Architectural Layer  | MVC Equivalent     | Django MVT Component                      |
++----------------------+--------------------+-------------------------------------------+
+| Data & Database      | Model              | Model (`models.py`)                       |
+| Request Handling     | Controller         | View (`views.py`)                         |
+| Presentation Output  | View               | Template (`templates/*.html`)             |
++----------------------+--------------------+-------------------------------------------+
+
+
+--------------------------------------------------------------------------------
+4. BACKEND DEVELOPMENT ENVIRONMENT & TOOLING
+--------------------------------------------------------------------------------
+
+[Version Control Systems (VCS)]
+- Definition: Systems tracking file modifications over time, allowing software development teams 
+  to collaborate without overwriting work or losing history.
+- Core Benefits:
+  * Eliminates file naming chaos (e.g. `Report_final_v2_FINAL.doc`).
+  * Enables collaborative code development across teams.
+  * Allows comparing line-by-line historical diffs.
+  * Provides instant rollback capability to stable releases.
+
+VCS Tools:
+- Git: De-facto industry standard distributed VCS. Hosted on GitHub / BitBucket.
+- Apache Subversion (SVN): Centralized VCS (legacy/fading).
+- Mercurial (Hg): Python-based alternative VCS.
+
+--------------------------------------------------------------------------------
+[Package Management & Virtual Environments]
+--------------------------------------------------------------------------------
+- Package Manager: Automates installing, upgrading, and configuring software dependencies.
+  * Python: `pip`
+  * Node.js: `npm`
+  * PHP: `Composer`
+  * Ruby: `RubyGems`
+
+Dependency Conflict Problem:
+- Operating systems host a global Python installation that allows ONLY ONE version of a package 
+  at a time.
+- If Project A requires `Django 3.1` and Project B requires `Django 3.2`, system-wide installation fails.
+
+Solution: Python Virtual Environments (`venv`)
+- Supported natively in Python 3 (`venv` module).
+- Creates an isolated directory tree containing a distinct Python binary and private `site-packages`.
+- Commands:
+  * Create:   `python3 -m venv myenvname`
+  * Activate: `source myenvname/bin/activate` (Unix) or `myenvname\Scripts\activate` (Windows)
+- Best Practice Rule: NEVER commit virtual environments (`venv` folder) to git repositories! 
+  Add `myenvname/` or `venv/` to `.gitignore`.
+
+--------------------------------------------------------------------------------
+[Integrated Development Environments (IDEs)]
+--------------------------------------------------------------------------------
+An IDE consolidates developer tools into a single application:
+- Text Editor
+- Debugger
+- Syntax Highlighting & Auto-completion
+- Integrated Version Control (Git UI)
+- Code Refactoring & Global Search
+- Popular Examples: Visual Studio Code, PyCharm, Eclipse
+
+
+--------------------------------------------------------------------------------
+5. QUICK REVISION & EXAM CHEAT SHEET
+--------------------------------------------------------------------------------
+- MIME Type: Format classifier set via `Content-Type` header (e.g. `application/json`).
+- XML vs JSON: XML uses tags/DTD schema (verbose); JSON uses JS object notation (lightweight API format).
+- DTD Symbols: `+` (1+), `*` (0+), `?` (0 or 1), `#PCDATA` (parsed text).
+- Safe / Idempotent HTTP Methods: GET is safe & idempotent; POST is neither safe nor idempotent.
+- Cookie Flow: Server sets via `Set-Cookie`, browser sends via `Cookie` header on subsequent requests.
+- Cookie Flags: `HttpOnly` (blocks JS/XSS), `Secure` (HTTPS only), `SameSite` (blocks CSRF).
+- Foreign Key: Enforces 1-to-Many relationships; Many-to-Many requires a Junction Table.
+- MVC vs MVT: In Django MVT, View = Controller role, Template = View role.
+- Virtual Environment: Isolated Python installation created with `python3 -m venv <env_name>`.
+================================================================================

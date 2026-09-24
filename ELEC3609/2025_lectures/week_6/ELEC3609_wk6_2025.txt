@@ -1,0 +1,682 @@
+--- Slide 1 ---
+The University of Sydney
+Page 1
+
+--- Slide 2 ---
+The University of Sydney
+Page 2
+Pre-packaged Software –
+Deploying from the 
+shoulders of giants
+Presented by
+Dr. Huaming Chen
+ELEC3609/9609
+Internet Software Platforms
+2025 S2
+
+--- Slide 3 ---
+The University of Sydney
+Page 3
+We acknowledge the tradition of 
+custodianship and law of the Country on which 
+the University of Sydney campuses stand. 
+We pay our respects to those who have cared 
+and continue to care for Country.
+
+--- Slide 4 ---
+The University of Sydney
+Page 4
+Overview
+ü Software Packages
+ü Components
+üApplication Code
+üConfiguration
+üDatabase
+ü Deployment
+üReverse Proxy
+ü Docker
+ü Containers & Images
+ü Volumes & Networking
+ü Docker Hub
+ü AWS Elastic Container Services   
+(ECS)
+ü Monitoring
+ü Prometheus
+ü Grafana
+ü Elasticsearch ELK
+ü Nagios
+ü Sentry
+ü Tracking/Analytics
+ü Google Analytics
+ü KISSmetrics
+ü Custom Tracking/ETL
+
+--- Slide 5 ---
+The University of Sydney
+Page 5
+Software Packages
+
+--- Slide 6 ---
+The University of Sydney
+Page 6
+Software Packages
+
+--- Slide 7 ---
+The University of Sydney
+Page 7
+Software Packages Components
+– Prepackaged web software is commonly used to get something 
+up and running quickly. Examples include:
+– Wordpress: Content Management System (CMS)
+– vBulletin: Internet forum software
+– MediaWiki: Open-source wiki platform
+– Phabricator: Project management tool
+
+--- Slide 8 ---
+The University of Sydney
+Page 8
+Software Packages Components
+– Just like any other website, these 
+packages typically consist of:
+– application code
+– configuration files
+– database
+– The 
+prepacked 
+software 
+provides 
+application code, but it is up to the 
+deployer to configure the application 
+and infrastructure.
+– Memcached
+Image from memcached.org
+
+--- Slide 9 ---
+The University of Sydney
+Page 9
+Software Packages Security
+– Any perceived risks?
+– Inheriting not just the main application code, but also all of its 
+dependencies
+– Dependency management
+– Libraries & frameworks
+– Plugins / extensions
+– Container images
+– System packages
+– Supply chain security
+– Supply Chain Attacks
+– Outdated Dependencies
+– Plugin/Extension Ecosystem
+– Trust in Docker Hub Images
+
+--- Slide 10 ---
+The University of Sydney
+Page 10
+Software Packages: Application Code
+–
+It can be dangerous to blindly run 
+other people’s code, especially 
+when it is old and complex.
+–
+Questions to ask:
+– What is it written in?
+– Is the code-base mature?
+– How active is development on 
+the project?
+– Does the software have a 
+history of security 
+vulnerabilities?
+
+--- Slide 11 ---
+The University of Sydney
+Page 11
+Software Packages: Application Code
+–
+Identify other users
+–
+If large companies have adopted the software, it is likely they have reviewed it 
+before deciding.
+–
+Identify potential support avenues
+–
+Determine if support is available through the software supplier. Do they provide 
+direct support? How much does it cost?
+–
+Check for the frequency of commits
+–
+If the software is open-source, take a look the activity of their code repository. More 
+frequent and recent, the more active development.
+–
+Scan for vulnerabilities
+–
+Depending on the language and tooling, static source code vulnerability scanner.
+–
+Search for known vulnerabilities
+–
+Check sites disclosing existing vulnerabilities - cvedetails.com
+
+--- Slide 12 ---
+The University of Sydney
+Page 12
+Software Packages: Application Code
+– npm audit: https://docs.npmjs.com/cli/v9/commands/npm-
+audit
+– pip-audit: https://pypi.org/project/pip-audit/
+– OWASP 
+Dependency-Check: 
+https://owasp.org/www-
+project-dependency-check/
+– Snyk Vulnerability DB: https://security.snyk.io/
+
+--- Slide 13 ---
+The University of Sydney
+Page 13
+Software Packages: Configuration
+– While it is good practice to release software that is secure-by-
+default, many software packages come with insecure 
+configuration. 
+– It is critical to review all configuration options prior 
+deployment.
+– Question to ask:
+– What configuration options are available?
+– Are the default values for these options secure?
+– Are there any features enabled that you’re not using?
+– Can you disable these features?
+
+--- Slide 14 ---
+The University of Sydney
+Page 14
+Software Packages: Configuration
+– Identify all the configuration options
+– Be sure to read the documentation and view example configurations.
+– Search the Internet for example configurations
+– Generally configurations are readily available online. Don’t blindly 
+trust these. Evaluate the configuration.
+– Identify all features and components
+– Usually prepackaged software is general purpose. This means while it 
+has the functionality required for your application, it may also offer 
+other features.
+– Disable unwanted features
+– Reduce complexity and surface area for possible attacks.
+
+--- Slide 15 ---
+The University of Sydney
+Page 15
+Software Packages: Configuration
+
+--- Slide 16 ---
+The University of Sydney
+Page 16
+Software Packages: Database
+– It is usually the responsibility of the deployer to configure the 
+database required by pre-packaged software. 
+– Care must be taken while doing this.
+– Questions to ask:
+– Does the package need to have its own database or can/will it share?
+– What DB permissions are required?
+– If the application is vulnerable, will DB compromise lead to system 
+compromise?
+
+--- Slide 17 ---
+The University of Sydney
+Page 17
+Software Packages: Database
+– Identify database requirements
+– Does the software create a single database for all of its tables? Or does 
+it create multiple databases?
+– Evaluate database permissions
+– It is best practice to give the minimum set of permissions to an 
+application. A good approach is to start by giving the minimal set of 
+access and extending when necessary.
+– Evaluate the scope of DB compromise
+– If a malicious user discovers an SQL injection in our application, they 
+may be able to run arbitrary commands on our database. Important to 
+update database as well.
+
+--- Slide 18 ---
+The University of Sydney
+Page 18
+Deployment of Software Packages
+– Software packages can come with a web/HTTP interface.
+– We don’t want this interface directly exposed to the Internet, 
+we want our own layer that we have control over in between.
+– A reverse proxy (Nginx, Apache) or load balancer can enable 
+us finer control over which requests can reach the application.
+– Especially important if the application exposes an admin or 
+control interface without authentication.
+
+--- Slide 19 ---
+The University of Sydney
+Page 19
+Reverse Proxy
+– Intercepting incoming web requests with a reverse proxy (RP) can 
+provide many advantages:
+– Scaling
+– We can increase the number of concurrent connections by using the 
+RP as a load balancer. We can run many instances of the application 
+and scale horizontally. Database is still a bottleneck to share state.
+– Request Authentication
+– If our application is an internal service, we can perform basic 
+authentication to keep anonymous web users from accessing it.
+– Malicious user can’t access the application if blocked by RP.
+– Web Application Firewall (WAF)
+– A WAF can inspect incoming requests and reject them if they appear 
+to be attack vectors
+
+--- Slide 20 ---
+The University of Sydney
+Page 20
+HTTP Basic Authentication
+– HTTP Basic Authentication requires HTTP requests to include 
+a username and password to be considered authorised.
+– If the HTTP requests arrives without a valid username and 
+password, a 401 Unauthorized response is served.
+
+--- Slide 21 ---
+The University of Sydney
+Page 21
+HTTP Basic Authentication - Mechanics
+– Server Side:
+– 1.Server responds to initial request with a 401 Unauthorized 
+HTTP response, containing a HTTP header:
+ 
+WWW-Authenticate: Basic realm=“User Visible Realm”
+– Client Side:
+– 1.Prompts user for username/password
+– 2.Combines username and password with a single colon:
+ 
+“Aladdin:OpenSesame”
+– 3.Encodes string in RFC2045-MIME variant of base64.
+– 4.Sets HTTP request Authorization header to base64-encoded 
+credentials:
+ 
+Authorization: Basic QWxhZGRpbjpPcGVuU2VzYW1l
+
+--- Slide 22 ---
+The University of Sydney
+Page 22
+Web Application Firewall
+– A Web Application Firewall (WAF) applies rules and/or filters 
+to incoming HTTP requests. A WAF will try to identify HTTP 
+requests that appear to contain exploitation code and reject 
+them.
+– All requests should go through the WAF, so it usually sits at 
+the edge/web layer in front of your application.
+– A WAF is only as good as the rules it evaluates. Keep the 
+rule/filter sets up to date.
+
+--- Slide 23 ---
+The University of Sydney
+Page 23
+Docker
+
+--- Slide 24 ---
+The University of Sydney
+Page 24
+Virtual Machines vs Linux Containers
+– A hypervisor enables the execution of virtual machines inside 
+a host operating system.
+– Linux containers remove the need to install a guest operating 
+system, allowing multiple isolated Linux systems to run on a 
+single host operating system.
+
+--- Slide 25 ---
+The University of Sydney
+Page 25
+Docker
+– Docker is an open-source project to automate the deployment 
+of applications inside Linux containers.
+– It allows for easy deployment of packaged applications, 
+including any necessary dependencies.
+– Multiple services/containers can be combined using the tool: 
+Docker Compose
+
+--- Slide 26 ---
+The University of Sydney
+Page 26
+Docker: Containers
+– Instead of running virtual machines, Docker allows us to run 
+containers.
+– A Docker container can be thought of as a minimalistic Linux 
+host.
+– We can install any application that we like into the container, 
+and the container itself can be (almost) any distribution of 
+Linux.
+– A Docker container is created based off a Docker image. An 
+image file describes the base operating system, and any 
+modifications that need to be made, such as dependencies.
+
+--- Slide 27 ---
+The University of Sydney
+Page 27
+Docker: Image
+– Sample Docker image that specifies:
+– use Ubuntu 18.04 (Xenial) as the base image.
+– executes make in the /app (mounted filesystem).
+– copy all files from the /app directory.
+– invoke Python with the entry point of our application.
+– FROM ubuntu:18.04
+– RUN make /app
+– COPY . /app
+– CMD python /app/app.py
+
+--- Slide 28 ---
+The University of Sydney
+Page 28
+Docker: Volumes
+– Docker containers are good for running applications, but they 
+are not good for storing data. Containers do not maintain state. 
+Typically, we mount volumes into Docker containers to allow 
+for persistence.
+– If we were creating a Docker container for a database, such as 
+MySQL, the data directory for the application should be stored 
+in an attached volume.
+– The mounted volume is a folder on the host machine and exists 
+outside the container. We can now destroy the container 
+without losing any data.
+
+--- Slide 29 ---
+The University of Sydney
+Page 29
+Docker: Networking
+– Docker containers can be linked to each other and have 
+nominated ports forwarded form the host OS to the container.
+– If we have a web application, such as Wordpress, we can have 
+one container for the application and a separate container for 
+the MySQL database.
+– By linking the containers, the Wordpress application can talk 
+to the MySQL container directly. No other containers or 
+system are allowed to communicate with the database unless 
+specified directly via Docker.
+– This segmentation significantly improves security and ease of 
+deployment.
+
+--- Slide 30 ---
+The University of Sydney
+Page 30
+Docker Hub
+– Why re-create the wheel? We don’t need to build our own 
+Docker containers, we can stand on the shoulders of the giants 
+who have come before us.
+– The Docker project has a service called Docker Hub, which 
+contains pre-built Docker images. These can be used as a 
+starting point for building services.
+– Many large software companies and projects have released 
+Docker Hub images for their software projects.
+– Security is a factor to consider here.
+
+--- Slide 31 ---
+The University of Sydney
+Page 31
+Cloud – Container Orchestration
+– When running containers in production, it is quite common to 
+have container fleets of 10s-1000s. How do we manage these?
+– Google offers Kubernetes Engine (GKE), an open-source 
+cluster management system, for deploying and managing 
+containerised applications on Google Cloud. You can also use 
+Kubernetes outside of Google Cloud.
+– AWS offers the Elastic Container Service for deploying Linux 
+containers within the AWS ecosystem.
+
+--- Slide 32 ---
+The University of Sydney
+Page 32
+Monitoring
+
+--- Slide 33 ---
+The University of Sydney
+Page 33
+Monitoring
+– When running a large-scale website, it is essential to monitor 
+everything.
+– Facets we want to consider:
+ 
+- User Interaction
+ 
+ 
+Who clicks on what?
+ 
+- User Analytics
+ 
+ 
+What local time do users usually come online?
+ 
+- HTTP Error Rate
+ 
+ 
+What pages are throwing 500s and impacting users?
+ 
+- Infrastructure Metrics
+ 
+ 
+How is our infrastructure performing? Can we handle 2x 
+load? 10x?
+
+--- Slide 34 ---
+The University of Sydney
+Page 34
+System Monitoring
+– There are many tools and techniques available for monitoring 
+websites metrics at the system and application level.
+– In the next slides we will discuss:
+ 
+- Prometheus: Metrics
+ 
+- Grafana: graphing above metrics + dashbaords
+ 
+- Elasticsearch, Logstash, Kibana (ELK): Logging
+ 
+- Nagios: Infrastructure monitoring
+ 
+- Sentry: Error detection
+
+--- Slide 35 ---
+The University of Sydney
+Page 35
+Prometheus
+– Prometheus is an open-source system for storing and graphing 
+highly dimensional data and metrics.
+– Efficiently stores metrics in a custom format and scales 
+through functional sharding and federation. Data is scraped 
+from monitored services over HTTP, rather than the 
+applications publishing metrics to Prometheus.
+– Developed at SoundCloud originally, now a member of the 
+Cloud Native Computing Foundation.
+
+--- Slide 36 ---
+The University of Sydney
+Page 36
+Prometheus
+
+--- Slide 37 ---
+The University of Sydney
+Page 37
+Grafana
+– Grafana allows us to visualise, query and alert on key metrics, 
+regardless of where they are stored. Grafana can have multiple 
+backend metrics systems.
+
+--- Slide 38 ---
+The University of Sydney
+Page 38
+Grafana
+Demo
+–
+System Metrics:
+•
+CPU usage
+•
+Memory usage
+•
+Disk space and I/O
+•
+Network traffic and bandwidth
+•
+Load averages
+•
+System uptime
+–
+Application Metrics:
+•
+Response times
+•
+Throughput
+•
+Error rates
+•
+Requests per second
+•
+Latency
+•
+User activity metrics
+etc
+
+--- Slide 39 ---
+The University of Sydney
+Page 39
+Logging
+– Once our website reaches a certain size, manually looking at 
+logs on each host is not feasible. The number of services that 
+we need to monitor
+– The ELK stack (Elasticsearch, Logstash, Kibana) is a 
+commonly used industry pattern for ingesting and querying 
+large volumes of logs (application, web access/error, etc) in a 
+centralised location.
+– Kibana is an open-source data visualisation plugin for 
+Elasticsearch. It offers a simple interface for querying 
+Elasticsearch (the service that has our logs).
+
+--- Slide 40 ---
+The University of Sydney
+Page 40
+Logging
+
+--- Slide 41 ---
+The University of Sydney
+Page 41
+NAGIOS
+– Nagios is an open-source “industry standard” for monitoring 
+infrastructure.
+– Many custom metrics can be configured to monitor:
+ 
+- Network transfer rates
+ 
+- Server performance
+ 
+- Application metrics
+– Nagios has integrations that it allow it to send email, integrate 
+with chat programs and trigger alerts if metrics are exceeded.
+
+--- Slide 42 ---
+The University of Sydney
+Page 42
+System Monitoring
+
+--- Slide 43 ---
+The University of Sydney
+Page 43
+Sentry
+– Sentry collects errors from your website, both front-end and 
+back-end, and consolidates and aggregates them into a single 
+feed of events.
+– It allows for real-time monitoring of errors experienced while 
+using your website, and is a critical piece of infrastructure for 
+large scale websites.
+
+--- Slide 44 ---
+The University of Sydney
+Page 44
+Sentry
+
+--- Slide 45 ---
+The University of Sydney
+Page 45
+Sentry
+
+--- Slide 46 ---
+The University of Sydney
+Page 46
+Google Analytics
+– Google Analytics (GA) is a tool for tracking and reporting on 
+website traffic. It is a JavaScript library that can be included 
+on any web page.
+– It is an essential tool for determining who has visited your 
+website, what browser they are using, what page they came 
+from?
+– It is great tool for identifying your audience and prioritising 
+browser/feature support.
+
+--- Slide 47 ---
+The University of Sydney
+Page 47
+Google Analytics
+
+--- Slide 48 ---
+The University of Sydney
+Page 48
+Google Analytics
+
+--- Slide 49 ---
+The University of Sydney
+Page 49
+KISSmetrics
+– KISSmetrics is a customer intelligence platform that performs 
+a subset of the features of Google Analytics, but provides 
+much deeper insights.
+– It enables an administrator or marketing manager to gain 
+detailed visibility regarding user interaction, across devices.
+– It offers a much wider variety of tools and analytics than 
+Google Analytics, however it costs substantially more.
+
+--- Slide 50 ---
+The University of Sydney
+Page 50
+KISSmetrics
+
+--- Slide 51 ---
+The University of Sydney
+Page 51
+Custom Tracking/Analytics
+– You may find that user tracking systems readily available on 
+the market are too heavy (performance) or do not meet your 
+needs. In situations like these, you may need to build out the 
+beginnings of a data warehouse solution.
+– Database schemas are generally optimised for user 
+performance, not for analytics. Calculating a user’s balance by 
+summing their deposits is relatively straight forward. 
+Calculating the balance for all users is less-bounded.
+– Transforming the database into a format that is better 
+optimised for queries, or importing the data into another 
+service, are the most common ways of dealing with this.
+
+--- Slide 52 ---
+The University of Sydney
+Page 52
+ETL
+– When building a custom tracking system, a common approach 
+is to use the Extract, Transform, Load (ETL) process:
+– Extract: Extract the data from various sources
+– User clicks from JavaScript, web access logs, database changes
+– Transform: Transform the data into a consistent format or 
+structure.
+– Load: Load the transformed data into a final application.
+
+--- Slide 53 ---
+The University of Sydney
+Page 53
+MapReduce
+– If we need to perform very computationally intensive analytics 
+tasks across a large data set, a useful technique can be 
+MapReduce.
+– The approach is to perform the data analytics in a distributed 
+sense, splitting over two different steps.
+ 
+- Map: Performs filtering and sorting.
+ 
+- Reduce: Consolidates data into a summary format.
+
+--- Slide 54 ---
+The University of Sydney
+Page 54
+You reached the end of the lecture. 
+Thank you and see you next week.

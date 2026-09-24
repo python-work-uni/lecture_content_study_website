@@ -1,0 +1,248 @@
+================================================
+INFO3616 Week 3 – Study Guide
+Access Control
+================================================
+
+OVERVIEW
+--------
+This lecture covers access control fundamentals in cybersecurity, including the distinction between authentication, authorization, and access control. It explores Discretionary Access Control (DAC) and Mandatory Access Control (MAC), examines access control mechanisms in operating systems (Unix/Linux, Windows, macOS, iOS, Android), middleware, and hardware. The lecture also covers security policy models including Bell-LaPadula (confidentiality-focused) and Biba (integrity-focused) models, with practical examples and practice questions to reinforce learning.
+
+------------------------------------------------
+SECTION 1: Access Control Fundamentals
+------------------------------------------------
+
+Access control is an important element of a security policy that aims to control access to resources and assets. It determines which principals (users, groups, processes, machines) can access which resources and what operations they can perform (read, write, execute).
+
+Key concept: Access control vs Authentication vs Authorization
+- Authentication: Process of acquiring evidence of the identity of another party (proving who you are)
+- Authorization: Process of verifying if an entity is allowed to perform an action (what you're allowed to do)
+- Access control: Specified in policy, counters attacker incentives, implemented by mechanisms providing assurance
+
+Example: Bank vault access control
+- Can a customer access the bank vault? (Access control question)
+- How do we verify the customer's identity? (Authentication)
+- Once verified, what areas is the customer allowed to access? (Authorization)
+
+💡 Why it matters: Understanding these three concepts is fundamental to designing secure systems. Confusing them leads to security vulnerabilities.
+
+------------------------------------------------
+SECTION 2: Discretionary vs Mandatory Access Control (DAC vs MAC)
+------------------------------------------------
+
+**Discretionary Access Control (DAC)**: Access is controlled by the resource owner. Users can grant or revoke permissions to other users at their discretion.
+- Objects (files, processes) are owned by subjects (people, groups, processes)
+- Access to objects is based on the identity of the owning subject
+- Subjects can pass on privileges over their objects to other subjects (unless constrained by MAC)
+- High level of flexibility; control by subjects
+- Example: File ownership in Unix/Linux where owners can change permissions
+
+**Mandatory Access Control (MAC)**: Access is enforced by a central authority based on security labels (e.g., classification levels). Users cannot change access permissions themselves.
+- An external entity (security policy administrator) defines access
+- 'Security kernel' checks via security attributes whether a subject is allowed to interact with an object
+- High level of rigour
+- Example: Military systems where data classification dictates access regardless of user preferences
+
+💡 Why it matters: DAC provides flexibility for personal use but can be inconsistent at scale. MAC provides strong security for environments requiring strict compliance (military, government) but limits user flexibility.
+
+Example: Microsoft OneDrive
+- DAC in OneDrive: Users control access (private, specific people, anyone with link, public)
+- MAC in OneDrive: In enterprise settings, admins set sharing policies and DLP rules restricting access based on organizational policies
+
+------------------------------------------------
+SECTION 3: Operating System Access Control
+------------------------------------------------
+
+**Unix/Linux Permission Model**
+- Each file/directory has three permission types: read (r), write (w), execute (x)
+- Three categories: owner, group, others
+- Permissions displayed symbolically (rwxr-xr-x) or octally (755)
+- Modified using chmod, chown, chgrp commands
+
+Key concept: Unix/Linux Special Permission Bits
+- Set-user-ID (SUID): File executes with owner's privileges rather than invoking user's (e.g., mount command)
+- Set-group-ID (SGID): File executes with group's privileges; on directory, new files inherit directory's group
+- Sticky bit: On directory, restricts deletion so only owner/root can delete files (common in /tmp)
+
+Example: -rw-r--r-- 1 sam sam 24K Jun 12 10:20 email.png
+- Owner (sam): read, write
+- Group (sam): read
+- Others: read
+
+💡 Why it matters: These bits enable legitimate privilege escalation for specific tasks while maintaining security boundaries.
+
+**Process Permission Inheritance**
+- Processes inherit permissions from running user (UID and GID)
+- Real UID/GID: Actual user/group that initiated process
+- Effective UID/GID (eUID/eGID): Determines permissions process runs with (affected by SUID/SGID)
+- Saved UID/GID: Used by kernel to revert process to original UID/GID after temporary privilege assumption
+
+**Root User**
+- UID and GID of 0
+- All-powerful: can access any file, become any user
+- sudo command allows authorized users to run commands as root (requires sudo group membership)
+
+**Other Operating Systems**
+- macOS: Based on FreeBSD (Unix), has similar permissions, includes Keychain for password storage, Kerberos for network authentication
+- Windows: 13+ permissions (vs Unix's 3), enforced via Security Reference Monitor (SRM), fine-grained but complex
+- iOS: Apps request capabilities to access device services (camera, SMS, etc.), hardware support, signed software, encryption, sandboxing, OS read-only to apps
+- Android: Similar permission system to Linux, apps run under different user IDs, permissions as capabilities, problematic storage models (app-internal vs public storage), Google Play Store screens for malware
+
+------------------------------------------------
+SECTION 4: Middleware Access Control
+------------------------------------------------
+
+Middleware (message brokering, RPCs) is often exposed to probing, creating security risks.
+
+Key challenges:
+- Defining appropriate access granularity
+- Monitoring and enforcing permissions
+- Avoiding misconfiguration
+- Policy languages exist but are hard to use effectively
+
+Best practices:
+- Protect middleware from external access when possible (prevents random remote exploitation)
+- Note: Malware originating within participating systems can still exploit middleware
+- Database access control: Map OS users to database roles (role-based access control)
+- SQL standard defines fine-grained access control methods
+- Browsers: Same-origin policy (JavaScript can only communicate with originating IP), code runs in sandbox to prevent host system alteration
+
+Example: Confused Deputy Problem in browsers
+- Occurs when a privileged program (deputy) is tricked by less-privileged entity into misusing authority
+- Common via Cross-Site Scripting (XSS): Malicious script injected into trusted site runs with site's permissions
+- Attacker can perform actions on behalf of user (sending authenticated requests, accessing sensitive data)
+
+💡 Why it matters: Middleware is often overlooked in security planning but represents significant attack surface due to its privileged position and complexity.
+
+------------------------------------------------
+SECTION 5: Hardware Access Control
+------------------------------------------------
+
+**Memory Protection**
+- Segment addressing: Memory accessed via segment register (identifies segment) + address register (location within segment)
+- Segmentation fault (SIGSEGV): Triggered when process accesses memory outside designated space
+- Protects against unauthorized read/write operations
+
+**Privileged Execution (Protection Rings)**
+- CPUs have layered modes (rings) supporting OS
+- Rings separated by privilege classes
+- Process in higher ring cannot directly interact with process in lower ring
+- Principle of least privilege: Code should run only with minimal required privilege
+- Number of ways to communicate with kernel should be minimized and well-controlled
+
+**Isolated Cryptographic Components**
+- Cryptographic keys stored in hardware
+- Functionality accessed via dedicated interface
+- Example: Intel TPM (Trusted Platform Module) - originally for DRM, now used for secure cryptographic operations
+
+**Modern Processor Security Features**
+- Intel: Nine rings (0-3 normal code, 0-3 VMM root for hypervisor, SMM for BIOS), segment addressing, virtual memory
+- ARM: Memory Management Units (MMUs), Memory Protection Units (MPUs), CHERI (Capability Hardware Enhanced RISC Instructions) for fine-grained spatial memory safety
+- CHERI potential: Prevent most zero-day exploits by enabling multiple sandboxes in same process with hardware-enforced memory safety
+
+💡 Why it matters: Hardware-based access control provides foundational security that is difficult to bypass, forming the trust boundary for higher-level security mechanisms.
+
+------------------------------------------------
+SECTION 6: Security Policy Models
+------------------------------------------------
+
+**Multilevel Security (MLS) Policy**
+- Foundational access control model for handling information at different classification levels
+- Top Secret, Secret, Confidential, etc.
+- Enormous importance in military/government sectors
+- Challenge: How to automatically declassify documents (e.g., Top Secret to Secret) for dependent principals at lower levels
+
+**Bell-LaPadula Model (Confidentiality Focus)**
+- Classic MLS model from 1973
+- Two core properties:
+  1. Simple Security Property (no read up): Subject cannot read data at higher security level
+  2. *-property (no write down): Subject cannot write data to lower security level
+- Includes discretionary matrix access control (external entity defines subject-object access in matrix)
+- Innovations: Good for formal analysis, combines DAC and MAC
+- Criticisms: 
+  - Relies on single omnipotent Trusted Principal (hard to secure)
+  - Focuses on confidentiality, not integrity
+  - Ignores covert channels (e.g., encoding data via CPU load variations)
+  - Two Bell-LaPadula-secure systems combined aren't necessarily Bell-LaPadula-secure
+
+**Biba Model (Integrity Focus)**
+- Reverse of Bell-LaPadula - focuses on data integrity, not confidentiality
+- Three core properties:
+  1. Simple Integrity Property: Subject may only read data at own level or higher (no read down)
+  2. *-integrity property: Subject may only write data at own level or lower (no write up)
+  3. Invocation property: Process from below cannot request higher access (only own or lower level)
+- Examples: 
+  - Aircraft entertainment system can read avionics data (airspeed) but cannot alter it
+  - Odometer can display mileage but not change it
+- Variants more common in practice: Windows Vista, UNIX (SELinux, Red Hat, FreeBSD module)
+
+💡 Why it matters: Real-world systems often combine elements of both models - using Bell-LaPadula for confidentiality protection and Biba for integrity protection, depending on the data and system requirements.
+
+------------------------------------------------
+KEY TAKEAWAYS
+================================================
+
+• Access control determines who can access what resources and what operations they can perform, distinct from authentication (identity verification) and authorization (permission granting)
+• Discretionary Access Control (DAC) allows resource owners to control access at their discretion, while Mandatory Access Control (MAC) enforces access through central authority based on security labels
+• Unix/Linux uses a tripartite permission system (owner/group/others) with read/write/execute bits, plus special bits (SUID, SGID, sticky) for privileged operations
+• The Principle of Least Privilege states that code should operate with only the minimum privileges necessary, implemented through CPU protection rings
+• Security policy models like Bell-LaPadula (confidentiality) and Biba (integrity) provide formal frameworks for access control, though real-world implementations often combine elements of both
+• Hardware protections including memory protection, privileged execution rings, and isolated cryptographic components form the foundational security boundary for systems
+• Middleware access control is complex but critical, with risks from external probing and internal malware exploiting trusted positions
+• Mobile operating systems (iOS/Android) use sandboxing and capability models to restrict app access while maintaining functionality
+• The Confused Deputy Problem occurs when a privileged program is tricked into misusing its authority, commonly via XSS attacks in web browsers
+• Understanding both theoretical models and practical implementations is essential for designing effective, layered security controls
+
+------------------------------------------------
+TERMS TO KNOW
+================================================
+
+Access Control: Security policy mechanism that controls which principals can access which resources and what operations they can perform
+Authentication: Process of verifying the identity of a user, process, or device (proving who you are)
+Authorization: Process of determining if an authenticated entity is permitted to perform a specific action (what you're allowed to do)
+Discretionary Access Control (DAC): Access control model where resource owners determine access permissions for their resources
+Mandatory Access Control (MAC): Access control model where access is enforced by central authority based on security labels, not user discretion
+Access Control List (ACL): Table defining permissions for specific users or groups to access specific objects (files, processes, etc.)
+Set-user-ID (SUID): Special permission bit allowing a file to execute with the privileges of its owner rather than the executing user
+Set-group-ID (SGID): Special permission bit allowing a file to execute with group privileges or causing new files in a directory to inherit the directory's group
+Sticky bit: Permission bit that restricts file deletion in directories so only owners/root can delete files (commonly used in /tmp)
+Protection Rings: Hardware-enforced CPU privilege levels that restrict communication between processes of different privilege levels
+Principle of Least Privilege: Security concept stating that processes should operate with minimum privileges necessary to perform their function
+Bell-LaPadula Model: Confidentiality-focused security policy model enforcing "no read up" and "no write down" properties
+Biba Model: Integrity-focused security policy model enforcing "no read down" and "no write up" properties plus invocation property
+Multilevel Security (MLS): Approach to handling information at different sensitivity/classification levels (Top Secret, Secret, Confidential, etc.)
+Covert Channel: Mechanism for transmitting information using unintended communication paths (e.g., CPU load variations, timing)
+Same-Origin Policy: Browser security restriction allowing web page scripts to only communicate with the page's originating IP address
+Confused Deputy Problem: Security vulnerability where a privileged program is tricked into misusing its authority by a less-privileged entity
+Sandboxing: Security mechanism that isolates applications in restricted environments with limited APIs to prevent system interference
+Role-Based Access Control (RBAC): Access control model where permissions are assigned to roles, and users are assigned to roles rather than receiving permissions directly
+
+------------------------------------------------
+POTENTIAL EXAM FOCUS
+================================================
+
+• Explain the difference between authentication, authorization, and access control using a concrete example (e.g., building entry system)
+• Compare and contrast DAC and MAC, including one advantage and one disadvantage of each approach
+• Describe how Unix/Linux file permissions work, including the meaning of rwxr-xr-x notation and how to modify permissions using chmod
+• Explain the purpose and function of the SUID, SGID, and sticky bits in Unix/Linux systems with specific examples
+• Analyze how the Bell-LaPadula and Biba models differ in their security goals and give a practical example where each would be appropriately applied
+• Describe the Principle of Least Privilege and explain how it is implemented through CPU protection rings in modern processors
+• Explain how Android and iOS implement access control for mobile apps through sandboxing and capability models
+• Describe the Confused Deputy Problem and explain how it can occur in web browsers via Cross-Site Scripting (XSS) attacks
+• Compare hardware-based access control mechanisms in Intel versus ARM processors, highlighting key security features of each
+• Evaluate whether a system combining two Bell-LaPadula-secure components would necessarily maintain Bell-LaPadula security, explaining your reasoning
+
+--------------------------------================
+MEMORY AIDS & MNEMONICS
+================================================
+
+• "AAA" for Access Control Triad: Authentication, Authorization, Access Control
+• "DAC = Do As You Choose" (owners discretion) vs "MAC = Must Accept Central" (central authority control)
+• Unix/Linux Permissions: "rwx = Read, Write, eXecute" for Owner/Group/Others
+• Special Bits: "SUID = SuperUser ID", "SGID = SuperGroup ID", "Sticky = Stays in directory"
+• Bell-LaPadula: "No Read Up, No Write Down" → Think "BL" for "Bottom Level" (can't read above, can't write below)
+• Biba: "No Read Down, No Write Up" → Think "BI" for "Bottom Integrity" (can't read below integrity level, can't write above)
+• Protection Rings: "Ring 0 = Royal (Kernel), Ring 3 = Regular (Users)" - higher numbers = less privilege
+• Same-Origin Policy: "Same Origin = Same Trust" - scripts only trust same origin
+• Confused Deputy: "Deputy Does What They're Told" - privileged program follows malicious instructions
+
+================================================

@@ -1,0 +1,412 @@
+================================================
+INFO3616 Week 4 – Study Guide
+Symmetric Cryptography
+================================================
+
+OVERVIEW
+--------
+This lecture covers the foundations of symmetric cryptography — where the same secret key is used for both encryption and decryption. It traces the evolution from ancient ciphers (Caesar, Vigenère) to modern standards (DES, 3DES, AES), explains the core design principles of confusion and diffusion, and shows how block ciphers are used in practice through modes of operation (ECB, CBC, CTR). The lecture also introduces one-time pads (theoretically perfect but impractical) and the role of cryptographically secure random number generators. Understanding these concepts is essential because symmetric cryptography underpins almost all encrypted communication on the internet today (TLS, VPNs, disk encryption, etc.).
+
+------------------------------------------------
+SECTION 1: CORE DEFINITIONS & TERMINOLOGY
+------------------------------------------------
+
+Plaintext (P): The original, readable message before encryption. Denoted as p.
+
+Ciphertext (C): The encrypted output — unreadable without the key. Denoted as c.
+
+Key (k): The secret value that parameterises the encryption/decryption algorithm. In symmetric crypto, the same key is used for both: ke = kd.
+
+Encryption (Enc): The function that maps plaintext + key → ciphertext: c = Enc_k(p).
+
+Decryption (Dec): The inverse function: p = Dec_k(c).
+
+Symmetric Cryptography (Shared-Key Cryptography): Encryption and decryption use the same key (or keys trivially derivable from each other). Algorithms shuffle/substitute symbols. Examples: AES, DES, ChaCha20.
+
+Asymmetric Cryptography (Public-Key Cryptography): Encryption key (public) differs from decryption key (private); infeasible to derive private from public. Based on hard math problems (factoring, discrete log). Examples: RSA, ECC.
+
+💡 Why it matters: Symmetric crypto is ~1000x faster than asymmetric, so it's used for bulk data encryption. Asymmetric is used only for key exchange and signatures.
+
+------------------------------------------------
+SECTION 2: KERCKHOFFS' PRINCIPLE
+------------------------------------------------
+
+Statement: "The security of a cryptosystem must depend only on the secrecy of the key, not on the secrecy of the algorithm."
+
+Implications:
+- Algorithms should be public, standardised, and extensively analysed (e.g., AES, RSA).
+- "Security by obscurity" (keeping the algorithm secret) fails historically: GSM A5/1, DVD CSS.
+- Public scrutiny by the global crypto community finds weaknesses before attackers do.
+
+Memory Aid: **K-E-Y = Keep Everything Yours** — only the key must stay secret.
+
+Historical Failures:
+- GSM A5/1: Proprietary stream cipher, 64-bit key. Reverse-engineered; ciphertext-only attacks practical by late 1990s.
+- DVD CSS: 40-bit key, secret algorithm. Broken once algorithm leaked; entire DRM collapsed.
+
+------------------------------------------------
+SECTION 3: HISTORICAL CIPHERS & CRYPTANALYSIS
+------------------------------------------------
+
+3.1 Transposition vs Substitution
+- Transposition: Reorders symbols without changing them (e.g., Rail Fence).
+- Substitution: Replaces symbols with substitutes (e.g., Caesar, Vigenère).
+- Modern ciphers combine both across multiple rounds.
+
+3.2 Caesar Cipher (Monoalphabetic Substitution)
+- Shift each letter by fixed n (e.g., n=3: A→D, B→E).
+- Trivial to break: Frequency analysis preserves language statistics (E most common in English).
+- Key space = 25 (brute-forceable instantly).
+
+3.3 Vigenère Cipher (Polyalphabetic Substitution)
+- Uses a keyword to select different Caesar shifts per position.
+- Example: Key="KEY" (10,4,24), Plaintext="HELLO" (7,4,11,11,14)
+  C_i = (P_i + K_{i mod |K|}) mod 26
+- Breaks monoalphabetic frequency analysis — but still vulnerable.
+
+3.4 Breaking Vigenère: Kasiski Examination
+- Find repeated ciphertext sequences; measure distances between them.
+- GCD of distances ≈ key length.
+- Once key length known, split ciphertext into Caesar sub-ciphers and frequency-analyse each.
+
+Worked Example:
+Ciphertext: "BWGWBHQSJBBKNF", key length = 2, known plaintext[2] = 'I'
+- Positions 2,4,6... use same key char → same plaintext letter 'I' maps to same ciphertext.
+- Eliminate candidate plaintexts by matching pattern constraints.
+- Answer: "SIXISTHEANSWER" (only option with matching repeated positions).
+
+3.5 Rail Fence Cipher (Transposition)
+- Write plaintext in zigzag across N rails, read off row by row.
+- Example: "MEET ME AFTER THE TOGA PARTY", depth 2 → "MEMATRHTGPRYETEFETEOAAT"
+- Vulnerable to anagram attacks (letter frequencies preserved).
+
+------------------------------------------------
+SECTION 4: CONFUSION & DIFFUSION (SHANNON'S DESIGN GOALS)
+------------------------------------------------
+
+Confusion: Make the relationship between ciphertext and key as complex as possible.
+- Each ciphertext bit depends on multiple key bits.
+- Achieved via Substitution (S-boxes).
+
+Diffusion: Spread each plaintext bit's influence across many ciphertext bits.
+- Change 1 plaintext bit → ~50% of ciphertext bits flip (avalanche effect).
+- Achieved via Transposition/Permutation (P-boxes).
+
+Memory Aid: **C-D = Confusion scrambles the key; Diffusion spreads the plaintext.**
+
+Modern block ciphers alternate substitution and permutation layers across many rounds to achieve both.
+
+------------------------------------------------
+SECTION 5: ATTACK MODELS (ADVERSARY CAPABILITIES)
+------------------------------------------------
+
+Ordered weakest → strongest:
+
+1. Ciphertext-Only Attack (COA): Attacker sees only ciphertexts.
+   - Example: Intercepted WWII radio traffic.
+
+2. Known-Plaintext Attack (KPA): Attacker has some (plaintext, ciphertext) pairs.
+   - Example: Bletchley Park breaking Enigma using known weather report formats.
+
+3. Chosen-Plaintext Attack (CPA): Attacker can choose plaintexts and obtain ciphertexts.
+   - Standard model for asymmetric crypto.
+   - Example: BEAST attack on SSL/TLS.
+
+4. Chosen-Ciphertext Attack (CCA): Attacker can submit ciphertexts and see decryptions (decryption oracle).
+   - Example: Bleichenbacher's attack on PKCS#1 v1.5.
+
+💡 Why it matters: A cipher secure against CCA is the gold standard. Modern authenticated encryption (AEAD) aims for CCA security.
+
+------------------------------------------------
+SECTION 6: STREAM CIPHERS VS BLOCK CIPHERS
+------------------------------------------------
+
+Stream Ciphers:
+- Encrypt bit/byte at a time.
+- Generate keystream b = f(k) from secret key.
+- Ciphertext: c = p ⊕ b (XOR).
+- Examples: RC4 (broken), ChaCha20/Salsa20 (modern standard).
+- Challenge: Keystream must be indistinguishable from true randomness.
+
+Block Ciphers:
+- Encrypt fixed-size blocks (64 or 128 bits).
+- Pad plaintext to block boundary if needed.
+- Examples: DES (64-bit block, 56-bit key — broken), AES (128-bit block, 128/192/256-bit key).
+- Internally use S-boxes (substitution) and P-boxes (permutation) across multiple rounds.
+
+Key Difference: Stream = continuous; Block = chunked. Stream ciphers are essentially block ciphers in CTR/OFB mode.
+
+------------------------------------------------
+SECTION 7: ONE-TIME PAD (OTP) — PERFECT SECRECY
+------------------------------------------------
+
+Definition: Ciphertext c = p ⊕ k where k is truly random, |k| ≥ |p|, and k is used ONCE.
+
+Properties:
+- Perfect secrecy: Ciphertext reveals zero information about plaintext (all plaintexts equally likely).
+- Proof: For any c, p = c ⊕ k — since k is uniformly random, p is uniformly random.
+
+Why Impractical:
+1. Key distribution: Need secure channel to share k — if you have that, why encrypt?
+2. Key generation: True randomness at message length is hard.
+3. Key reuse = catastrophic: c1 ⊕ c2 = p1 ⊕ p2 (key cancels out) → crib dragging attacks.
+
+Memory Aid: **OTP = One-Time Pad = One-Time-Use — NEVER REUSE.**
+
+Crib Dragging (Many-Time Pad Attack):
+- If k reused: c1 = p1⊕k, c2 = p2⊕k → c1⊕c2 = p1⊕p2.
+- Guess common word ("the") in p1, XOR with p1⊕p2 at each offset → reveals fragments of p2.
+
+------------------------------------------------
+SECTION 8: BLOCK CIPHER INTERNALS — S-BOXES, P-BOXES, FEISTEL
+------------------------------------------------
+
+S-Box (Substitution Box):
+- Lookup table: n input bits → m output bits.
+- Carefully designed for nonlinearity and diffusion (1 input bit flip → ~50% output bits flip).
+- DES: 8 S-boxes, each 6→4 bits.
+- AES: 1 S-box (8→8 bits), based on finite field inversion in GF(2^8).
+
+P-Box (Permutation Box):
+- Bit permutation: reorders bits.
+- Spreads output of one S-box across multiple S-boxes in next round (diffusion).
+
+Feistel Network (used in DES, Blowfish, Twofish):
+- Split block into L (left) and R (right) halves.
+- Round function: L_{i+1} = R_i; R_{i+1} = L_i ⊕ F(R_i, K_i).
+- Decryption uses same structure with subkeys in reverse order.
+- Advantage: F need not be invertible.
+
+Substitution-Permutation Network — SPN (used in AES):
+- Entire block passes through SubBytes → ShiftRows → MixColumns → AddRoundKey each round.
+- All operations invertible (except AddRoundKey which is XOR).
+
+Worked Example — DES S-Box S[0]:
+Input: 6 bits (b0 b1 b2 b3 b4 b5)
+Row = (b0 b5) in binary; Column = (b1 b2 b3 b4) in binary.
+Example: Input = 110111 → Row=11₂=3, Column=1011₂=11 → Output = 14 = 1110₂.
+
+------------------------------------------------
+SECTION 9: DES & 3DES
+------------------------------------------------
+
+DES (Data Encryption Standard):
+- 1977 standard, 16 Feistel rounds.
+- 64-bit block, 56-bit effective key (8 parity bits).
+- 8 S-boxes (6→4), 1 P-box, expansion 32→48 bits per round.
+- 16 round keys (48 bits each) from key schedule.
+
+Why DES is Broken:
+- Key space = 2^56 ≈ 7.2×10^16.
+- Modern hardware: 10^9 keys/sec (multi-core) → ~1.2 years average; 10^13 keys/sec (supercomputer) → ~1 hour.
+- Meet-in-the-middle attacks on reduced-round variants.
+
+3DES (Triple DES) — Transition Fix:
+- EDE (Encrypt-Decrypt-Encrypt) with 2 or 3 keys:
+  C = E_{K3}( D_{K2}( E_{K1}(P) ) )
+- 2 keys (K1=K3): 112-bit effective security.
+- 3 keys: 168-bit effective security.
+- Why EDE? Backward compatibility: if K1=K2=K3, 3DES = DES.
+- Still slow (3× DES) and 64-bit block → sweet32 birthday attacks. Deprecated.
+
+------------------------------------------------
+SECTION 10: AES (ADVANCED ENCRYPTION STANDARD)
+------------------------------------------------
+
+AES = Rijndael cipher selected by NIST competition (2001).
+- Block size: 128 bits.
+- Key sizes: 128, 192, 256 bits → 10, 12, 14 rounds respectively.
+- SPN structure (not Feistel).
+- All operations in GF(2^8) with irreducible polynomial m(x) = x^8 + x^4 + x^3 + x + 1.
+
+AES Round (for 128-bit key):
+1. SubBytes: Byte substitution via AES S-box (inversion in GF(2^8) + affine transform).
+2. ShiftRows: Row i shifted left by i bytes (row 0 unchanged, row 1 by 1, row 2 by 2, row 3 by 3).
+3. MixColumns: Matrix multiplication in GF(2^8) — each column transformed independently (diffusion).
+4. AddRoundKey: XOR with round key.
+
+Key Expansion: 128-bit key → 11 round keys (176 bytes = 44 words of 32 bits).
+- Uses RotWord, SubWord, Rcon constants.
+
+Memory Aid: **S-S-M-A = SubBytes, ShiftRows, MixColumns, AddRoundKey** — the four AES round steps.
+
+AES Security: No practical attacks better than brute force on full rounds. Side-channel attacks (timing, cache) are main concern → constant-time implementations required.
+
+------------------------------------------------
+SECTION 11: BLOCK CIPHER MODES OF OPERATION
+------------------------------------------------
+
+Problem: Block ciphers encrypt fixed blocks; messages are arbitrary length. Modes define how to chain blocks.
+
+11.1 ECB (Electronic Codebook) — NEVER USE
+- C_i = Enc_k(P_i) independently.
+- Identical plaintext blocks → identical ciphertext blocks.
+- Patterns visible (e.g., encrypted bitmap shows penguin outline).
+- No IV, no chaining.
+
+11.2 CBC (Cipher Block Chaining) — Classic Standard
+- Encryption: C_i = Enc_k(P_i ⊕ C_{i-1}), with C_0 = IV (random).
+- Decryption: P_i = Dec_k(C_i) ⊕ C_{i-1}.
+- IV must be unpredictable, unique per key; not secret.
+- Sequential encryption (not parallelisable); decryption parallelisable.
+- Padding required (e.g., PKCS#7).
+- WEP failure: 24-bit IV → rapid reuse → RC4 keystream reuse → key recovery.
+
+11.3 CTR (Counter Mode) — Parallelisable Stream-Like
+- Keystream block = Enc_k(Nonce || Counter).
+- C_i = P_i ⊕ Enc_k(Nonce || Counter_i).
+- Nonce must be unique per key; counter increments per block.
+- Encryption & decryption fully parallelisable; no padding needed.
+- Turns block cipher into stream cipher.
+- Reusing (Key, Nonce) = catastrophic (same keystream).
+
+11.4 Other Modes (Brief):
+- CFB (Cipher Feedback): Stream-like, uses previous ciphertext as input.
+- OFB (Output Feedback): Stream-like, encrypts IV repeatedly.
+- GCM (Galois Counter Mode): CTR + GHASH authentication tag → AEAD (Authenticated Encryption with Associated Data). Modern standard (TLS 1.3).
+- CCM: CBC-MAC + CTR → AEAD.
+
+Memory Aid: **E-C-B = Every Cipher Block independent (bad). C-B-C = Chain Blocks Consecutively. C-T-R = Count To Randomness.**
+
+------------------------------------------------
+SECTION 12: PSEUDORANDOM NUMBER GENERATORS (PRNG / CSPRNG)
+------------------------------------------------
+
+PRNG: Deterministic algorithm producing sequence from seed.
+- Seed determines entire output.
+- Not cryptographically secure by default (e.g., Mersenne Twister).
+
+CSPRNG (Cryptographically Secure PRNG): Must satisfy:
+1. Computationally infeasible to brute-force seed (next-bit test).
+2. Output indistinguishable from true randomness (statistical tests pass).
+
+Uses in Crypto:
+- Key generation (symmetric & asymmetric).
+- IVs, nonces, salts.
+- Session keys, ephemeral DH exponents.
+- Stream cipher keystreams (ChaCha20 is both cipher and CSPRNG).
+
+Seed Generation: Collect entropy from hardware sources (mouse, keyboard, thermal noise, RDRAND, /dev/urandom). NIST SP 800-90A/B/C standards (HMAC_DRBG, Hash_DRBG, CTR_DRBG).
+
+Modern Standards:
+- ChaCha20 / Salsa20 (DJ Bernstein): Core of TLS 1.3, WireGuard, OpenBSD/Linux CSPRNG.
+- RC4: Broken (biases in keystream); avoid.
+
+------------------------------------------------
+SECTION 13: MATH FOUNDATIONS (FOR EXAM)
+------------------------------------------------
+
+Modular Arithmetic:
+- a ≡ b (mod n) means n | (a - b).
+- Properties: Reflexive, Symmetric, Transitive.
+- a ≡ b and b ≡ c ⇒ a ≡ c (mod n). But a ≠ c generally!
+
+Finite Fields:
+- GF(p) = {0,1,...,p-1} with mod p arithmetic, p prime → field.
+- GF(2^8): Bytes as polynomials mod m(x) = x^8+x^4+x^3+x+1.
+- Addition = XOR; Multiplication = polynomial mul mod m(x).
+- Every non-zero element has multiplicative inverse.
+
+Extended Euclidean Algorithm: Find x,y such that ax + by = gcd(a,b). Used for modular inverses.
+
+Discrete Logarithm Problem (DLP): Given g, h = g^x mod p, find x. Hard for large p. Basis of Diffie-Hellman, DSA, ElGamal.
+
+------------------------------------------------
+KEY TAKEAWAYS
+================================================
+
+• Symmetric cryptography uses one shared key for both encryption and decryption — fast, but requires secure key distribution.
+• Kerckhoffs' Principle: Only the key must be secret; the algorithm should be public and analysed.
+• Historical ciphers (Caesar, Vigenère, Rail Fence) are broken by frequency analysis and Kasiski examination — they only provide confusion or diffusion, not both.
+• Shannon's Confusion & Diffusion are the twin pillars of modern cipher design: S-boxes provide confusion; P-boxes provide diffusion.
+• One-Time Pad achieves perfect secrecy but is impractical due to key distribution and the absolute prohibition on key reuse.
+• DES (56-bit key) is broken by brute force; 3DES extends life but is slow; AES (128/192/256-bit) is the modern standard.
+• AES uses an SPN structure with 4 round operations (SubBytes, ShiftRows, MixColumns, AddRoundKey) in GF(2^8).
+• Block cipher modes matter: ECB leaks patterns; CBC adds chaining but is sequential; CTR enables parallelism; GCM/CCM provide authenticated encryption (AEAD).
+• IVs/nonces must never repeat under the same key — reuse breaks CTR, CBC, and stream ciphers alike.
+• CSPRNGs are essential for keys, IVs, nonces; they must be seeded with true entropy and pass next-bit tests.
+
+------------------------------------------------
+TERMS TO KNOW
+================================================
+
+Plaintext: Original unencrypted message.
+Ciphertext: Encrypted output.
+Key: Secret parameter controlling encryption/decryption.
+Symmetric Cryptography: Same key for encryption and decryption (shared-key).
+Asymmetric Cryptography: Different keys for encryption (public) and decryption (private).
+Kerckhoffs' Principle: Security depends only on key secrecy, not algorithm secrecy.
+Substitution: Replacing symbols with substitutes (confusion).
+Transposition: Reordering symbols (diffusion).
+Frequency Analysis: Statistical attack exploiting preserved letter frequencies.
+Kasiski Examination: Method to find Vigenère key length via repeated ciphertext distances.
+Confusion: Complexifying key-ciphertext relationship (via S-boxes).
+Diffusion: Spreading plaintext influence across ciphertext (via P-boxes).
+Avalanche Effect: 1-bit plaintext change → ~50% ciphertext bits flip.
+S-Box: Substitution box — nonlinear lookup table.
+P-Box: Permutation box — bit reordering.
+Feistel Network: Block cipher structure splitting block into two halves; used in DES.
+SPN (Substitution-Permutation Network): Block cipher structure applying S and P to whole block; used in AES.
+DES: 64-bit block, 56-bit key, 16 Feistel rounds — now insecure.
+3DES: Triple DES with EDE construction; 112/168-bit effective security.
+AES: 128-bit block, 128/192/256-bit key, SPN, 10/12/14 rounds — current standard.
+ECB: Electronic Codebook mode — encrypts each block independently (insecure).
+CBC: Cipher Block Chaining — XORs previous ciphertext before encryption; needs IV.
+CTR: Counter mode — encrypts counter to generate keystream; parallelisable.
+IV (Initialization Vector): Random value for first block in CBC; need not be secret but must be unique.
+Nonce: Number used once; CTR equivalent of IV; must be unique per key.
+AEAD: Authenticated Encryption with Associated Data — encryption + integrity (e.g., GCM).
+OTP (One-Time Pad): Perfect secrecy cipher with truly random key ≥ message length, used once.
+CSPRNG: Cryptographically Secure PRNG — output indistinguishable from random; seed unguessable.
+GF(2^8): Galois Field of 256 elements; AES arithmetic field.
+Modular Inverse: For a in Z_n*, a^{-1} such that a·a^{-1} ≡ 1 (mod n).
+
+------------------------------------------------
+POTENTIAL EXAM FOCUS
+================================================
+
+• Explain Kerckhoffs' Principle and give two historical examples of its violation (GSM A5/1, DVD CSS).
+• Given a Vigenère ciphertext and key length, demonstrate Kasiski examination to recover the key.
+• Compare and contrast Feistel Network vs SPN — which ciphers use which? Why does Feistel not require invertible F?
+• Trace one round of AES encryption on a 128-bit block: show SubBytes, ShiftRows, MixColumns, AddRoundKey.
+• Calculate the effective key space of DES, 3DES (2-key and 3-key), and AES-128. Estimate brute-force time at 10^9 and 10^13 keys/sec.
+• Why is ECB mode insecure? Show how identical plaintext blocks produce identical ciphertext blocks.
+• Given a CBC encryption scenario, explain why IV must be unpredictable and never reused. What happens if IV is fixed?
+• Explain how CTR mode turns a block cipher into a stream cipher. What is the security impact of nonce reuse?
+• Define perfect secrecy. Prove that OTP achieves it. Why is OTP impractical for general use?
+• Describe the crib-dragging attack on a reused OTP key. Given c1⊕c2 = p1⊕p2, how does guessing "the" in p1 reveal p2?
+• List the four attack models (COA, KPA, CPA, CCA) in order of increasing adversary power. Give a real example of each.
+• What is the difference between a PRNG and a CSPRNG? Why is seeding with true entropy critical?
+• In GF(2^8) with m(x)=x^8+x^4+x^3+x+1, compute (0x57 + 0x83) and explain why addition is XOR.
+• Explain the role of S-boxes and P-boxes in achieving confusion and diffusion respectively.
+• Why does 3DES use EDE (Encrypt-Decrypt-Encrypt) instead of EEE? (Backward compatibility with DES).
+• Given a block cipher with 64-bit block size, explain the sweet32 birthday bound attack after 2^32 blocks.
+
+------------------------------------------------
+MNEMONICS & QUICK RECALL
+================================================
+
+- K-E-Y: Keep Everything Yours (only key secret per Kerckhoffs)
+- C-D: Confusion scrambles key; Diffusion spreads plaintext
+- S-S-M-A: SubBytes, ShiftRows, MixColumns, AddRoundKey (AES round)
+- E-C-B: Every Cipher Block independent (bad mode)
+- C-B-C: Chain Blocks Consecutively (chaining mode)
+- C-T-R: Count To Randomness (counter mode)
+- OTP: One-Time Pad = One-Time-Use — NEVER REUSE
+- E-D-E: Encrypt-Decrypt-Encrypt (3DES construction)
+- G-C-M: Galois Counter Mode = AEAD standard
+- C-S-P-R-N-G: Crypto-Secure PRNG = next-bit unguessable + indistinguishable from random
+
+================================================
+WORKED EXAMPLES SUMMARY
+================================================
+
+1. Vigenère Kasiski: Ciphertext "BWGWBHQSJBBKNF", key len 2, known P[2]=I → Plaintext "SIXISTHEANSWER"
+2. DES S-Box: Input 110111 → Row 3, Col 11 → Output 1110
+3. OTP Reuse: c1⊕c2 = p1⊕p2 → guess "the" in p1 at offset i → p2[i..i+2] = "the" ⊕ (c1⊕c2)[i..i+2]
+4. AES Round: 128-bit state → SubBytes (16 S-box lookups) → ShiftRows (row shifts) → MixColumns (matrix mul) → AddRoundKey (XOR)
+5. CBC IV Reuse: Same IV + same key + same P1 → same C1 → pattern leakage like ECB
+
+================================================
+END OF STUDY GUIDE
+================================================

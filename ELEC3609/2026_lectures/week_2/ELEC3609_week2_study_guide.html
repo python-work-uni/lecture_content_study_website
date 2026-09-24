@@ -1,0 +1,2434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ELEC3609 Week 2 Study Guide – Internet Software Platforms — Web Fundamentals & Project Management</title>
+  <meta name="description" content="This lecture covers two major pillars: (1) how the web actually works when you type a URL — from DNS resolution through TCP handshake to HTTP request/response and browser rendering, and (2) the fundam">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for crisp mathematical formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+:root {
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Light Theme (Default) */
+      --bg-primary: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-alt: #e2e8f0;
+      
+      --border-color: #e2e8f0;
+      --border-focus: #6366f1;
+      
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-glow: rgba(79, 70, 229, 0.15);
+      
+      --accent-blue: #0284c7;
+      --accent-blue-bg: #e0f2fe;
+      --accent-emerald: #059669;
+      --accent-emerald-bg: #d1fae5;
+      --accent-amber: #d97706;
+      --accent-amber-bg: #fef3c7;
+      --accent-rose: #e11d48;
+      --accent-rose-bg: #ffe4e6;
+      --accent-purple: #7c3aed;
+      --accent-purple-bg: #ede9fe;
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --nav-width: 280px;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0b0f19;
+      --bg-surface: #131b2e;
+      --bg-subtle: #1e293b;
+      --bg-alt: #334155;
+      
+      --border-color: #1e293b;
+      --border-focus: #818cf8;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-light: #64748b;
+      
+      --primary: #6366f1;
+      --primary-hover: #818cf8;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      
+      --accent-blue: #38bdf8;
+      --accent-blue-bg: rgba(56, 189, 248, 0.15);
+      --accent-emerald: #34d399;
+      --accent-emerald-bg: rgba(52, 211, 153, 0.15);
+      --accent-amber: #fbbf24;
+      --accent-amber-bg: rgba(251, 191, 36, 0.15);
+      --accent-rose: #fb7185;
+      --accent-rose-bg: rgba(251, 113, 133, 0.15);
+      --accent-purple: #a78bfa;
+      --accent-purple-bg: rgba(167, 139, 250, 0.15);
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      --card-shadow-hover: 0 10px 20px -3px rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(19, 27, 46, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Reading Progress Bar */
+    #progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981);
+      width: 0%;
+      z-index: 1000;
+      transition: width 0.1s ease-out;
+    }
+
+    /* Top Sticky Header */
+    header.site-header {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: var(--glass-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.6rem;
+      color: var(--text-main);
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .course-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-box input {
+      padding: 0.45rem 0.75rem 0.45rem 2rem;
+      font-size: 0.85rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      width: 180px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      width: 240px;
+      background: var(--bg-surface);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 0.65rem;
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .btn-icon {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-alt);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      max-width: 1520px;
+      margin: 0 auto;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: var(--nav-width);
+      flex-shrink: 0;
+      position: sticky;
+      top: 57px;
+      height: calc(100vh - 57px);
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-primary);
+    }
+
+    .sidebar-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-light);
+      margin-bottom: 0.75rem;
+      padding-left: 0.5rem;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.65rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      line-height: 1.3;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+      background: var(--bg-subtle);
+    }
+
+    .nav-link.active {
+      color: var(--primary);
+      background: var(--primary-light);
+      font-weight: 600;
+    }
+
+    .nav-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    /* Main Content Area */
+    main.main-content {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      max-width: 1020px;
+      min-width: 0;
+    }
+
+    /* Hero Banner */
+    .hero-card {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-main);
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-overview {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      background: var(--bg-surface);
+      padding: 1.25rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      line-height: 1.7;
+    }
+
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .stat-val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Section Styling */
+    section.guide-section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 80px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .section-number {
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+    }
+
+    h2.section-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    h3.subsection-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.75rem 0;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-main);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--card-shadow);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Callout Boxes */
+    .callout {
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      margin: 1.25rem 0;
+      display: flex;
+      gap: 0.9rem;
+      align-items: flex-start;
+      border-left: 4px solid transparent;
+    }
+
+    .callout-icon {
+      font-size: 1.35rem;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .callout-content {
+      flex: 1;
+      font-size: 0.95rem;
+    }
+
+    .callout-content strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.95rem;
+    }
+
+    .callout-why {
+      background: var(--accent-amber-bg);
+      border-left-color: var(--accent-amber);
+      color: var(--text-main);
+    }
+
+    .callout-memory {
+      background: var(--accent-purple-bg);
+      border-left-color: var(--accent-purple);
+      color: var(--text-main);
+    }
+
+    .callout-tip {
+      background: var(--accent-emerald-bg);
+      border-left-color: var(--accent-emerald);
+      color: var(--text-main);
+    }
+
+    .callout-warning {
+      background: var(--accent-rose-bg);
+      border-left-color: var(--accent-rose);
+      color: var(--text-main);
+    }
+
+    .callout-info {
+      background: var(--accent-blue-bg);
+      border-left-color: var(--accent-blue);
+      color: var(--text-main);
+    }
+
+    /* Formula & Math Block */
+    .formula-block {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin: 1.25rem 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .formula-title {
+      position: absolute;
+      top: -10px;
+      left: 14px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .formula-math {
+      font-size: 1.2rem;
+      margin: 0.5rem 0;
+      color: var(--text-main);
+      overflow-x: auto;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.25rem 0;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      background: var(--bg-surface);
+    }
+
+    table.study-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    table.study-table th {
+      background: var(--bg-subtle);
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border-color);
+      letter-spacing: 0.02em;
+    }
+
+    table.study-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    table.study-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.study-table tr:hover td {
+      background: var(--bg-subtle);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .badge-recall {
+      background: var(--accent-emerald-bg);
+      color: var(--accent-emerald);
+    }
+
+    .badge-precision {
+      background: var(--accent-blue-bg);
+      color: var(--accent-blue);
+    }
+
+    .badge-f1 {
+      background: var(--accent-purple-bg);
+      color: var(--accent-purple);
+    }
+
+    .badge-danger {
+      background: var(--accent-rose-bg);
+      color: var(--accent-rose);
+    }
+
+    /* Pipeline Diagram */
+    .pipeline-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      box-shadow: var(--card-shadow);
+    }
+
+    .pipeline-flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin: 1rem 0;
+    }
+
+    .pipe-step {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .pipe-step .step-num {
+      font-size: 0.7rem;
+      color: var(--primary);
+      font-family: var(--font-mono);
+    }
+
+    .pipe-step:hover, .pipe-step.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .pipe-arrow {
+      color: var(--text-light);
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    /* Interactive Confusion Matrix Calculator Widget */
+    .calculator-card {
+      background: var(--bg-surface);
+      border: 2px solid var(--primary);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin: 2rem 0;
+      box-shadow: 0 10px 25px -5px var(--primary-glow);
+    }
+
+    .calc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .calc-presets {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .cm-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    .cm-table th, .cm-table td {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem;
+    }
+
+    .cm-table th {
+      background: var(--bg-subtle);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .cm-input-cell {
+      background: var(--bg-surface);
+    }
+
+    .cm-input-cell label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+    }
+
+    .cm-input-cell input {
+      width: 100%;
+      max-width: 90px;
+      padding: 0.4rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .cm-input-cell input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    .calc-results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .metric-card {
+      background: var(--bg-subtle);
+      border-radius: 10px;
+      padding: 0.85rem;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .metric-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--primary);
+      margin: 0.2rem 0;
+    }
+
+    .metric-formula {
+      font-size: 0.7rem;
+      color: var(--text-light);
+      font-family: var(--font-mono);
+    }
+
+    /* Key Takeaways list */
+    .takeaways-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .takeaway-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.9rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .takeaway-num {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.85rem;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    /* Terms & Glossary Section */
+    .glossary-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .filter-chip {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-chip:hover, .filter-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .terms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .term-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.1rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .term-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .term-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--primary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .term-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Exam Questions Section */
+    .exam-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .exam-progress {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .exam-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-secondary {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-alt);
+    }
+
+    .quiz-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--card-shadow);
+      transition: border-color 0.2s ease;
+    }
+
+    .quiz-card.mastered {
+      border-left: 4px solid var(--accent-emerald);
+      opacity: 0.9;
+    }
+
+    .quiz-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      cursor: pointer;
+    }
+
+    .quiz-qnum {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+
+    .quiz-question {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      flex: 1;
+      line-height: 1.5;
+    }
+
+    .quiz-status-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .quiz-answer {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+      color: var(--text-main);
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .quiz-answer.show {
+      display: block;
+    }
+
+    .quiz-toggle-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0;
+    }
+
+    .quiz-toggle-btn:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--border-color);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      background: var(--bg-surface);
+      margin-top: 4rem;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      header.site-header, aside.sidebar, #progress-bar, .calculator-card, .btn-icon, .exam-actions, .filter-chip {
+        display: none !important;
+      }
+      .app-container {
+        display: block;
+        max-width: 100%;
+      }
+      main.main-content {
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .card, .hero-card, .takeaway-item, .quiz-card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .quiz-answer {
+        display: block !important;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      aside.sidebar {
+        position: fixed;
+        left: -100%;
+        top: 57px;
+        z-index: 950;
+        background: var(--bg-surface);
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        transition: left 0.3s ease;
+      }
+      aside.sidebar.open {
+        left: 0;
+      }
+      .menu-toggle {
+        display: block;
+      }
+      main.main-content {
+        padding: 1.5rem;
+      }
+      .grid-2, .calc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="progress-bar"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-left">
+      <button class="menu-toggle" id="menu-btn" aria-label="Toggle navigation menu">&#9776;</button>
+      <span class="course-badge">ELEC3609 • Week 2</span>
+      <span class="header-title">Internet Software Platforms — Web Fundamentals & Project Management</span>
+    </div>
+    <div class="header-controls">
+      <div class="search-box">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" id="site-search" placeholder="Search guide..." aria-label="Search study guide">
+      </div>
+      <button class="btn-icon" id="theme-toggle" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">&#127769;</button>
+      <button class="btn-icon" onclick="window.print()" title="Print Study Guide" aria-label="Print Guide">&#128424;</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">Table of Contents</div>
+      <ul class="nav-list">
+<li><a href="#overview" class="nav-link"><span class="nav-num">00</span> Overview</a></li>
+        <li><a href="#section-1" class="nav-link"><span class="nav-num">01</span> PART 1: WEB FUNDAMENTALS</a></li>
+        <li><a href="#section-2" class="nav-link"><span class="nav-num">02</span> When you type a URL and hit Enter, the browser and OS work together through a precise sequence of steps:</a></li>
+        <li><a href="#section-3" class="nav-link"><span class="nav-num">03</span> MAKING A WEB REQUEST — URL, CACHE, DNS, TCP, HTTP</a></li>
+        <li><a href="#section-4" class="nav-link"><span class="nav-num">04</span> RESPONDING TO A WEB REQUEST — SERVER ARCHITECTURE</a></li>
+        <li><a href="#section-5" class="nav-link"><span class="nav-num">05</span> PARSING A WEB RESPONSE — CLIENT SIDE</a></li>
+        <li><a href="#section-6" class="nav-link"><span class="nav-num">06</span> WEB HOSTS — SERVER SOFTWARE &amp; STACKS</a></li>
+        <li><a href="#section-7" class="nav-link"><span class="nav-num">07</span> PART 2: PROJECT MANAGEMENT</a></li>
+        <li><a href="#section-8" class="nav-link"><span class="nav-num">08</span> **Written Documentation Tools:**</a></li>
+        <li><a href="#section-9" class="nav-link"><span class="nav-num">09</span> USE CASES — REQUIREMENTS ANALYSIS</a></li>
+        <li><a href="#section-10" class="nav-link"><span class="nav-num">10</span> SEQUENCE DIAGRAMS</a></li>
+        <li><a href="#section-11" class="nav-link"><span class="nav-num">11</span> STATE &amp; FLOW DIAGRAMS</a></li>
+        <li><a href="#section-12" class="nav-link"><span class="nav-num">12</span> WIREFRAMES</a></li>
+        <li><a href="#section-13" class="nav-link"><span class="nav-num">13</span> DOCUMENTATION — SOFTWARE REQUIREMENTS SPECIFICATION (SRS)</a></li>
+        <li><a href="#section-14" class="nav-link"><span class="nav-num">14</span> TASK MANAGEMENT</a></li>
+        <li><a href="#section-15" class="nav-link"><span class="nav-num">15</span> COMPLEXITY / QUANTITATIVE NOTES</a></li>
+        <li><a href="#section-16" class="nav-link"><span class="nav-num">16</span> END OF STUDY GUIDE</a></li>
+        <li><a href="#key-takeaways" class="nav-link"><span class="nav-num">17</span> Key Takeaways</a></li>
+        <li><a href="#terms-to-know" class="nav-link"><span class="nav-num">18</span> Terms to Know (Glossary)</a></li>
+        <li><a href="#mnemonics" class="nav-link"><span class="nav-num">19</span> Mnemonics &amp; Quick Recall</a></li>
+        <li><a href="#worked-examples" class="nav-link"><span class="nav-num">20</span> Worked Scenarios &amp; Calculations</a></li>
+        <li><a href="#exam-focus" class="nav-link"><span class="nav-num">21</span> Potential Exam Focus &amp; Practice</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+<section id="overview" class="hero-card">
+  <div class="hero-tagline">📖 Official Course Notes • Week 2</div>
+  <h1 class="hero-title">Internet Software Platforms — Web Fundamentals &amp; Project Management</h1>
+  <p class="hero-subtitle">This lecture covers two major pillars: (1) how the web actually works when you type a URL — from DNS resolution through TCP handshake to…</p>
+  <div class='hero-overview'><strong>Lecture Overview:</strong> This lecture covers two major pillars: (1) how the web actually works when you type a URL — from DNS resolution through TCP handshake to HTTP request/response and browser rendering, and (2) the fundamentals of software project management including requirements analysis, UML diagrams, documentation standards, and task management tools. Together, these form the technical and process foundation for building internet software platforms.</div>
+  
+</section>
+
+<section id="section-1" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">01</span>
+    <h2 class="section-title">PART 1: WEB FUNDAMENTALS</h2>
+  </div>
+  <p>SECTION 1: WHAT HAPPENS WHEN YOU ENTER A URL</p>
+</section>
+
+<section id="section-2" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">02</span>
+    <h2 class="section-title">When you type a URL and hit Enter, the browser and OS work together through a precise sequence of steps:</h2>
+  </div>
+  <p><strong>Client-side steps:</strong></p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Parse URL</strong> — Break into scheme (https), domain (cusp.sydney.edu.au), and path (/students/...)</li><li><strong>Check cache</strong> — Browser looks for cached copies of HTML, CSS, JS, images, fonts</li><li><strong>Identify network</strong> — OS reads DHCP config: your IP, subnet mask, default gateway, DNS servers</li><li><strong>Resolve DNS</strong> — OS asks a nameserver (port 53/UDP) for the domain's IP address</li><li><strong>Establish TCP connection</strong> — Three-way handshake to the web server on port 443 (HTTPS)</li><li><strong>Send HTTP request</strong> — Browser transmits the request over the open TCP connection</li></ol>
+
+<p><strong>Server-side steps:</strong></p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Load balancer receives</strong> — Establishes TCP, parses HTTP headers, routes to app server</li><li><strong>App server processes</strong> — Runs backend logic, queries databases (master for writes, slaves for reads)</li><li><strong>Generate response</strong> — Renders HTML via template engine (variables in {{ }}, logic in {% %})</li><li><strong>Return response</strong> — Sends HTTP response back through the load balancer</li></ol>
+
+<p><strong>Client continues:</strong></p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Parse response</strong> — Check status code (200 = OK, 302 = redirect, etc.)</li><li><strong>Fetch additional resources</strong> — CSS, JS, images, web sockets, plugins</li><li><strong>Render page</strong> — Browser engine builds DOM, applies CSS, executes JS, paints pixels</li></ol>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters::</strong>
+    This is the complete request/response lifecycle. Every web application you build lives inside this flow. Understanding each step lets you debug performance issues, security problems, and architecture decisions. <strong>Memory aid — "P-C-D-T-H-F" for Client Steps:</strong>
+  </div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>P</strong>arse URL</li><li><strong>C</strong>heck Cache</li><li><strong>D</strong>NS resolution</li><li><strong>T</strong>CP handshake</li><li><strong>H</strong>TTP request</li><li><strong>F</strong>etch resources &amp; render</li></ul>
+
+<p><strong>Worked example — URL breakdown:</strong></p>
+
+<div class="formula-block">
+  <div class="formula-title">Formula</div>
+  <pre class="formula-math">https://cusp.sydney.edu.au/students/view-unit-page/uos_id/101257
+│    │              │                    │
+│    │              │                    └── Path
+│    │              └─────────────────────── Domain (subdomain.domain.gTLD.ccTLD)
+│    └────────────────────────────────────── Protocol (HTTPS = HTTP over TLS)</pre>
+</div>
+</section>
+
+<section id="section-3" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">03</span>
+    <h2 class="section-title">MAKING A WEB REQUEST — URL, CACHE, DNS, TCP, HTTP</h2>
+  </div>
+  <p><strong>URL Components:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Protocol/scheme</strong> — HTTPS (HTTP over TLS/SSL), HTTP (plaintext)</li><li><strong>Domain hierarchy</strong> — subdomain.domain.gTLD.ccTLD (e.g., cusp.sydney.edu.au)</li><li><strong>Path</strong> — Resource identifier on the server</li></ul>
+
+<p><strong>Browser Cache:</strong> Stores JS, CSS, images, fonts. If cached and fresh, browser skips network entirely. <strong>Network Configuration (DHCP provides):</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>IP Address</strong> — Your machine's local identity</li><li><strong>Subnet Mask</strong> — Defines "local" vs "remote" IPs</li><li><strong>Default Gateway</strong> — Router that forwards packets outside your subnet</li><li><strong>Nameservers</strong> — DNS servers for domain resolution (check /etc/resolv.conf)</li></ul>
+
+<p><strong>DNS Resolution (recursive, UDP port 53):</strong></p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Check local /etc/hosts</li><li>Query configured nameserver</li><li>Nameserver recursively asks parent servers (root → TLD → authoritative)</li><li>Returns A-record (IPv4) or AAAA-record (IPv6)</li></ol>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters::</strong>
+    DNS is often the first failure point. If you can't reach sites, check DNS first (dig, nslookup). <strong>TCP vs UDP (Layer 4 of OSI):</strong>
+  </div>
+</div>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Feature</th><th>TCP</th><th>UDP</th></tr></thead>
+<tbody><tr><td>Delivery</td><td>Guaranteed, in-order</td><td>Best-effort, no ordering</td></tr><tr><td>Mechanism</td><td>3-way handshake, ACKs, retransmission</td><td>Fire-and-forget datagrams</td></tr><tr><td>Overhead</td><td>Higher (connection state)</td><td>Lower</td></tr><tr><td>Use cases</td><td>HTTP, SSH, Email</td><td>DNS, streaming, gaming</td></tr><tr><td>Port examples</td><td>80 (HTTP), 443 (HTTPS), 22 (SSH)</td><td>53 (DNS)</td></tr></tbody>
+  </table>
+</div>
+
+<p><strong>TCP Three-Way Handshake:</strong></p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Client → SYN</li><li>Server → SYN-ACK</li><li>Client → ACK</li></ol>
+
+<p>Connection now established. <strong>HTTP Request Structure:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Header</strong> — Metadata: cookies, auth, content-type, connection info</li><li><strong>Body</strong> — Optional payload (POST, PUT)</li></ul>
+
+<p><strong>HTTP Methods:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>GET</strong> — Retrieve resource (header only)</li><li><strong>POST</strong> — Submit data (form, file upload)</li><li><strong>HEAD</strong> — Like GET but no response body</li><li><strong>PUT</strong> — Replace resource entirely</li><li><strong>DELETE</strong> — Remove resource</li><li><strong>OPTIONS</strong> — Ask what methods are allowed</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters::</strong>
+    Method semantics matter for REST APIs. GET must be safe/idempotent; POST is not idempotent.
+  </div>
+</div>
+</section>
+
+<section id="section-4" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">04</span>
+    <h2 class="section-title">RESPONDING TO A WEB REQUEST — SERVER ARCHITECTURE</h2>
+  </div>
+  <p><strong>Typical Three-Layer Architecture (AWS example):</strong></p>
+
+<div class="pipeline-container">
+  <h3 style="font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.75rem;">AI/ML Engineering Lifecycle Flow</h3>
+  <div class="pipeline-flow">
+    <div class="pipe-step"><span class="step-num">01</span>Internet</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step"><span class="step-num">02</span>[DDoS Protection/CDN]</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step"><span class="step-num">03</span>[Load Balancer]</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step"><span class="step-num">04</span>[App Servers]</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step"><span class="step-num">05</span>[Database]</div>
+  </div>
+</div>
+
+<p><strong>Layer 1: Internet-Facing (Edge)</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>DDoS mitigation / WAF</strong> — CloudFlare, AWS Shield. Filter attack traffic before it hits your infra.</li><li><strong>CDN</strong> — Cache static assets globally (CloudFront, CloudFlare). Reduces latency, offloads origin.</li></ul>
+
+<p><strong>Layer 2: Load Balancer (ELB)</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Routes based on health, performance, request content</li><li><strong>SSL termination</strong> — Decrypts HTTPS, forwards HTTP to backend (reduces backend CPU)</li><li><strong>Port forwarding</strong> — Redirect HTTP → HTTPS</li></ul>
+
+<p><strong>Layer 3: Application Servers</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Run backend code (business logic, DB access, caching)</li><li><strong>Deployment models:</strong><ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>VMs (IaaS)</strong> — EC2, GCE. Full OS control, more ops burden.</li><li><strong>Containers</strong> — Docker. Portable, consistent environments.</li><li><strong>Serverless</strong> — Lambda, Cloud Functions. Auto-scale, pay-per-invocation.</li></ul></li></ul>
+
+<p><strong>App Server Frameworks by Language:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Python: Flask, Django</li><li>PHP: CodeIgniter, CakePHP, Laravel</li><li>Ruby: Rails</li><li>JavaScript: Express.js (Node.js)</li></ul>
+
+<p><strong>Databases — Persistent Data:</strong></p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Type</th><th>Examples</th><th>Characteristics</th></tr></thead>
+<tbody><tr><td><strong>SQL (Relational)</strong></td><td>MySQL, PostgreSQL, SQLite, SQL Server</td><td>Schema-enforced, ACID, JOINs, relationships</td></tr><tr><td><strong>NoSQL (Non-relational)</strong></td><td>MongoDB, Redis, DynamoDB, Cloud Datastore</td><td>Flexible schema, horizontal scale, eventual consistency</td></tr></tbody>
+  </table>
+</div>
+
+<p><strong>Master/Slave (Primary/Replica) Replication:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Master/Primary</strong> — Accepts reads AND writes. Single writer.</li><li><strong>Slaves/Replicas</strong> — Read-only copies. Async replication from master.</li><li><strong>Benefit</strong> — Scale reads horizontally (many slaves), single write path.</li></ul>
+
+<p><strong>Slave Drift (Replication Lag):</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Writes to master → async propagate to slaves → <strong>delay exists</strong></li><li><strong>Critical reads</strong> (payments, auth decisions) must hit <strong>master</strong> to avoid stale data</li><li>Trade-off: Synchronous replication = no drift but slower writes + lower availability</li></ul>
+
+<p><strong>HTTP Response Generation:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Template engine inserts data: <code>{{ variable }}</code> for values, <code>{% logic %}</code> for control flow</li><li>Response = Header (status, content-type, length) + Body (HTML/JSON/resource)</li></ul>
+</section>
+
+<section id="section-5" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">05</span>
+    <h2 class="section-title">PARSING A WEB RESPONSE — CLIENT SIDE</h2>
+  </div>
+  <p><strong>HTTP Status Code Categories:</strong></p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Category</th><th>Meaning</th><th>Key Codes</th></tr></thead>
+<tbody><tr><td><strong>1xx</strong></td><td>Informational</td><td>100 Continue, 101 Switching Protocols</td></tr><tr><td><strong>2xx</strong></td><td>Success</td><td><strong>200 OK</strong>, 201 Created, 204 No Content</td></tr><tr><td><strong>3xx</strong></td><td>Redirection</td><td><strong>301 Moved Permanently</strong>, <strong>302 Found</strong>, 304 Not Modified</td></tr><tr><td><strong>4xx</strong></td><td>Client Error</td><td><strong>400 Bad Request</strong>, 401 Unauthorized, 403 Forbidden, <strong>404 Not Found</strong></td></tr><tr><td><strong>5xx</strong></td><td>Server Error</td><td><strong>500 Internal Server Error</strong>, <strong>502 Bad Gateway</strong>, 503 Service Unavailable</td></tr></tbody>
+  </table>
+</div>
+
+<p><strong>Browser Behavior on Key Codes:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>302</strong> — Follow <code>Location</code> header immediately (redirect)</li><li><strong>200</strong> — Render response body (usually HTML)</li><li><strong>304</strong> — Use cached version (conditional GET with ETag/If-Modified-Since)</li></ul>
+
+<p><strong>HTML → DOM Parsing:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Browser builds <strong>Document Object Model (DOM)</strong> — tree of nodes representing HTML elements</li><li>JS (jQuery, React, vanilla) manipulates DOM to update UI</li><li>Browser extensions also hook into DOM</li></ul>
+
+<p><strong>DOM Resources (fetched via additional requests):</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>CSS</strong> — <code>&lt;link rel="stylesheet" href="..."&gt;</code> or <code>&lt;style&gt;...&lt;/style&gt;</code></li><li><strong>JavaScript</strong> — <code>&lt;script src="..."&gt;&lt;/script&gt;</code> or inline <code>&lt;script&gt;...&lt;/script&gt;</code></li><li><strong>Images, fonts, WebSocket connections, plugins</strong></li></ul>
+
+<p><strong>Browser Rendering Engines:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Blink</strong> — Chrome, Edge, Opera</li><li><strong>WebKit</strong> — Safari</li><li><strong>Gecko</strong> — Firefox</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters::</strong>
+    Rendering pipeline determines page load performance. Critical rendering path = HTML → DOM → CSSOM → Render Tree → Layout → Paint.
+  </div>
+</div>
+</section>
+
+<section id="section-6" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">06</span>
+    <h2 class="section-title">WEB HOSTS — SERVER SOFTWARE &amp; STACKS</h2>
+  </div>
+  <p><strong>Web Server Software Comparison:</strong></p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Server</th><th>Architecture</th><th>Best For</th></tr></thead>
+<tbody><tr><td><strong>Apache</strong></td><td>Process-per-request (prefork)</td><td>Simple sites, .htaccess, legacy PHP</td></tr><tr><td><strong>Nginx</strong></td><td>Event-driven worker processes</td><td>High concurrency, reverse proxy, static files</td></tr><tr><td><strong>IIS</strong></td><td>Windows-integrated</td><td>Windows/.NET shops (avoid if possible — security history)</td></tr></tbody>
+  </table>
+</div>
+
+<p><strong>Server OS Market Share:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Linux/Unix</strong> — &gt;60% (all top 100 supercomputers)</li><li><strong>Windows Server</strong> — &lt;40%</li></ul>
+
+<p><strong>Common Technology Stacks:</strong></p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Stack</th><th>Components</th><th>Use Case</th></tr></thead>
+<tbody><tr><td><strong>LAMP</strong></td><td>Linux, Apache, MySQL, PHP</td><td>Classic PHP apps, WordPress</td></tr><tr><td><strong>MEAN</strong></td><td>MongoDB, Express, Angular, Node.js</td><td>Full-stack JS, SPAs</td></tr><tr><td><strong>LYME</strong></td><td>Linux, Yaws, Mnesia/CouchDB, Erlang</td><td>High-concurrency, fault-tolerant systems</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters::</strong>
+    Stack choice affects hiring, ecosystem, scaling characteristics, and operational complexity.
+  </div>
+</div>
+</section>
+
+<section id="section-7" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">07</span>
+    <h2 class="section-title">PART 2: PROJECT MANAGEMENT</h2>
+  </div>
+  <p>SECTION 6: PROJECT MANAGEMENT TOOLS</p>
+</section>
+
+<section id="section-8" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">08</span>
+    <h2 class="section-title">**Written Documentation Tools:**</h2>
+  </div>
+  <ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Google Docs</strong> — Collaboration, versioning, easy sharing</li><li><strong>LaTeX</strong> — Professional output, git-friendly, consistent formatting</li><li><strong>Microsoft Word</strong> — Feature-rich but poor version control/collaboration</li></ul>
+
+<p><strong>Diagramming Tools:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>LucidChart</strong> — Multi-editor, Google Docs integration</li><li><strong>Balsamiq</strong> — Wireframing only (low-fidelity)</li><li><strong>Diagrams.net (Draw.io)</strong> — Free, SaaS</li><li><strong>Adobe Illustrator</strong> — Flexible but steep learning curve</li><li><strong>Microsoft Visio</strong> — Enterprise standard</li></ul>
+
+<p><strong>Task/Workflow Management:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>GitHub</strong> — Issues, PRs, code review, security scanning, deployments (primary for this course)</li><li><strong>Jira</strong> — Deep SDLC integration, bug tracking, service desk, marketplace</li><li><strong>Asana/Trello</strong> — Visual Kanban boards, lightweight</li><li><strong>Microsoft Project/Smartsheet</strong> — Gantt charts, resource planning, enterprise PM</li></ul>
+</section>
+
+<section id="section-9" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">09</span>
+    <h2 class="section-title">USE CASES — REQUIREMENTS ANALYSIS</h2>
+  </div>
+  <p><strong>Two-Step Process:</strong> <strong>Step 1: Identify Problems</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>What core issues does the system solve?</li><li>Write <strong>problem statements</strong>:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>"Buyers have no way to express max price"</li><li>"Sellers can't determine optimal listing price"</li><li>"Non-technical users can't get websites built"</li></ul></li></ul>
+
+<p><strong>Step 2: Convert to Use Cases</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Actor</strong> — A <em>role</em> (not a person): Customer, Admin, Payment Gateway</li><li><strong>Action</strong> — Simple, distinct, testable step</li><li><strong>Use Case</strong> — Group of related actions achieving a goal</li></ul>
+
+<p><strong>Process:</strong></p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Identify flow of events</li><li>Extract distinct actions</li><li>Group into high-level use cases</li><li>Expand into extensions (alternative/error flows)</li></ol>
+
+<p><strong>Use Case Documentation Fields:</strong></p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Field</th><th>Purpose</th></tr></thead>
+<tbody><tr><td>Name</td><td>Short identifier</td></tr><tr><td>Goal</td><td>What the use case achieves</td></tr><tr><td>Actors</td><td>Who initiates/participates</td></tr><tr><td>Preconditions</td><td>Must be true before start</td></tr><tr><td>Main Flow</td><td>Happy path, step by step</td></tr><tr><td>Subflows</td><td>Dependent use cases</td></tr><tr><td>Alternative Flows</td><td>Errors, edge cases</td></tr><tr><td>Priority</td><td>MVP importance</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters::</strong>
+    Use cases bridge business needs and technical design. They drive test cases and acceptance criteria. <strong>Memory aid — "A-P-M-S-A-P" for Use Case Doc Fields:</strong>
+  </div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>A</strong>ctors</li><li><strong>P</strong>reconditions</li><li><strong>M</strong>ain Flow</li><li><strong>S</strong>ubflows</li><li><strong>A</strong>lternative Flows</li><li><strong>P</strong>riority</li></ul>
+</section>
+
+<section id="section-10" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">10</span>
+    <h2 class="section-title">SEQUENCE DIAGRAMS</h2>
+  </div>
+  <p><strong>Purpose:</strong> Show <em>how objects interact</em> and <em>in what order</em> over time. <strong>Elements:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Lifelines</strong> — Vertical dashed lines (objects/actors)</li><li><strong>Messages</strong> — Horizontal arrows (sync=filled, async=open, return=dashed)</li><li><strong>Activation bars</strong> — Rectangles on lifelines showing active execution</li><li><strong>Fragments</strong> — <code>alt</code>, <code>opt</code>, <code>loop</code>, <code>par</code> for control flow</li></ul>
+
+<p><strong>When to use:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Multi-system interactions (client → LB → app → DB)</li><li>Complex multi-step processes (checkout, auth flow)</li><li>API contract clarification</li></ul>
+
+<p><strong>Example:</strong> Computer → Server email retrieval:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Formula</div>
+  <pre class="formula-math">Client          Server
+  │               │
+  ├─LOGIN────────►│
+  │◄─OK───────────┤
+  ├─LIST─────────►│
+  │◄─EMAIL LIST───┤
+  ├─FETCH 1──────►│
+  │◄─EMAIL 1──────┤</pre>
+</div>
+</section>
+
+<section id="section-11" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">11</span>
+    <h2 class="section-title">STATE &amp; FLOW DIAGRAMS</h2>
+  </div>
+  <p><strong>State Diagrams (State Machines):</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Show <strong>states</strong> of an object and <strong>valid transitions</strong> between them</li><li>Essential for entities with lifecycle: Order, Ticket, User Account, Payment</li></ul>
+
+<p><strong>Key concepts:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>State</strong> — Condition at a point in time (e.g., "Cart: Empty", "Order: Paid")</li><li><strong>Transition</strong> — Event-triggered move (e.g., "Add item" → "Cart: Active")</li><li><strong>Guard conditions</strong> — Transition only if condition met</li><li><strong>Initial/Final states</strong> — Filled circle → start; bullseye → end</li></ul>
+
+<p><strong>Example: Order State Machine</strong></p>
+
+<div class="formula-block">
+  <div class="formula-title">Formula</div>
+  <pre class="formula-math">[Created] ──pay──► [Paid] ──ship──► [Shipped] ──deliver──► [Delivered]
+    │                  │
+    └──cancel──────────┘</pre>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters::</strong>
+    Prevents invalid states (shipping an unpaid order). Maps directly to DB status columns and business logic.
+  </div>
+</div>
+</section>
+
+<section id="section-12" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">12</span>
+    <h2 class="section-title">WIREFRAMES</h2>
+  </div>
+  <p><strong>Purpose:</strong> Low-fidelity visual layout — "cartoon version" of the UI. <strong>Characteristics:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Focus on <strong>structure, flow, content hierarchy</strong> — NOT visual design</li><li>No colors, fonts, pixel-perfect spacing</li><li>Can be static images or clickable storyboards</li><li>Fast to create, easy to discard/iterate</li></ul>
+
+<p><strong>Tools:</strong> Balsamiq (specialised), Diagrams.net, Figma, pen &amp; paper <strong>When to use:</strong> Early design, stakeholder alignment, usability testing before dev.</p>
+</section>
+
+<section id="section-13" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">13</span>
+    <h2 class="section-title">DOCUMENTATION — SOFTWARE REQUIREMENTS SPECIFICATION (SRS)</h2>
+  </div>
+  <p><strong>SRS Purpose:</strong> Single source of truth defining what the system <strong>does and does not do</strong>. Communication tool between stakeholders and developers. Prevents scope creep. Defines "done." <strong>SRS Structure (IEEE 830 style):</strong> <strong>1. Introduction</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Purpose</strong> — Why this document exists</li><li><strong>Definitions</strong> — Glossary of terms, acronyms</li><li><strong>System Overview</strong> — High-level summary</li><li><strong>References</strong> — Related docs, standards</li></ul>
+
+<p><strong>2. Overall Description</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Product Perspective</strong> — System interfaces, user interfaces, HW/SW/comms interfaces, memory constraints</li><li><strong>Design Constraints</strong> — Operations, site adaptation, regulatory</li><li><strong>Product Functionality</strong> — Feature summary</li><li><strong>User Characteristics</strong> — Who uses it, technical level</li><li><strong>Constraints, Assumptions, Dependencies</strong></li></ul>
+
+<p><strong>3. Specific Requirements (granular, testable)</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>External Interface Requirements</strong> — APIs, UI, hardware</li><li><strong>Functional Requirements</strong> — "The system shall..." (use case traces)</li><li><strong>Performance Requirements</strong> — Response time, throughput, capacity</li><li><strong>Logical Database Requirements</strong> — Schema, relationships, retention</li><li><strong>Software System Attributes (Quality Attributes):</strong><ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Reliability</strong> — MTBF, recovery time</li><li><strong>Availability</strong> — Uptime % (99.9% = ~8.76h/yr downtime)</li><li><strong>Security</strong> — AuthZ, AuthN, encryption, audit</li><li><strong>Maintainability</strong> — Modularity, testability, deployability</li><li><strong>Portability</strong> — Platform independence, containerisation</li></ul></li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Golden Rule::</strong>
+    Diagrams <strong>clarify</strong> — they must not introduce new requirements not in the SRS text. <strong>Memory aid — "FURPS+" for Quality Attributes:</strong>
+  </div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>F</strong>unctionality (Functional requirements)</li><li><strong>U</strong>sability</li><li><strong>R</strong>eliability</li><li><strong>P</strong>erformance</li><li><strong>S</strong>upportability (Maintainability)</li><li><strong>+</strong> = Security, Portability, etc.</li></ul>
+</section>
+
+<section id="section-14" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">14</span>
+    <h2 class="section-title">TASK MANAGEMENT</h2>
+  </div>
+  <p><strong>Challenge:</strong> Coordinating many tasks, people, dependencies without collisions. <strong>GitHub (Course Standard):</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Source control + issues + PRs + code review + security + deploy</li><li><strong>Issues</strong> = tasks, bugs, features</li><li><strong>Projects</strong> = Kanban boards for sprint planning</li><li><strong>Milestones</strong> = release tracking</li></ul>
+
+<p><strong>Jira:</strong> Enterprise-grade, customizable workflows, reporting, ecosystem <strong>Asana/Trello:</strong> Visual boards, simpler, good for non-technical teams <strong>Microsoft Project:</strong> Gantt charts, critical path, resource levelling — waterfall-heavy</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters::</strong>
+    Tool choice shapes process. GitHub Issues + Projects = lightweight agile. Jira = heavy process. Match tool to team maturity.
+  </div>
+</div>
+</section>
+
+<section id="section-15" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">15</span>
+    <h2 class="section-title">COMPLEXITY / QUANTITATIVE NOTES</h2>
+  </div>
+  <p><strong>DNS Resolution</strong>: Typically 1-3 round trips (client → resolver → root → TLD → authoritative). Cached = 0 RTT. <strong>TCP Handshake</strong>: 1 RTT (SYN → SYN-ACK → ACK) before first HTTP byte. TLS 1.2 = +1 RTT; TLS 1.3 = 0 RTT (resumption) or 1 RTT (full). <strong>HTTP/1.1 vs HTTP/2</strong>: H1.1 = 1 request per connection (pipelining broken). H2 = multiplexed streams over 1 connection. H3 (QUIC) = UDP-based, 0-RTT. <strong>Availability Math</strong>:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>99% = 3.65 days/year downtime</li><li>99.9% = 8.76 hours/year</li><li>99.99% = 52.6 minutes/year</li><li>99.999% = 5.26 minutes/year ("five nines")</li></ul>
+
+<p><strong>Replication Lag</strong>: Typically 10-500ms in same region; cross-region = 50-500ms+. Synchronous = zero lag but write latency = slowest replica. <strong>Nginx Worker Model</strong>: <code>worker_processes auto;</code> (1 per CPU core). Each worker handles thousands of connections via epoll/kqueue. Memory per connection ~2-5KB vs Apache ~8MB.</p>
+</section>
+
+<section id="section-16" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">16</span>
+    <h2 class="section-title">END OF STUDY GUIDE</h2>
+  </div>
+  
+</section>
+
+<section id="key-takeaways" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">17</span>
+    <h2 class="section-title">Key Takeaways</h2>
+  </div>
+  <div class="takeaways-list">
+
+</div>
+</section>
+
+<section id="terms-to-know" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">18</span>
+    <h2 class="section-title">Terms to Know (Glossary)</h2>
+  </div>
+  <div class="glossary-controls">
+  <button class="filter-chip active" onclick="filterTerms('all', this)">All (41)</button>
+  <button class="filter-chip" onclick="filterTerms('models', this)">Models & Systems</button>
+  <button class="filter-chip" onclick="filterTerms('pipeline', this)">Pipeline & Data</button>
+</div>
+<div class="terms-grid" id="terms-container">
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>A-record</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">DNS record mapping domain to IPv4 address</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>AAAA-record</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">DNS record mapping domain to IPv6 address</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ACID</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Atomicity, Consistency, Isolation, Durability — SQL transaction guarantees</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Activation bar</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Sequence diagram element showing object is executing</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>App server</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Executes backend business logic, talks to database</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Async replication</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Master→slave copy with delay (slave drift)</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Blink</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Chrome/Edge rendering engine</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>CDN</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Content Delivery Network — geographically distributed cache</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>CSSOM</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">CSS Object Model — browser's parsed representation of styles</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>DHCP</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Dynamic Host Configuration Protocol — auto-assigns IP, gateway, DNS</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>DOM</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Document Object Model — browser's tree representation of HTML</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>DDoS</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Distributed Denial of Service — flood attack mitigated by WAF/CDN</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Event-driven</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Nginx architecture — workers handle many connections via async I/O</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>FURPS+</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Quality attribute checklist (Functionality, Usability, Reliability, Performance, Supportability, +Security/Portability)</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Gecko</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Firefox rendering engine</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Guard condition</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">State diagram transition constraint</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>HTTP</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">HyperText Transfer Protocol — application layer (L7) protocol</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>HTTPS</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">HTTP over TLS — encrypted, authenticated</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Idempotent</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Operation safe to repeat (GET, PUT, DELETE — not POST)</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Load balancer</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Distributes traffic across server pool; health checks, SSL termination</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Master/Primary DB</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Single write authority; replicates to slaves</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>OSI Model</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">7-layer network abstraction (Physical → Application)</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Precondition</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Use case field — must be true before use case starts</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Process-per-request</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Apache architecture — heavy, one process per connection</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Replication lag</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Delay between master write and slave visibility (slave drift)</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>REST</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Architectural style using HTTP semantics correctly</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Reverse proxy</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Nginx role — terminates client connections, forwards to backend</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Sequence diagram</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">UML — shows object interactions over time</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>SLA</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Service Level Agreement — contractual uptime/performance targets</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Slave/Replica DB</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Read-only copy of master; scales reads</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>SRS</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Software Requirements Specification — definitive requirements document</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>SSL/TLS</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Encryption protocols (SSL deprecated, TLS current)</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>State diagram</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">UML — shows valid states and transitions for an object</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Subnet mask</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Defines local network range vs remote (needs gateway)</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Synchronous replication</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Zero lag but slower writes, lower availability</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Three-way handshake</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">TCP connection setup (SYN, SYN-ACK, ACK)</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>UDP</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">User Datagram Protocol — best-effort, no handshake, port 53 for DNS</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Use case</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Goal-oriented scenario with actors and actions</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>WebKit</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Safari rendering engine</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>WAF</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Web Application Firewall — filters malicious requests</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Wireframe</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Low-fidelity UI layout focusing on structure not visuals</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="mnemonics" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">19</span>
+    <h2 class="section-title">Mnemonics &amp; Quick Recall</h2>
+  </div>
+  <div class="grid-2">
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Client Request Steps</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">P-C-D-T-H-F</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">= Parse, Cache, DNS, TCP, HTTP, Fetch/Render</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Use Case Doc Fields</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">A-P-M-S-A-P</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">= Actors, Preconditions, Main Flow, Subflows, Alternatives, Priority</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Quality Attributes</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">FURPS+</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">= Functionality, Usability, Reliability, Performance, Supportability, +Security/Portability</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 TCP Handshake</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">S-S-A</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">= SYN, SYN-ACK, ACK</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 DNS → TCP → HTTP</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">D-T-H</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">= DNS (UDP/53), TCP (handshake), HTTP (request)</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 SQL vs NoSQL</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">SQL = Structure/Relationships</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">NoSQL = Scale/Flexibility</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Status Code Families</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">1=Info, 2=OK, 3=Go elsewhere, 4=You broke it, 5=We broke it</div>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Stack Acronyms</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">LAMP</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">= Linux/Apache/MySQL/PHP; MEAN = Mongo/Express/Angular/Node</p>
+</div>
+</div>
+</section>
+
+<section id="worked-examples" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">20</span>
+    <h2 class="section-title">Worked Scenarios &amp; Calculations</h2>
+  </div>
+  <p><strong>Analogy 1: DNS = Phone Book + Recursive Lookup</strong> You want to call "Jiawen Wen." You don't know the number. You ask your local directory (nameserver). If they don't know, they ask the state directory, then national, until someone has the listing. The number (IP) comes back. You dial (TCP connect). <strong>Analogy 2: Master/Slave DB = Authoritative Ledger + Photocopies</strong> The Master is the single official ledger. Every write goes there. Slaves are photocopies distributed to reading rooms. Photocopying takes time (replication lag). If you need the absolutely latest entry (payment confirmation), you go to the official ledger (master), not a photocopy (slave). <strong>Analogy 3: TCP vs UDP = Registered Mail vs Postcard</strong> TCP = Registered mail: Tracked, signed for, re-sent if lost, arrives in order. UDP = Postcard: Dropped in box, no tracking, might arrive out of order or not at all. DNS uses postcards (speed critical, small payload). HTTP uses registered mail (correctness critical). <strong>Worked Example: HTTP Request/Response Pair</strong></p>
+
+<div class="formula-block">
+  <div class="formula-title">Formula</div>
+  <pre class="formula-math">REQUEST:
+GET /api/users/42 HTTP/1.1
+Host: api.example.com
+Authorization: Bearer eyJhbGciOi...
+Accept: application/json
+
+RESPONSE:
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 127
+ETag: "abc123"
+
+{"id":42,"name":"Jiawen","role":"lecturer","enrolled":["ELEC3609"]}</pre>
+</div>
+
+<p><strong>Worked Example: Slave Drift Bug</strong></p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>User A posts comment → writes to Master (comment_id=100)</li><li>User B loads page → reads from Slave (replication lag 200ms)</li><li>Slave doesn't have comment_id=100 yet → User B doesn't see comment</li><li>User B thinks comment failed → posts duplicate</li><li>Both comments appear after replication catches up</li></ol>
+</section>
+
+<section id="exam-focus" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">21</span>
+    <h2 class="section-title">Potential Exam Focus &amp; Practice</h2>
+  </div>
+  <div class="exam-toolbar">
+  <div class="exam-progress" id="exam-progress-tracker">Progress: 0 / 12 Mastered</div>
+  <div class="exam-actions">
+    <button class="btn-secondary" onclick="toggleAllAnswers(true)">Reveal All</button>
+    <button class="btn-secondary" onclick="toggleAllAnswers(false)">Hide All</button>
+    <button class="btn-secondary" onclick="resetExamProgress()">Reset Progress</button>
+  </div>
+</div><div class="quiz-card" id="q1">
+  <div class="quiz-header" onclick="toggleAnswer('ans-1')">
+    <span class="quiz-qnum">Q1</span>
+    <div class="quiz-question"><strong>Trace the complete flow</strong> when a user enters <code>https://example.com/page</code> — list every step from keystroke to painted pixels, naming protocols, ports, and components at each stage.</div>
+  </div>
+  <div class='quiz-answer' id='ans-1'>
+    <strong>Answer:</strong> <em>(see relevant section above)</em>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-1')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q1', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q2">
+  <div class="quiz-header" onclick="toggleAnswer('ans-2')">
+    <span class="quiz-qnum">Q2</span>
+    <div class="quiz-question"><strong>Compare TCP vs UDP</strong> — explain why DNS uses UDP while HTTP uses TCP. Include handshake, reliability, ordering, and overhead in your answer.</div>
+  </div>
+  <div class='quiz-answer' id='ans-2'>
+    <strong>Answer:</strong> <em>(see relevant section above)</em>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-2')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q2', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q3">
+  <div class="quiz-header" onclick="toggleAnswer('ans-3')">
+    <span class="quiz-qnum">Q3</span>
+    <div class="quiz-question"><strong>Given a master/slave database setup</strong>, explain when you MUST read from the master vs when slaves are acceptable. Define "slave drift" and give a concrete example of a bug it causes.</div>
+  </div>
+  <div class='quiz-answer' id='ans-3'>
+    <strong>Answer:</strong> <em>(see relevant section above)</em>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-3')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q3', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q4">
+  <div class="quiz-header" onclick="toggleAnswer('ans-4')">
+    <span class="quiz-qnum">Q4</span>
+    <div class="quiz-question"><strong>HTTP Method Semantics</strong> — For each method (GET, POST, PUT, DELETE, HEAD, OPTIONS), state: (a) idempotent? (b) safe? (c) typical use case. Design a REST endpoint for "create order" and "cancel order" with correct methods.</div>
+  </div>
+  <div class='quiz-answer' id='ans-4'>
+    <strong>Answer:</strong> <em>(see relevant section above)</em>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-4')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q4', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q5">
+  <div class="quiz-header" onclick="toggleAnswer('ans-5')">
+    <span class="quiz-qnum">Q5</span>
+    <div class="quiz-question"><strong>Status Code Diagnosis</strong> — Given scenarios (browser shows old content, API returns 502, form redirect loops, missing resource), identify the likely status code and explain the client/server behavior.</div>
+  </div>
+  <div class='quiz-answer' id='ans-5'>
+    <strong>Answer:</strong> <em>(see relevant section above)</em>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-5')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q5', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q6">
+  <div class="quiz-header" onclick="toggleAnswer('ans-6')">
+    <span class="quiz-qnum">Q6</span>
+    <div class="quiz-question"><strong>Architecture Design</strong> — Sketch a three-tier AWS architecture for a high-traffic e-commerce site. Label: DDoS protection, CDN, load balancer (SSL termination), app servers (container vs serverless trade-off), DB (master/slave with read replicas). Justify each choice.</div>
+  </div>
+  <div class='quiz-answer' id='ans-6'>
+    <strong>Answer:</strong> <em>(see relevant section above)</em>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-6')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q6', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q7">
+  <div class="quiz-header" onclick="toggleAnswer('ans-7')">
+    <span class="quiz-qnum">Q7</span>
+    <div class="quiz-question"><strong>Use Case Specification</strong> — Convert this problem statement into a documented use case with all 7 fields: "Students cannot see their exam timetable until 2 weeks before exams, causing scheduling conflicts." Include at least one alternative flow.</div>
+  </div>
+  <div class='quiz-answer' id='ans-7'>
+    <strong>Answer:</strong> <em>(see relevant section above)</em>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-7')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q7', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q8">
+  <div class="quiz-header" onclick="toggleAnswer('ans-8')">
+    <span class="quiz-qnum">Q8</span>
+    <div class="quiz-question"><strong>Sequence Diagram</strong> — Draw a sequence diagram for: User submits login form → Load balancer → App server → Database (check credentials) → Session created → JWT returned → Browser stores token → Redirect to dashboard. Show async/sync messages and activation bars.</div>
+  </div>
+  <div class='quiz-answer' id='ans-8'>
+    <strong>Answer:</strong> <em>(see relevant section above)</em>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-8')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q8', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q9">
+  <div class="quiz-header" onclick="toggleAnswer('ans-9')">
+    <span class="quiz-qnum">Q9</span>
+    <div class="quiz-question"><strong>State Diagram</strong> — Design a state machine for a "Support Ticket" with states: Open, Triaged, In Progress, Waiting on Customer, Resolved, Closed, Reopened. Define valid transitions and at least two guard conditions.</div>
+  </div>
+  <div class='quiz-answer' id='ans-9'>
+    <strong>Answer:</strong> <em>(see relevant section above)</em>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-9')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q9', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q10">
+  <div class="quiz-header" onclick="toggleAnswer('ans-10')">
+    <span class="quiz-qnum">Q10</span>
+    <div class="quiz-question"><strong>SRS Quality Attributes</strong> — For a real-time bidding platform, specify measurable (quantified) requirements for: Availability, Latency (p99), Security (data at rest/in transit), and Maintainability (deploy frequency). Map each to FURPS+.</div>
+  </div>
+  <div class='quiz-answer' id='ans-10'>
+    <strong>Answer:</strong> <em>(see relevant section above)</em>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-10')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q10', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q11">
+  <div class="quiz-header" onclick="toggleAnswer('ans-11')">
+    <span class="quiz-qnum">Q11</span>
+    <div class="quiz-question"><strong>Web Server Selection</strong> — Compare Apache vs Nginx for a site expecting 100k concurrent connections. Explain the architectural difference (process-per-request vs event-driven) and its impact on memory/CPU.</div>
+  </div>
+  <div class='quiz-answer' id='ans-11'>
+    <strong>Answer:</strong> <em>(see relevant section above)</em>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-11')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q11', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q12">
+  <div class="quiz-header" onclick="toggleAnswer('ans-12')">
+    <span class="quiz-qnum">Q12</span>
+    <div class="quiz-question"><strong>Rendering Pipeline Optimisation</strong> — Explain how <code>&lt;script&gt;</code> in <code>&lt;head&gt;</code> vs <code>&lt;body&gt;</code> vs <code>defer</code>/<code>async</code> affects DOM construction and first paint. What is the Critical Rendering Path?</div>
+  </div>
+  <div class='quiz-answer' id='ans-12'>
+    <strong>Answer:</strong> <em>(see relevant section above)</em>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-12')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q12', this)"> Mastered
+    </label>
+  </div>
+</div>
+</section>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+<p><strong>ELEC3609 Engineering Study Guide</strong> &bull; Week 2: Internet Software Platforms — Web Fundamentals &amp; Project Management</p>
+    <p style="font-size: 0.75rem; margin-top: 0.4rem;">Generated for self-paced revision and exam preparation.</p>
+  </footer>
+
+  <!-- Interactive JavaScript -->
+  <script>
+// Theme Toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let currentTheme = localStorage.getItem('study_theme') || (prefersDark ? 'dark' : 'light');
+
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeBtn.textContent = '☀️';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        themeBtn.textContent = '🌙';
+      }
+      localStorage.setItem('study_theme', theme);
+    }
+    applyTheme(currentTheme);
+
+    themeBtn.addEventListener('click', () => {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(currentTheme);
+    });
+
+    // Mobile Menu Toggle
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    menuBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+
+    // Close sidebar when clicking links on mobile
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 1024) {
+          sidebar.classList.remove('open');
+        }
+      });
+    });
+
+    // Reading Progress & Active Nav Link Highlight
+    window.addEventListener('scroll', () => {
+      const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById('progress-bar').style.width = scrolled + '%';
+
+      // Active Section Highlighting
+      const sections = document.querySelectorAll('section.guide-section, section.hero-card');
+      let currentSecId = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 120;
+        if (winScroll >= top) {
+          currentSecId = sec.getAttribute('id');
+        }
+      });
+
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentSecId) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Interactive Confusion Matrix Calculator Logic
+    function calculateMetrics() {
+      const tp = parseFloat(document.getElementById('inp-tp').value) || 0;
+      const fn = parseFloat(document.getElementById('inp-fn').value) || 0;
+      const fp = parseFloat(document.getElementById('inp-fp').value) || 0;
+      const tn = parseFloat(document.getElementById('inp-tn').value) || 0;
+
+      const total = tp + fn + fp + tn;
+      const acc = total > 0 ? ((tp + tn) / total) * 100 : 0;
+      const prec = (tp + fp) > 0 ? (tp / (tp + fp)) * 100 : 0;
+      const rec = (tp + fn) > 0 ? (tp / (tp + fn)) * 100 : 0;
+      const f1 = (prec + rec) > 0 ? 2 * (prec * rec) / (prec + rec) / 100 : 0;
+
+      document.getElementById('res-acc').textContent = acc.toFixed(1) + '%';
+      document.getElementById('res-prec').textContent = (tp + fp) > 0 ? prec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-rec').textContent = (tp + fn) > 0 ? rec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-f1').textContent = (prec + rec) > 0 ? f1.toFixed(3) : '0.000';
+    }
+
+    function setPreset(tp, fp, tn, fn) {
+      document.getElementById('inp-tp').value = tp;
+      document.getElementById('inp-fp').value = fp;
+      document.getElementById('inp-tn').value = tn;
+      document.getElementById('inp-fn').value = fn;
+      calculateMetrics();
+    }
+
+    // Glossary Filter Logic
+    function filterTerms(category, btn) {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+
+      const cards = document.querySelectorAll('.term-card');
+      cards.forEach(card => {
+        if (category === 'all' || card.getAttribute('data-cat') === category) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // Global Search Logic
+    const searchInput = document.getElementById('site-search');
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      const termCards = document.querySelectorAll('.term-card');
+      const quizCards = document.querySelectorAll('.quiz-card');
+
+      if (!query) {
+        termCards.forEach(c => c.style.display = 'flex');
+        quizCards.forEach(c => c.style.display = 'block');
+        return;
+      }
+
+      termCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+
+      quizCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'block' : 'none';
+      });
+    });
+
+    // Exam Questions Show/Hide & Progress Tracker
+    function toggleAnswer(id) {
+      const ans = document.getElementById(id);
+      ans.classList.toggle('show');
+    }
+
+    function toggleAllAnswers(show) {
+      document.querySelectorAll('.quiz-answer').forEach(ans => {
+        if (show) ans.classList.add('show');
+        else ans.classList.remove('show');
+      });
+    }
+
+    let masteredMap = JSON.parse(localStorage.getItem('engg2112_w3_mastered') || '{}');
+
+    function updateProgressUI() {
+      const total = document.querySelectorAll('.quiz-card').length;
+      const count = Object.values(masteredMap).filter(Boolean).length;
+      document.getElementById('exam-progress-tracker').textContent = `Progress: ${count} / ${total} Mastered`;
+
+      for (let i = 1; i <= total; i++) {
+        const card = document.getElementById('q' + i);
+        const checkbox = card ? card.querySelector('input[type="checkbox"]') : null;
+        if (card && checkbox) {
+          if (masteredMap['q' + i]) {
+            card.classList.add('mastered');
+            checkbox.checked = true;
+          } else {
+            card.classList.remove('mastered');
+            checkbox.checked = false;
+          }
+        }
+      }
+    }
+
+    function toggleMastered(qid, checkbox) {
+      masteredMap[qid] = checkbox.checked;
+      localStorage.setItem('engg2112_w3_mastered', JSON.stringify(masteredMap));
+      updateProgressUI();
+    }
+
+    function resetExamProgress() {
+      if (confirm('Reset all exam progress checkboxes?')) {
+        masteredMap = {};
+        localStorage.removeItem('engg2112_w3_mastered');
+        updateProgressUI();
+      }
+    }
+
+    // Initialize state on load
+    window.addEventListener('DOMContentLoaded', () => {
+      calculateMetrics();
+      updateProgressUI();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,205 @@
+================================================================================
+ELEC3609 / ELEC9609: INTERNET SOFTWARE PLATFORMS
+WEEK 3 STUDY GUIDE: WEB SERVERS & APPLICATION ARCHITECTURE
+================================================================================
+
+--------------------------------------------------------------------------------
+1. THREE-TIER WEB ARCHITECTURE & STACKS
+--------------------------------------------------------------------------------
+Modern web platforms are organized into tiers to separate concerns, improve security,
+and simplify scalability.
+
+[The Three Architectural Layers]
+1. Web Server Layer:
+   - Handles public incoming HTTP (Port 80) and HTTPS (Port 443) traffic.
+   - Serves static assets (HTML, CSS, JavaScript, Images) directly.
+   - Acts as a reverse proxy forwarding dynamic requests to the Application Server.
+
+2. Application Server Layer:
+   - Executes core business logic and dynamic request processing.
+   - Communicates via HTTP, WSGI, or custom TCP protocols.
+   - Tightly integrated with software frameworks (e.g., Django, Flask, Express).
+
+3. Data Storage Layer:
+   - Persists stateful data (Relational DBs, NoSQL, Object Storage, Caches).
+   - Placed in private networks behind firewalls (isolated from public Internet).
+
+[Classic Web Stacks]
+- LAMP: Linux (OS) + Apache (Web Server) + MySQL (Database) + PHP (Language)
+- LEMP: Linux (OS) + Nginx (Web Server) + MySQL (Database) + PHP (Language)
+  * Note: "E" in LEMP comes from "Engine-X" (Nginx).
+
+[Web Server vs. Application Server]
++----------------------+---------------------------------+----------------------------------+
+| Feature              | Web Server                      | Application Server               |
++----------------------+---------------------------------+----------------------------------+
+| Primary Function     | Serves static content & HTTP(S) | Executes dynamic business logic  |
+| Protocols Supported  | Exclusively HTTP / HTTPS        | HTTP, TCP, WSGI, gRPC, RPC, etc. |
+| Speed / Overhead     | Extremely high throughput, low  | Higher processing load per       |
+|                      | overhead for static files       | request due to code execution    |
+| Examples             | Nginx, Apache HTTP Server, IIS  | Gunicorn, uWSGI, Tomcat, Node.js |
++----------------------+---------------------------------+----------------------------------+
+
+--------------------------------------------------------------------------------
+2. WEB SERVER ENGINES COMPARISON (IIS, APACHE, NGINX)
+--------------------------------------------------------------------------------
+Choosing the correct web server depends on scale requirements and OS ecosystem.
+
+[1. Microsoft IIS (Internet Information Services)]
+- Launched: 1996 (Microsoft)
+- Architecture: Proprietary Windows web server.
+- Best For: Native ASP.NET applications and enterprise Active Directory (AD) integration.
+- Drawbacks: Historically prone to security vulnerabilities; bound to Windows environment.
+
+[2. Apache HTTP Server]
+- Launched: 1995 (Apache Software Foundation)
+- Architecture: Process/Thread-per-request model (`mpm_prefork`, `mpm_worker`).
+- Features: Highly modular using dynamically loaded modules (`mod_rewrite`, `mod_ssl`).
+- Scale Characteristics: Flexible, but higher memory footprint under massive concurrency.
+
+[3. Nginx ("Engine-X")]
+- Launched: 2004 (Igor Sysoev)
+- Architecture: Asynchronous, event-driven worker process model.
+- Features: Acts as web server, reverse proxy, and layer 7 load balancer.
+- Scale Characteristics: Consistent low CPU and memory consumption under heavy traffic;
+  designed specifically to solve the C10K problem (10,000 concurrent connections).
+
+--------------------------------------------------------------------------------
+3. PROGRAMMING LANGUAGES & FRAMEWORKS (DJANGO MVT MODEL)
+--------------------------------------------------------------------------------
+[Web Server Gateway Interface (WSGI)]
+- WSGI is the standard Python specification (PEP 3333) bridging Web Servers (Nginx/Apache)
+  with Python Web Applications (Django/Flask).
+- Nginx/Apache cannot run Python code natively; WSGI servers (Gunicorn/uWSGI) translate 
+  HTTP requests into Python function calls.
+
+[Django MVT Architecture vs. Traditional MVC]
+Django uses the MVT (Model-View-Template) pattern, which maps directly to classic MVC:
+
++--------------------+---------------------------------------------------------------+
+| Django Component   | Role & Responsibilities                                       |
++--------------------+---------------------------------------------------------------+
+| Model (M)          | - Encapsulates data structure and database operations (ORM).  |
+|                    | - Maps directly to 'Model' in classic MVC.                    |
+| View (V)           | - Receives HTTP requests, executes business logic, fetches    |
+|                    |   data from Models, and returns HTTP responses.               |
+|                    | - Maps to 'Controller' in classic MVC!                        |
+| Template (T)       | - Presentation layer using HTML & Django Template Language.   |
+|                    | - Maps to 'View' in classic MVC!                              |
++--------------------+---------------------------------------------------------------+
+
+[MVT Request-Response Lifecycle Flow]
+Client HTTP Request -> Web Server -> WSGI (Gunicorn) -> Django URL Router (urls.py)
+   -> Django View (views.py) <--> Model / DB (models.py)
+   -> View populates Template (HTML/DTL) -> HTTP Response sent to Client.
+
+--------------------------------------------------------------------------------
+4. DATA STORAGE LANDSCAPE: RELATIONAL, NOSQL & CLOUD STORAGE
+--------------------------------------------------------------------------------
+[Storage Types & Form Factors]
+- In-Memory Storage: Ultra-fast volatile RAM storage (e.g., Redis, Memcached).
+- Block Store: Raw unformatted volumes attached to VMs (e.g., AWS EBS, local HDDs/SSDs).
+- File Store: Shared network file systems (e.g., NFS, Samba, CephFS, HDFS).
+- Object Store: Highly durable key-value store for unstructured files/media (e.g., AWS S3, GCP Cloud Storage).
+- SAN vs. NAS:
+  * SAN (Storage Area Network): Block-level storage over Fibre Channel or iSCSI.
+  * NAS (Network Attached Storage): File-level storage over local network protocols (NFS/SMB).
+
+[Relational Databases (RDBMS)]
+Organizes data into structured tables with rows (instances) and columns (attributes). 
+Enforces schema rigidity (schema updates usually require planned maintenance/downtime).
+
+1. MySQL / MariaDB:
+   - Most widely deployed open-source RDBMS.
+   - Non-standard SQL gotcha: `||` operates as logical `OR` (whereas standard SQL uses `||` for string concatenation).
+
+2. PostgreSQL:
+   - Strictly ANSI/ISO SQL compliant with complete ACID transaction guarantees.
+   - Outstanding spatial features (PostGIS) and advanced data types (JSONB).
+
+3. Microsoft SQL Server (MSSQL):
+   - Deep integration with MS Enterprise BI stack (SSIS, SSAS, SSRS).
+   - High licensing cost overhead; requires careful DBA planning.
+
+[NoSQL & NewSQL Databases]
+Designed for horizontal scalability, high throughput, loose schemas, and eventual consistency.
+
++---------------+-----------------+--------------------+------------------------------------+
+| Database      | Model Type      | Primary Language   | Key Features & Use Cases           |
++---------------+-----------------+--------------------+------------------------------------+
+| Redis         | Key-Value       | C                  | Disk-backed in-memory cache, fast  |
+|               |                 |                    | Pub/Sub, key TTL expiration.       |
+| Cassandra     | Column-Family   | Java               | Massive dataset storage, CQL3 language|
+|               |                 |                    | No JOINs, zero single point of failure.|
+| MongoDB       | Document        | C++                | JSON/BSON document store, built-in |
+|               |                 |                    | auto-sharding & JS query language. |
+| ElasticSearch | Document / Search| Java              | Distributed full-text search, JSON |
+|               |                 |                    | REST API, core component of ELK stack.|
++---------------+-----------------+--------------------+------------------------------------+
+
+* ELK Stack: ElasticSearch (Search Engine) + Logstash (Log Processing) + Kibana (Visualization).
+
+--------------------------------------------------------------------------------
+5. PRODUCTION ARCHITECTURE BEST PRACTICES & RELIABILITY
+--------------------------------------------------------------------------------
+[1. Decoupling]
+- Separate Web, Application, and Database services onto independent hardware nodes/containers.
+- Benefits: Reduced blast radius (one failing service doesn't crash others), isolated resource 
+  allocations, easier troubleshooting, step towards microservices.
+
+[2. Scalability Principles]
+- Statelessness: The fundamental requirement for horizontal scaling. Application servers 
+  must NOT hold local session state.
+- Scale-Up (Vertical): Upgrading to bigger/faster hardware (CPUs, RAM). Limited by physical limits & high cost.
+- Scale-Out (Horizontal): Adding more uniform nodes behind a load balancer. Highly scalable & cost-effective.
+- Bottlenecks to monitor: Compute (CPU/RAM) vs. I/O Performance (IOPS, Bandwidth, Latency).
+
+[3. Reliability Definitions & Metrics]
+- Durability: Protection of data against loss/corruption (e.g., AWS S3 features 99.999999999% / 11 9s durability).
+- Availability: Percentage of total operational uptime (e.g., 99.99% = 52.6 minutes downtime/year).
+- Reliability: System capability to perform intended operations correctly while available.
+- Resiliency: Ability of a system to self-heal and recover automatically from hardware/software failures.
+- Single Point of Failure (SPOF): Any isolated component whose malfunction halts the entire system.
+- Chaos Engineering: Testing system resiliency by deliberately injecting random failure (e.g., Netflix Chaos Monkey).
+
+--------------------------------------------------------------------------------
+6. PROGRESSIVE ROADMAP FOR SCALING WEB ARCHITECTURE
+--------------------------------------------------------------------------------
+Web architectures evolve incrementally from simple MVPs to multi-tiered resilient systems:
+
+[STAGE 1: Single Server MVP]
+  [ Client Browser ] ----(HTTP/HTTPS)----> [ Single Server (Nginx + App + DB) ]
+  - Evaluation: Excellent for rapid prototype/demo; NOT production ready (SPOF, zero scaling).
+
+[STAGE 2: Separate Database Server]
+  [ Client Browser ] ----> [ Web & App Server ] ----(Internal Network)----> [ Dedicated DB Server ]
+  - Evaluation: Eliminates resource contention between CPU (App) and Disk I/O (DB).
+    Removes DB from public internet (DMZ).
+
+[STAGE 3: Load-Balanced Application Layer]
+                             /---> [ App Server 1 ] \
+  [ Client ] -> [ Load Balancer ]                    ----> [ DB Server ]
+                             \---> [ App Server 2 ] /
+  - Evaluation: Introduces Horizontal Scale-Out. If App Server 1 crashes, Load Balancer 
+    routes traffic to App Server 2 without user interruption.
+
+[STAGE 4: Adding HTTP Accelerators / Caching]
+  [ Client ] -> [ HTTP Accelerator (Varnish/Nginx) ] -> [ Load Balancer ] -> [ App Servers ] -> [ DB ]
+  - Evaluation: Caches static & dynamic responses in memory. Drastically lowers response latency 
+    and reduces load on App Servers.
+
+[STAGE 5: Master-Slave Database Replication]
+                                                          /---> [ Master DB (Writes) ]
+  [ App Servers ] ----(Read/Write Splitting)------------+
+                                                          \---> [ Slave DB 1 (Reads) ]
+                                                          \---> [ Slave DB 2 (Reads) ]
+  - Evaluation: Offloads heavy database read traffic onto read replicas (Slaves), leaving the 
+    Master node dedicated strictly to write transactions.
+
+[STAGE 6: Fully Integrated High-Availability Enterprise Stack]
+  Client -> Load-Balanced Caching Proxies -> Load-Balanced App Servers -> Master-Slave DB Cluster
+  - Evaluation: Maximizes availability, durability, throughput, and fault tolerance across all layers.
+
+================================================================================
+END OF WEEK 3 STUDY GUIDE
+================================================================================

@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>INFO3616 Week 3 Study Guide – Access Control</title>
+  <meta name="description" content="This lecture covers the foundational concepts of access control in cybersecurity — how systems decide who (or what) can access which resources. You'll learn the difference between authentication, auth">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for crisp mathematical formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+:root {
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Light Theme (Default) */
+      --bg-primary: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-alt: #e2e8f0;
+      
+      --border-color: #e2e8f0;
+      --border-focus: #6366f1;
+      
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-glow: rgba(79, 70, 229, 0.15);
+      
+      --accent-blue: #0284c7;
+      --accent-blue-bg: #e0f2fe;
+      --accent-emerald: #059669;
+      --accent-emerald-bg: #d1fae5;
+      --accent-amber: #d97706;
+      --accent-amber-bg: #fef3c7;
+      --accent-rose: #e11d48;
+      --accent-rose-bg: #ffe4e6;
+      --accent-purple: #7c3aed;
+      --accent-purple-bg: #ede9fe;
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --nav-width: 280px;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0b0f19;
+      --bg-surface: #131b2e;
+      --bg-subtle: #1e293b;
+      --bg-alt: #334155;
+      
+      --border-color: #1e293b;
+      --border-focus: #818cf8;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-light: #64748b;
+      
+      --primary: #6366f1;
+      --primary-hover: #818cf8;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      
+      --accent-blue: #38bdf8;
+      --accent-blue-bg: rgba(56, 189, 248, 0.15);
+      --accent-emerald: #34d399;
+      --accent-emerald-bg: rgba(52, 211, 153, 0.15);
+      --accent-amber: #fbbf24;
+      --accent-amber-bg: rgba(251, 191, 36, 0.15);
+      --accent-rose: #fb7185;
+      --accent-rose-bg: rgba(251, 113, 133, 0.15);
+      --accent-purple: #a78bfa;
+      --accent-purple-bg: rgba(167, 139, 250, 0.15);
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      --card-shadow-hover: 0 10px 20px -3px rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(19, 27, 46, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Reading Progress Bar */
+    #progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981);
+      width: 0%;
+      z-index: 1000;
+      transition: width 0.1s ease-out;
+    }
+
+    /* Top Sticky Header */
+    header.site-header {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: var(--glass-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.6rem;
+      color: var(--text-main);
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .course-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-box input {
+      padding: 0.45rem 0.75rem 0.45rem 2rem;
+      font-size: 0.85rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      width: 180px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      width: 240px;
+      background: var(--bg-surface);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 0.65rem;
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .btn-icon {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-alt);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      max-width: 1520px;
+      margin: 0 auto;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: var(--nav-width);
+      flex-shrink: 0;
+      position: sticky;
+      top: 57px;
+      height: calc(100vh - 57px);
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-primary);
+    }
+
+    .sidebar-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-light);
+      margin-bottom: 0.75rem;
+      padding-left: 0.5rem;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.65rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      line-height: 1.3;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+      background: var(--bg-subtle);
+    }
+
+    .nav-link.active {
+      color: var(--primary);
+      background: var(--primary-light);
+      font-weight: 600;
+    }
+
+    .nav-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    /* Main Content Area */
+    main.main-content {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      max-width: 1020px;
+      min-width: 0;
+    }
+
+    /* Hero Banner */
+    .hero-card {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-main);
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-overview {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      background: var(--bg-surface);
+      padding: 1.25rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      line-height: 1.7;
+    }
+
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .stat-val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Section Styling */
+    section.guide-section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 80px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .section-number {
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+    }
+
+    h2.section-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    h3.subsection-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.75rem 0;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-main);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--card-shadow);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Callout Boxes */
+    .callout {
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      margin: 1.25rem 0;
+      display: flex;
+      gap: 0.9rem;
+      align-items: flex-start;
+      border-left: 4px solid transparent;
+    }
+
+    .callout-icon {
+      font-size: 1.35rem;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .callout-content {
+      flex: 1;
+      font-size: 0.95rem;
+    }
+
+    .callout-content strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.95rem;
+    }
+
+    .callout-why {
+      background: var(--accent-amber-bg);
+      border-left-color: var(--accent-amber);
+      color: var(--text-main);
+    }
+
+    .callout-memory {
+      background: var(--accent-purple-bg);
+      border-left-color: var(--accent-purple);
+      color: var(--text-main);
+    }
+
+    .callout-tip {
+      background: var(--accent-emerald-bg);
+      border-left-color: var(--accent-emerald);
+      color: var(--text-main);
+    }
+
+    .callout-warning {
+      background: var(--accent-rose-bg);
+      border-left-color: var(--accent-rose);
+      color: var(--text-main);
+    }
+
+    .callout-info {
+      background: var(--accent-blue-bg);
+      border-left-color: var(--accent-blue);
+      color: var(--text-main);
+    }
+
+    /* Formula & Math Block */
+    .formula-block {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin: 1.25rem 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .formula-title {
+      position: absolute;
+      top: -10px;
+      left: 14px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .formula-math {
+      font-size: 1.2rem;
+      margin: 0.5rem 0;
+      color: var(--text-main);
+      overflow-x: auto;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.25rem 0;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      background: var(--bg-surface);
+    }
+
+    table.study-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    table.study-table th {
+      background: var(--bg-subtle);
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border-color);
+      letter-spacing: 0.02em;
+    }
+
+    table.study-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    table.study-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.study-table tr:hover td {
+      background: var(--bg-subtle);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .badge-recall {
+      background: var(--accent-emerald-bg);
+      color: var(--accent-emerald);
+    }
+
+    .badge-precision {
+      background: var(--accent-blue-bg);
+      color: var(--accent-blue);
+    }
+
+    .badge-f1 {
+      background: var(--accent-purple-bg);
+      color: var(--accent-purple);
+    }
+
+    .badge-danger {
+      background: var(--accent-rose-bg);
+      color: var(--accent-rose);
+    }
+
+    /* Pipeline Diagram */
+    .pipeline-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      box-shadow: var(--card-shadow);
+    }
+
+    .pipeline-flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin: 1rem 0;
+    }
+
+    .pipe-step {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .pipe-step .step-num {
+      font-size: 0.7rem;
+      color: var(--primary);
+      font-family: var(--font-mono);
+    }
+
+    .pipe-step:hover, .pipe-step.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .pipe-arrow {
+      color: var(--text-light);
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    /* Interactive Confusion Matrix Calculator Widget */
+    .calculator-card {
+      background: var(--bg-surface);
+      border: 2px solid var(--primary);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin: 2rem 0;
+      box-shadow: 0 10px 25px -5px var(--primary-glow);
+    }
+
+    .calc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .calc-presets {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .cm-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    .cm-table th, .cm-table td {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem;
+    }
+
+    .cm-table th {
+      background: var(--bg-subtle);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .cm-input-cell {
+      background: var(--bg-surface);
+    }
+
+    .cm-input-cell label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+    }
+
+    .cm-input-cell input {
+      width: 100%;
+      max-width: 90px;
+      padding: 0.4rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .cm-input-cell input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    .calc-results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .metric-card {
+      background: var(--bg-subtle);
+      border-radius: 10px;
+      padding: 0.85rem;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .metric-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--primary);
+      margin: 0.2rem 0;
+    }
+
+    .metric-formula {
+      font-size: 0.7rem;
+      color: var(--text-light);
+      font-family: var(--font-mono);
+    }
+
+    /* Key Takeaways list */
+    .takeaways-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .takeaway-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.9rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .takeaway-num {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.85rem;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    /* Terms & Glossary Section */
+    .glossary-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .filter-chip {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-chip:hover, .filter-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .terms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .term-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.1rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .term-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .term-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--primary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .term-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Exam Questions Section */
+    .exam-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .exam-progress {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .exam-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-secondary {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-alt);
+    }
+
+    .quiz-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--card-shadow);
+      transition: border-color 0.2s ease;
+    }
+
+    .quiz-card.mastered {
+      border-left: 4px solid var(--accent-emerald);
+      opacity: 0.9;
+    }
+
+    .quiz-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      cursor: pointer;
+    }
+
+    .quiz-qnum {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+
+    .quiz-question {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      flex: 1;
+      line-height: 1.5;
+    }
+
+    .quiz-status-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .quiz-answer {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+      color: var(--text-main);
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .quiz-answer.show {
+      display: block;
+    }
+
+    .quiz-toggle-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0;
+    }
+
+    .quiz-toggle-btn:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--border-color);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      background: var(--bg-surface);
+      margin-top: 4rem;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      header.site-header, aside.sidebar, #progress-bar, .calculator-card, .btn-icon, .exam-actions, .filter-chip {
+        display: none !important;
+      }
+      .app-container {
+        display: block;
+        max-width: 100%;
+      }
+      main.main-content {
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .card, .hero-card, .takeaway-item, .quiz-card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .quiz-answer {
+        display: block !important;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      aside.sidebar {
+        position: fixed;
+        left: -100%;
+        top: 57px;
+        z-index: 950;
+        background: var(--bg-surface);
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        transition: left 0.3s ease;
+      }
+      aside.sidebar.open {
+        left: 0;
+      }
+      .menu-toggle {
+        display: block;
+      }
+      main.main-content {
+        padding: 1.5rem;
+      }
+      .grid-2, .calc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="progress-bar"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-left">
+      <button class="menu-toggle" id="menu-btn" aria-label="Toggle navigation menu">&#9776;</button>
+      <span class="course-badge">INFO3616 • Week 3</span>
+      <span class="header-title">Access Control</span>
+    </div>
+    <div class="header-controls">
+      <div class="search-box">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" id="site-search" placeholder="Search guide..." aria-label="Search study guide">
+      </div>
+      <button class="btn-icon" id="theme-toggle" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">&#127769;</button>
+      <button class="btn-icon" onclick="window.print()" title="Print Study Guide" aria-label="Print Guide">&#128424;</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">Table of Contents</div>
+      <ul class="nav-list">
+<li><a href="#overview" class="nav-link"><span class="nav-num">00</span> Overview</a></li>
+        <li><a href="#section-1" class="nav-link"><span class="nav-num">01</span> Core Concepts &amp; Terminology</a></li>
+        <li><a href="#section-2" class="nav-link"><span class="nav-num">02</span> DAC vs MAC — The Two Paradigms</a></li>
+        <li><a href="#section-3" class="nav-link"><span class="nav-num">03</span> Operating System Access Control</a></li>
+        <li><a href="#section-4" class="nav-link"><span class="nav-num">04</span> Middleware Access Control</a></li>
+        <li><a href="#section-5" class="nav-link"><span class="nav-num">05</span> Other Access Control Mechanisms</a></li>
+        <li><a href="#section-6" class="nav-link"><span class="nav-num">06</span> Hardware Access Control</a></li>
+        <li><a href="#section-7" class="nav-link"><span class="nav-num">07</span> Security Policy Models</a></li>
+        <li><a href="#section-8" class="nav-link"><span class="nav-num">08</span> Practice Quiz Insights (Exam Prep)</a></li>
+        <li><a href="#section-9" class="nav-link"><span class="nav-num">09</span> QUANTITATIVE DETAILS &amp; SPECIFICS</a></li>
+        <li><a href="#key-takeaways" class="nav-link"><span class="nav-num">10</span> Key Takeaways</a></li>
+        <li><a href="#terms-to-know" class="nav-link"><span class="nav-num">11</span> Terms to Know (Glossary)</a></li>
+        <li><a href="#mnemonics" class="nav-link"><span class="nav-num">12</span> Mnemonics &amp; Quick Recall</a></li>
+        <li><a href="#exam-focus" class="nav-link"><span class="nav-num">13</span> Potential Exam Focus &amp; Practice</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+<section id="overview" class="hero-card">
+  <div class="hero-tagline">📖 Official Course Notes • Week 3</div>
+  <h1 class="hero-title">Access Control</h1>
+  <p class="hero-subtitle">This lecture covers the foundational concepts of access control in cybersecurity — how systems decide who (or what) can access which…</p>
+  <div class='hero-overview'><strong>Lecture Overview:</strong> This lecture covers the foundational concepts of access control in cybersecurity — how systems decide who (or what) can access which resources. You'll learn the difference between authentication, authorization, and access control; the two main paradigms (DAC vs MAC); how operating systems (Linux, Windows, macOS, iOS, Android) implement permissions; middleware and database access control; sandboxing and virtualization; hardware-level protections (memory, CPU rings, TPM); and the two classic security policy models: Bell-LaPadula (confidentiality) and Biba (integrity). This is core material for understanding how real systems enforce security boundaries.</div>
+  
+</section>
+
+<section id="section-1" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">01</span>
+    <h2 class="section-title">Core Concepts &amp; Terminology</h2>
+  </div>
+  <p>Access Control vs Authentication vs Authorization</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Access Control</strong>: The overall mechanism that determines which principals (users, processes, groups) can access which resources (files, programs, data). It's the policy enforcement layer.</li><li><strong>Authentication</strong>: Proving identity — "Who are you?" (passwords, fingerprints, certificates).</li><li><strong>Authorization</strong>: Granting privileges — "What are you allowed to do?" (permissions, roles).</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    
+    Why it matters: These three terms are often confused. In exams, you'll be asked to distinguish them or identify which layer a given mechanism operates at. Access Control Matrix (Naive Model) A table where rows = subjects (users), columns = objects (files), cells = permissions (r/w/x/-). Example from notes:
+  </div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Sam (admin): rwx on OS, rwx on Accounts, rw on Data, r on Audit Trail</li><li>Alice (manager): x on OS, x on Accounts, rw on Data, - on Audit Trail</li><li>Bob (auditor): rx on OS, r on Accounts, r on Data, r on Audit Trail</li></ul>
+
+<p>Key insight: The matrix is conceptually simple but doesn't scale — too many entries to manage manually.</p>
+</section>
+
+<section id="section-2" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">02</span>
+    <h2 class="section-title">DAC vs MAC — The Two Paradigms</h2>
+  </div>
+  <p>Discretionary Access Control (DAC)</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Resource owners decide who gets access.</li><li>Flexible, user-controlled.</li><li>Example: OneDrive personal — you share a file with specific people or create a public link.</li><li>Risk: Users can accidentally (or maliciously) over-share. No central enforcement.</li></ul>
+
+<p>Mandatory Access Control (MAC)</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Central authority (security admin) defines policy based on security labels (classifications).</li><li>Users CANNOT change permissions — even the file owner.</li><li>Example: OneDrive enterprise — admins restrict sharing to @company.com domains; DLP blocks sensitive data.</li><li>High rigour, used in military/government (Top Secret, Secret, Confidential).</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    
+    Memory aid: <strong>DAC = "Discretion = Your Decision"</strong> — owner decides. <strong>MAC = "Mandatory = Admin Commands"</strong> — central policy decides. OneDrive Comparison (from notes)
+  </div>
+</div>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Aspect</th><th>DAC (Personal)</th><th>MAC (Enterprise)</th></tr></thead>
+<tbody><tr><td>Who controls</td><td>File owner</td><td>IT Admin</td></tr><tr><td>Flexibility</td><td>High</td><td>Low</td></tr><tr><td>Enforcement</td><td>User discretion</td><td>Policy-enforced</td></tr><tr><td>Use case</td><td>Personal files</td><td>Compliance, secrets</td></tr></tbody>
+  </table>
+</div>
+</section>
+
+<section id="section-3" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">03</span>
+    <h2 class="section-title">Operating System Access Control</h2>
+  </div>
+  <p>3.1 Access Control Lists (ACLs)</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Each object has a list: (subject, permissions).</li><li>Used in UNIX (POSIX — Portable Operating System Interface), Windows, social networks, CMS (Content Management System), ERP (Enterprise Resource Planning) systems.</li><li>Can be coarse (r/w/x) or fine-grained (specific operations).</li></ul>
+
+<p>3.2 Unix/Linux Permissions — The Core Model Every file/directory has:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Owner UID (User Identifier)</strong> — user who owns it</li><li><strong>Group GID (Group Identifier)</strong> — group associated with it</li><li><strong>Permission bits</strong> (3 sets × 3 bits = 9 bits):<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Owner: r/w/x</li><li>Group: r/w/x</li><li>Others: r/w/x</li></ul></li></ul>
+
+<p>Symbolic notation: <code>-rw-r--r--</code> = owner rw, group r, others r Octal notation: <code>755</code> = rwx (7) + r-x (5) + r-x (5) Special bits (beyond the basic 9):</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>SUID (Set User ID)</strong>: Program runs with file owner's privileges, not runner's. Example: <code>mount</code> command.</li><li><strong>SGID (Set Group ID)</strong>: On file = runs with file's group; on directory = new files inherit directory's group.</li><li><strong>Sticky bit</strong>: On directory = only file owner (or root) can delete files inside. Example: <code>/tmp</code>.</li></ul>
+
+<p>Process Identity (3 UIDs/GIDs):</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Real UID/GID</strong>: Who launched the process.</li><li><strong>Effective UID/GID (eUID/eGID — effective User/Group Identifier)</strong>: What permissions the process currently has (changed by SUID/SGID).</li><li><strong>Saved UID/GID</strong>: Stored original UID/GID so process can drop privileges temporarily and regain them.</li></ul>
+
+<p>Root (UID 0): All-powerful. <code>sudo</code> lets permitted users run commands as root (requires sudo group membership + password).</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    
+    Worked Example: File <code>-rwsr-xr-x 1 root root 40K /usr/bin/passwd</code>
+  </div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Owner root, SUID bit set (s in owner execute position).</li><li>When Alice runs <code>passwd</code>, it executes with root's privileges so it can modify <code>/etc/shadow</code> (which only root can write).</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    
+    Memory aid for permission bits: <strong>R-W-X = Read-Write-eXecute</strong>. Octal: r=4, w=2, x=1. So rwx=7, rw=6, rx=5, r=4. 3.3 macOS
+  </div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Based on FreeBSD (Unix) — similar permission model.</li><li>Adds: File attributes, ACLs, Keychain (passwords + some ACLs), Kerberos network auth.</li><li>Since 10.5 (Leopard): TrustedBSD = MAC mechanisms protecting core system from malware.</li><li>Root disabled by default; admin users in "wheel" group can <code>su</code> to root.</li></ul>
+
+<p>3.4 Windows</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>More complex than Unix: ~15-16 permission types (not just RWX).</li></ul>
+
+<p>Examples: Traverse Folder/Execute File, List Folder/Read Data, Read Attributes, Write Attributes, etc.</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Enforced by <strong>Security Reference Monitor (SRM)</strong> — trusted kernel component.</li><li>Complexity risk: Hard to configure correctly; secure defaults can still be misconfigured.</li></ul>
+
+<p>3.5 iOS</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Unix-based, heavy sandboxing.</li><li>Apps run in separate sandboxes — cannot access other apps' files.</li><li>Permissions = capabilities requested at runtime (camera, SMS (Short Message Service), location, etc.).</li><li>Sensor values read-only (Biba model — integrity protection).</li><li>Hardware support: signed software, encryption, OS (Operating System) read-only to apps.</li></ul>
+
+<p>3.6 Android</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Linux-based; each app runs under different UID.</li><li>Permissions = capabilities (SMS, camera, contacts).</li><li>Storage issue: "Public storage" world-readable/writable — developers misuse it.</li><li>Apps in signed .apk packages (self-signed certs = developer identity).</li><li>Android 6+ moved to "trust on first use" (like iOS) — dangerous permissions requested at runtime.</li><li>Google Play screens for malware but less strict than Apple App Store.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    
+    Key comparison: iOS = stricter sandbox, OS read-only, mandatory code signing by Apple. Android = more permissive, self-signed certs, public storage risk.
+  </div>
+</div>
+</section>
+
+<section id="section-4" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">04</span>
+    <h2 class="section-title">Middleware Access Control</h2>
+  </div>
+  <p>Middleware = message brokers (AMQP — Advanced Message Queuing Protocol), RPCs (Java RMI — Remote Method Invocation, CORBA — Common Object Request Broker Architecture, XML-RPC), often distributed. Challenges:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Exposed to external probing.</li><li>High complexity: define granularity, track/enforce permissions, easy to misconfigure.</li><li>Policy languages exist but are hard to use.</li><li>Mitigation: Protect from external access (firewall), but internal malware can still exploit.</li></ul>
+
+<p>4.1 Database Access Control</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>DBMS (Database Management System) has own access control (users, roles, GRANT/REVOKE).</li><li>Data still lives on disk/RAM → OS protections still needed.</li><li>Map OS users → DB roles (role-based access control).</li><li>SQL (Structured Query Language) standard: fine-grained control on any object → can become over-complex.</li><li>Integrity controls exist but computationally heavy to verify.</li></ul>
+
+<p>4.2 Browsers</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Main rule: <strong>Same-Origin Policy</strong> — JS (JavaScript) can only talk to its originating IP/domain.</li><li>Code runs in sandbox (prevents host system alteration).</li><li>Chrome: each tab = separate OS process (isolation).</li></ul>
+
+<p><strong>Confused Deputy Problem</strong> (important!)</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>A privileged component (deputy) is tricked by less-privileged attacker into misusing its authority.</li><li>Browser example: XSS (Cross-Site Scripting) — malicious script injected into trusted site runs with that site's permissions, can send authenticated requests, access cookies.</li><li>CSRF (Cross-Site Request Forgery) = classic confused deputy.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    
+    Memory aid: <strong>Deputy = privileged component. Confused = tricked into acting for attacker.</strong> "Deputy does the dirty work."
+  </div>
+</div>
+</section>
+
+<section id="section-5" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">05</span>
+    <h2 class="section-title">Other Access Control Mechanisms</h2>
+  </div>
+  <p>5.1 Sandboxing</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Shielded environment with limited API.</li><li>Examples: Java applets (historical), JavaScript in browser, Chrome tabs as separate processes.</li><li>Challenge: Sandboxes can be "broken out of" — isolation not guaranteed.</li></ul>
+
+<p>5.2 Virtualization</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>VMs (Virtual Machines) emulate full computer systems (since 1960s IBM VM/370).</li><li>Types:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Full virtualization</strong>: Complete hardware emulation (even cross-architecture).</li><li><strong>Para-virtualization</strong>: Guest OS modified to cooperate with hypervisor.</li><li><strong>Containers/Jails</strong>: Lightweight — share host kernel, isolate userspace.</li></ul></li><li><strong>Hypervisor</strong> manages VMs (Ring -1 hardware support). Examples: VirtualBox, VMware, Xen, QEMU.</li><li>Not designed for access control, but breaking out is hard → raises attacker bar.</li><li>Caveats: VM detectable (malware behaves differently), hypervisor vulnerabilities exist.</li></ul>
+
+<p>5.3 Docker (Container Example)</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Originally for CI/CD (Continuous Integration/Continuous Deployment).</li><li>Images = app + libraries; fast spin-up; Kubernetes (container orchestration platform) for orchestration.</li><li>Sandboxes apps: no direct inter-container communication.</li><li><strong>Risk</strong>: Docker daemon runs as root — any user who can start/stop containers talks to daemon → attack surface.</li><li>Still provides extra separation layer.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    
+    Worked Example: Docker daemon root issue. If user "alice" is in docker group, she can run <code>docker run -v /:/host ubuntu chroot /host</code> → full host root access.
+  </div>
+</div>
+</section>
+
+<section id="section-6" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">06</span>
+    <h2 class="section-title">Hardware Access Control</h2>
+  </div>
+  <p>6.1 Memory Protection</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>CPUs use segment addressing: segment register + offset register.</li><li>Process accesses outside its segment → <strong>Segmentation Fault (SIGSEGV)</strong>.</li><li>Protects both read and write.</li></ul>
+
+<p>6.2 Privileged Execution / CPU Rings</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>CPUs have hierarchical privilege rings.</li><li><strong>Principle of Least Privilege</strong>: Code runs with minimum required privilege.</li><li>Kernel communication paths minimized and controlled.</li></ul>
+
+<p>Intel x86 Rings (Modern):</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Ring 3: Applications (least privilege)</li><li>Ring 0: OS Kernel</li><li>Ring 0 (VMX root): Hypervisor/VMM (Virtual Machine Monitor)</li><li>SMM (System Management Mode): BIOS/firmware (highest)</li><li>Total: 9 rings (0-3 normal, 0-3 VMM root, SMM)</li></ul>
+
+<p>ARM Processors:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Dominant in phones, tablets, IoT (Internet of Things).</li><li>Licensable cores → customizable hardware protection.</li><li>MMU (Memory Management Unit) for virtual memory.</li><li>MPU (Memory Protection Unit) for simpler embedded.</li><li><strong>CHERI (Capability Hardware Enhanced RISC Instructions)</strong>: Fine-grained memory capabilities — can give sub-thread specific memory ranges. Potential to stop most zero-day exploits if adopted widely.</li></ul>
+
+<p>6.3 Isolated Cryptographic Components</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Keys stored in hardware, accessed via dedicated interface.</li><li>Example: <strong>Intel TPM (Trusted Platform Module)</strong> — originally for DRM (Digital Rights Management), now general secure crypto storage.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    
+    Memory aid: <strong>Rings = Russian dolls</strong>. Ring 3 inside Ring 0 inside VMM root inside SMM. Higher number = less privilege.
+  </div>
+</div>
+</section>
+
+<section id="section-7" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">07</span>
+    <h2 class="section-title">Security Policy Models</h2>
+  </div>
+  <p>These are formal models specifying protection properties. Used to drive engineering. 7.1 Bell-LaPadula Model (1973) — Confidentiality Focus <strong>Goal</strong>: Prevent information flowing DOWN (from high classification to low). Two mandatory properties:</p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Simple Security Property (No Read Up)</strong>: Subject cannot read object at higher classification.</li><li>**\*-Property / Star Property (No Write Down)**: Subject cannot write to object at lower classification.</li><li><strong>Discretionary Access Control</strong>: External entity defines access matrix (DAC component).</li></ol>
+
+<p>Implicit allowances:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Can read at own level OR DOWN.</li><li>Can write at own level OR UP.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    
+    Why \*-property matters: Prevents "Trojan horse" where low user writes malicious program, waits for high user to run it, program exfiltrates secrets by writing down. Criticisms:
+  </div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Single omnipotent "Trusted Principal" admin — who watches the watcher?</li><li>Confidentiality only — no integrity protection.</li><li>Ignores covert channels (e.g., CPU load signaling bits).</li><li>Composition fails: Two BLP (Bell-LaPadula) secure systems combined ≠ BLP-secure.</li></ul>
+
+<p>7.2 Biba Model — Integrity Focus <strong>Goal</strong>: Prevent malicious modification (corruption) of data. Reverse of BLP. Three properties:</p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Simple Integrity (No Read Down)</strong>: Subject may only read at own level or HIGHER.</li><li>**\*-Integrity (No Write Up)**: Subject may only write at own level or LOWER.</li><li><strong>Invocation Property</strong>: Process cannot invoke higher-integrity process.</li></ol>
+
+<p>Examples:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>In-flight entertainment reads avionics (airspeed) but CANNOT alter flight controls.</li><li>Odometer displays mileage but CANNOT change it.</li></ul>
+
+<p>7.3 Practical Example (from notes) Users: Bart (None), Homer (Low), Lisa (Medium), Marge (Ultimate) Objects: fridgecodes.txt (Ultimate), tvlockcodes.txt (Medium), playstationcodes.txt (Low)</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Question</th><th>BLP Answer</th><th>Biba Answer</th></tr></thead>
+<tbody><tr><td>Can Homer read TV codes?</td><td>No (No read up)</td><td>Yes (Read up allowed)</td></tr><tr><td>Can Marge help Homer get TV codes?</td><td>No (No write down)</td><td>Yes (Write down allowed)</td></tr><tr><td>Can Bart change all codes?</td><td>Yes (Write up allowed!)</td><td>No (No write up)</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    
+    Key insight: BLP allows low-integrity users to corrupt high-integrity data (Bart writes up). Biba prevents this but allows low-confidentiality reads. 7.4 Real-World Usage
+  </div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Pure BLP/Biba rare — too rigid.</li><li><strong>Biba variants common</strong>: Windows Vista, SELinux (Security-Enhanced Linux), some Red Hat, FreeBSD module.</li><li>Concepts used to discuss/design real access control in mobile, desktop, server OS.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    
+    Memory aid: <strong>BLP = "Better Lock Papers" (Confidentiality — lock secrets UP). Biba = "Bad Integrity Blocks Alteration" (Integrity — block writes UP).</strong> Or: <strong>BLP = No Read Up, No Write Down. Biba = No Read Down, No Write Up.</strong> (Opposites!)
+  </div>
+</div>
+</section>
+
+<section id="section-8" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">08</span>
+    <h2 class="section-title">Practice Quiz Insights (Exam Prep)</h2>
+  </div>
+  <p>The notes include 10 practice questions. Key patterns:</p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Bell-LaPadula property identification</strong>: "No read up" = simple security; "No write down" = \*-property.</li><li><strong>Covert vs Side channels</strong>: Covert = using non-communication method (steganography). Side = inferring from artifacts (timing, heat, power).</li><li><strong>Model focus</strong>: BLP = confidentiality; Biba = integrity. They don't overlap.</li><li><strong>Linux permissions</strong>: r/w/x only. <code>-rwxrwxrwx</code> = everyone can do everything (dangerous!).</li><li><strong>BLP scenario questions</strong>: Given clearances/classifications, apply "no read up, no write down".</li><li><strong>DAC identification</strong>: If creator defines per-user access, it's DAC.</li><li><strong>Mobile sandboxing features</strong>: Each app = separate UID; controlled API comms; OS read-only; NOT full storage access.</li><li><strong>Docker for access control</strong>: TRUE — containers sandbox apps, raise attack bar.</li><li><strong>Confused Deputy in browsers</strong>: TRUE — scripting, add-ons, cookies vulnerable; CSRF is example.</li></ol>
+</section>
+
+<section id="section-9" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">09</span>
+    <h2 class="section-title">QUANTITATIVE DETAILS &amp; SPECIFICS</h2>
+  </div>
+  <ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Unix permission bits: 9 basic + 3 special = 12 bits per file.</li><li>Windows permissions: ~15-16 distinct types (vs Unix's 3).</li><li>Intel modern CPUs: 9 rings total (0-3 normal, 0-3 VMM root, SMM).</li><li>BLP/Biba clearance levels in example: 4 levels (Top Secret, Secret, Confidential, Unclassified).</li><li>Practice quiz: 10 questions covering all major topics.</li><li>OneDrive DAC sharing options: Private, Specific People, Anyone with Link, Public.</li><li>OneDrive MAC controls: Domain restrictions, DLP (Data Loss Prevention) policies.</li><li>Android storage types: App-internal (private) vs Public (world-readable/writable).</li><li>Android permission model change: Pre-6.0 = install-time all-or-nothing; 6.0+ = runtime "trust on first use".</li></ul>
+</section>
+
+<section id="key-takeaways" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">10</span>
+    <h2 class="section-title">Key Takeaways</h2>
+  </div>
+  <div class="takeaways-list">
+
+</div>
+</section>
+
+<section id="terms-to-know" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">11</span>
+    <h2 class="section-title">Terms to Know (Glossary)</h2>
+  </div>
+  <div class="glossary-controls">
+  <button class="filter-chip active" onclick="filterTerms('all', this)">All (28)</button>
+  <button class="filter-chip" onclick="filterTerms('models', this)">Models & Systems</button>
+  <button class="filter-chip" onclick="filterTerms('pipeline', this)">Pipeline & Data</button>
+</div>
+<div class="terms-grid" id="terms-container">
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Access Control <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Mechanism controlling which principals can access which resources.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Authentication <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Process of verifying identity (proving who you are).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Authorization <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Process of granting privileges (deciding what you can do).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Principal <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Active entity requesting access (user, process, group).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Object <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Passive resource being protected (file, program, data, port).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">DAC (Discretionary Access Control) <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Owner-controlled access; users can delegate.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">MAC (Mandatory Access Control) <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Central policy-controlled access; users cannot change.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">ACL (Access Control List) <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Per-object list of (subject, permissions) entries.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">UID/GID <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">User ID / Group ID — numeric identifiers in Unix/Linux.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">SUID (Set User ID) <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Bit allowing program to run with file owner's privileges.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">SGID (Set Group ID) <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Bit for group-based privilege escalation or directory group inheritance.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Sticky Bit <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Directory bit restricting deletion to file owner (e.g., /tmp).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">eUID/eGID <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Effective UID/GID — current runtime privileges of a process.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Same-Origin Policy <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Browser rule — scripts only talk to their originating domain.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Confused Deputy Problem <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Privileged component tricked into misusing authority for attacker.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Sandboxing <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Isolated execution environment with limited API.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Virtualization <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Emulating hardware to run guest OS; hypervisor manages VMs.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Container <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Lightweight virtualization sharing host kernel (Docker).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">CPU Rings <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Hierarchical privilege levels (Ring 3=apps, Ring 0=kernel, etc.).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">TPM (Trusted Platform Module) <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Hardware secure cryptographic key storage.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title">Bell-LaPadula Model <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Confidentiality model — no read up, no write down.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title">Biba Model <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Integrity model — no read down, no write up.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">\*-Property (Star Property) <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">BLP rule — no write down; prevents Trojan horse exfiltration.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Simple Security Property <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">BLP rule — no read up.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Invocation Property <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Biba rule — process cannot invoke higher-integrity process.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Covert Channel <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Information flow via non-communication method (e.g., steganography).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">Side Channel <span class="badge" style="background:var(--accent-rose-bg); color:var(--accent-rose);">Trap</span></div>
+    <div class="term-desc">Information leakage via physical artifacts (timing, power, heat).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title">CHERI <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">ARM capability hardware for fine-grained memory safety.</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="mnemonics" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">12</span>
+    <h2 class="section-title">Mnemonics &amp; Quick Recall</h2>
+  </div>
+  <div class="grid-2">
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 DAC vs MAC</h3>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Discretion = Your Decision&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">DAC =  | MAC =</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 BLP vs Biba</h3>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Better Lock Papers&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">BLP =  (confidentiality) | Biba =  (integrity)</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 BLP rules</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">NRU, NWD</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;No Read Up, No Write Down&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">→ NRU, NWD</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Biba rules</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">NRD, NWU</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;No Read Down, No Write Up&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">→ NRD, NWU (exact opposites!)</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Unix perms octal</h3>
+<p style="font-size: 0.85rem; color: var(--text-muted);">r=4, w=2, x=1 → rwx=7, rw=6, rx=5, r=4</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 CPU Rings (outside→in)</h3>
+<p style="font-size: 0.85rem; color: var(--text-muted);">Ring 3 (apps) → Ring 0 (kernel) → VMM Root (hypervisor) → SMM (BIOS)</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Confused Deputy</h3>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Deputy Does Dirty Work&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">— privileged component tricked into acting for attacker</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 SUID mnemonic</h3>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;SUID = Switch User ID&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">— program runs as file owner, not runner</p>
+</div>
+</div>
+</section>
+
+<section id="exam-focus" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">13</span>
+    <h2 class="section-title">Potential Exam Focus &amp; Practice</h2>
+  </div>
+  <div class="exam-toolbar">
+  <div class="exam-progress" id="exam-progress-tracker">Progress: 0 / 0 Mastered</div>
+  <div class="exam-actions">
+    <button class="btn-secondary" onclick="toggleAllAnswers(true)">Reveal All</button>
+    <button class="btn-secondary" onclick="toggleAllAnswers(false)">Hide All</button>
+    <button class="btn-secondary" onclick="resetExamProgress()">Reset Progress</button>
+  </div>
+</div>
+</section>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+<p><strong>INFO3616 Engineering Study Guide</strong> &bull; Week 3: Access Control</p>
+    <p style="font-size: 0.75rem; margin-top: 0.4rem;">Generated for self-paced revision and exam preparation.</p>
+  </footer>
+
+  <!-- Interactive JavaScript -->
+  <script>
+// Theme Toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let currentTheme = localStorage.getItem('study_theme') || (prefersDark ? 'dark' : 'light');
+
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeBtn.textContent = '☀️';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        themeBtn.textContent = '🌙';
+      }
+      localStorage.setItem('study_theme', theme);
+    }
+    applyTheme(currentTheme);
+
+    themeBtn.addEventListener('click', () => {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(currentTheme);
+    });
+
+    // Mobile Menu Toggle
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    menuBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+
+    // Close sidebar when clicking links on mobile
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 1024) {
+          sidebar.classList.remove('open');
+        }
+      });
+    });
+
+    // Reading Progress & Active Nav Link Highlight
+    window.addEventListener('scroll', () => {
+      const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById('progress-bar').style.width = scrolled + '%';
+
+      // Active Section Highlighting
+      const sections = document.querySelectorAll('section.guide-section, section.hero-card');
+      let currentSecId = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 120;
+        if (winScroll >= top) {
+          currentSecId = sec.getAttribute('id');
+        }
+      });
+
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentSecId) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Interactive Confusion Matrix Calculator Logic
+    function calculateMetrics() {
+      const tp = parseFloat(document.getElementById('inp-tp').value) || 0;
+      const fn = parseFloat(document.getElementById('inp-fn').value) || 0;
+      const fp = parseFloat(document.getElementById('inp-fp').value) || 0;
+      const tn = parseFloat(document.getElementById('inp-tn').value) || 0;
+
+      const total = tp + fn + fp + tn;
+      const acc = total > 0 ? ((tp + tn) / total) * 100 : 0;
+      const prec = (tp + fp) > 0 ? (tp / (tp + fp)) * 100 : 0;
+      const rec = (tp + fn) > 0 ? (tp / (tp + fn)) * 100 : 0;
+      const f1 = (prec + rec) > 0 ? 2 * (prec * rec) / (prec + rec) / 100 : 0;
+
+      document.getElementById('res-acc').textContent = acc.toFixed(1) + '%';
+      document.getElementById('res-prec').textContent = (tp + fp) > 0 ? prec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-rec').textContent = (tp + fn) > 0 ? rec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-f1').textContent = (prec + rec) > 0 ? f1.toFixed(3) : '0.000';
+    }
+
+    function setPreset(tp, fp, tn, fn) {
+      document.getElementById('inp-tp').value = tp;
+      document.getElementById('inp-fp').value = fp;
+      document.getElementById('inp-tn').value = tn;
+      document.getElementById('inp-fn').value = fn;
+      calculateMetrics();
+    }
+
+    // Glossary Filter Logic
+    function filterTerms(category, btn) {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+
+      const cards = document.querySelectorAll('.term-card');
+      cards.forEach(card => {
+        if (category === 'all' || card.getAttribute('data-cat') === category) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // Global Search Logic
+    const searchInput = document.getElementById('site-search');
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      const termCards = document.querySelectorAll('.term-card');
+      const quizCards = document.querySelectorAll('.quiz-card');
+
+      if (!query) {
+        termCards.forEach(c => c.style.display = 'flex');
+        quizCards.forEach(c => c.style.display = 'block');
+        return;
+      }
+
+      termCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+
+      quizCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'block' : 'none';
+      });
+    });
+
+    // Exam Questions Show/Hide & Progress Tracker
+    function toggleAnswer(id) {
+      const ans = document.getElementById(id);
+      ans.classList.toggle('show');
+    }
+
+    function toggleAllAnswers(show) {
+      document.querySelectorAll('.quiz-answer').forEach(ans => {
+        if (show) ans.classList.add('show');
+        else ans.classList.remove('show');
+      });
+    }
+
+    let masteredMap = JSON.parse(localStorage.getItem('engg2112_w3_mastered') || '{}');
+
+    function updateProgressUI() {
+      const total = document.querySelectorAll('.quiz-card').length;
+      const count = Object.values(masteredMap).filter(Boolean).length;
+      document.getElementById('exam-progress-tracker').textContent = `Progress: ${count} / ${total} Mastered`;
+
+      for (let i = 1; i <= total; i++) {
+        const card = document.getElementById('q' + i);
+        const checkbox = card ? card.querySelector('input[type="checkbox"]') : null;
+        if (card && checkbox) {
+          if (masteredMap['q' + i]) {
+            card.classList.add('mastered');
+            checkbox.checked = true;
+          } else {
+            card.classList.remove('mastered');
+            checkbox.checked = false;
+          }
+        }
+      }
+    }
+
+    function toggleMastered(qid, checkbox) {
+      masteredMap[qid] = checkbox.checked;
+      localStorage.setItem('engg2112_w3_mastered', JSON.stringify(masteredMap));
+      updateProgressUI();
+    }
+
+    function resetExamProgress() {
+      if (confirm('Reset all exam progress checkboxes?')) {
+        masteredMap = {};
+        localStorage.removeItem('engg2112_w3_mastered');
+        updateProgressUI();
+      }
+    }
+
+    // Initialize state on load
+    window.addEventListener('DOMContentLoaded', () => {
+      calculateMetrics();
+      updateProgressUI();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,1863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ENGG2112 Week 4 Study Guide – Data Pre-Processing & Classical Machine Learning</title>
+  <meta name="description" content="This lecture covers the essential pipeline before training any ML model: cleaning and preparing data (handling missing values, feature engineering, encoding categorical variables, dealing with class i">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for crisp mathematical formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+
+:root {
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --bg-primary: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-subtle: #f1f5f9;
+  --bg-alt: #e2e8f0;
+
+  --border-color: #e2e8f0;
+  --border-focus: #6366f1;
+
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-light: #94a3b8;
+
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-light: #eef2ff;
+  --primary-glow: rgba(79, 70, 229, 0.15);
+
+  --accent-blue: #0284c7;
+  --accent-blue-bg: #e0f2fe;
+  --accent-emerald: #059669;
+  --accent-emerald-bg: #d1fae5;
+  --accent-amber: #d97706;
+  --accent-amber-bg: #fef3c7;
+  --accent-rose: #e11d48;
+  --accent-rose-bg: #ffe4e6;
+  --accent-purple: #7c3aed;
+  --accent-purple-bg: #ede9fe;
+
+  --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.6);
+  --nav-width: 280px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+#progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981);
+  width: 0%;
+  z-index: 1000;
+  transition: width 0.1s ease-out;
+}
+
+header.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: var(--glass-bg);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.menu-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  color: var(--text-main);
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.course-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.header-title {
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-box input {
+  padding: 0.45rem 0.75rem 0.45rem 2rem;
+  font-size: 0.85rem;
+  border-radius: 20px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  width: 180px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: var(--primary);
+  width: 240px;
+  background: var(--bg-surface);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.search-box svg {
+  position: absolute;
+  left: 0.65rem;
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.btn-icon {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+  background: var(--bg-alt);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.app-container {
+  display: flex;
+  max-width: 1520px;
+  margin: 0 auto;
+  min-height: calc(100vh - 60px);
+}
+
+aside.sidebar {
+  width: var(--nav-width);
+  flex-shrink: 0;
+  position: sticky;
+  top: 57px;
+  height: calc(100vh - 57px);
+  overflow-y: auto;
+  padding: 1.5rem 1rem;
+  border-right: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.sidebar-header {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-light);
+  margin-bottom: 0.75rem;
+  padding-left: 0.5rem;
+}
+
+.nav-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  line-height: 1.3;
+}
+
+.nav-link:hover {
+  color: var(--primary);
+  background: var(--bg-subtle);
+}
+
+.nav-link.active {
+  color: var(--primary);
+  background: var(--primary-light);
+  font-weight: 600;
+}
+
+.nav-num {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+main.main-content {
+  flex: 1;
+  padding: 2.5rem 3rem;
+  max-width: 1020px;
+  min-width: 0;
+}
+
+.hero-card {
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 2.5rem;
+  margin-bottom: 2.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-card::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-tagline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.hero-title {
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--text-main);
+  margin-bottom: 0.75rem;
+}
+
+.hero-subtitle {
+  font-size: 1.15rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+}
+
+.hero-overview {
+  font-size: 0.95rem;
+  color: var(--text-main);
+  background: var(--bg-surface);
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--card-shadow);
+  line-height: 1.7;
+}
+
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.stat-pill {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.stat-val {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+section.guide-section {
+  margin-bottom: 3.5rem;
+  scroll-margin-top: 80px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.section-number {
+  background: var(--primary);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+}
+
+h2.section-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+h3.subsection-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 1.75rem 0 0.75rem 0;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+p {
+  margin-bottom: 1rem;
+  color: var(--text-main);
+}
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--card-shadow);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card:hover {
+  box-shadow: var(--card-shadow-hover);
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.callout {
+  border-radius: 12px;
+  padding: 1.15rem 1.25rem;
+  margin: 1.25rem 0;
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  border-left: 4px solid transparent;
+}
+
+.callout-icon {
+  font-size: 1.35rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.callout-content {
+  flex: 1;
+  font-size: 0.95rem;
+}
+
+.callout-content strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.95rem;
+}
+
+.callout-why {
+  background: var(--accent-amber-bg);
+  border-left-color: var(--accent-amber);
+  color: var(--text-main);
+}
+
+.callout-memory {
+  background: var(--accent-purple-bg);
+  border-left-color: var(--accent-purple);
+  color: var(--text-main);
+}
+
+.callout-tip {
+  background: var(--accent-emerald-bg);
+  border-left-color: var(--accent-emerald);
+  color: var(--text-main);
+}
+
+.callout-warning {
+  background: var(--accent-rose-bg);
+  border-left-color: var(--accent-rose);
+  color: var(--text-main);
+}
+
+.callout-info {
+  background: var(--accent-blue-bg);
+  border-left-color: var(--accent-blue);
+  color: var(--text-main);
+}
+
+.formula-block {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin: 1.25rem 0;
+  text-align: center;
+  position: relative;
+}
+
+.formula-title {
+  position: absolute;
+  top: -10px;
+  left: 14px;
+  background: var(--primary);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.formula-math {
+  font-size: 1.2rem;
+  margin: 0.5rem 0;
+  color: var(--text-main);
+  overflow-x: auto;
+}
+
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  margin: 1.25rem 0;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--card-shadow);
+  background: var(--bg-surface);
+}
+
+table.study-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+table.study-table th {
+  background: var(--bg-subtle);
+  padding: 0.85rem 1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  border-bottom: 1px solid var(--border-color);
+  letter-spacing: 0.02em;
+}
+
+table.study-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+  vertical-align: middle;
+}
+
+table.study-table tr:last-child td {
+  border-bottom: none;
+}
+
+table.study-table tr:hover td {
+  background: var(--bg-subtle);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+
+.badge-recall {
+  background: var(--accent-emerald-bg);
+  color: var(--accent-emerald);
+}
+
+.badge-precision {
+  background: var(--accent-blue-bg);
+  color: var(--accent-blue);
+}
+
+.badge-f1 {
+  background: var(--accent-purple-bg);
+  color: var(--accent-purple);
+}
+
+.badge-danger {
+  background: var(--accent-rose-bg);
+  color: var(--accent-rose);
+}
+
+.pipeline-container {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  box-shadow: var(--card-shadow);
+}
+
+.pipeline-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  margin: 1rem 0;
+}
+
+.pipe-step {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  color: var(--text-main);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.pipe-step .step-num {
+  font-size: 0.7rem;
+  color: var(--primary);
+  font-family: var(--font-mono);
+}
+
+.pipe-step:hover,
+.pipe-step.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.pipe-arrow {
+  color: var(--text-light);
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+.calculator-card {
+  background: var(--bg-surface);
+  border: 2px solid var(--primary);
+  border-radius: 16px;
+  padding: 1.75rem;
+  margin: 2rem 0;
+  box-shadow: 0 10px 25px -5px var(--primary-glow);
+}
+
+.calc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.calc-presets {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.calc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.cm-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+.cm-table th,
+.cm-table td {
+  border: 1px solid var(--border-color);
+  padding: 0.75rem;
+}
+
+.cm-table th {
+  background: var(--bg-subtle);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.cm-input-cell {
+  background: var(--bg-surface);
+}
+
+.cm-input-cell label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.cm-input-cell input {
+  width: 100%;
+  max-width: 90px;
+  padding: 0.4rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  font-family: var(--font-mono);
+}
+
+.cm-input-cell input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-glow);
+}
+
+.calc-results {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.metric-card {
+  background: var(--bg-subtle);
+  border-radius: 10px;
+  padding: 0.85rem;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.metric-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--primary);
+  margin: 0.2rem 0;
+}
+
+.metric-formula {
+  font-size: 0.7rem;
+  color: var(--text-light);
+  font-family: var(--font-mono);
+}
+
+.takeaways-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.takeaway-item {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 0.9rem 1.25rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+  box-shadow: var(--card-shadow);
+}
+
+.takeaway-num {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 0.85rem;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.glossary-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.filter-chip {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filter-chip:hover,
+.filter-chip.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.terms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.term-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.1rem;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.term-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.term-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--primary);
+  margin-bottom: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.term-desc {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.exam-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.exam-progress {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.exam-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-secondary {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-alt);
+}
+
+.quiz-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--card-shadow);
+  transition: border-color 0.2s ease;
+}
+
+.quiz-card.mastered {
+  border-left: 4px solid var(--accent-emerald);
+  opacity: 0.9;
+}
+
+.quiz-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.quiz-qnum {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}
+
+.quiz-question {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  flex: 1;
+  line-height: 1.5;
+}
+
+.quiz-status-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border-color);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.quiz-answer {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-color);
+  font-size: 0.9rem;
+  color: var(--text-main);
+  display: none;
+  animation: fadeIn 0.2s ease;
+}
+
+.quiz-answer.show {
+  display: block;
+}
+
+.quiz-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0;
+}
+
+.quiz-toggle-btn:hover {
+  text-decoration: underline;
+}
+
+footer.site-footer {
+  border-top: 1px solid var(--border-color);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  background: var(--bg-surface);
+  margin-top: 4rem;
+}
+
+@media (max-width: 1024px) {
+  aside.sidebar {
+    position: fixed;
+    left: -100%;
+    top: 57px;
+    z-index: 950;
+    background: var(--bg-surface);
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    transition: left 0.3s ease;
+  }
+  aside.sidebar.open {
+    left: 0;
+  }
+  .menu-toggle {
+    display: block;
+  }
+  main.main-content {
+    padding: 1.5rem;
+  }
+  .grid-2,
+  .calc-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="progress-bar"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-left">
+      <button class="menu-toggle" id="menu-btn" aria-label="Toggle navigation menu">&#9776;</button>
+      <span class="course-badge">ENGG2112 • Week 4</span>
+      <span class="header-title">Data Pre-Processing & Classical Machine Learning</span>
+    </div>
+    <div class="header-controls">
+      <div class="search-box">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" id="site-search" placeholder="Search guide..." aria-label="Search study guide">
+      </div>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">Table of Contents</div>
+      <ul class="nav-list">
+<li><a href="#overview" class="nav-link"><span class="nav-num">00</span> Overview</a></li>
+        <li><a href="#section-1" class="nav-link"><span class="nav-num">01</span> DATA PRE-PROCESSING</a></li>
+        <li><a href="#section-2" class="nav-link"><span class="nav-num">02</span> Real-world datasets almost always have</a></li>
+        <li><a href="#section-3" class="nav-link"><span class="nav-num">03</span> Raw signals (e.g., vibration over</a></li>
+        <li><a href="#section-4" class="nav-link"><span class="nav-num">04</span> When one class dominates (e.g.,</a></li>
+        <li><a href="#section-5" class="nav-link"><span class="nav-num">05</span> Categorical variables (airport names,</a></li>
+        <li><a href="#section-6" class="nav-link"><span class="nav-num">06</span> MATHEMATICAL FOUNDATIONS</a></li>
+        <li><a href="#section-7" class="nav-link"><span class="nav-num">07</span> **Core idea**: For input **x**,</a></li>
+        <li><a href="#section-8" class="nav-link"><span class="nav-num">08</span> Two paths:</a></li>
+        <li><a href="#section-9" class="nav-link"><span class="nav-num">09</span> GAUSSIAN NAÏVE BAYES (GNB)</a></li>
+        <li><a href="#section-10" class="nav-link"><span class="nav-num">10</span> 1. **Conditional Independence**:</a></li>
+        <li><a href="#section-11" class="nav-link"><span class="nav-num">11</span> - **Training**: Compute μᵢ,ᵧ and</a></li>
+        <li><a href="#section-12" class="nav-link"><span class="nav-num">12</span> RANDOM FOREST</a></li>
+        <li><a href="#section-13" class="nav-link"><span class="nav-num">13</span> A tree recursively splits data</a></li>
+        <li><a href="#section-14" class="nav-link"><span class="nav-num">14</span> Single trees overfit (memorise training</a></li>
+        <li><a href="#section-15" class="nav-link"><span class="nav-num">15</span> K-NEAREST NEIGHBOURS (KNN) &amp; WEIGHTED</a></li>
+        <li><a href="#section-16" class="nav-link"><span class="nav-num">16</span> **Algorithm**:</a></li>
+        <li><a href="#section-17" class="nav-link"><span class="nav-num">17</span> **Fixes**: Imbalanced data + gives</a></li>
+        <li><a href="#section-18" class="nav-link"><span class="nav-num">18</span> Both KNN and WNN can estimate P(Cᵢ|x):</a></li>
+        <li><a href="#section-19" class="nav-link"><span class="nav-num">19</span> Features on different scales (engine</a></li>
+        <li><a href="#section-20" class="nav-link"><span class="nav-num">20</span> VALIDATION &amp; TESTING</a></li>
+        <li><a href="#section-21" class="nav-link"><span class="nav-num">21</span> - **Training set** — fit</a></li>
+        <li><a href="#section-22" class="nav-link"><span class="nav-num">22</span> Single validation split has high</a></li>
+        <li><a href="#section-23" class="nav-link"><span class="nav-num">23</span> Almost every supervised model follows:</a></li>
+        <li><a href="#section-24" class="nav-link"><span class="nav-num">24</span> COMPLEXITY CHEAT SHEET</a></li>
+        <li><a href="#section-25" class="nav-link"><span class="nav-num">25</span> NEXT WEEK PREVIEW</a></li>
+        <li><a href="#key-takeaways" class="nav-link"><span class="nav-num">26</span> Key Takeaways</a></li>
+        <li><a href="#terms-to-know" class="nav-link"><span class="nav-num">27</span> Terms to Know (Glossary)</a></li>
+        <li><a href="#mnemonics" class="nav-link"><span class="nav-num">28</span> Mnemonics &amp; Quick Recall</a></li>
+        <li><a href="#worked-examples" class="nav-link"><span class="nav-num">29</span> Worked Scenarios &amp; Calculations</a></li>
+        <li><a href="#exam-focus" class="nav-link"><span class="nav-num">30</span> Potential Exam Focus &amp; Practice</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+<section id="overview" class="hero-card">
+  <div class="hero-tagline">📖 Official Course Notes • Week 4</div>
+  <h1 class="hero-title">Data Pre-Processing &amp; Classical Machine Learning</h1>
+  <p class="hero-subtitle">This lecture covers the essential pipeline before training any ML model: cleaning and preparing data (handling missing values, feature…</p>
+  <div class='hero-overview'><strong>Lecture Overview:</strong> This lecture covers the essential pipeline before training any ML model: cleaning and preparing data (handling missing values, feature engineering, encoding categorical variables, dealing with class imbalance), then introduces three foundational classical ML algorithms—Gaussian Naïve Bayes, Random Forest, and K-Nearest Neighbours (KNN)—plus validation/testing methodology. These are the "classical" (non-neural-network) methods that still power many real-world systems and provide the conceptual groundwork for understanding modern deep learning next week.</div>
+  
+</section>
+
+<section id="section-1" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">01</span>
+    <h2 class="section-title">DATA PRE-PROCESSING</h2>
+  </div>
+  <p>1.1 Missing Data</p>
+</section>
+
+<section id="section-2" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">02</span>
+    <h2 class="section-title">Real-world datasets almost always have</h2>
+  </div>
+  <p>&lt;p&gt;gaps—cells left blank because a sensor failed, a survey question was skipped, or a log entry was corrupted. In pandas, these appear as &lt;strong&gt;NaN (Not a Number)&lt;/strong&gt; when you load a CSV or Excel file.&lt;/p&gt; <strong>Three main strategies:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Drop rows</strong> with <code>dropna()</code> — simple but wastes data; only viable if missingness is random and rare.</li><li><strong>Fill with a constant</strong> (e.g., 0, mean, median) via <code>fillna()</code> — fast, but can bias statistics.</li><li><strong>Forward/backward fill</strong> — propagate the last/next known value; useful for time-series.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters:</strong>
+    How you handle missing data can silently skew your model. Dropping rows may remove the rare class you care about. Filling with zero may create artificial patterns. <strong>Memory aid</strong>: <strong>"DFF"</strong> — <strong>D</strong>rop, <strong>F</strong>ill constant, <strong>F</strong>ill forward/backward. <strong>Example</strong>: A Power(kW) column has NaN entries. Filling with 200 (a constant) assumes all missing readings were 200 kW—probably wrong. Forward-fill assumes the power didn't change since the last reading—better for steady signals. 1.2 Feature Engineering
+  </div>
+</div>
+</section>
+
+<section id="section-3" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">03</span>
+    <h2 class="section-title">Raw signals (e.g., vibration over</h2>
+  </div>
+  <p>&lt;p&gt;time) are high-dimensional and noisy. &lt;strong&gt;Feature engineering&lt;/strong&gt; = extracting informative, lower-dimensional representations. The lecture calls this "the step that takes the most time in an ML project."&lt;/p&gt; <strong>Main techniques:</strong></p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Technique</th><th>What it does</th><th>When to use</th></tr></thead>
+<tbody><tr><td><strong>Feature Selection</strong></td><td>Pick inputs with highest correlation to output</td><td>Many features, want interpretability</td></tr><tr><td><strong>Variance Threshold</strong></td><td>Drop near-constant features (low variance)</td><td>Pre-filter before modelling</td></tr><tr><td><strong>Tree-based Importance</strong></td><td>Train a quick Decision Tree/Random Forest, use feature importances</td><td>When relationships are non-linear</td></tr><tr><td><strong>PCA (Principal Component Analysis)</strong></td><td>Project data onto directions of max variance</td><td>High-dimensional, correlated features</td></tr><tr><td><strong>Manual/Domain-driven</strong></td><td>Use physics/engineering knowledge (e.g., FFT for frequency features)</td><td>When you understand the signal</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters:</strong>
+    Good features beat fancy models. A simple model on great features outperforms a complex model on raw data. <strong>Analogy</strong>: Raw signal = a messy pile of LEGO bricks. Feature engineering = sorting them by colour/shape so you can build the target object efficiently. 1.3 Imbalanced Datasets
+  </div>
+</div>
+</section>
+
+<section id="section-4" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">04</span>
+    <h2 class="section-title">When one class dominates (e.g.,</h2>
+  </div>
+  <p>&lt;p&gt;95% "normal", 5% "fault"), a model that always predicts "normal" gets 95% accuracy but is useless.&lt;/p&gt; <strong>Resampling methods:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Oversampling minority</strong> — replicate or synthesize minority samples. <strong>SMOTE</strong> (Synthetic Minority Oversampling Technique) creates new synthetic points along lines between existing minority neighbours.</li><li><strong>Undersampling majority</strong> — randomly discard majority samples. Loses data, but faster.</li></ul>
+
+<p><strong>Cost-Sensitive Learning</strong>: Modify the loss function so False Negatives (missing a fault) cost more than False Positives (false alarm). The model shifts its decision boundary to minimise <em>cost</em>, not just error rate. <strong>Data Augmentation</strong>: Generate realistic synthetic minority samples (e.g., rotate/flip images, add noise to signals).</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters:</strong>
+    In safety-critical engineering (fault detection, medical diagnosis), the minority class is usually the one you <em>most</em> need to catch. <strong>Memory aid</strong>: <strong>"SMOTE = Synthetic Minority Oversampling Technique"</strong> — say it three times. <strong>Example</strong>: 90% Class 0 (blue), 10% Class 1 (orange). A test point (yellow triangle) sits in the orange region but has more blue neighbours. Plain KNN → blue. Weighted KNN (inverse distance weighting) → orange. <strong>Weighting fixes the imbalance bias.</strong> 1.4 One-Hot Encoding
+  </div>
+</div>
+</section>
+
+<section id="section-5" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">05</span>
+    <h2 class="section-title">Categorical variables (airport names,</h2>
+  </div>
+  <p>&lt;p&gt;airlines, gender) can't be multiplied or fed to most ML algorithms directly. &lt;strong&gt;One-hot encoding&lt;/strong&gt; converts a categorical variable with M categories into M−1 binary (0/1) "dummy" columns.&lt;/p&gt; <strong>Why M−1, not M?</strong> The last category is implied when all dummies are 0 (the "reference category"). Including all M creates perfect multicollinearity (dummy variable trap). <strong>Example</strong>: Gender = {Male, Female, Not Given} → two columns:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>x₁ = 1 if Male, else 0</li><li>x₂ = 1 if Female, else 0</li><li>(0,0) = Not Given</li></ul>
+
+<p><strong>Critical mistake</strong>: Encoding as 0, 1, 2 implies <strong>Male &lt; Female &lt; Not Given</strong> (ordinal relationship). One-hot avoids this.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters:</strong>
+    Tree-based models (Random Forest) can handle label encoding (0,1,2) because they split on thresholds. Linear models, SVMs, and neural networks <em>cannot</em>—they assume numerical distance semantics. <strong>Python</strong>: <code>sklearn.preprocessing.OneHotEncoder</code> (returns numpy array) or <code>pd.get_dummies()</code> (returns DataFrame).
+  </div>
+</div>
+</section>
+
+<section id="section-6" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">06</span>
+    <h2 class="section-title">MATHEMATICAL FOUNDATIONS</h2>
+  </div>
+  <p>2.1 MAP (Maximum A Posteriori) Detection</p>
+</section>
+
+<section id="section-7" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">07</span>
+    <h2 class="section-title">**Core idea**: For input **x**,</h2>
+  </div>
+  <p>&lt;p&gt;we want the output &lt;strong&gt;y&lt;/strong&gt; that maximises &lt;strong&gt;P(y|x)&lt;/strong&gt; — the posterior probability.&lt;/p&gt;</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Classification</strong>: MAP minimises decision error (maximises accuracy).</li><li><strong>Regression</strong>: Would use expected value (minimise MSE), not MAP.</li></ul>
+
+<p><strong>Bayes' Rule</strong>: P(y|x) = P(x|y)P(y) / P(x). Denominator P(x) is constant for a given x, so we maximise numerator: <strong>P(x|y)P(y)</strong>.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters:</strong>
+    Naïve Bayes is literally this formula with simplifying assumptions. Softmax outputs in neural networks approximate P(y|x). 2.2 Where P(x|y) Comes From
+  </div>
+</div>
+</section>
+
+<section id="section-8" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">08</span>
+    <h2 class="section-title">Two paths:</h2>
+  </div>
+  <ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Physics-based model</strong> (e.g., bit error rate p on a noisy channel). If you know the channel, you derive P(x|y) mathematically.</li><li><strong>Learn from data</strong> — the ML approach. Most real systems are too complex for physics models.</li></ol>
+</section>
+
+<section id="section-9" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">09</span>
+    <h2 class="section-title">GAUSSIAN NAÏVE BAYES (GNB)</h2>
+  </div>
+  <p>3.1 The Two "Naïve" Assumptions</p>
+</section>
+
+<section id="section-10" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">10</span>
+    <h2 class="section-title">1. **Conditional Independence**:</h2>
+  </div>
+  <p>&lt;p&gt;Features x₁…xₖ are independent &lt;em&gt;given&lt;/em&gt; class y.&lt;/p&gt;</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Allows: P(x₁…xₖ|y) = ∏ᵢ P(xᵢ|y) — product of 1D densities instead of a joint K-dimensional density.</li></ul>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Gaussian Features</strong>: Each P(xᵢ|y) is Gaussian (Normal).</li></ol>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Fully specified by mean μᵢ,ᵧ and variance σ²ᵢ,ᵧ per feature per class.</li></ul>
+
+<p><strong>Result</strong>: For K features and C classes, we estimate 2×K×C parameters (mean + variance per feature per class). No hyperparameters. 3.2 Training &amp; Inference</p>
+</section>
+
+<section id="section-11" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">11</span>
+    <h2 class="section-title">- **Training**: Compute μᵢ,ᵧ and</h2>
+  </div>
+  <p>&lt;p&gt;σ²ᵢ,ᵧ from the training data for each class y and feature i. That's it.&lt;/p&gt;</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Inference</strong>: For a new x, compute log P(y) + Σᵢ log P(xᵢ|y) for each class y, pick max. (Log avoids underflow.)</li></ul>
+
+<p><strong>Python</strong>:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Formula</div>
+  <div class="formula-math"><pre class="formula-math">from sklearn.naive_bayes import GaussianNB
+nb = GaussianNB()
+nb.fit(X_train, y_train)
+y_pred = nb.predict(X_test)
+probs = nb.predict_proba(X_test)  # P(y|x) estimates</pre></div>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters:</strong>
+    GNB is fast, works surprisingly well on many text/classification tasks, and is a great baseline. Zero hyperparameters = no tuning needed. <strong>Complexity</strong>: Training O(N×K×C), Inference O(K×C). Very fast. Memory O(K×C) — just stores means/variances. <strong>Example</strong>: Two classes (0,1), two features. Class 0: μ₁=−0.2, μ₂=1.05. Class 1: μ₁=2.77, μ₂=−1.0. A new point (2.5, −0.8) is much closer to Class 1's means → predicts Class 1.
+  </div>
+</div>
+</section>
+
+<section id="section-12" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">12</span>
+    <h2 class="section-title">RANDOM FOREST</h2>
+  </div>
+  <p>4.1 Decision Tree Refresher</p>
+</section>
+
+<section id="section-13" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">13</span>
+    <h2 class="section-title">A tree recursively splits data</h2>
+  </div>
+  <p>&lt;p&gt;by asking questions (xⱼ ≤ threshold?) at each node.&lt;/p&gt;</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Root</strong> → all data.</li><li><strong>Internal nodes</strong> → split on one feature + threshold.</li><li><strong>Leaves</strong> → final class prediction (majority class in that leaf).</li></ul>
+
+<p><strong>Splitting criterion</strong> (hyperparameter <code>criterion</code>):</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Gini Impurity</strong>: 1 − Σ pᵢ² — measures "mixedness". Lower = purer.</li><li><strong>Entropy</strong>: −Σ pᵢ log pᵢ — information theory view. Similar behaviour.</li></ul>
+
+<p><strong>Hyperparameters (set by human)</strong>:</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Parameter</th><th>Role</th></tr></thead>
+<tbody><tr><td><code>max_depth</code></td><td>Max levels; prevents overfitting</td></tr><tr><td><code>max_features</code></td><td>Features considered at each split (√p default)</td></tr><tr><td><code>criterion</code></td><td>"gini" or "entropy"</td></tr><tr><td><code>n_estimators</code></td><td>Number of trees in the forest</td></tr></tbody>
+  </table>
+</div>
+
+<p><strong>Parameters (learned by machine)</strong>:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Which feature to split on at each node.</li><li>What threshold value to use.</li></ul>
+
+<p>4.2 Randomization = Generalisation</p>
+</section>
+
+<section id="section-14" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">14</span>
+    <h2 class="section-title">Single trees overfit (memorise training</h2>
+  </div>
+  <p>&lt;p&gt;data). Random Forest combats this via:&lt;/p&gt;</p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Bagging (Bootstrap Aggregating)</strong>: Each tree trains on a bootstrap sample (sampling with replacement) — ~63% unique samples, rest duplicates.</li><li><strong>Random Feature Subsets</strong>: At each split, only consider <code>max_features</code> randomly chosen features (default √p for classification).</li></ol>
+
+<p>These make trees <em>different</em> from each other. Averaging/voting across diverse trees reduces variance without increasing bias.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters:</strong>
+    Random Forest is a go-to "off-the-shelf" classifier—robust, handles mixed data types, gives feature importances, rarely needs heavy tuning. <strong>Python</strong>:
+  </div>
+</div>
+
+<div class="formula-block">
+  <div class="formula-title">Formula</div>
+  <div class="formula-math"><pre class="formula-math">from sklearn.ensemble import RandomForestClassifier
+rf = RandomForestClassifier(n_estimators=100, max_depth=5)
+rf.fit(X_train, y_train)
+y_pred = rf.predict(X_test)
+importances = rf.feature_importances_</pre></div>
+</div>
+
+<p><strong>Complexity</strong>: Training O(n_estimators × N × max_depth × max_features). Inference O(n_estimators × max_depth). Parallelisable across trees.</p>
+</section>
+
+<section id="section-15" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">15</span>
+    <h2 class="section-title">K-NEAREST NEIGHBOURS (KNN) &amp; WEIGHTED</h2>
+  </div>
+  <p>&lt;p&gt;KNN (WNN)&lt;/p&gt; 5.1 Standard KNN</p>
+</section>
+
+<section id="section-16" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">16</span>
+    <h2 class="section-title">**Algorithm**:</h2>
+  </div>
+  <ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Choose odd K (e.g., 5) to avoid ties.</li><li>Compute distance from test point <strong>x</strong> to all N training points.</li><li>Sort distances, pick K nearest.</li><li>Majority vote among their labels → prediction.</li></ol>
+
+<p><strong>Distance metrics</strong> (hyperparameter):</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>L2 (Euclidean)</strong>: Default, sensitive to scale.</li><li><strong>L1 (Manhattan)</strong>: More robust to outliers.</li><li><strong>Hamming</strong>: For binary/categorical vectors (count of differing positions).</li></ul>
+
+<p><strong>Key insight</strong>: K is a <strong>hyperparameter</strong> (set before training). No parameters are "learned"—the training data <em>is</em> the model. Decision boundaries are piecewise-linear (Voronoi diagram). <strong>Problem</strong>: All N distances computed every prediction → slow at scale. Doesn't work well with high dimensions (curse of dimensionality). <strong>Example</strong>: K=3 → "triangle". K=5 → "square". K changes the decision boundary shape. 5.2 Weighted KNN (WNN)</p>
+</section>
+
+<section id="section-17" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">17</span>
+    <h2 class="section-title">**Fixes**: Imbalanced data + gives</h2>
+  </div>
+  <p>&lt;p&gt;closer neighbours more influence.&lt;/p&gt; <strong>Algorithm</strong>:</p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Find K nearest neighbours and their distances dᵢ.</li><li>For each class n, compute <strong>Nₙ = Σ (1/dᵢ)</strong> over neighbours of class n.</li><li>Predict class with max Nₙ.</li></ol>
+
+<p><strong>Example from lecture</strong>: K=5, neighbours:</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Point</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr></thead>
+<tbody><tr><td>Class</td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td></tr><tr><td>Dist</td><td>0.5</td><td>0.4</td><td>1.0</td><td>0.8</td><td>1.5</td></tr><tr><td>1/d</td><td>2.0</td><td>2.5</td><td>1.0</td><td>1.25</td><td>0.67</td></tr></tbody>
+  </table>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>KNN</strong>: Class 0 count=2, Class 1 count=3 → <strong>Class 1</strong></li><li><strong>WNN</strong>: N₀=2+2.5=4.5, N₁=1+1.25+0.67=2.92 → <strong>Class 0</strong></li></ul>
+
+<p>WNN correctly favours the closer Class 0 points. 5.3 Probability Estimates</p>
+</section>
+
+<section id="section-18" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">18</span>
+    <h2 class="section-title">Both KNN and WNN can estimate P(Cᵢ|x):</h2>
+  </div>
+  <ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>KNN</strong>: P(Cᵢ|x) = (count of class i in K) / K</li><li><strong>WNN</strong>: P(Cᵢ|x) = Nᵢ / Σⱼ Nⱼ</li></ul>
+
+<p>In the example:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>WNN: P(C₀|x) = 4.5/7.42 = 0.606, P(C₁|x) = 0.394</li><li>KNN: P(C₀|x) = 2/5 = 0.4, P(C₁|x) = 0.6</li></ul>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Caveat:</strong>
+    These are <em>estimates</em>. Different classifiers give different probabilities. Calibration (reliability diagrams) needed for trustworthy probabilities. 5.4 Normalisation — Critical for KNN
+  </div>
+</div>
+</section>
+
+<section id="section-19" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">19</span>
+    <h2 class="section-title">Features on different scales (engine</h2>
+  </div>
+  <p>&lt;p&gt;cc vs. year; age vs. height) → large-scale feature dominates distance.&lt;/p&gt; <strong>Min-Max Normalisation</strong>: x' = (x − min) / (max − min) → maps to [0, 1]. <strong>Python</strong>: <code>sklearn.preprocessing.MinMaxScaler</code> (not <code>normalize</code> — that's L2 normalisation).</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters:</strong>
+    Without normalisation, KNN (and SVM, neural nets, etc.) will be dominated by the feature with the largest numeric range. <strong>Complexity</strong>: Training O(1) — just store data. Inference O(N×K) distance computations. Space O(N×K) — must store all training data. <strong>Not suitable for large N</strong>.
+  </div>
+</div>
+</section>
+
+<section id="section-20" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">20</span>
+    <h2 class="section-title">VALIDATION &amp; TESTING</h2>
+  </div>
+  <p>6.1 Data Splits</p>
+</section>
+
+<section id="section-21" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">21</span>
+    <h2 class="section-title">- **Training set** — fit</h2>
+  </div>
+  <p>&lt;p&gt;model parameters.&lt;/p&gt;</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Validation set</strong> — tune hyperparameters, select model.</li><li><strong>Test set</strong> — final unbiased performance estimate. <strong>Touch only once!</strong></li></ul>
+
+<p>6.2 Cross-Validation</p>
+</section>
+
+<section id="section-22" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">22</span>
+    <h2 class="section-title">Single validation split has high</h2>
+  </div>
+  <p>&lt;p&gt;variance. &lt;strong&gt;K-fold CV&lt;/strong&gt;:&lt;/p&gt;</p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Shuffle data, split into K folds.</li><li>For each fold: train on K−1, validate on 1.</li><li>Average the K validation scores → robust estimate.</li></ol>
+
+<p><strong>StratifiedKFold</strong> preserves class proportions in each fold (critical for imbalanced data). <strong>Python</strong>:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Formula</div>
+  <div class="formula-math">$$from sklearn.model_selection import StratifiedKFold
+cv = StratifiedKFold(n_splits=5)
+# Use with cross_val_score or GridSearchCV$$</div>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why it matters:</strong>
+    Reporting test performance without CV is like grading your own exam. CV gives you a reliable estimate <em>before</em> you touch the test set. 6.3 Scikit-Learn Unified API
+  </div>
+</div>
+</section>
+
+<section id="section-23" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">23</span>
+    <h2 class="section-title">Almost every supervised model follows:</h2>
+  </div>
+  <div class="formula-block">
+  <div class="formula-title">Formula</div>
+  <div class="formula-math"><pre class="formula-math">model = AlgorithmClass(hyperparameters)
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+y_proba = model.predict_proba(X_test)  # if supported
+score = accuracy_score(y_test, y_pred)</pre></div>
+</div>
+</section>
+
+<section id="section-24" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">24</span>
+    <h2 class="section-title">COMPLEXITY CHEAT SHEET</h2>
+  </div>
+  <div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Algorithm</th><th>Train Time</th><th>Inference Time</th><th>Memory</th><th>Hyperparameters</th></tr></thead>
+<tbody><tr><td>GNB</td><td>O(N×K×C)</td><td>O(K×C)</td><td>O(K×C)</td><td>None</td></tr><tr><td>Random Forest</td><td>O(T×N×D×F)</td><td>O(T×D)</td><td>O(T×D×F)</td><td>T, D, F, criterion</td></tr><tr><td>KNN</td><td>O(1)</td><td>O(N×K)</td><td>O(N×K)</td><td>K, distance metric</td></tr><tr><td>WNN</td><td>O(1)</td><td>O(N×K)</td><td>O(N×K)</td><td>K, distance metric</td></tr></tbody>
+  </table>
+</div>
+
+<p>T=n_estimators, D=max_depth, F=max_features, N=training samples, K=features, C=classes.</p>
+</section>
+
+<section id="section-25" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">25</span>
+    <h2 class="section-title">NEXT WEEK PREVIEW</h2>
+  </div>
+  <p>Week 5: <strong>Neural Networks</strong> — basic concepts, architectures (MLP, CNN, RNN), why differentiability enables backpropagation, example applications. The classical methods this week are the foundation; NNs generalise them with learnable feature representations. --- <em>Study guide generated from ENGG2112 Week 4 lecture slides (Prof. T. J. Lim, Semester 2, 2026)</em></p>
+</section>
+
+<section id="key-takeaways" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">26</span>
+    <h2 class="section-title">Key Takeaways</h2>
+  </div>
+  <div class="takeaways-list">
+
+</div>
+</section>
+
+<section id="terms-to-know" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">27</span>
+    <h2 class="section-title">Terms to Know (Glossary)</h2>
+  </div>
+  <div class="glossary-controls">
+  <button class="filter-chip active" onclick="filterTerms('all', this)">All (15)</button>
+  <button class="filter-chip" onclick="filterTerms('models', this)">Models & Systems</button>
+  <button class="filter-chip" onclick="filterTerms('pipeline', this)">Pipeline & Data</button>
+</div>
+<div class="terms-grid" id="terms-container">
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>NaN</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Not a Number — pandas' representation for missing data.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>MAP (Maximum A Posteriori)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Decision rule choosing y that maximises P(y|x).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Conditional Independence</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">P(x₁,x₂|y) = P(x₁|y)P(x₂|y) — features independent given the class.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Gini Impurity</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">1 − Σ pᵢ² — measures node purity in decision trees (0 = pure).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Entropy</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">−Σ pᵢ log pᵢ — information-theoretic splitting criterion.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Bagging (Bootstrap Aggregating)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Training each tree on a bootstrap resample of data.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>SMOTE (Synthetic Minority Oversampling Technique)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Creates synthetic minority samples along lines between neighbours.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>One-Hot Encoding</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Converts M-category variable into M−1 binary dummy columns.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Dummy Variable Trap</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Including all M dummies creates perfect multicollinearity.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Min-Max Normalisation</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">x' = (x − min) / (max − min) → scales features to [0, 1].</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Stratified K-Fold CV</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">K-fold cross-validation preserving class proportions in each fold.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Hyperparameter</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Set before training (e.g., K, max_depth, n_estimators); not learned.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Parameter</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Learned from data (e.g., tree split thresholds, GNB means/variances).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Curse of Dimensionality</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">In high dimensions, all points become equidistant; KNN fails.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Voronoi Diagram</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Partition of space where each region contains points closest to one training sample — KNN's decision boundaries.</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="mnemonics" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">28</span>
+    <h2 class="section-title">Mnemonics &amp; Quick Recall</h2>
+  </div>
+  <div class="grid-2">
+
+</div>
+</section>
+
+<section id="worked-examples" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">29</span>
+    <h2 class="section-title">Worked Scenarios &amp; Calculations</h2>
+  </div>
+  <ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>One-Hot Encoding</strong>: Gender {Male, Female, Not Given} → x₁(Male), x₂(Female); (0,0)=Not Given. Avoid 0/1/2 encoding.</li><li><strong>WNN vs KNN</strong>: 5 neighbours, 2 Class 0 (dist 0.4, 0.5), 3 Class 1 (dist 0.8, 1.0, 1.5). KNN→Class 1, WNN→Class 0.</li><li><strong>Min-Max Normalisation</strong>: Engine capacity 1000–5000cc, Year 2000–2026. Without scaling, capacity dominates distance. After scaling, both in [0,1].</li></ol>
+</section>
+
+<section id="exam-focus" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">30</span>
+    <h2 class="section-title">Potential Exam Focus &amp; Practice</h2>
+  </div>
+  <div class="exam-toolbar">
+  <div class="exam-progress" id="exam-progress-tracker">Progress: 0 / 0 Mastered</div>
+  <div class="exam-actions">
+    <button class="btn-secondary" onclick="toggleAllAnswers(true)">Reveal All</button>
+    <button class="btn-secondary" onclick="toggleAllAnswers(false)">Hide All</button>
+    <button class="btn-secondary" onclick="resetExamProgress()">Reset Progress</button>
+  </div>
+</div>
+</section>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+<p><strong>ENGG2112 Engineering Study Guide</strong> &bull; Week 4: Data Pre-Processing &amp; Classical Machine Learning</p>
+    <p style="font-size: 0.75rem; margin-top: 0.4rem;">Generated for self-paced revision and exam preparation.</p>
+  </footer>
+
+  <!-- Interactive JavaScript -->
+  <script>
+
+// Mobile Menu Toggle
+const menuBtn = document.getElementById('menu-btn');
+const sidebar = document.getElementById('sidebar');
+menuBtn.addEventListener('click', () => {
+  sidebar.classList.toggle('open');
+});
+
+// Close sidebar when clicking links on mobile
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', () => {
+    if (window.innerWidth <= 1024) {
+      sidebar.classList.remove('open');
+    }
+  });
+});
+
+// Reading Progress & Active Nav Link Highlight
+window.addEventListener('scroll', () => {
+  const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+  const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+  const scrolled = (winScroll / height) * 100;
+  document.getElementById('progress-bar').style.width = scrolled + '%';
+
+  // Active Section Highlighting
+  const sections = document.querySelectorAll('section.guide-section, section.hero-card');
+  let currentSecId = '';
+  sections.forEach(sec => {
+    const top = sec.offsetTop - 120;
+    if (winScroll >= top) {
+      currentSecId = sec.getAttribute('id');
+    }
+  });
+
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.classList.remove('active');
+    if (link.getAttribute('href') === '#' + currentSecId) {
+      link.classList.add('active');
+    });
+  });
+});
+
+ // Glossary Filter Logic
+function filterTerms(category, btn) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+
+  const cards = document.querySelectorAll('.term-card');
+  cards.forEach(card => {
+    if (category === 'all' || card.getAttribute('data-cat') === category) {
+      card.style.display = 'flex';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+// Global Search Logic
+const searchInput = document.getElementById('site-search');
+searchInput.addEventListener('input', (e) => {
+  const query = e.target.value.toLowerCase().trim();
+  const termCards = document.querySelectorAll('.term-card');
+  const quizCards = document.querySelectorAll('.quiz-card');
+
+  if (!query) {
+    termCards.forEach(c => c.style.display = 'flex');
+    quizCards.forEach(c => c.style.display = 'block');
+    return;
+  }
+
+  termCards.forEach(card => {
+    const text = card.textContent.toLowerCase();
+    card.style.display = text.includes(query) ? 'flex' : 'none';
+  });
+
+  quizCards.forEach(card => {
+    const text = card.textContent.toLowerCase();
+    card.style.display = text.includes(query) ? 'block' : 'none';
+  });
+});
+
+// Exam Questions Show/Hide & Progress Tracker
+function toggleAnswer(id) {
+  const ans = document.getElementById(id);
+  ans.classList.toggle('show');
+}
+
+function toggleAllAnswers(show) {
+  document.querySelectorAll('.quiz-answer').forEach(ans => {
+    if (show) ans.classList.add('show');
+    else ans.classList.remove('show');
+  });
+}
+
+let masteredMap = JSON.parse(localStorage.getItem('html_study_guide_mastered') || '{}');
+
+function updateProgressUI() {
+  const total = document.querySelectorAll('.quiz-card').length;
+  const count = Object.values(masteredMap).filter(Boolean).length;
+  const tracker = document.getElementById('exam-progress-tracker');
+  if (tracker) {
+    tracker.textContent = `Progress: ${count} / ${total} Mastered`;
+  }
+
+  for (let i = 1; i <= total; i++) {
+    const card = document.getElementById('q' + i);
+    const checkbox = card ? card.querySelector('input[type="checkbox"]') : null;
+    if (card && checkbox) {
+      if (masteredMap['q' + i]) {
+        card.classList.add('mastered');
+        checkbox.checked = true;
+      } else {
+        card.classList.remove('mastered');
+        checkbox.checked = false;
+      }
+    }
+  }
+}
+
+function toggleMastered(qid, checkbox) {
+  masteredMap[qid] = checkbox.checked;
+  localStorage.setItem('html_study_guide_mastered', JSON.stringify(masteredMap));
+  updateProgressUI();
+}
+
+function resetExamProgress() {
+  if (confirm('Reset all exam progress checkboxes?')) {
+    masteredMap = {};
+    localStorage.removeItem('html_study_guide_mastered');
+    updateProgressUI();
+  }
+}
+
+// Initialize state on load
+window.addEventListener('DOMContentLoaded', () => {
+  updateProgressUI();
+});
+
+  </script>
+</body>
+</html>

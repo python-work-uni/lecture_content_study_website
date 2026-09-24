@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 6 — Cryptographic Hashes, MACs, and Digital Signatures · Slides</title>
+<meta name="description" content="Slide deck: Week 6 — Cryptographic Hashes, MACs, and Digital Signatures.">
+<style>
+/* ============================================================
+   DESIGN SYSTEM TOKENS (shared with the notes page)
+   ============================================================ */
+:root{
+  --bg:#fafaf9;
+  --surface:#ffffff;
+  --surface-2:#f2f1ef;
+  --border:#e2e1de;
+  --border-strong:#cfcdc8;
+  --text:#1c1b1a;
+  --text-2:#57534e;
+  --text-3:#78716c;
+  --accent:#1d4ed8;
+  --accent-soft:#eef2ff;
+  --note:#6b7280;
+  --warn:#b45309;
+  --ok:#15803d;
+
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px;
+  --s5:24px; --s6:32px; --s7:48px; --s8:64px; --s9:96px;
+
+  --sans:ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono:ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --measure:68ch;
+  --radius:8px;
+
+  --gap:20px;
+  --sidebar-w:300px;
+  --shell-bg:#f0efec;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#161514; --surface:#1e1d1b; --surface-2:#262522;
+    --border:#33312d; --border-strong:#48453f;
+    --text:#f2f1ef; --text-2:#c4c0b8; --text-3:#948f86;
+    --accent:#8ab4ff; --accent-soft:#1b2438;
+    --note:#8a8f99; --warn:#e0a15a; --ok:#6ee7a0;
+    --shell-bg:#110f0e;
+  }
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--shell-bg);
+  color:var(--text);
+  font-family:var(--sans);
+  overflow:hidden;
+}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+a{color:var(--accent)}
+
+.skip{
+  position:fixed;left:var(--s4);top:-100px;z-index:200;
+  background:var(--accent);color:#fff;padding:var(--s2) var(--s4);
+  border-radius:var(--radius);text-decoration:none;font-weight:600;
+  transition:top .15s ease;
+}
+.skip:focus{top:var(--s2)}
+
+/* ============================================================
+   SHELL: sidebar + stage
+   ============================================================ */
+.deck-shell{
+  display:flex;
+  height:100vh;
+  height:100dvh;
+  width:100%;
+}
+
+/* ---- toggle button (fixed, top-left) ---- */
+.nav-toggle{
+  position:fixed;top:14px;left:14px;z-index:120;
+  width:42px;height:42px;padding:0;
+  display:grid;place-items:center;
+  border:1px solid var(--border);
+  border-radius:11px;
+  background:var(--surface);
+  color:var(--text);
+  cursor:pointer;
+  box-shadow:0 1px 2px rgba(0,0,0,.06),0 6px 16px -10px rgba(0,0,0,.35);
+}
+.nav-toggle:hover{background:var(--surface-2)}
+.nav-toggle svg{width:20px;height:20px;display:block}
+.nav-toggle .icon-close{display:none}
+body:not(.nav-collapsed) .nav-toggle .icon-open{display:none}
+body:not(.nav-collapsed) .nav-toggle .icon-close{display:block}
+
+/* ---- sidebar ---- */
+.sidebar{
+  flex:0 0 var(--sidebar-w);
+  width:var(--sidebar-w);
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  min-width:0;
+  overflow:hidden;
+  transition:flex-basis .28s ease, width .28s ease, opacity .22s ease;
+}
+body.nav-collapsed .sidebar{
+  flex-basis:0;width:0;opacity:0;border-right-color:transparent;
+}
+.sidebar-head{
+  flex:none;
+  padding:18px 16px 12px 66px;
+  border-bottom:1px solid var(--border);
+}
+.sidebar-head .kicker{
+  font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-3);margin:0 0 2px;
+}
+.sidebar-head .name{
+  font-size:.95rem;font-weight:650;color:var(--text);
+  margin:0;line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.sidebar-count{
+  display:block;font-size:.78rem;color:var(--text-3);margin-top:2px;
+  font-variant-numeric:tabular-nums;
+}
+.thumblist{
+  list-style:none;margin:0;padding:12px;
+  overflow-y:auto;overflow-x:hidden;flex:1 1 auto;
+  scrollbar-width:thin;
+  overscroll-behavior:contain;
+}
+.thumblist li{margin:0 0 10px}
+.thumb{
+  display:block;text-decoration:none;color:inherit;
+  padding:8px;border-radius:10px;border:1px solid transparent;
+}
+.thumb:hover{background:var(--surface-2)}
+.thumb-title{
+  display:block;
+  font-size:.78rem;font-weight:600;line-height:1.35;color:var(--text-2);
+  margin:0 0 6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.thumb-frame{
+  display:block;position:relative;overflow:hidden;
+  border:1px solid var(--border);border-radius:7px;
+  background:var(--surface);
+}
+.thumb.active{border-color:color-mix(in srgb, var(--accent) 45%, transparent);background:var(--accent-soft)}
+.thumb.active .thumb-title{color:var(--accent)}
+.thumb.active .thumb-frame{border-color:var(--accent)}
+.thumb-frame > .thumb-clone{
+  position:absolute;top:0;left:0;
+  transform-origin:top left;
+  pointer-events:none;user-select:none;
+  margin:0;border:0;border-radius:0;box-shadow:none;
+  overflow:hidden;height:auto;
+}
+
+/* ---- stage ---- */
+.stage{
+  flex:1 1 auto;min-width:0;
+  display:flex;flex-direction:column;
+  padding:12px 20px 18px;
+}
+.stage-head{
+  flex:none;
+  display:flex;align-items:center;justify-content:space-between;gap:var(--s4);
+  padding:2px 4px 12px 66px;
+  min-height:42px;
+}
+.stage-head .deck-name{
+  font-size:.8rem;font-weight:600;color:var(--text-3);
+  letter-spacing:.03em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.stage-tools{display:flex;align-items:center;gap:var(--s4);flex:none}
+.counter{
+  font-size:.82rem;font-weight:650;color:var(--text-2);
+  font-variant-numeric:tabular-nums;
+}
+.hint{font-size:.78rem;color:var(--text-3)}
+.hint kbd{
+  font-family:var(--mono);font-size:.72rem;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:5px;padding:1px 5px;color:var(--text-2);
+}
+.viewport{flex:1 1 auto;min-height:0;overflow:hidden;position:relative}
+.track{
+  display:flex;gap:var(--gap);height:100%;
+  transition:transform .34s cubic-bezier(.22,.61,.36,1);
+  will-change:transform;
+}
+.progress{
+  flex:none;height:3px;background:var(--border);border-radius:99px;
+  margin:12px 4px 0;overflow:hidden;
+}
+.progress > span{
+  display:block;height:100%;width:0;background:var(--accent);
+  border-radius:99px;transition:width .34s ease;
+}
+
+/* ============================================================
+   SLIDE
+   ============================================================ */
+.slide{
+  flex:0 0 calc((100% - var(--gap)) / 2);
+  height:100%;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:clamp(20px, 2.4vw, 44px);
+  box-shadow:0 1px 2px rgba(0,0,0,.04), 0 18px 40px -34px rgba(0,0,0,.55);
+  scrollbar-width:thin;
+  scroll-behavior:smooth;
+}
+.slide::-webkit-scrollbar{width:9px}
+.slide::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:9px;border:2px solid var(--surface)}
+.slide > *:first-child{margin-top:0}
+.slide::after{content:"";display:block;height:2px}
+
+.slide-title{
+  font-size:clamp(1.25rem, 1.9vw, 1.7rem);
+  line-height:1.22;font-weight:700;letter-spacing:-.015em;
+  margin:0 0 var(--s5);
+  padding-bottom:var(--s3);
+  border-bottom:1px solid var(--border);
+  color:var(--text);
+}
+.slide-title .num{
+  display:inline-block;
+  font-family:var(--mono);font-size:.72em;font-weight:700;
+  color:var(--accent);background:var(--accent-soft);
+  border-radius:7px;padding:.05em .5em;margin-right:.5em;
+  transform:translateY(-.06em);
+}
+
+/* title slide */
+.title-slide{
+  display:flex;flex-direction:column;justify-content:center;
+  background:linear-gradient(160deg, var(--surface) 0%, var(--accent-soft) 130%);
+}
+.title-slide .eyebrow{
+  font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 var(--s4);
+}
+.title-slide h1{
+  font-size:clamp(1.9rem, 3.6vw, 3.1rem);
+  line-height:1.1;font-weight:700;letter-spacing:-.025em;
+  margin:0 0 var(--s6);max-width:22ch;
+}
+.title-slide .lede{
+  font-size:1.02rem;color:var(--text-2);line-height:1.6;
+  border-top:1px solid var(--border);padding-top:var(--s5);
+  max-width:56ch;
+}
+.title-slide .lede p{margin:0 0 var(--s2)}
+.title-slide .lede strong{color:var(--text)}
+
+/* slide body typography */
+.slide p{margin:0 0 var(--s4);max-width:var(--measure);line-height:1.62}
+.slide ul,.slide ol{margin:0 0 var(--s4);padding-left:1.35em;max-width:var(--measure);line-height:1.6}
+.slide li{margin:0 0 var(--s2)}
+.slide li > ul,.slide li > ol{margin:var(--s2) 0 0}
+.slide li:last-child{margin-bottom:0}
+.slide strong{font-weight:650;color:var(--text)}
+.slide em{font-style:italic}
+.slide code{
+  font-family:var(--mono);font-size:.9em;background:var(--surface-2);
+  border:1px solid var(--border);padding:.08em .34em;border-radius:4px;
+  overflow-wrap:anywhere;
+}
+.slide sub,.slide sup{font-size:.72em;line-height:0}
+.slide h3{font-size:1.08rem;font-weight:650;line-height:1.32;margin:var(--s5) 0 var(--s3)}
+.slide h4{font-size:1rem;font-weight:650;margin:var(--s5) 0 var(--s3)}
+.slide h3 + p,.slide h4 + p{margin-top:0}
+
+/* callouts */
+.callout{
+  border-left:4px solid var(--note);background:var(--surface-2);
+  border-radius:0 var(--radius) var(--radius) 0;
+  padding:var(--s4) var(--s5);margin:var(--s4) 0;
+  max-width:var(--measure);color:var(--text-2);font-size:.95rem;line-height:1.6;
+}
+.callout p:last-child{margin-bottom:0}
+.callout.key{border-left-color:var(--accent);background:var(--accent-soft);color:var(--text)}
+.callout.warn{border-left-color:var(--warn)}
+.callout .label{
+  display:block;font-size:.68rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text-3);margin-bottom:var(--s1);
+}
+.callout.key .label{color:var(--accent)}
+
+blockquote.quote{
+  border-left:3px solid var(--border-strong);
+  margin:var(--s4) 0;padding:var(--s2) 0 var(--s2) var(--s5);
+  max-width:var(--measure);font-style:italic;color:var(--text-2);
+  font-size:.98rem;line-height:1.6;
+}
+blockquote.quote p:last-child{margin-bottom:0}
+
+/* protocol blocks */
+.protocol{
+  font-family:var(--mono);font-size:.88rem;line-height:1.95;
+  background:var(--surface-2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:var(--s4) var(--s5);
+  margin:var(--s3) 0 var(--s5);overflow-x:auto;
+}
+.protocol .pl{display:block;white-space:nowrap}
+.protocol .pl + .pl{margin-top:2px}
+.protocol .who{color:var(--accent);font-weight:700}
+
+/* tables */
+.tablewrap{
+  overflow-x:auto;margin:var(--s4) 0 var(--s5);
+  border:1px solid var(--border);border-radius:var(--radius);
+}
+table{border-collapse:collapse;width:100%;font-size:.9rem;background:var(--surface)}
+caption{caption-side:top;text-align:left;padding:0 0 var(--s3);color:var(--text-3);font-size:.78rem}
+th,td{padding:var(--s3) var(--s4);text-align:left;vertical-align:top;border-bottom:1px solid var(--border)}
+thead th{background:var(--surface-2);font-weight:650}
+tbody tr:nth-child(even){background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:none}
+
+/* definition lists */
+dl.defs{margin:var(--s3) 0 var(--s5);max-width:var(--measure)}
+dl.defs dt{font-weight:650;margin-top:var(--s3)}
+dl.defs dt:first-child{margin-top:0}
+dl.defs dd{margin:2px 0 0;padding-left:var(--s4);color:var(--text-2);font-size:.94rem;line-height:1.55}
+
+/* quiz */
+.quiz{
+  border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--surface-2);padding:var(--s5);
+  margin:0 0 var(--s5);
+}
+.quiz:last-child{margin-bottom:0}
+.quiz .q{font-size:1rem;font-weight:650;line-height:1.5;margin:0 0 var(--s3);max-width:var(--measure)}
+.quiz .q .qn{color:var(--accent);margin-right:.35em}
+ul.options{list-style:none;padding-left:0;margin:0 0 var(--s3);max-width:var(--measure)}
+ul.options li{
+  padding:var(--s2) var(--s3);margin:4px 0;border-radius:6px;
+  border:1px solid transparent;color:var(--text-2);font-size:.94rem;line-height:1.5;
+}
+ul.options li.correct{
+  background:color-mix(in srgb, var(--ok) 12%, var(--surface));
+  border-color:color-mix(in srgb, var(--ok) 35%, transparent);
+  color:var(--text);font-weight:600;
+}
+ul.options li.correct::before{content:"✓ ";color:var(--ok);font-weight:800}
+.quiz .explain{
+  border-left:3px solid var(--border-strong);
+  padding:var(--s2) 0 var(--s2) var(--s4);margin:0;
+  font-size:.9rem;color:var(--text-2);max-width:var(--measure);line-height:1.55;
+}
+.quiz .explain p{margin:0}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width:60rem){
+  :root{--gap:14px}
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:0;z-index:90;
+    width:min(84vw, 320px);flex-basis:auto;
+    box-shadow:0 0 0 1px var(--border), 24px 0 60px -30px rgba(0,0,0,.5);
+  }
+  body.nav-collapsed .sidebar{transform:translateX(-102%);opacity:0;width:min(84vw,320px);flex-basis:auto}
+  .stage{padding:12px 12px 16px}
+  .stage-head{padding-left:66px}
+  .slide{flex-basis:100%}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .track{transition:none}
+  .progress > span{transition:none}
+  .slide{scroll-behavior:auto}
+  .sidebar{transition:none}
+}
+@media print{
+  .nav-toggle,.sidebar,.stage-head,.progress{display:none}
+  body{overflow:visible;background:#fff}
+  .deck-shell{display:block;height:auto}
+  .viewport,.track{display:block;height:auto}
+  .slide{flex:none;height:auto;break-after:page;box-shadow:none}
+}
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to slides</a>
+
+<button id="navToggle" class="nav-toggle" type="button"
+        aria-controls="sidebar" aria-expanded="true" aria-label="Toggle slide navigation">
+  <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+    <path d="M4 6h16M4 12h16M4 18h16"/>
+  </svg>
+  <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+    <path d="M15 6l-6 6 6 6"/>
+  </svg>
+</button>
+
+<div class="deck-shell">
+
+  <aside id="sidebar" class="sidebar" aria-label="Slide navigation">
+    <div class="sidebar-head">
+      <p class="kicker">Slides</p>
+      <p class="name">Week 6 — Hashes, MACs &amp; Signatures</p>
+      <span class="sidebar-count" id="sidebarCount">1 / 1</span>
+    </div>
+    <nav aria-label="All slides">
+      <ol class="thumblist" id="thumbList"></ol>
+    </nav>
+  </aside>
+
+  <main id="main" class="stage">
+    <div class="stage-head">
+      <span class="deck-name">INFO3616 · Week 6 — Hashes, MACs &amp; Signatures</span>
+      <div class="stage-tools">
+        <span class="hint"><kbd>←</kbd> <kbd>→</kbd> move · <kbd>N</kbd> nav</span>
+        <span class="counter" id="counter" aria-live="polite">1 / 1</span>
+      </div>
+    </div>
+
+    <div class="viewport">
+      <div class="track" id="track">
+
+<section class="slide title-slide" data-title="Title">
+  <p class="eyebrow">INFO3616 · Cybersecurity Engineering</p>
+  <h1>Week 6 — Cryptographic Hashes, MACs, and Digital Signatures</h1>
+  <div class="lede">
+    <p>Consolidated from <strong>Week6_Notes.pdf</strong> and <strong>Week6_slides.pdf</strong>.</p>
+    <p>School of Computer Science, The University of Sydney.</p>
+    <p>Lecturers: Dr Suranga Seneviratne, Dr Thilini Dahanayaka. September 3, 2026.</p>
+  </div>
+</section>
+
+<section class="slide" data-title="Recommended Reading">
+  <h2 class="slide-title">Recommended Reading</h2>
+  <p><strong>Cryptography and Network Security (7th Edition — William Stallings)</strong></p>
+  <ul>
+    <li><strong>Chapter 11</strong> — Cryptographic Hash Functions</li>
+    <li><strong>Chapter 12</strong> — Message Authentication Codes</li>
+    <li><strong>Chapter 13</strong> — Digital Signatures</li>
+  </ul>
+  <blockquote class="callout warn">
+    <span class="label">Note</span>
+    These lecture notes are given to you to assist with understanding the lecture content better. This content is prepared based on the above book chapters. You are not allowed to upload this material to any internet source or share it with anyone else.
+  </blockquote>
+</section>
+
+<section class="slide" data-title="Agenda">
+  <h2 class="slide-title">Agenda</h2>
+  <ul>
+    <li>Cryptographic hash functions</li>
+    <li>Requirements and security</li>
+    <li>Secure Hash Algorithm (SHA)</li>
+    <li>Message Authentication Code (MAC)</li>
+    <li>Digital Signatures</li>
+  </ul>
+</section>
+
+<section class="slide" data-title="1 · Hash Functions">
+  <h2 class="slide-title"><span class="num">1</span>Hash Functions</h2>
+  <p>A hash function is a <strong>one-way function</strong> that accepts a variable-length block of data <em>M</em> as input and produces a fixed-size hash value <em>h</em> = <em>H</em>(<em>M</em>). The output is referred to by different names depending on context: digest, hash, hash value, checksum, CRC, and more. Given that the input space of a hash function is significantly larger than its output space, <strong>collisions are inevitable</strong>. A "good" hash function has the property that applying it to a large set of inputs produces outputs that are evenly distributed and emulate randomness.</p>
+  <p><strong>Commonly used hash functions:</strong></p>
+  <ul>
+    <li>Cyclic Redundancy Check (CRC) (CRC-16, CRC-32, …)</li>
+    <li>MD5 (Message Digest)</li>
+    <li>SHA-1, SHA-2, SHA-3 (Secure Hash Algorithm)</li>
+    <li>RIPEMD160</li>
+  </ul>
+  <p>CRC was not designed for cryptography. MD5 and SHA-1 were designed for cryptography but were found to be insufficient (MD5 no longer used; SHA-1 in phase-out).</p>
+</section>
+
+<section class="slide" data-title="1 · Goal and Idea">
+  <h2 class="slide-title">Hash Functions — Goal and Idea</h2>
+  <p><strong>Goal:</strong> Integrity — we want to ascertain that a received message is the same as the one that was sent.</p>
+  <p><strong>Idea:</strong> define a function to create a checksum ("hash function"):</p>
+  <ul>
+    <li>Sender applies the hash function to the message and obtains a checksum ("hash value").</li>
+    <li>Sender encrypts the message and sends it together with the hash value of the plaintext.</li>
+    <li>Receiver decrypts the message, applies the hash function, and compares with the transmitted hash value.</li>
+    <li>If the hash values match, the plaintext must be correct.</li>
+  </ul>
+  <p>The principle objective of hash functions in cryptography is <strong>data integrity</strong>. At a conceptual level: a predefined hash function generates a checksum for a message; the sender hashes the message, may encrypt it for confidentiality, and sends both the (encrypted) message and its hash. The receiver decrypts, recalculates the hash, and compares. If they match, the message remained unaltered in transit. For this to hold:</p>
+  <ul>
+    <li><strong>a.</strong> An attacker cannot deduce the original message from the hash (would compromise confidentiality).</li>
+    <li><strong>b.</strong> An attacker must not be able to find a plaintext that results in the same hash (otherwise the plaintext can be replaced without changing the hash, making alteration undetectable).</li>
+  </ul>
+</section>
+
+<section class="slide" data-title="1 · Cryptographic Hash Functions">
+  <h2 class="slide-title">Cryptographic Hash Functions</h2>
+  <p>Hash functions satisfying these criteria are <strong>cryptographic hash functions</strong>. The input of variable length is padded to an integer multiple of a predetermined fixed length (the <strong>block size</strong>). The padding incorporates the length of the original message in bits — this <strong>length field</strong> is a security measure that increases the difficulty for an attacker to produce <em>H</em>(<em>a</em>) = <em>H</em>(<em>b</em>), <em>a ≠ b</em>. The message then undergoes hashing, producing <em>h</em>.</p>
+  <p><strong>What we are trying to prevent:</strong> In order to communicate securely we normally want both confidentiality and integrity. With hash functions, for integrity we want to prevent:</p>
+  <ul>
+    <li>The attacker obtaining the plaintext from the hash value alone (defeats encryption, though not integrity itself).</li>
+    <li>The attacker finding a bit sequence with the same hash value (decryption of a bit sequence may yield implausible plaintext, but plausibility is not a good way to determine integrity).</li>
+  </ul>
+</section>
+
+<section class="slide" data-title="1.1.1 · Message Authentication">
+  <h2 class="slide-title"><span class="num">1.1.1</span>Message Authentication</h2>
+  <p>Message authentication verifies the integrity of a message; often there is an additional requirement to confirm the sender's claimed identity. When a hash function is used for message authentication, the resulting value is commonly termed a <strong>message digest</strong>.</p>
+  <p>The sender generates a hash value from the message and sends both the hash and the message. On receipt, the receiver performs the same hash computation and compares. A disparity implies either the message or the hash was altered.</p>
+  <p>However, this basic method is vulnerable to <strong>person-in-the-middle attacks</strong>: an attacker (Darth) who intercepts Alice's message can replace the original message and alter the message digest to match. Bob will not detect the change. This problem is <strong>origin authentication</strong> (closely related to integrity). To prevent it, the message digest generated by Alice must be protected.</p>
+  <p><strong>Message Authentication Codes (MACs)</strong> — also known as <strong>keyed hash functions</strong> — are a common way to achieve message authentication (integrity + origin authentication). MACs rely on a <strong>shared secret key</strong> between communicating parties. They generate a hash value (the MAC) incorporating both the message and the secret key, transmitted alongside the message. An attacker cannot alter the MAC without the secret key, and the verifying party can ascertain the sender's identity since only parties privy to the key can produce the MAC. See Section 2.</p>
+</section>
+
+<section class="slide" data-title="1.1.2 · Digital Signatures">
+  <h2 class="slide-title"><span class="num">1.1.2</span>Digital Signatures</h2>
+  <p>Digital signatures operate similarly to MACs but rely on <strong>public-key cryptography</strong> rather than a shared secret key. The hash value of a message is encrypted with the sender's <strong>private key</strong> and transmitted with the message. Anyone who knows the sender's <strong>public key</strong> can verify the integrity of the message and confirm it came from the expected sender. An attacker aiming to modify the message and/or hash would need the sender's private key. See Section 3.</p>
+  <p><strong>Other applications:</strong> one-way password files, intrusion detection, virus detection, and pseudorandom number generators (PRNG) / pseudorandom functions (PRF).</p>
+</section>
+
+<section class="slide" data-title="1.2 · Security Requirements">
+  <h2 class="slide-title"><span class="num">1.2</span>Security Requirements for Cryptographic Hash Functions</h2>
+  <p><strong>Preimage:</strong> A specific input value that produces a particular output when passed through a given hash function. For <em>h</em> = <em>H</em>(<em>x</em>), <em>x</em> is the preimage of <em>h</em>.</p>
+  <p><strong>Collision:</strong> If two different inputs produce identical hash values under the same hash function, i.e. <em>H</em>(<em>a</em>) = <em>H</em>(<em>b</em>), <em>a ≠ b</em>.</p>
+  <p>Formally, the security requirements are:</p>
+  <ol>
+    <li>Preimage resistance</li>
+    <li>Second preimage resistance</li>
+    <li>Collision resistance</li>
+  </ol>
+</section>
+
+<section class="slide" data-title="1.2.1 · Preimage Resistance">
+  <h2 class="slide-title"><span class="num">1.2.1</span>Preimage Resistance</h2>
+  <p><strong>Goal:</strong> If the attacker knows an output hash value, we don't want them to find an input that produces it.</p>
+  <p>Given a randomly chosen <em>y</em> from <em>H</em>'s range of output values, it is computationally infeasible to find an <em>x</em> such that <em>H</em>(<em>x</em>) = <em>y</em>.</p>
+  <blockquote class="callout">
+    <span class="label">Note</span>
+    It is not impossible — brute force is always possible — but computational infeasibility makes it far too hard in practice. This property is important if the confidentiality of the original message is required: if preimage resistance is violated, an attacker can infer the original message from the hash.
+  </blockquote>
+</section>
+
+<section class="slide" data-title="1.2.2 · Second Preimage Resistance">
+  <h2 class="slide-title"><span class="num">1.2.2</span>Second Preimage Resistance</h2>
+  <p><strong>Goal:</strong> If the attacker is given an input value, they cannot find another input with the same output hash value.</p>
+  <p>Given a randomly chosen <em>x</em>, it is computationally infeasible to find an <em>x′</em>, <em>x′ ≠ x</em>, such that <em>H</em>(<em>x</em>) = <em>H</em>(<em>x′</em>).</p>
+  <p>If compromised, an attacker could substitute the original message with a forged one yielding the same hash.</p>
+</section>
+
+<section class="slide" data-title="1.2.3 · Collision Resistance">
+  <h2 class="slide-title"><span class="num">1.2.3</span>Collision Resistance</h2>
+  <p><strong>Goal:</strong> The attacker should be unable to find any two input values with the same output hash value.</p>
+  <p>It is computationally infeasible to find a pair (<em>x, x′</em>), <em>x ≠ x′</em>, such that <em>H</em>(<em>x</em>) = <em>H</em>(<em>x′</em>).</p>
+  <blockquote class="callout">
+    <span class="label">Note</span>
+    Collision resistance implies second preimage resistance (but not preimage resistance). A successful second-preimage attack implies a successful collision attack; a successful collision can sometimes be all the attacker needs.
+  </blockquote>
+</section>
+
+<section class="slide" data-title="1.2.4 · Pseudo-randomness">
+  <h2 class="slide-title"><span class="num">1.2.4</span>Pseudo-randomness</h2>
+  <p>Pseudo-randomness is the property of a sequence that appears random but is generated deterministically. It is not traditionally listed as a requirement, but it is implied: cryptographic hash functions are used for key derivation and pseudorandom number generation, and the three resistance properties depend on the randomness of the output. Verify that a given hash function indeed produces output that appears pseudorandom, e.g.:</p>
+  <div class="protocol">
+    <span class="pl">sh-3.2# echo "CYBERSECURITY ENGINEERING" | sha256sum</span>
+    <span class="pl">605d08ba60312b5e8b79105bc4f31ee8c269b956cada4821c9e22876bab917e5</span>
+    <span class="pl">sh-3.2# echo "CYBERSECURITY ENGINEERING" | md5sum</span>
+    <span class="pl">ca00a2f980e354eb1ff97c4305aaed2e</span>
+  </div>
+  <p>A function that fulfils preimage resistance, second-preimage resistance, and collision resistance is called a <strong>cryptographic hash function</strong>. We then have a (feasibility-conditioned) guarantee that the attacker cannot obtain plaintexts and cannot easily find bogus inputs with the same hash values.</p>
+</section>
+
+<section class="slide" data-title="1.2.5 · Birthday Attack">
+  <h2 class="slide-title"><span class="num">1.2.5</span>Birthday Attack</h2>
+  <p>If <em>n</em> random people are invited to a party, there is more than a 50% chance of two sharing a birthday if <em>n ≥ 23</em>. This is far fewer than most people intuitively expect — we are not asking whether someone matches a <em>specific</em> birthday, but whether any two match each other, giving vastly more opportunities for a match.</p>
+  <p><strong>Birthday Problem:</strong> "If there are 365 days in a year, how many people must be in a room before there is a 50% chance that two share the same birthday?" Answer: just 23.</p>
+  <p>Sketchy proof — add people one by one and track the probability that all birthdays remain unique. After <em>k</em> people, P(no match) = 1 · (364/365) · … · ((365−k+1)/365):</p>
+  <div class="tablewrap">
+    <table>
+      <caption>Probability that no two of <em>k</em> people share a birthday.</caption>
+      <thead><tr><th scope="col">k</th><th scope="col">P(no match)</th></tr></thead>
+      <tbody>
+        <tr><td>20</td><td>58.9%</td></tr>
+        <tr><td>22</td><td>52.4%</td></tr>
+        <tr><td>23</td><td>49.3%</td></tr>
+        <tr><td>25</td><td>43.1%</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="slide" data-title="1.2.5 · Birthday Attack Applied to Hashes">
+  <h2 class="slide-title"><span class="num">1.2.5</span>Birthday Attack Applied to Hashes</h2>
+  <p><strong>Generalised Birthday Attack:</strong> If random variables are chosen from a uniform distribution in the range 0 through <em>N −</em> 1, the probability that a repeated element is encountered exceeds 50% after <em>√N</em> choices.</p>
+  <p><strong>Applied to hashes:</strong> For an <em>n</em>-bit output there are 2<sup><em>n</em></sup> possible values, so an attacker needs only about <strong>2<sup><em>n</em>/2</sup></strong> attempts for a &gt;50% chance of a collision. For a 64-bit output that is just 2<sup>32</sup> — trivially achievable on modern hardware. This is why output length is a hard security requirement; currently the accepted minimum is <em>n ≥</em> 160 bits (2<sup>80</sup> attempts), which remains computationally infeasible today.</p>
+</section>
+
+<section class="slide" data-title="1.2.6 · Relationships Among Properties">
+  <h2 class="slide-title"><span class="num">1.2.6</span>Relationships Among Properties</h2>
+  <ul>
+    <li><strong>Collision resistance implies second preimage resistance</strong> — any function hard to find collisions in is also hard to find a second input matching a given hash, but the reverse does not always hold.</li>
+    <li><strong>Preimage resistance stands apart</strong> — a function can be preimage resistant without being collision/second-preimage resistant, and vice versa; no strict implication runs between them.</li>
+    <li><strong>Collision resistance is the strongest of the two related properties</strong> — breaking second preimage resistance also breaks collision resistance; collision resistance is harder to satisfy and harder to attack. Collision resistance is the hardest property to satisfy but the easiest to attack, because the attacker has maximum freedom (only needs <em>any</em> two colliding inputs, no specific target).</li>
+  </ul>
+</section>
+
+<section class="slide" data-title="1.2.7 · Requirements for Applications">
+  <h2 class="slide-title"><span class="num">1.2.7</span>Resistance Properties Required for Applications</h2>
+  <div class="tablewrap">
+    <table>
+      <caption>Which resistance properties each application requires.</caption>
+      <thead>
+        <tr>
+          <th scope="col">Application</th>
+          <th scope="col">Preimage Resistant</th>
+          <th scope="col">Second Preimage Resistant</th>
+          <th scope="col">Collision Resistant</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Hash + digital signature</td><td>Yes</td><td>Yes</td><td>Yes<sup>1</sup></td></tr>
+        <tr><td>Intrusion detection and virus detection</td><td></td><td>Yes</td><td></td></tr>
+        <tr><td>Hash + symmetric encryption</td><td></td><td></td><td></td></tr>
+        <tr><td>One-way password file</td><td>Yes</td><td></td><td></td></tr>
+        <tr><td>MAC</td><td>Yes</td><td>Yes</td><td>Yes<sup>1</sup></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><sup>1</sup> Resistance required if an attacker is able to mount a chosen message attack.</p>
+</section>
+
+<section class="slide" data-title="1.3 · Secure Hash Algorithm (SHA)">
+  <h2 class="slide-title"><span class="num">1.3</span>Secure Hash Algorithm (SHA)</h2>
+  <p>The Secure Hash Algorithm (SHA) is the most prevalent hash function. Developed by NIST and introduced as FIPS 180 in 1993, the initial iterations (SHA-0, SHA-1, 160-bit output) have fallen out of favour due to susceptibility to collisions. In 2001/2002, NIST produced SHA-2 with variants SHA-224, SHA-256, SHA-384, SHA-512. In 2015, NIST announced the latest member, SHA-3, with variants SHA3-224, SHA3-256, SHA3-384, SHA3-512.</p>
+  <div class="tablewrap">
+    <table>
+      <caption>SHA family parameters (sizes in bits).</caption>
+      <thead>
+        <tr>
+          <th scope="col">Algorithm</th>
+          <th scope="col">Message size</th>
+          <th scope="col">Block size</th>
+          <th scope="col">Word size</th>
+          <th scope="col">Digest size</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>SHA-1</td><td><em>&lt;</em>2<sup>64</sup></td><td>512</td><td>32</td><td>160</td></tr>
+        <tr><td>SHA-224</td><td><em>&lt;</em>2<sup>64</sup></td><td>512</td><td>32</td><td>224</td></tr>
+        <tr><td>SHA-256</td><td><em>&lt;</em>2<sup>64</sup></td><td>512</td><td>32</td><td>256</td></tr>
+        <tr><td>SHA-384</td><td><em>&lt;</em>2<sup>128</sup></td><td>1024</td><td>64</td><td>384</td></tr>
+        <tr><td>SHA-512</td><td><em>&lt;</em>2<sup>128</sup></td><td>1024</td><td>64</td><td>512</td></tr>
+        <tr><td>SHA-512/224</td><td><em>&lt;</em>2<sup>128</sup></td><td>1024</td><td>64</td><td>224</td></tr>
+        <tr><td>SHA-512/256</td><td><em>&lt;</em>2<sup>128</sup></td><td>1024</td><td>64</td><td>256</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="slide" data-title="1.3.1 · SHA-2 Padding Procedure">
+  <h2 class="slide-title"><span class="num">1.3.1</span>SHA-2 — Padding Procedure</h2>
+  <p>SHA-512 takes an input message with a maximum length of less than 2<sup>128</sup> bits and produces a 512-bit message digest, processing the input in 1024-bit blocks. <strong>Padding procedure:</strong></p>
+  <ul>
+    <li>The original message of <em>L</em> bits is padded with a single 1 bit followed by enough 0 bits so the total length is congruent to 896 mod 1024, leaving room at the end.</li>
+    <li>A 128-bit encoding of the original length <em>L</em> is appended, bringing the padded message to an exact multiple of 1024 bits.</li>
+    <li>The padded message is split into <em>N</em> blocks of 1024 bits each: <em>M₁, M₂, …, Mₜ</em> — the "plaintext blocks" feeding the compression chain.</li>
+    <li><em>H₀</em> (IV) is a fixed, publicly-specified 512-bit constant defined in the standard. It is not secret and not random.</li>
+  </ul>
+</section>
+
+<section class="slide" data-title="1.3.1 · SHA-2 Compression Function">
+  <h2 class="slide-title"><span class="num">1.3.1</span>SHA-2 — Inside the Compression Function <em>F</em></h2>
+  <ul>
+    <li><em>F</em> unpacks <em>H<sub>i-1</sub></em> into eight 64-bit working registers <em>a–h</em>, transformed across <strong>80 rounds</strong>.</li>
+    <li>The message schedule expands the 1024-bit block <em>M<sub>i</sub></em> into 80 round words <em>W₀–W₇₉</em>, analogous to the AES key schedule turning one key into many round keys.</li>
+    <li>Each round mixes in one <em>W<sub>t</sub></em> and one public constant <em>K<sub>t</sub></em>; six of the eight registers just shift along, so only two new values are computed per round.</li>
+    <li><strong>Davies–Meyer feedforward:</strong> after round 79, the final <em>a–h</em> are added mod 2<sup>64</sup> back to the original <em>H<sub>i-1</sub></em>. The result of those eight additions is <em>H<sub>i</sub></em>, passed to the next block.</li>
+  </ul>
+  <p><strong>Applications:</strong> widely implemented in security applications and protocols (TLS/SSL, SSH, IPSec, …); validates and signs digital certificates and documents; verifies transactions in cryptocurrencies (e.g., Bitcoin uses SHA-256).</p>
+</section>
+
+<section class="slide" data-title="1.3.2 · SHA-3">
+  <h2 class="slide-title"><span class="num">1.3.2</span>SHA-3 — Sponge Construction</h2>
+  <p>SHA-3 uses a <strong>sponge construction</strong> rather than SHA-2's register-based compression:</p>
+  <ul>
+    <li><strong>Single unified state</strong> of <em>r + c</em> bits passed through permutation <em>f</em>. Unlike SHA-2's eight working registers, there is one big state repeatedly permuted.</li>
+    <li><strong>Absorbing phase:</strong> each message block XORs into the top <em>r</em> bits of the state, then <em>f</em> scrambles the entire state. The bottom <em>c</em> bits are never directly touched by the message input, protecting the security margin.</li>
+    <li><strong>Squeezing phase:</strong> output is read from the top <em>r</em> bits; <em>f</em> is applied between each read. As many bits as needed can be squeezed out, making SHA-3 naturally an <strong>extendable output function</strong>.</li>
+    <li><strong>Rate <em>r</em> vs capacity <em>c</em> is a tunable tradeoff:</strong> larger <em>r</em> means faster hashing but smaller <em>c</em> means lower security. Different SHA-3 variants just change this split.</li>
+    <li><strong>No length-extension vulnerability:</strong> in SHA-2 an attacker who knows <em>H</em>(<em>m</em>) can compute <em>H</em>(<em>m</em> ‖ extra) without knowing <em>m</em> — the sponge structure eliminates this because the hidden <em>c</em> bits make the full state unrecoverable from the output.</li>
+  </ul>
+</section>
+
+<section class="slide" data-title="2 · Message Authentication Code (MAC)">
+  <h2 class="slide-title"><span class="num">2</span>Message Authentication Code (MAC)</h2>
+  <p>Message authentication verifies that a received message comes from the said source and has not been altered. Any message-authentication or digital-signature mechanism has two levels of functionality: a lower-level function that generates an <strong>authenticator</strong> (a value used to authenticate a message), and a higher-level authentication protocol that uses this primitive so a recipient can authenticate a message. Authenticator-generating functions fall under three classes:</p>
+  <ul>
+    <li><strong>Hash function:</strong> using hash functions alone may not provide message authentication, as unprotected hash values are susceptible to person-in-the-middle attacks.</li>
+    <li><strong>Message encryption:</strong>
+      <ul>
+        <li><strong>Symmetric encryption:</strong> encrypting with the shared key ensures confidentiality and lets B confirm the message originated from A, as the secret key is known only to A and B. However, an attacker can modify the ciphertext's bit pattern without knowing the key; if the original message was a bit sequence, the receiver cannot detect the alteration because the modified ciphertext still decrypts into a valid bit sequence.</li>
+        <li><strong>Public-key encryption:</strong> straightforward use ensures confidentiality but lacks authentication — anyone can encrypt a forged message with B's public key and substitute it undetected. To provide authentication, A can encrypt with their private key and B decrypts with A's public key (this does <strong>not</strong> provide confidentiality, as anyone can use A's public key to access the plaintext). This lets B confirm origin, but has the same limitation as symmetric: an attacker can modify the message without knowing A's private key, potentially going undetected if the altered ciphertext corresponds to a legitimate message. To achieve both confidentiality and authentication, A encrypts <em>M</em> first with their private key (digital signature) then with B's public key — but the complex public-key algorithm must then be executed <strong>four times</strong> instead of two per communication.</li>
+      </ul>
+    </li>
+    <li><strong>Message authentication code (MAC).</strong></li>
+  </ul>
+</section>
+
+<section class="slide" data-title="2 · Why MACs">
+  <h2 class="slide-title">Why MACs When We Already Have Hashes?</h2>
+  <p>Hashes are keyless — anyone, including an attacker, can compute a valid hash for a forged message, so they prove the message wasn't corrupted but can't prove who sent it. A MAC fixes this by incorporating a secret key: think of it as a <strong>keyed hash</strong>.</p>
+  <p>A MAC is a fixed-size tag generated using a secret key shared between the parties, appended to the original message. MACs are also known as <strong>cryptographic checksums</strong>.</p>
+  <blockquote class="quote"><p><em>MAC</em> = <em>C</em>(<em>K</em>, <em>M</em>)</p></blockquote>
+  <p><em>M</em> = input message, <em>C</em> = MAC function, <em>K</em> = shared key, <em>MAC_</em> = message authentication code.</p>
+  <p>The message and MAC are transmitted together. The recipient recomputes the MAC using the shared key and compares. If the MACs match, assuming the key is known only to sender and receiver:</p>
+  <ol>
+    <li>The recipient is assured the message was not altered — any alteration without modifying the MAC causes a mismatch, and the attacker cannot produce a valid MAC without the key.</li>
+    <li>The recipient is assured of the message's <strong>origin</strong>, as no other party has the key.</li>
+    <li>If the message includes a <strong>sequence number</strong> (e.g., HDLC, X.25, TCP), the recipient can verify the sequence's integrity; an attacker cannot alter it undetected.</li>
+  </ol>
+  <p>This process does <strong>not</strong> provide confidentiality. Confidentiality can be added by encrypting either before or after the MAC algorithm.</p>
+</section>
+
+<section class="slide" data-title="2.1 · Requirements for MACs">
+  <h2 class="slide-title"><span class="num">2.1</span>Requirements for Message Authentication Codes</h2>
+  <p>The intuition: given the MAC <em>t</em> for a message <em>m</em>, an attacker should not be able to generate a valid MAC for a different message. A MAC function should satisfy:</p>
+  <ol>
+    <li>It must have the resistance properties of a cryptographic hash function.</li>
+    <li>It must be computationally infeasible to predict a correct MAC <em>t′</em> for a message <em>m′ ≠ m</em>, even when allowed to know any other combinations of (<em>m, t</em>).</li>
+  </ol>
+  <p>A cryptographic hash function fulfils the first requirement; incorporating a secret <em>s</em> addresses the second, provided the resistance properties are upheld.</p>
+  <blockquote class="callout">
+    <span class="label">Note</span>
+    While MACs based on symmetric block ciphers exist, this course focuses on MACs derived from cryptographic hash functions.
+  </blockquote>
+</section>
+
+<section class="slide" data-title="2.2 · HMAC">
+  <h2 class="slide-title"><span class="num">2.2</span>HMAC (Hash-Based Message Authentication Code)</h2>
+  <p>While several methods have been proposed for integrating a secret key into a hash algorithm, the most widely used is <strong>HMAC</strong>. Published as RFC 2104, HMAC is the obligatory MAC for IP security, is used in Internet protocols including SSL, and is ratified as NIST standard FIPS 198.</p>
+  <blockquote class="quote"><p><em>HMAC</em>(<em>K</em>, <em>M</em>) = <em>H</em>[(<em>K</em> ⊕ <em>opad</em>) ‖ <em>H</em>[(<em>K</em> ⊕ <em>ipad</em>) ‖ <em>M</em>]]</p></blockquote>
+  <ul>
+    <li><em>H</em> can be any cryptographic hash function (e.g., SHA-3, SHA-2, MD5, SHA-1)</li>
+    <li><em>K</em> is the shared secret key</li>
+    <li><em>M</em> is the input message</li>
+    <li><em>ipad</em> and <em>opad</em> are publicly known constant bit strings required for HMAC's security proof (their precise values matter little)</li>
+  </ul>
+  <p><strong>Structure notation:</strong> <em>H</em> = embedded hash function, <em>M</em> = message input, <em>b</em> = number of bits in a block, <em>L</em> = number of blocks in <em>M</em>, <em>K</em> = secret key, <em>K⁺</em> = <em>K</em> padded with zeros on the left to match <em>b</em>, <em>IV</em> = initial value input to the hash function, <em>Y<sub>i</sub></em> = <em>i</em>-th block of <em>M</em> (0 ≤ <em>i</em> ≤ <em>L−1</em>), <em>ipad</em> = 00110110 (36<sub>16</sub>) repeated <em>b</em>/8 times, <em>opad</em> = 01011100 (5C<sub>16</sub>) repeated <em>b</em>/8 times, <em>n</em> = length of hash code produced by <em>H</em>.</p>
+</section>
+
+<section class="slide" data-title="2.2 · HMAC Algorithm">
+  <h2 class="slide-title"><span class="num">2.2</span>HMAC Algorithm</h2>
+  <ol>
+    <li>Append zeros to the left end of <em>K</em> to create a <em>b</em>-bit string <em>K⁺</em> (e.g., if <em>K</em> is 160 bits and <em>b</em> = 512, append 44 zeroes).</li>
+    <li>XOR <em>K⁺</em> with <em>ipad</em> to produce the <em>b</em>-bit block <em>S<sub>i</sub></em>.</li>
+    <li>Append <em>M</em> to <em>S<sub>i</sub></em>.</li>
+    <li>Apply <em>H</em> to the stream from step 3.</li>
+    <li>XOR <em>K⁺</em> with <em>opad</em> to produce the <em>b</em>-bit block <em>S₀</em>.</li>
+    <li>Append the hash result from step 4 to <em>S₀</em>.</li>
+    <li>Apply <em>H</em> to the stream from step 6 and output the result.</li>
+  </ol>
+</section>
+
+<section class="slide" data-title="2.3 · Security of HMAC">
+  <h2 class="slide-title"><span class="num">2.3</span>Security of HMAC</h2>
+  <p>The security of a MAC based on an embedded hash function depends on the cryptographic strength of that hash function (and key size). The appeal of HMAC is that its designers proved an <strong>exact relationship</strong> between the strength of the embedded hash function and the strength of HMAC.</p>
+  <p><strong>Question:</strong> According to the birthday paradox, 2<sup>64</sup> attempts have at least a 50% chance of producing a collision in MD5 (128-bit output), which looks feasible today. Can we use MD5 for HMAC?</p>
+  <p><strong>Answer: Yes.</strong> To attack MD5, the attacker can choose any set of messages and work offline on a dedicated facility to find a collision — because the attacker knows the algorithm and default IV. However, when attacking HMAC, the attacker cannot generate (message, code) pairs offline without the secret key <em>K</em>. They must observe a sequence of messages generated by HMAC under the same key. This requires 2<sup>64</sup> observed blocks (2<sup>72</sup> bits) generated with the same key. On a 1-Gbps link, this requires observing a continuous stream with no key change for about <strong>150,000 years</strong> — infeasible today. If speed is a concern, HMAC-MD5 can be used over HMAC-SHA-1.</p>
+</section>
+
+<section class="slide" data-title="2.4 · Applications of HMAC">
+  <h2 class="slide-title"><span class="num">2.4</span>Applications of HMAC</h2>
+  <p>HMAC is widely used wherever two parties share a secret key and need to verify both authenticity and integrity — not just that a message arrived uncorrupted, but that it came from a trusted sender.</p>
+  <ul>
+    <li><strong>API Request Signing (e.g., AWS Signature V4):</strong> the client signs the full request (URL, headers, body, timestamp) with HMAC using a shared secret; the server recomputes the signature independently. A mismatch means the request was tampered with or replayed. Provides integrity and replay protection on top of standard authentication.
+      <ul>
+        <li><strong>Note:</strong> HMAC alone does not guarantee confidentiality — the message is still readable. In practice this happens over an encrypted TLS connection, which handles confidentiality separately.</li>
+      </ul>
+    </li>
+    <li>Other applications include <strong>JSON Web Tokens (JWT)</strong> signing and <strong>One-Time Passwords (HOTP/TOTP)</strong> generation.</li>
+  </ul>
+</section>
+
+<section class="slide" data-title="2.5 · Authenticated Encryption (AE)">
+  <h2 class="slide-title"><span class="num">2.5</span>Authenticated Encryption (AE)</h2>
+  <p>So far confidentiality (encryption) and authenticity (MAC) have been treated as separate, and combining them correctly is tricky and error-prone. <strong>Authenticated encryption</strong> is an encryption system that simultaneously provides both confidentiality and authenticity (integrity) in a single operation — ensuring data remains private while protected from tampering. A MAC alone only guarantees integrity and authenticity, not confidentiality, leaving data vulnerable to exposure if not encrypted. AE also addresses developer mistakes when using encryption and MAC separately (incorrect ordering or improper implementation). By integrating encryption and authentication, AE reduces these errors.</p>
+  <p><strong>Authenticated Encryption with Associated Data (AEAD)</strong> extends AE by allowing additional data (associated data) that is authenticated but <strong>not</strong> encrypted — sent in plaintext but included in the integrity check (e.g., headers, metadata). The MAC tag computation and encryption can be performed in parallel, making AEAD schemes efficient. AEAD is defined for both block and stream ciphers. The security of the construction depends on how tightly the two are coupled — ideally, no plaintext is released until integrity is verified.</p>
+</section>
+
+<section class="slide" data-title="2.5.1 · Four Approaches">
+  <h2 class="slide-title"><span class="num">2.5.1</span>Four Approaches</h2>
+  <div class="tablewrap">
+    <table>
+      <caption>Ways to combine hashing, encryption, and authentication.</caption>
+      <thead>
+        <tr><th scope="col">Approach</th><th scope="col">Construction</th><th scope="col">Notes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Hashing followed by encryption (H→E)</strong></td>
+          <td>compute <em>h</em> = <em>H</em>(<em>M</em>), then encrypt the message plus hash: <em>E</em>(<em>K,</em>(<em>M</em> ‖ <em>h</em>)).</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td><strong>Authentication followed by encryption (A→E, MAC-then-Encrypt)</strong></td>
+          <td>requires two keys. Compute <em>T</em> = <em>MAC</em>(<em>K₁, M</em>), then encrypt the message plus tag: <em>E</em>(<em>K₂,</em>[<em>M</em> ‖ <em>T</em>]). Send <strong>Enc<sub>k1</sub>(m, MAC<sub>k2</sub>(m))</strong>.</td>
+          <td>Used in SSL/TLS.</td>
+        </tr>
+        <tr>
+          <td><strong>Encryption followed by authentication (E→A, Encrypt-then-MAC)</strong></td>
+          <td>requires two keys. Compute <em>C</em> = <em>E</em>(<em>K₂, M</em>), then <em>T</em> = <em>MAC</em>(<em>K₁, C</em>) to yield (<em>C, T</em>). Send <strong>Enc<sub>k1</sub>(m), MAC<sub>k2</sub>(Enc<sub>k1</sub>(m))</strong>.</td>
+          <td>Used in IPSec; can withstand stronger attacks; considered the strongest.</td>
+        </tr>
+        <tr>
+          <td><strong>Independently encrypt and authenticate (E + A, MAC-and-Encrypt)</strong></td>
+          <td>requires two keys. Compute <em>C</em> = <em>E</em>(<em>K₂, M</em>) and <em>T</em> = <em>MAC</em>(<em>K₁, M</em>) to yield (<em>C, T</em>); operations can be performed in either order. Send <strong>Enc<sub>k1</sub>(m), MAC<sub>k2</sub>(m)</strong>.</td>
+          <td>Used in SSH.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="slide" data-title="2.5.2 · GCM">
+  <h2 class="slide-title"><span class="num">2.5.2</span>Example AEAD — Galois/Counter Mode (GCM)</h2>
+  <ul>
+    <li>Designed to be parallelizable for high throughput with low cost and low latency. Follows the <strong>Encrypt-then-MAC</strong> paradigm.
+      <ul>
+        <li>The message is encrypted in a variant of CTR mode.</li>
+        <li>The resulting ciphertext is multiplied with key material and message-length information over GF(2<sup>128</sup>) to generate the authenticator tag.</li>
+        <li>The standard also specifies a MAC-only mode, known as <strong>Galois MAC</strong>.</li>
+      </ul>
+    </li>
+    <li>Makes use of two functions:
+      <ul>
+        <li><strong>GHASH</strong> — a keyed hash function.</li>
+        <li><strong>GCTR</strong> — CTR mode with counters determined by simple increment-by-one.</li>
+      </ul>
+    </li>
+    <li>Currently the strongest and most widely used block-cipher AEAD mode; highly efficient due to parallelism. However it is <strong>very brittle in implementation</strong> — nonce reuse, for example, can completely break security. Always use a well-vetted library rather than implementing it yourself.</li>
+  </ul>
+</section>
+
+<section class="slide" data-title="2.5.3 · CCM">
+  <h2 class="slide-title"><span class="num">2.5.3</span>Example AEAD — Counter with CBC-MAC (CCM)</h2>
+  <ul>
+    <li>Standardized by NIST to support the security requirements of IEEE 802.11 WiFi networks.</li>
+    <li>A carefully engineered variation of MAC-and-Encrypt: computes CMAC over the message first to generate a tag, then encrypts both the message and tag using CTR mode.</li>
+    <li>Unlike naive MAC-and-Encrypt, CCM is considered secure because the construction is tightly specified. But it is <strong>sequential</strong> (the MAC must complete before encryption begins), making it less efficient than GCM.</li>
+    <li>A single key <em>K</em> is used for both encryption and MAC. This is safe for the same reason as GCM: the two uses are carefully separated by design and accounted for in the security proof.</li>
+    <li>Widely used in constrained environments like IoT and WiFi (802.11).</li>
+  </ul>
+</section>
+
+<section class="slide" data-title="3 · Digital Signatures">
+  <h2 class="slide-title"><span class="num">3</span>Digital Signatures</h2>
+  <p>A digital signature is arguably the most significant development from work on public-key cryptography. While MACs rely on a shared symmetric key, digital signatures use public-key cryptography to achieve a similar objective.</p>
+</section>
+
+<section class="slide" data-title="3.1 · The Need for Digital Signatures">
+  <h2 class="slide-title"><span class="num">3.1</span>The Need for Digital Signatures</h2>
+  <ul>
+    <li>Hashes give us integrity, but no notion of who sent the message. MACs give integrity + authenticity, but rely on a shared secret key — both parties must already have agreed on a key.</li>
+    <li>This creates a fundamental limitation:
+      <ul>
+        <li><strong>Cannot prove to a third party that Alice sent the message</strong> — Bob could have computed the same MAC himself, so a judge or external verifier cannot distinguish.</li>
+        <li><strong>Do not scale</strong> — if Alice wants to communicate with 1000 people, she needs 1000 different keys.</li>
+        <li><strong>No non-repudiation</strong> — Alice can later deny sending the message, with no way to prove otherwise.</li>
+      </ul>
+    </li>
+    <li>Digital signatures solve this via asymmetric (public-key) cryptography — Alice signs with her private key, anyone verifies with her public key:
+      <ul>
+        <li>No shared secret needed.</li>
+        <li>A third party can verify the signature independently.</li>
+        <li>Alice cannot deny signing — providing <strong>non-repudiation</strong>.</li>
+      </ul>
+    </li>
+  </ul>
+</section>
+
+<section class="slide" data-title="3.2 · Basic Operation">
+  <h2 class="slide-title"><span class="num">3.2</span>Basic Operation</h2>
+  <p>Consider Bob sending a message to Alice. Bob doesn't prioritise confidentiality but wants to assure Alice the message is from him. Bob employs a secure hash function (e.g., SHA-512) to compute the message hash. The hash value, along with Bob's private key, is input to a <strong>digital signature generation algorithm</strong>, producing a short block — the digital signature. Bob sends the message with the attached signature.</p>
+  <p>Upon receiving the message and signature, Alice first calculates the hash of the message and provides the hash value and <strong>Bob's public key</strong> as inputs to a <strong>digital signature verification algorithm</strong>. If it returns valid:</p>
+  <ul>
+    <li>Alice is assured the message was <strong>signed by Bob</strong> — no one else has his private key, which is needed to create a signature verifiable with his public key.</li>
+    <li>Alice is assured the <strong>integrity</strong> of the message — without Bob's private key, no one can alter the message to produce a hash verifiable with Bob's public key.</li>
+  </ul>
+  <blockquote class="callout warn">
+    <span class="label">Caveat</span>
+    This only works if the verifier can be certain the public key she has actually belongs to Bob. A forged or substituted public key breaks all guarantees. This is the problem of <strong>public-key authentication</strong>, solved by PKI — covered later under Digital Certificates.
+  </blockquote>
+</section>
+
+<section class="slide" data-title="3.3 · Approaches to Digital Signatures">
+  <h2 class="slide-title"><span class="num">3.3</span>Approaches to Digital Signatures</h2>
+  <p>Two main approaches, both using SHA for hashing: <strong>RSA</strong> and <strong>DSA</strong>.</p>
+</section>
+
+<section class="slide" data-title="3.3.1 · DSA Approach">
+  <h2 class="slide-title"><span class="num">3.3.1</span>Digital Signature Algorithm (DSA) Approach</h2>
+  <p>DSA was proposed in 1991 and published by NIST via FIPS 186. It makes use of SHA and provides <strong>only</strong> the digital signature function — unlike RSA, DSA cannot be used for encryption or key exchange. It is a dedicated signature-only scheme derived from ElGamal signatures; NIST standardized it as a signature-only primitive, intentionally excluding the encryption capability ElGamal supports.</p>
+  <ul>
+    <li>The message <em>M</em> is hashed to generate a hash code.</li>
+    <li>The hash code is input to a signature function along with a random number <em>k</em> generated for this particular signature.</li>
+    <li>The signature function also depends on the sender's private key (<em>PR<sub>a</sub></em>) and a set of parameters known to a group of communicating principals — a <strong>global public key</strong> (<em>PU<sub>G</sub></em>).</li>
+    <li>The resulting signature consists of two components, <em>s</em> and <em>r</em>.</li>
+    <li>At the receiver, the incoming message's hash code is generated and input to a verification function that depends on the global public key and the sender's public key (<em>PU<sub>a</sub></em>). The output equals signature component <em>r</em> if valid. Only the sender, with knowledge of the private key, could have produced a valid signature.</li>
+  </ul>
+</section>
+
+<section class="slide" data-title="3.3.1 · DSA Domain Parameters">
+  <h2 class="slide-title"><span class="num">3.3.1</span>DSA Domain Parameters</h2>
+  <p><strong>Domain parameters:</strong> Let <em>p</em> be prime, <em>q</em> a prime divisor of (<em>p−1</em>), and <em>g</em> an element of order <em>q</em> in ℤ<sub>p</sub>. Domain parameters <em>PU<sub>G</sub></em> = (<em>p, q, g</em>) are shared by all users. The user's <strong>private key</strong> is <em>x</em>, a random/pseudorandom integer with 0 &lt; <em>x</em> &lt; <em>q</em>. The signature function uses the sender's private key, the global parameters, the message hash, and a per-message random <em>k</em> unique for each signing. In DSA, a user computes two quantities, <em>r</em> and <em>s</em>, as functions of the public key components (<em>p, q, g</em>), the private key (<em>x</em>), the hash <em>H</em>(<em>M</em>), and the random integer <em>k</em>.</p>
+  <blockquote class="callout">
+    <span class="label">Exam note</span>
+    The exam expectation is only the high-level ideas of DSA; refer to the textbook for full detail.
+  </blockquote>
+</section>
+
+<section class="slide" data-title="3.3.2 · RSA Approach">
+  <h2 class="slide-title"><span class="num">3.3.2</span>RSA Approach</h2>
+  <p>In 2013, an expanded FIPS-186 (FIPS-186-4) was proposed to incorporate digital signature algorithms based on RSA. In the RSA approach:</p>
+  <ul>
+    <li>The message to be signed is input to a hash function producing a secure fixed-length hash code.</li>
+    <li>This hash code is <strong>encrypted using the sender's private key</strong> to form the signature.</li>
+    <li>Both the message and signature are transmitted.</li>
+    <li>The recipient hashes the message and decrypts the signature using the sender's public key. If the calculated hash code matches the decrypted signature, the signature is valid.</li>
+    <li>Because only the sender knows the private key, only the sender could have produced a valid signature.</li>
+    <li>Recall: RSA is a general-purpose public-key scheme — it can also be used for encryption and key exchange.</li>
+  </ul>
+</section>
+
+<section class="slide" data-title="4 · Practice Quiz">
+  <h2 class="slide-title"><span class="num">4</span>Practice Quiz</h2>
+  <p>Ten questions covering hash functions, MACs, and digital signatures. Correct answers are marked with a ✓.</p>
+</section>
+
+<section class="slide" data-title="4 · Practice Quiz (Q1)">
+  <h2 class="slide-title">Practice Quiz — Question 1</h2>
+  <article class="quiz">
+    <p class="q"><span class="qn">Question 1:</span> Cryptographic hash functions are used to ensure confidentiality and integrity in communications. Which of the following is TRUE regarding cryptographic hash functions?</p>
+    <ul class="options">
+      <li class="correct">a) A cryptographic hash function must satisfy preimage resistance.</li>
+      <li>b) It is possible to find cryptographic hash functions that are collision-free.</li>
+      <li>c) Cryptographic hash functions can not provide origin authentication.</li>
+      <li>d) Cryptographic hash functions are used to ensure confidentiality and integrity in communications.</li>
+    </ul>
+    <blockquote class="explain">
+      <p><em>Explanation:</em></p>
+      <p><em>(a) Correct — a cryptographic hash function must satisfy pre-image resistance, second pre-image resistance, and collision resistance.</em></p>
+      <p><em>(b) Incorrect — hash functions map longer, potentially variable-length sequences to shorter sequences, so collisions are bound to happen as the input space is much larger than the output space.</em></p>
+      <p><em>(c) Correct — cryptographic hash functions do not provide origin authentication; we need digital signatures or MACs for that.</em></p>
+      <p><em>(d) Incorrect — cryptographic hash functions ensure integrity only.</em></p>
+    </blockquote>
+  </article>
+</section>
+
+<section class="slide" data-title="4 · Practice Quiz (Q2)">
+  <h2 class="slide-title">Practice Quiz — Question 2</h2>
+  <article class="quiz">
+    <p class="q"><span class="qn">Question 2:</span> "Given a hash function H, with n possible outputs and a specific value H(x), if H is applied to k random inputs, what must be the value of k so that the probability that at least one input y satisfies H(y) = H(x) is 0.5", is a reference to the ………</p>
+    <ul class="options">
+      <li>a) Authentication code</li>
+      <li>b) Collision resistant</li>
+      <li>c) Big-endian</li>
+      <li class="correct">d) Birthday attack</li>
+    </ul>
+    <blockquote class="explain"><p><em>Explanation: This question checked whether you know how the "birthday attack" is applicable to cryptographic hash functions. All the other answers are unrelated.</em></p></blockquote>
+  </article>
+</section>
+
+<section class="slide" data-title="4 · Practice Quiz (Q3 &amp; Q4)">
+  <h2 class="slide-title">Practice Quiz — Questions 3 &amp; 4</h2>
+  <article class="quiz">
+    <p class="q"><span class="qn">Question 3:</span> The MAC does not provide a digital signature because both the sender and receiver share the same key. TRUE or FALSE.</p>
+    <ul class="options">
+      <li class="correct">a) TRUE</li>
+      <li>b) FALSE</li>
+    </ul>
+    <blockquote class="explain"><p><em>Explanation: This is true. MACs start with the premise that there is a shared key established already.</em></p></blockquote>
+  </article>
+  <article class="quiz">
+    <p class="q"><span class="qn">Question 4:</span> Confidentiality can be provided by performing message encryption ………… the MAC algorithm.</p>
+    <ul class="options">
+      <li>a) Before</li>
+      <li class="correct">b) Before or after</li>
+      <li>c) After</li>
+      <li>d) During</li>
+    </ul>
+    <blockquote class="explain"><p><em>Explanation: This is related to the four "MAC"/"encrypt" scenarios we discussed. Either you can calculate MAC and then encrypt, or you can encrypt and calculate the MAC.</em></p></blockquote>
+  </article>
+</section>
+
+<section class="slide" data-title="4 · Practice Quiz (Q5)">
+  <h2 class="slide-title">Practice Quiz — Question 5</h2>
+  <article class="quiz">
+    <p class="q"><span class="qn">Question 5:</span> An important characteristic of the MAC algorithm is that it needs to be reversible. TRUE or FALSE.</p>
+    <ul class="options">
+      <li>a) TRUE</li>
+      <li class="correct">b) FALSE</li>
+    </ul>
+    <blockquote class="explain"><p><em>Explanation: Like hashes, the MAC has to be irreversible. Therefore, the statement is false.</em></p></blockquote>
+  </article>
+</section>
+
+<section class="slide" data-title="4 · Practice Quiz (Q6 &amp; Q7)">
+  <h2 class="slide-title">Practice Quiz — Questions 6 &amp; 7</h2>
+  <article class="quiz">
+    <p class="q"><span class="qn">Question 6:</span> To create a …………, a user calculates two quantities, r and s, that are functions of the public key components (p, q, g), the user's private key (x), the hash code of the message H(M), and an additional integer k that should be generated randomly or pseudorandomly and be unique for each signing.</p>
+    <ul class="options">
+      <li class="correct">a) Signature</li>
+      <li>b) Hash authentication</li>
+      <li>c) Secret key</li>
+      <li>d) Global key</li>
+    </ul>
+    <blockquote class="explain"><p><em>Explanation: The process describes the DSA digital signature algorithm. Therefore, the answer is A. We didn't cover this part in detail in the lecture. Please refer to the textbook content on the DSA algorithm. The expectation at the exam is only the high-level ideas of DSA.</em></p></blockquote>
+  </article>
+  <article class="quiz">
+    <p class="q"><span class="qn">Question 7:</span> In the digital signature algorithm, the user's ………… is represented by x, which is a random or pseudorandom integer with 0 &lt; x &lt; q.</p>
+    <ul class="options">
+      <li>a) Per message secret number</li>
+      <li class="correct">b) Private key</li>
+      <li>c) Global key</li>
+      <li>d) Public key</li>
+    </ul>
+    <blockquote class="explain"><p><em>Explanation: In DSA the user's private key is a random number generated by the user and is commonly denoted by x. We didn't cover this part in detail in the lecture. Please refer to the textbook content on the DSA algorithm. The expectation at the exam is only the high-level ideas of DSA.</em></p></blockquote>
+  </article>
+</section>
+
+<section class="slide" data-title="4 · Practice Quiz (Q8 &amp; Q9)">
+  <h2 class="slide-title">Practice Quiz — Questions 8 &amp; 9</h2>
+  <article class="quiz">
+    <p class="q"><span class="qn">Question 8:</span> A good hash function has the property that "the results of applying the function to a large set of inputs will produce outputs that are evenly distributed and apparently random". TRUE or FALSE.</p>
+    <ul class="options">
+      <li class="correct">a) TRUE</li>
+      <li>b) FALSE</li>
+    </ul>
+    <blockquote class="explain"><p><em>Explanation: This is a desired property of a hash function, even if we do not directly stipulate it. The outputs of the hash function must appear random.</em></p></blockquote>
+  </article>
+  <article class="quiz">
+    <p class="q"><span class="qn">Question 9:</span> You are given the below string. "5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8" This string is in hex (i.e., 2 hex characters represent a byte). Which hashing algorithm is the most likely to have produced this result if you suspect it is an output of a hash function?</p>
+    <ul class="options">
+      <li class="correct">a) SHA-1</li>
+      <li>b) SHA-224</li>
+      <li>c) SHA-256</li>
+      <li>d) SHA-512</li>
+    </ul>
+    <blockquote class="explain"><p><em>Explanation: Using the given information, we can calculate the length of the string. There are a total of 40 characters in the string. Two hex characters represent a byte, so the total length is 20 bytes. That means the total length is 160 bits. Out of the hash functions we discussed, only SHA-1 results in 160-bit outputs.</em></p></blockquote>
+  </article>
+</section>
+
+<section class="slide" data-title="4 · Practice Quiz (Q10)">
+  <h2 class="slide-title">Practice Quiz — Question 10</h2>
+  <article class="quiz">
+    <p class="q"><span class="qn">Question 10:</span> Consider the same hash value again. "5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8" We already know that hash values are theoretically reversible. Rainbow tables pre-compute hash values for common words and store them as lookup tables. Use an online hash lookup table to find the actual plaintext corresponding to this hash.</p>
+    <p>Example online tool: <code>https://sha1.gromweb.com/</code></p>
+    <p>What is the correct plaintext corresponding to the given hash?</p>
+    <ul class="options">
+      <li>a) Password</li>
+      <li>b) ChangeMe</li>
+      <li class="correct">c) password</li>
+      <li>d) querty</li>
+    </ul>
+    <blockquote class="explain"><p><em>Explanation: The online tool will return "password" as the plaintext. In practice, to defend against rainbow table lookups, we use salt (a random string concatenated with the original plaintext before calculating the hash).</em></p></blockquote>
+  </article>
+</section>
+
+<section class="slide" data-title="5 · Recap">
+  <h2 class="slide-title"><span class="num">5</span>Recap</h2>
+  <ul>
+    <li>Cryptographic hash function basics</li>
+    <li>Security requirements for cryptographic hash functions</li>
+    <li>Secure Hash Algorithm (SHA-2, SHA-3)</li>
+    <li>Message Authentication Codes and HMAC</li>
+    <li>AE/AEAD (CCM and GCM block modes)</li>
+    <li>Digital Signatures (RSA, DSA)</li>
+  </ul>
+</section>
+
+      </div>
+    </div>
+
+    <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var slides   = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var track    = document.getElementById("track");
+  var viewport = document.querySelector(".viewport");
+  var list     = document.getElementById("thumbList");
+  var counter  = document.getElementById("counter");
+  var sidebarCount = document.getElementById("sidebarCount");
+  var progressBar  = document.getElementById("progressBar");
+  var toggle   = document.getElementById("navToggle");
+  var body     = document.body;
+
+  var index = 0;
+  var slideW = 0, slideH = 0;
+  var rail = []; // thumbnail frames, parallel to slides
+
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- build sidebar previews ---------- */
+  slides.forEach(function(slide, i){
+    var title = slide.getAttribute("data-title") || ("Slide " + (i + 1));
+
+    var li = document.createElement("li");
+    var a  = document.createElement("a");
+    a.className = "thumb";
+    a.href = "#";
+    a.setAttribute("role", "button");
+    a.setAttribute("aria-label", "Go to slide " + (i + 1) + ": " + title);
+
+    var t = document.createElement("span");
+    t.className = "thumb-title";
+    t.textContent = (i + 1) + ". " + title;
+
+    var frame = document.createElement("span");
+    frame.className = "thumb-frame";
+    frame.setAttribute("aria-hidden", "true");
+
+    var clone = slide.cloneNode(true);
+    clone.classList.add("thumb-clone");
+    clone.removeAttribute("data-title");
+    clone.removeAttribute("id");
+    clone.querySelectorAll("[id]").forEach(function(el){ el.removeAttribute("id"); });
+    clone.querySelectorAll("a, button, input, [tabindex]").forEach(function(el){
+      el.setAttribute("tabindex", "-1");
+    });
+    frame.appendChild(clone);
+
+    a.appendChild(t);
+    a.appendChild(frame);
+    a.addEventListener("click", function(e){ e.preventDefault(); go(i); });
+    li.appendChild(a);
+    list.appendChild(li);
+
+    rail.push(frame);
+  });
+
+  /* ---------- measurement ---------- */
+  function measure(){
+    if(!slides.length) return;
+    var r = slides[0].getBoundingClientRect();
+    slideW = r.width;
+    slideH = r.height;
+    if(!slideW) return;
+
+    var frameW = rail.length ? rail[0].clientWidth : 0;
+    if(!frameW) return;
+    var scale = frameW / slideW;
+
+    rail.forEach(function(frame){
+      var clone = frame.firstElementChild;
+      clone.style.width  = slideW + "px";
+      clone.style.height = slideH + "px";
+      clone.style.transform = "scale(" + scale + ")";
+      frame.style.height = Math.round(slideH * scale) + "px";
+    });
+  }
+
+  function gapSize(){
+    var g = parseFloat(getComputedStyle(track).gap);
+    return isNaN(g) ? 0 : g;
+  }
+
+  /* ---------- positioning ---------- */
+  function position(){
+    var step = slideW + gapSize();
+    track.style.transform = "translateX(" + (-index * step) + "px)";
+  }
+
+  function go(i){
+    if(!slides.length) return;
+    index = Math.max(0, Math.min(slides.length - 1, i));
+
+    slides.forEach(function(s, j){ s.classList.toggle("is-active", j === index); });
+    rail.forEach(function(f, j){
+      var a = f.parentElement;
+      if(a) a.classList.toggle("active", j === index);
+    });
+
+    position();
+
+    var active = list.querySelectorAll(".thumb")[index];
+    if(active){
+      if(active.scrollIntoView){
+        active.scrollIntoView({ block:"nearest", inline:"nearest" });
+      }
+    }
+
+    var label = (index + 1) + " / " + slides.length;
+    counter.textContent = label;
+    sidebarCount.textContent = label;
+    progressBar.style.width = (slides.length > 1 ? (index / (slides.length - 1)) * 100 : 100) + "%";
+  }
+
+  /* ---------- sidebar toggle ---------- */
+  function toggleNav(){
+    var collapsed = body.classList.toggle("nav-collapsed");
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    /* re-measure after the width transition settles */
+    window.setTimeout(function(){ measure(); go(index); }, reduceMotion ? 0 : 300);
+  }
+
+  toggle.addEventListener("click", toggleNav);
+
+  /* ---------- keyboard ---------- */
+  document.addEventListener("keydown", function(e){
+    if(e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if(k === "ArrowRight" || k === "ArrowDown" || k === "PageDown" || k === " " || k === "Spacebar"){
+      e.preventDefault();
+      go(index + 1);
+    } else if(k === "ArrowLeft" || k === "ArrowUp" || k === "PageUp"){
+      e.preventDefault();
+      go(index - 1);
+    } else if(k === "Home"){
+      e.preventDefault(); go(0);
+    } else if(k === "End"){
+      e.preventDefault(); go(slides.length - 1);
+    } else if(k === "n" || k === "N"){
+      e.preventDefault(); toggleNav();
+    }
+  });
+
+  /* ---------- responsive recalculation ---------- */
+  var resizeTimer = null;
+  function onResize(){
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(function(){ measure(); go(index); }, 120);
+  }
+  window.addEventListener("resize", onResize);
+
+  if(window.ResizeObserver){
+    var ro = new ResizeObserver(function(){
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(function(){ measure(); go(index); }, 120);
+    });
+    ro.observe(viewport);
+  }
+
+  /* ---------- init ---------- */
+  function init(){
+    if(window.innerWidth < 960){
+      body.classList.add("nav-collapsed");
+      toggle.setAttribute("aria-expanded", "false");
+    }
+    measure();
+    go(0);
+  }
+
+  if(document.fonts && document.fonts.ready){
+    document.fonts.ready.then(function(){ measure(); position(); });
+  }
+  window.addEventListener("load", function(){ measure(); go(index); });
+  init();
+})();
+</script>
+</body>
+</html>

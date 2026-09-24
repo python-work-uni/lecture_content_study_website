@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 5 · Neural Networks in Engineering · Slides</title>
+<meta name="description" content="Slide deck: ENGG2112 Week 5 — Neural Networks in Engineering.">
+<style>
+/* ============================================================
+   DESIGN SYSTEM TOKENS (shared with the notes page)
+   ============================================================ */
+:root{
+  --bg:#fafaf9;
+  --surface:#ffffff;
+  --surface-2:#f2f1ef;
+  --border:#e2e1de;
+  --border-strong:#cfcdc8;
+  --text:#1c1b1a;
+  --text-2:#57534e;
+  --text-3:#78716c;
+  --accent:#1d4ed8;
+  --accent-soft:#eef2ff;
+  --note:#6b7280;
+  --warn:#b45309;
+  --ok:#15803d;
+
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px;
+  --s5:24px; --s6:32px; --s7:48px; --s8:64px; --s9:96px;
+
+  --sans:ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono:ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  --measure:68ch;
+  --radius:8px;
+
+  --gap:20px;
+  --sidebar-w:300px;
+  --shell-bg:#f0efec;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#161514; --surface:#1e1d1b; --surface-2:#262522;
+    --border:#33312d; --border-strong:#48453f;
+    --text:#f2f1ef; --text-2:#c4c0b8; --text-3:#948f86;
+    --accent:#8ab4ff; --accent-soft:#1b2438;
+    --note:#8a8f99; --warn:#e0a15a; --ok:#6ee7a0;
+    --shell-bg:#110f0e;
+  }
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--shell-bg);
+  color:var(--text);
+  font-family:var(--sans);
+  overflow:hidden;
+}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+a{color:var(--accent)}
+
+.skip{
+  position:fixed;left:var(--s4);top:-100px;z-index:200;
+  background:var(--accent);color:#fff;padding:var(--s2) var(--s4);
+  border-radius:var(--radius);text-decoration:none;font-weight:600;
+  transition:top .15s ease;
+}
+.skip:focus{top:var(--s2)}
+
+/* ============================================================
+   SHELL: sidebar + stage
+   ============================================================ */
+.deck-shell{
+  display:flex;
+  height:100vh;
+  height:100dvh;
+  width:100%;
+}
+
+/* ---- toggle button (fixed, top-left) ---- */
+.nav-toggle{
+  position:fixed;top:14px;left:14px;z-index:120;
+  width:42px;height:42px;padding:0;
+  display:grid;place-items:center;
+  border:1px solid var(--border);
+  border-radius:11px;
+  background:var(--surface);
+  color:var(--text);
+  cursor:pointer;
+  box-shadow:0 1px 2px rgba(0,0,0,.06),0 6px 16px -10px rgba(0,0,0,.35);
+}
+.nav-toggle:hover{background:var(--surface-2)}
+.nav-toggle svg{width:20px;height:20px;display:block}
+.nav-toggle .icon-close{display:none}
+body:not(.nav-collapsed) .nav-toggle .icon-open{display:none}
+body:not(.nav-collapsed) .nav-toggle .icon-close{display:block}
+
+/* ---- sidebar ---- */
+.sidebar{
+  flex:0 0 var(--sidebar-w);
+  width:var(--sidebar-w);
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  min-width:0;
+  overflow:hidden;
+  transition:flex-basis .28s ease, width .28s ease, opacity .22s ease;
+}
+body.nav-collapsed .sidebar{
+  flex-basis:0;width:0;opacity:0;border-right-color:transparent;
+}
+.sidebar-head{
+  flex:none;
+  padding:18px 16px 12px 66px;
+  border-bottom:1px solid var(--border);
+}
+.sidebar-head .kicker{
+  font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-3);margin:0 0 2px;
+}
+.sidebar-head .name{
+  font-size:.95rem;font-weight:650;color:var(--text);
+  margin:0;line-height:1.3;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.sidebar-count{
+  display:block;font-size:.78rem;color:var(--text-3);margin-top:2px;
+  font-variant-numeric:tabular-nums;
+}
+.thumblist{
+  list-style:none;margin:0;padding:12px;
+  overflow-y:auto;overflow-x:hidden;flex:1 1 auto;
+  scrollbar-width:thin;
+  overscroll-behavior:contain;
+}
+.thumblist li{margin:0 0 10px}
+.thumb{
+  display:block;text-decoration:none;color:inherit;
+  padding:8px;border-radius:10px;border:1px solid transparent;
+}
+.thumb:hover{background:var(--surface-2)}
+.thumb-title{
+  display:block;
+  font-size:.78rem;font-weight:600;line-height:1.35;color:var(--text-2);
+  margin:0 0 6px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.thumb-frame{
+  display:block;position:relative;overflow:hidden;
+  border:1px solid var(--border);border-radius:7px;
+  background:var(--surface);
+}
+.thumb.active{border-color:color-mix(in srgb, var(--accent) 45%, transparent);background:var(--accent-soft)}
+.thumb.active .thumb-title{color:var(--accent)}
+.thumb.active .thumb-frame{border-color:var(--accent)}
+.thumb-frame > .thumb-clone{
+  position:absolute;top:0;left:0;
+  transform-origin:top left;
+  pointer-events:none;user-select:none;
+  margin:0;border:0;border-radius:0;box-shadow:none;
+  overflow:hidden;height:auto;
+}
+
+/* ---- stage ---- */
+.stage{
+  flex:1 1 auto;min-width:0;
+  display:flex;flex-direction:column;
+  padding:12px 20px 18px;
+}
+.stage-head{
+  flex:none;
+  display:flex;align-items:center;justify-content:space-between;gap:var(--s4);
+  padding:2px 4px 12px 66px;
+  min-height:42px;
+}
+.stage-head .deck-name{
+  font-size:.8rem;font-weight:600;color:var(--text-3);
+  letter-spacing:.03em;text-transform:uppercase;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.stage-tools{display:flex;align-items:center;gap:var(--s4);flex:none}
+.counter{
+  font-size:.82rem;font-weight:650;color:var(--text-2);
+  font-variant-numeric:tabular-nums;
+}
+.hint{font-size:.78rem;color:var(--text-3)}
+.hint kbd{
+  font-family:var(--mono);font-size:.72rem;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:5px;padding:1px 5px;color:var(--text-2);
+}
+.viewport{flex:1 1 auto;min-height:0;overflow:hidden;position:relative}
+.track{
+  display:flex;gap:var(--gap);height:100%;
+  transition:transform .34s cubic-bezier(.22,.61,.36,1);
+  will-change:transform;
+}
+.progress{
+  flex:none;height:3px;background:var(--border);border-radius:99px;
+  margin:12px 4px 0;overflow:hidden;
+}
+.progress > span{
+  display:block;height:100%;width:0;background:var(--accent);
+  border-radius:99px;transition:width .34s ease;
+}
+
+/* ============================================================
+   SLIDE
+   ============================================================ */
+.slide{
+  flex:0 0 calc((100% - var(--gap)) / 2);
+  height:100%;
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:clamp(20px, 2.4vw, 44px);
+  box-shadow:0 1px 2px rgba(0,0,0,.04), 0 18px 40px -34px rgba(0,0,0,.55);
+  scrollbar-width:thin;
+  scroll-behavior:smooth;
+}
+.slide::-webkit-scrollbar{width:9px}
+.slide::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:9px;border:2px solid var(--surface)}
+.slide > *:first-child{margin-top:0}
+.slide::after{content:"";display:block;height:2px}
+
+.slide-title{
+  font-size:clamp(1.25rem, 1.9vw, 1.7rem);
+  line-height:1.22;font-weight:700;letter-spacing:-.015em;
+  margin:0 0 var(--s5);
+  padding-bottom:var(--s3);
+  border-bottom:1px solid var(--border);
+  color:var(--text);
+}
+.slide-title .num{
+  display:inline-block;
+  font-family:var(--mono);font-size:.72em;font-weight:700;
+  color:var(--accent);background:var(--accent-soft);
+  border-radius:7px;padding:.05em .5em;margin-right:.5em;
+  transform:translateY(-.06em);
+}
+
+/* title slide */
+.title-slide{
+  display:flex;flex-direction:column;justify-content:center;
+  background:linear-gradient(160deg, var(--surface) 0%, var(--accent-soft) 130%);
+}
+.title-slide .eyebrow{
+  font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--accent);margin:0 0 var(--s4);
+}
+.title-slide h1{
+  font-size:clamp(1.9rem, 3.6vw, 3.1rem);
+  line-height:1.1;font-weight:700;letter-spacing:-.025em;
+  margin:0 0 var(--s6);max-width:22ch;
+}
+.title-slide .lede{
+  font-size:1.02rem;color:var(--text-2);line-height:1.6;
+  border-top:1px solid var(--border);padding-top:var(--s5);
+  max-width:56ch;
+}
+.title-slide .lede p{margin:0 0 var(--s2)}
+.title-slide .lede strong{color:var(--text)}
+
+/* slide body typography */
+.slide p{margin:0 0 var(--s4);max-width:var(--measure);line-height:1.62}
+.slide ul,.slide ol{margin:0 0 var(--s4);padding-left:1.35em;max-width:var(--measure);line-height:1.6}
+.slide li{margin:0 0 var(--s2)}
+.slide li > ul,.slide li > ol{margin:var(--s2) 0 0}
+.slide li:last-child{margin-bottom:0}
+.slide strong{font-weight:650;color:var(--text)}
+.slide em{font-style:italic}
+.slide code{
+  font-family:var(--mono);font-size:.9em;background:var(--surface-2);
+  border:1px solid var(--border);padding:.08em .34em;border-radius:4px;
+  overflow-wrap:anywhere;
+}
+.slide sub,.slide sup{font-size:.72em;line-height:0}
+.slide h3{font-size:1.08rem;font-weight:650;line-height:1.32;margin:var(--s5) 0 var(--s3)}
+.slide h4{font-size:1rem;font-weight:650;margin:var(--s5) 0 var(--s3)}
+.slide h3 + p,.slide h4 + p{margin-top:0}
+
+/* callouts */
+.callout{
+  border-left:4px solid var(--note);background:var(--surface-2);
+  border-radius:0 var(--radius) var(--radius) 0;
+  padding:var(--s4) var(--s5);margin:var(--s4) 0;
+  max-width:var(--measure);color:var(--text-2);font-size:.95rem;line-height:1.6;
+}
+.callout p:last-child{margin-bottom:0}
+.callout.key{border-left-color:var(--accent);background:var(--accent-soft);color:var(--text)}
+.callout.warn{border-left-color:var(--warn)}
+.callout .label{
+  display:block;font-size:.68rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text-3);margin-bottom:var(--s1);
+}
+.callout.key .label{color:var(--accent)}
+
+blockquote.quote{
+  border-left:3px solid var(--border-strong);
+  margin:var(--s4) 0;padding:var(--s2) 0 var(--s2) var(--s5);
+  max-width:var(--measure);font-style:italic;color:var(--text-2);
+  font-size:.98rem;line-height:1.6;
+}
+blockquote.quote p:last-child{margin-bottom:0}
+
+/* protocol blocks */
+.protocol{
+  font-family:var(--mono);font-size:.88rem;line-height:1.95;
+  background:var(--surface-2);border:1px solid var(--border);
+  border-radius:var(--radius);padding:var(--s4) var(--s5);
+  margin:var(--s3) 0 var(--s5);overflow-x:auto;
+}
+.protocol .pl{display:block;white-space:nowrap}
+.protocol .pl + .pl{margin-top:2px}
+.protocol .who{color:var(--accent);font-weight:700}
+
+/* tables */
+.tablewrap{
+  overflow-x:auto;margin:var(--s4) 0 var(--s5);
+  border:1px solid var(--border);border-radius:var(--radius);
+}
+table{border-collapse:collapse;width:100%;font-size:.9rem;background:var(--surface)}
+caption{caption-side:top;text-align:left;padding:0 0 var(--s3);color:var(--text-3);font-size:.78rem}
+th,td{padding:var(--s3) var(--s4);text-align:left;vertical-align:top;border-bottom:1px solid var(--border)}
+thead th{background:var(--surface-2);font-weight:650}
+tbody tr:nth-child(even){background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:none}
+
+/* definition lists */
+dl.defs{margin:var(--s3) 0 var(--s5);max-width:var(--measure)}
+dl.defs dt{font-weight:650;margin-top:var(--s3)}
+dl.defs dt:first-child{margin-top:0}
+dl.defs dd{margin:2px 0 0;padding-left:var(--s4);color:var(--text-2);font-size:.94rem;line-height:1.55}
+
+/* quiz */
+.quiz{
+  border:1px solid var(--border);border-radius:var(--radius);
+  background:var(--surface-2);padding:var(--s5);
+  margin:0 0 var(--s5);
+}
+.quiz:last-child{margin-bottom:0}
+.quiz .q{font-size:1rem;font-weight:650;line-height:1.5;margin:0 0 var(--s3);max-width:var(--measure)}
+.quiz .q .qn{color:var(--accent);margin-right:.35em}
+ul.options{list-style:none;padding-left:0;margin:0 0 var(--s3);max-width:var(--measure)}
+ul.options li{
+  padding:var(--s2) var(--s3);margin:4px 0;border-radius:6px;
+  border:1px solid transparent;color:var(--text-2);font-size:.94rem;line-height:1.5;
+}
+ul.options li.correct{
+  background:color-mix(in srgb, var(--ok) 12%, var(--surface));
+  border-color:color-mix(in srgb, var(--ok) 35%, transparent);
+  color:var(--text);font-weight:600;
+}
+ul.options li.correct::before{content:"✓ ";color:var(--ok);font-weight:800}
+.quiz .explain{
+  border-left:3px solid var(--border-strong);
+  padding:var(--s2) 0 var(--s2) var(--s4);margin:0;
+  font-size:.9rem;color:var(--text-2);max-width:var(--measure);line-height:1.55;
+}
+.quiz .explain p{margin:0}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width:60rem){
+  :root{--gap:14px}
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:0;z-index:90;
+    width:min(84vw, 320px);flex-basis:auto;
+    box-shadow:0 0 0 1px var(--border), 24px 0 60px -30px rgba(0,0,0,.5);
+  }
+  body.nav-collapsed .sidebar{transform:translateX(-102%);opacity:0;width:min(84vw,320px);flex-basis:auto}
+  .stage{padding:12px 12px 16px}
+  .stage-head{padding-left:66px}
+  .slide{flex-basis:100%}
+  .hint{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  .track{transition:none}
+  .progress > span{transition:none}
+  .slide{scroll-behavior:auto}
+  .sidebar{transition:none}
+}
+@media print{
+  .nav-toggle,.sidebar,.stage-head,.progress{display:none}
+  body{overflow:visible;background:#fff}
+  .deck-shell{display:block;height:auto}
+  .viewport,.track{display:block;height:auto}
+  .slide{flex:none;height:auto;break-after:page;box-shadow:none}
+}
+
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to slides</a>
+
+<button id="navToggle" class="nav-toggle" type="button"
+        aria-controls="sidebar" aria-expanded="true" aria-label="Toggle slide navigation">
+  <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+    <path d="M4 6h16M4 12h16M4 18h16"/>
+  </svg>
+  <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+    <path d="M15 6l-6 6 6 6"/>
+  </svg>
+</button>
+
+<div class="deck-shell">
+
+  <aside id="sidebar" class="sidebar" aria-label="Slide navigation">
+    <div class="sidebar-head">
+      <p class="kicker">Slides</p>
+      <p class="name">Week 5 · Neural Networks in Engineering</p>
+      <span class="sidebar-count" id="sidebarCount">1 / 1</span>
+    </div>
+    <nav aria-label="All slides">
+      <ol class="thumblist" id="thumbList"></ol>
+    </nav>
+  </aside>
+
+  <main id="main" class="stage">
+    <div class="stage-head">
+      <span class="deck-name">ENGG2112 · Week 5 · Neural Networks in Engineering</span>
+      <div class="stage-tools">
+        <span class="hint"><kbd>←</kbd> <kbd>→</kbd> move · <kbd>N</kbd> nav</span>
+        <span class="counter" id="counter" aria-live="polite">1 / 1</span>
+      </div>
+    </div>
+
+    <div class="viewport">
+      <div class="track" id="track">
+
+        <section class="slide title-slide" data-title="Title">
+          <p class="eyebrow">ENGG2112 · MULTIDISCIPLINARY ENGINEERING</p>
+          <h1>Neural Networks in Engineering</h1>
+          <div class="lede">
+            <p>Week 5 — MLPs, training &amp; backpropagation, CNNs and softmax.</p>
+            <p><strong>Professor T. J. Lim</strong> · The University of Sydney · Semester 2, 2026</p>
+          </div>
+        </section>
+
+        <section class="slide" data-title="Motivation">
+          <h2 class="slide-title">Motivation</h2>
+          <p><strong>Why Neural Networks in Engineering?</strong></p>
+          <p>The lecture opens with real engineering problems that motivate learning with neural networks.</p>
+        </section>
+
+        <section class="slide" data-title="Applications">
+          <h2 class="slide-title">Applications of Neural Networks in Engineering</h2>
+          <h3>Structural Health Monitoring</h3>
+          <p>Detecting cracks, fatigue and anomalies in bridges and aircraft from vibration and sensor signals.</p>
+          <h3>Automated Defect Detection</h3>
+          <p>Spotting defects on production lines from images; faster and more consistent than manual inspection.</p>
+          <h3>Predictive Maintenance</h3>
+          <p>Forecasting equipment failure from sensor data before it happens.</p>
+          <h3>Autonomous Control Systems</h3>
+          <p>Learning control policies for robots, drones, and self-driving vehicles directly from data.</p>
+        </section>
+
+        <section class="slide" data-title="What We're Covering Today">
+          <h2 class="slide-title">What We're Covering Today</h2>
+          <h3><span class="num">01</span>MLPs</h3>
+          <p>Neurons, layers, and activation functions — the building blocks.</p>
+          <h3><span class="num">02</span>Training</h3>
+          <p>How networks learn: stochastic gradient descent &amp; backpropagation.</p>
+          <h3><span class="num">03</span>CNNs</h3>
+          <p>Convolutions for images and spatially structured engineering data.</p>
+          <h3><span class="num">04</span>Code</h3>
+          <p>Hands-on examples in scikit-learn and PyTorch.</p>
+        </section>
+
+        <section class="slide" data-title="MLPs — The Building Block">
+          <h2 class="slide-title">Multi-Layer Perceptrons</h2>
+          <p><em>The Building Block</em></p>
+        </section>
+
+        <section class="slide" data-title="The Artificial Neuron">
+          <h2 class="slide-title">Borrowing from Biology: The Artificial Neuron</h2>
+          <p><strong>The biological neuron.</strong> Signals arrive at the dendrites, are combined in the cell body, and — if strong enough — fire down the axon.</p>
+          <p><strong>The artificial neuron.</strong> Inputs are scaled by weights, summed, and passed through an activation function to produce an output.</p>
+        </section>
+
+        <section class="slide" data-title="The Perceptron">
+          <h2 class="slide-title">The Perceptron</h2>
+          <p>The full computation performed by a neuron:</p>
+          <p><em>ŷ</em> = <em>σ</em>(<em>w</em><sub>1</sub><em>x</em><sub>1</sub> + ⋯ + <em>w</em><sub>K</sub><em>x</em><sub>K</sub> + <em>b</em>)</p>
+          <ul>
+            <li>where <em>σ</em>(·) is known as an activation function. It is usually non-linear, and hence the perceptron performs a non-linear operation.</li>
+            <li>The weights <em>w</em><sub>1</sub>, …, <em>w</em><sub>K</sub> and bias <em>b</em> are the parameters that need to be learned during training.</li>
+            <li>The neuron inputs <em>x</em><sub>1</sub>, …, <em>x</em><sub>K</sub> are the input features in the first layer, and the outputs of a prior layer of neurons in the hidden layer.</li>
+            <li>The neuron output is labelled <em>ŷ</em> but is only the output of the NN at the output layer; at other layers, the neuron output is an input to another layer of neurons.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Activation Functions">
+          <h2 class="slide-title">Activation Functions</h2>
+          <p>Three common choices:</p>
+          <h3>Sigmoid</h3>
+          <p><em>σ(z) = 1 / (1 + e<sup>−z</sup>)</em> — squashes to (0, 1), classic choice for output probabilities.</p>
+          <h3>Tanh</h3>
+          <p><em>tanh(z)</em> — squashes to (−1, 1), zero-centered, common in hidden layers.</p>
+          <h3>ReLU</h3>
+          <p><em>max(0, z)</em> — cheap and effective, the default for hidden layers today.</p>
+        </section>
+
+        <section class="slide" data-title="Non-Linearity">
+          <h2 class="slide-title">Non-Linearity to Model Complex Systems</h2>
+          <ul>
+            <li>Without the activation function, even a complex multi-layered system will be linear and cannot model cognitive systems or other complex systems.</li>
+            <li>With activation functions to introduce non-linearity, increasing the complexity of the NN architecture allows us to successfully mimic cognitive functions such as image recognition.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Stacking Neurons">
+          <h2 class="slide-title">Stacking Neurons: The Multilayer Perceptron</h2>
+          <p>Hidden layer 1 — 4 neurons · Hidden layer 2 — 4 neurons · Output layer — 2 classes.</p>
+        </section>
+
+        <section class="slide" data-title="What is the Network Actually Learning?">
+          <h2 class="slide-title">What is the Network Actually Learning?</h2>
+          <ul>
+            <li>Complex non-linear decision boundaries can be synthesized by an MLP.</li>
+            <li>The more layers and neurons, the more flexible the decision boundaries can be.</li>
+            <li>Both blessing and curse — if training data is sufficient, the MLP can solve very complex classification problems it has not seen before. But if training is insufficient, the model may overfit and not generalize well. <em>More on this later.</em></li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Training and Back-Propagation">
+          <h2 class="slide-title">Training and Back-Propagation</h2>
+          <p>Minimizing the loss function iteratively.</p>
+        </section>
+
+        <section class="slide" data-title="Loss Functions">
+          <h2 class="slide-title">Loss Functions</h2>
+          <ul>
+            <li>In any supervised learning context, we want the ML model output <em>ŷ</em> to be as close to the ground truth label <em>y</em> as possible. But what does that mean precisely?</li>
+            <li>In classification, perhaps we can maximize <em>P</em>(<em>y</em> = <em>ŷ</em>)?</li>
+            <li>In regression, perhaps we should minimize <em>E</em>[(<em>y</em> − <em>ŷ</em>)<sup>2</sup>]?</li>
+            <li>In both cases, we need the probability distribution of the features and the label. Conceptually, we can learn this distribution to some degree using training data — hence the more data we have, the better.</li>
+            <li>Whether regression or classification, we need to define a loss function to minimize over the model parameters <em>θ</em>.</li>
+            <li>For regression, MSE (mean square error) is the natural choice.</li>
+            <li>For classification, the probability of error is not suitable, but we have a proxy called cross entropy.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Mean Squared Error (MSE)">
+          <h2 class="slide-title">Mean Squared Error (MSE)</h2>
+          <ul>
+            <li>In regression, the model directly outputs an estimate of the continuous label, i.e. <em>ŷ</em> = <em>f</em><sub>θ</sub>(<em>x</em>), as we saw earlier.</li>
+            <li>For a given <em>x</em>, <em>ŷ</em> is a function of <em>θ</em>, hence (<em>y</em> − <em>ŷ</em>)<sup>2</sup> will also be a function of <em>θ</em>.</li>
+            <li>Need to find the <em>θ</em> that minimizes (<em>y</em> − <em>ŷ</em>)<sup>2</sup> on average, where averaging is over the distribution of <em>x</em> and <em>y</em>.</li>
+            <li>Since we only have training data but not exact distributions, we can approximate the desired average by averaging over all the training data, hence this loss function works:</li>
+          </ul>
+          <p><em>L</em>(<em>θ</em>) = (1/<em>N</em>) Σ<sub><em>i</em>=1</sub><sup><em>N</em></sup>(<em>y</em><sub><em>i</em></sub> − <em>ŷ</em><sub><em>i</em></sub>)<sup>2</sup></p>
+          <p>This is generally not a simple function of <em>θ</em>, and hence we cannot minimize it in a closed-form expression.</p>
+        </section>
+
+        <section class="slide" data-title="Cross Entropy">
+          <h2 class="slide-title">Cross Entropy</h2>
+          <ul>
+            <li>In a classification problem where <em>y</em> has a sample space with <em>L</em> values, the ML model must output a probability distribution over those <em>L</em> values. <em>We’ll see how in just a while.</em></li>
+            <li>In this case, we don’t only have a single “point” estimate of <em>y</em>, as in regression. Instead, the model outputs its confidence that <em>y</em> takes each of its <em>L</em> possible values, i.e. it outputs:</li>
+          </ul>
+          <p><em>p</em><sub>1</sub>, …, <em>p</em><sub>L</sub> &nbsp;s.t.&nbsp; Σ<sub><em>l</em>=1</sub><sup><em>L</em></sup> <em>p</em><sub><em>l</em></sub> = 1</p>
+          <ul>
+            <li>We would naturally want max(<em>p</em><sub>1</sub>, …, <em>p</em><sub>L</sub>) = <em>p</em><sub>y</sub>, where <em>y</em> is the ground truth label, for all training samples.</li>
+            <li>But this problem statement does not afford us any way to find the optimal <em>θ</em>.</li>
+            <li>Hence, we need to bring in the concept of entropy.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Cross Entropy — Definition">
+          <h2 class="slide-title">Cross Entropy</h2>
+          <p>In general, the cross entropy of two distributions <em>P</em> and <em>Q</em> over the same discrete sample space <em>S</em> is:</p>
+          <p><em>H</em>(<em>P</em>, <em>Q</em>) = − Σ<sub><em>x</em>∈<em>S</em></sub> <em>P</em>(<em>x</em>) log<sub>2</sub> <em>Q</em>(<em>x</em>)</p>
+          <ul>
+            <li>It is minimal when <em>P</em> = <em>Q</em>, i.e. the two distributions are identical. In that sense, it’s a form of distance between two distributions.</li>
+            <li>Now recall that our ML model outputs a probability distribution over the sample space of <em>y</em>, and that we have the ground truth value of <em>y</em>.</li>
+            <li>Suppose <em>S</em><sub>y</sub> = {1, 2, 3, 4}, and the true value of <em>y</em> = 2. Then the true distribution is <em>p</em><sub>1</sub> = <em>p</em><sub>3</sub> = <em>p</em><sub>4</sub> = 0 and <em>p</em><sub>2</sub> = 1.</li>
+            <li>The ML model will estimate a different distribution from the true one, let’s call this distribution <em>p̂</em><sub><em>l</em></sub>, <em>l</em> = 1, 2, 3, 4.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Cross Entropy — Loss">
+          <h2 class="slide-title">Cross Entropy</h2>
+          <p>This is an incredibly elegant result! Since <em>p̂</em><sub><em>y</em></sub> is the <em>y</em>-th output of the ML model, its relationship to the parameter vector <em>θ</em> is explicit.</p>
+          <p><em>L</em>(<em>θ</em>) = − (1/<em>N</em>) Σ<sub><em>i</em>=1</sub><sup><em>N</em></sup> log <em>p̂</em><sub><em>y</em><sub><em>i</em></sub></sub>(<em>θ</em>)</p>
+          <p>where <em>y</em><sub><em>i</em></sub> denotes the ground truth label of the i-th data sample.</p>
+        </section>
+
+        <section class="slide" data-title="Optimization of Loss Function">
+          <h2 class="slide-title">Optimization of Loss Function</h2>
+          <p><em>Training using gradient descent.</em></p>
+        </section>
+
+        <section class="slide" data-title="Method of Steepest Descent">
+          <h2 class="slide-title">Method of Steepest Descent</h2>
+          <ul>
+            <li>Both MSE and cross-entropy loss functions are differentiable with respect to <em>θ</em>, as we’ll see soon. But still we can’t solve ∇<em>L</em>(<em>θ</em>) = d<em>L</em>(<em>θ</em>)/d<em>θ</em> = 0.</li>
+            <li>A simple numerical method for approximately solving this equation is to “descend” towards the nearest minimum through a sequence of steps taken in the direction of steepest descent.</li>
+            <li>The direction of steepest <em>ascent</em> is given by ∇<em>L</em>(<em>θ</em>), hence the direction of steepest <em>descent</em> is the negative of that.</li>
+            <li>Denoting the step size or learning rate by <em>μ</em>, we have the SD iteration:</li>
+          </ul>
+          <p><em>θ</em><sub><em>t</em>+1</sub> = <em>θ</em><sub><em>t</em></sub> − <em>μ</em>∇<em>L</em>(<em>θ</em><sub><em>t</em></sub>)</p>
+          <p>The iterations continue until a “stopping criterion” is met, e.g. <em>θ</em> changes by less than a threshold from one iteration to the next, or a maximum number of iterations is reached.</p>
+        </section>
+
+        <section class="slide" data-title="Batch, Mini-Batch and SGD">
+          <h2 class="slide-title">Batch, Mini-Batch and Stochastic Gradient Descent (SGD)</h2>
+          <ul>
+            <li>Recall that our two loss functions are averages over the <em>entire</em> set of training samples. The size of this data set is normally very large (at least in the thousands).</li>
+            <li>The computational complexity and time of gradient calculation both scale linearly with <em>N</em>, the size of the training data.</li>
+            <li>Using all training samples (known as <strong>batch</strong> processing) for gradient descent optimization will therefore consume a lot of resources and be very slow.</li>
+          </ul>
+          <p><em>L</em>(<em>θ</em>) ≈ (1/<em>N</em><sub>b</sub>) Σ<sub><em>i</em>∈batch</sub> <em>l</em><sub><em>i</em></sub>(<em>θ</em>)</p>
+          <p>where <em>N</em><sub>b</sub> ≪ <em>N</em> is the mini-batch size, and <em>l</em><sub><em>i</em></sub>(<em>θ</em>) is either squared error or cross entropy for the i-th training sample.</p>
+        </section>
+
+        <section class="slide" data-title="SGD — Terminology">
+          <h2 class="slide-title">Batch, Mini-Batch and Stochastic Gradient Descent (SGD)</h2>
+          <p>The mini-batch size <em>N</em><sub>b</sub> can be anything from 1 to <em>N</em>. Generally accepted terminology is:</p>
+          <ul>
+            <li><strong>Batch GD:</strong> <em>N</em><sub>b</sub> = <em>N</em> (i.e. use all training samples per iteration)</li>
+            <li><strong>Mini-Batch GD:</strong> 2 ≤ <em>N</em><sub>b</sub> &lt; <em>N</em> (i.e. use more than 1 but fewer than all training samples per iteration)</li>
+            <li><strong>Stochastic GD:</strong> <em>N</em><sub>b</sub> = 1 (i.e. use only one sample per iteration)</li>
+          </ul>
+          <p>Unfortunately, SGD is also often used to refer to mini-batch GD. Putting aside terminology, the main idea here is:</p>
+          <ul>
+            <li>Use <em>N</em><sub>b</sub> as a trade-off variable — smaller <em>N</em><sub>b</sub> ⇒ noisier but faster and less complex updates.</li>
+            <li>Default in sklearn is <em>N</em><sub>b</sub> = 200. It can be reset using the <code>batch_size</code> input parameter.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Epochs and Batches">
+          <h2 class="slide-title">Epochs and Batches</h2>
+          <ul>
+            <li>As we proceed through the batches, we eventually pass all the training data through the SGD solver.</li>
+            <li>Each complete pass through the training data is known as a <strong>training epoch</strong>.</li>
+            <li>The number of epochs we use for training is arbitrary — it depends on how much time and computational resources we have.</li>
+          </ul>
+          <p><em>Mini-batches: weights are updated once per mini-batch using GD, over several epochs.</em></p>
+        </section>
+
+        <section class="slide" data-title="Choice of Step Size / Learning Rate">
+          <h2 class="slide-title">Choice of Step Size / Learning Rate</h2>
+          <h3>Too small</h3>
+          <p>Crawls toward the minimum — training takes far longer than necessary.</p>
+          <h3>Just right</h3>
+          <p>Converges quickly and smoothly toward the minimum.</p>
+          <h3>Too large</h3>
+          <p>Overshoots the minimum — can oscillate or even diverge.</p>
+          <blockquote class="callout key">
+            <span class="label">Key idea</span>
+            No need to pick the step size manually. Optimizers like Adam adapt the step size automatically.
+          </blockquote>
+        </section>
+
+        <section class="slide" data-title="Overfitting and Regularization">
+          <h2 class="slide-title">Overfitting and Regularization</h2>
+          <ul>
+            <li>If we have more parameters than training data, e.g. an MLP having 1000 weights and 500 training samples, then we can drive the loss function to a value that matches every input feature perfectly with its class. This is an extreme case of the <strong>overfitting</strong> phenomenon.</li>
+            <li>Can visualize it as in the figures.</li>
+            <li>Generalization performance will be poor.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Avoiding Overfitting">
+          <h2 class="slide-title">Overfitting and Regularization</h2>
+          <ul>
+            <li>Avoiding over-fitting by ensuring that the number of training samples exceeds the number of model parameters is obviously something we can do.</li>
+            <li>However, over-fitting is not necessarily due to such an easily detected scenario. It is usually because the underlying model is simpler than what we’ve assumed — but we don’t know the underlying model!</li>
+            <li>All we can do is to try to drive the smallish weights (which are essentially redundant) down to zero.</li>
+            <li>The usual way to do this is to penalize the norm of the parameter vector, i.e. we add a term that drives the norm towards zero.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Backpropagation">
+          <h2 class="slide-title">Backpropagation</h2>
+          <ul>
+            <li>In SGD, we need to compute gradients of the loss function with respect to each and every one of the weights in the NN.</li>
+            <li>To do this we use the chain rule of differentiation, starting from the output layer and progressing backwards.</li>
+            <li>To illustrate, consider one of the output layer weights:</li>
+          </ul>
+          <p><em>ŷ</em> = <em>σ</em>(<em>w</em><sub>1</sub><em>x</em><sub>1</sub> + ⋯) = <em>σ</em>(<em>z</em>)</p>
+          <p>We use the Chain Rule to write d<em>L</em>/d<em>w</em><sub>1</sub> = (d<em>L</em>/d<em>ŷ</em>) · (d<em>ŷ</em>/d<em>w</em><sub>1</sub>) = (d<em>L</em>/d<em>ŷ</em>) <em>σ</em>′(<em>z</em>) <em>x</em><sub>1</sub></p>
+          <ul>
+            <li>All the terms on the RHS can be calculated.</li>
+            <li>In the lecture, we will demonstrate finding the derivative with respect to one of the hidden layer weights.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Convolutional Neural Networks (CNNs)">
+          <h2 class="slide-title">Convolutional Neural Networks (CNNs)</h2>
+          <p><em>Automatic feature extraction on 2D inputs.</em></p>
+        </section>
+
+        <section class="slide" data-title="Why Images Are Problematic for MLPs">
+          <h2 class="slide-title">Why Images Are Problematic for MLPs</h2>
+          <ul>
+            <li>MLPs assume that features are just a flat list: if we swap two features in the order that they are fed into the MLP, the result will be unchanged. In other words, adjacency carries no information as the ordering of features is arbitrary.</li>
+            <li>If an image were to be fed into an MLP, we would “flatten” the pixels, i.e. turn the matrix of 2D pixel values into a 1D vector. This presents the first problem: complexity or “parameter explosion”.</li>
+            <li>A 128 × 128 grayscale image turns into 16,384 features at the input layer.</li>
+            <li>If the first hidden layer only has 128 neurons, we already need over 2 million weights in that first layer.</li>
+            <li>The second problem is that any detail (a face, a sign, etc.) when shifted even by one pixel will not be recognized as being the same thing. The MLP has no built-in notion that something is the “same pattern but moved”.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Convolution or Filtering">
+          <h2 class="slide-title">Convolution or Filtering to Reveal Features</h2>
+          <ul>
+            <li>Convolution or linear filtering is nothing new. A filter for a 2D image can change the image so that certain colours are amplified or edges are sharpened — digital image processing has been doing this for years.</li>
+            <li>The effect of filtering depends critically on the filter kernel <em>w</em><sub><em>j</em>,<em>k</em></sub>, where the total number of weights in the kernel is user-defined. The filter output is:</li>
+          </ul>
+          <p><em>y</em><sub><em>m</em>,<em>n</em></sub> = Σ<sub><em>j</em></sub> Σ<sub><em>k</em></sub> <em>w</em><sub><em>j</em>,<em>k</em></sub> <em>x</em><sub><em>m</em>−<em>j</em>,<em>n</em>−<em>k</em></sub></p>
+          <p>Depicted pictorially this is much less obtuse than this equation! See next page.</p>
+        </section>
+
+        <section class="slide" data-title="Convolution Illustration">
+          <h2 class="slide-title">Convolution Illustration</h2>
+          <p>This kernel is a vertical edge detector — if the image in the window has a vertical edge, say a value of 10 for the first two columns and 0 in the third column, what’s the filter output?</p>
+          <p><em>(The convolution of the kernel over an image window was shown as a figure in the lecture.)</em></p>
+        </section>
+
+        <section class="slide" data-title="Feature Maps">
+          <h2 class="slide-title">Feature Maps: What a Filter Detects</h2>
+          <ul>
+            <li><strong>Original</strong> — the source image.</li>
+            <li><strong>Vertical edges</strong> — what a vertical edge filter detects.</li>
+            <li><strong>Horizontal edges</strong> — what a horizontal edge filter detects.</li>
+            <li><strong>Blur</strong> — what a smoothing filter produces.</li>
+          </ul>
+          <p><em>(Feature map examples were shown as images in the lecture.)</em></p>
+        </section>
+
+        <section class="slide" data-title="CNN Convolutional Layer">
+          <h2 class="slide-title">CNN Convolutional Layer</h2>
+          <ul>
+            <li>A CNN starts with a convolutional layer where the kernels are not hand-designed but are <strong>learned from the data</strong>.</li>
+            <li>In other words, instead of manually deciding what features to extract for a given image processing task, we let the learning algorithm decide from the data.</li>
+            <li>If the task is deciding whether a picture contains a furry animal or not, “furriness” could be a more important feature than “vertical edge”.</li>
+            <li>This automatic feature extraction step is the key to solving the 2<sup>nd</sup> problem of the MLP, its inability to recognise a feature that’s been shifted.</li>
+            <li>But it doesn’t solve the complexity issue, which is where “max pooling” comes in.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="CNN Pooling">
+          <h2 class="slide-title">CNN Pooling</h2>
+          <ul>
+            <li>An image carries redundancy — an edge will carry over multiple pixels, so will a single colour or a texture. This translates also into the feature map.</li>
+            <li>It is therefore sufficient to collapse a small region of a feature map into just one number, e.g. within a 2 × 2 pixel square, retain only the largest value to represent the presence of that feature within the region.</li>
+            <li>This operation is known as <strong>max-pooling</strong>, and solves the 1<sup>st</sup> MLP problem of parameter explosion.</li>
+            <li>We can also have <strong>average-pooling</strong>, which retains the average of the feature map in a region.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Illustration of Max Pooling">
+          <h2 class="slide-title">Illustration of Max Pooling</h2>
+          <p>We just reduced the number of inputs to the next layer by a factor of 4 without losing (much) information.</p>
+          <ul>
+            <li>Max pooling keeps only the strongest activation in each region, i.e. the clearest indication that the feature was found in that region.</li>
+            <li>That’s all the information that the next layer needs for e.g. face recognition or anomaly detection.</li>
+          </ul>
+          <p><em>(A 2×2 → 1 max-pooling illustration was shown in the lecture.)</em></p>
+        </section>
+
+        <section class="slide" data-title="LeNet-5: Pioneering CNN">
+          <h2 class="slide-title">LeNet-5: Pioneering CNN</h2>
+          <p><em>(Architecture diagram shown in the lecture.)</em></p>
+        </section>
+
+        <section class="slide" data-title="LeNet-5: Layers & Feature Maps">
+          <h2 class="slide-title">LeNet-5: Pioneering CNN</h2>
+          <p><em>(Layer-by-layer feature map illustrations shown in the lecture.)</em></p>
+        </section>
+
+        <section class="slide" data-title="Softmax Output Layer">
+          <h2 class="slide-title">Softmax Output Layer</h2>
+          <p><em>(Softmax output layer diagram shown in the lecture.)</em></p>
+        </section>
+
+        <section class="slide" data-title="Creating Probabilities Using Softmax">
+          <h2 class="slide-title">Creating Probabilities Using Softmax</h2>
+          <ul>
+            <li>Recall: in a classification problem where the label space has <em>L</em> values, an ML model should produce probability values <em>p</em><sub>1</sub>, …, <em>p</em><sub>L</sub> where <em>p</em><sub>l</sub> quantifies the confidence that the model has that the true label is <em>l</em>.</li>
+            <li>The forward propagation through a NN (or any ML model) is designed to result in <em>L</em> values, but there is no way that those <em>L</em> values will sum to 1 without normalization. This normalization operation is known as <strong>softmax</strong>.</li>
+            <li>There are obviously many ways in which we can transform <em>L</em> raw numbers into a probability distribution, but softmax makes the most sense:</li>
+          </ul>
+          <p>softmax<sub><em>i</em></sub>(<em>z</em><sub>1</sub>, …, <em>z</em><sub>L</sub>) = e<sup><em>z</em><sub><em>i</em></sub></sup> / Σ<sub><em>l</em>=1</sub><sup><em>L</em></sup> e<sup><em>z</em><sub><em>l</em></sub></sup></p>
+          <ul>
+            <li>It allows the raw input to be any real value (negative or positive); the exponentiation magnifies the gap between the largest and smallest values; most importantly, it has a simple derivative with respect to any <em>z</em><sub><em>i</em></sub>.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="Softmax — Examples">
+          <h2 class="slide-title">Creating Probabilities Using Softmax</h2>
+          <p><strong>Example 1.</strong> Classifying an image as “dog”, “cat” or “airplane”. If the raw NN outputs are (2.0, 1.0, 0.1), the softmax outputs are (0.659, 0.242, 0.099). Instead of a factor of two between the top two choices, now the ratio is 2.72.</p>
+          <p><strong>Example 2.</strong> Same task as above. If the raw NN outputs are (1, 2, 8), the model is more confident in the most likely label than above. The softmax function accentuates that certainty and outputs probabilities of (0.001, 0.002, 0.997).</p>
+        </section>
+
+        <section class="slide" data-title="Recap">
+          <h2 class="slide-title">Recap</h2>
+          <ul>
+            <li>Neural Networks attempt to mimic the structure of the brain.</li>
+            <li>Basic building block is the neuron or perceptron.</li>
+            <li>Most straightforward NN is the multi-layer perceptron (MLP), which is a feedforward NN.</li>
+            <li>Described MSE and cross-entropy loss functions and how to minimize them using training data and SGD.</li>
+            <li>Described Convolutional NN as an ML model naturally able to handle 2D (image) inputs.</li>
+            <li>Ended with a discussion of the softmax function.</li>
+          </ul>
+        </section>
+
+        <section class="slide" data-title="See you next week!">
+          <h2 class="slide-title">See you next week!</h2>
+          <p><em>Survey on this lecture.</em></p>
+        </section>
+
+      </div>
+    </div>
+
+    <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+  </main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var slides   = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var track    = document.getElementById("track");
+  var viewport = document.querySelector(".viewport");
+  var list     = document.getElementById("thumbList");
+  var counter  = document.getElementById("counter");
+  var sidebarCount = document.getElementById("sidebarCount");
+  var progressBar  = document.getElementById("progressBar");
+  var toggle   = document.getElementById("navToggle");
+  var body     = document.body;
+
+  var index = 0;
+  var slideW = 0, slideH = 0;
+  var rail = []; // thumbnail frames, parallel to slides
+
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- build sidebar previews ---------- */
+  slides.forEach(function(slide, i){
+    var title = slide.getAttribute("data-title") || ("Slide " + (i + 1));
+
+    var li = document.createElement("li");
+    var a  = document.createElement("a");
+    a.className = "thumb";
+    a.href = "#";
+    a.setAttribute("role", "button");
+    a.setAttribute("aria-label", "Go to slide " + (i + 1) + ": " + title);
+
+    var t = document.createElement("span");
+    t.className = "thumb-title";
+    t.textContent = (i + 1) + ". " + title;
+
+    var frame = document.createElement("span");
+    frame.className = "thumb-frame";
+    frame.setAttribute("aria-hidden", "true");
+
+    var clone = slide.cloneNode(true);
+    clone.classList.add("thumb-clone");
+    clone.removeAttribute("data-title");
+    clone.removeAttribute("id");
+    clone.querySelectorAll("[id]").forEach(function(el){ el.removeAttribute("id"); });
+    clone.querySelectorAll("a, button, input, [tabindex]").forEach(function(el){
+      el.setAttribute("tabindex", "-1");
+    });
+    frame.appendChild(clone);
+
+    a.appendChild(t);
+    a.appendChild(frame);
+    a.addEventListener("click", function(e){ e.preventDefault(); go(i); });
+    li.appendChild(a);
+    list.appendChild(li);
+
+    rail.push(frame);
+  });
+
+  /* ---------- measurement ---------- */
+  function measure(){
+    if(!slides.length) return;
+    var r = slides[0].getBoundingClientRect();
+    slideW = r.width;
+    slideH = r.height;
+    if(!slideW) return;
+
+    var frameW = rail.length ? rail[0].clientWidth : 0;
+    if(!frameW) return;
+    var scale = frameW / slideW;
+
+    rail.forEach(function(frame){
+      var clone = frame.firstElementChild;
+      clone.style.width  = slideW + "px";
+      clone.style.height = slideH + "px";
+      clone.style.transform = "scale(" + scale + ")";
+      frame.style.height = Math.round(slideH * scale) + "px";
+    });
+  }
+
+  function gapSize(){
+    var g = parseFloat(getComputedStyle(track).gap);
+    return isNaN(g) ? 0 : g;
+  }
+
+  /* ---------- positioning ---------- */
+  function position(){
+    var step = slideW + gapSize();
+    track.style.transform = "translateX(" + (-index * step) + "px)";
+  }
+
+  function go(i){
+    if(!slides.length) return;
+    index = Math.max(0, Math.min(slides.length - 1, i));
+
+    slides.forEach(function(s, j){ s.classList.toggle("is-active", j === index); });
+    rail.forEach(function(f, j){
+      var a = f.parentElement;
+      if(a) a.classList.toggle("active", j === index);
+    });
+
+    position();
+
+    var active = list.querySelectorAll(".thumb")[index];
+    if(active){
+      if(active.scrollIntoView){
+        active.scrollIntoView({ block:"nearest", inline:"nearest" });
+      }
+    }
+
+    var label = (index + 1) + " / " + slides.length;
+    counter.textContent = label;
+    sidebarCount.textContent = label;
+    progressBar.style.width = (slides.length > 1 ? (index / (slides.length - 1)) * 100 : 100) + "%";
+  }
+
+  /* ---------- sidebar toggle ---------- */
+  function toggleNav(){
+    var collapsed = body.classList.toggle("nav-collapsed");
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    /* re-measure after the width transition settles */
+    window.setTimeout(function(){ measure(); go(index); }, reduceMotion ? 0 : 300);
+  }
+
+  toggle.addEventListener("click", toggleNav);
+
+  /* ---------- keyboard ---------- */
+  document.addEventListener("keydown", function(e){
+    if(e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = e.key;
+    if(k === "ArrowRight" || k === "ArrowDown" || k === "PageDown" || k === " " || k === "Spacebar"){
+      e.preventDefault();
+      go(index + 1);
+    } else if(k === "ArrowLeft" || k === "ArrowUp" || k === "PageUp"){
+      e.preventDefault();
+      go(index - 1);
+    } else if(k === "Home"){
+      e.preventDefault(); go(0);
+    } else if(k === "End"){
+      e.preventDefault(); go(slides.length - 1);
+    } else if(k === "n" || k === "N"){
+      e.preventDefault(); toggleNav();
+    }
+  });
+
+  /* ---------- responsive recalculation ---------- */
+  var resizeTimer = null;
+  function onResize(){
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(function(){ measure(); go(index); }, 120);
+  }
+  window.addEventListener("resize", onResize);
+
+  if(window.ResizeObserver){
+    var ro = new ResizeObserver(function(){
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(function(){ measure(); go(index); }, 120);
+    });
+    ro.observe(viewport);
+  }
+
+  /* ---------- init ---------- */
+  function init(){
+    if(window.innerWidth < 960){
+      body.classList.add("nav-collapsed");
+      toggle.setAttribute("aria-expanded", "false");
+    }
+    measure();
+    go(0);
+  }
+
+  if(document.fonts && document.fonts.ready){
+    document.fonts.ready.then(function(){ measure(); position(); });
+  }
+  window.addEventListener("load", function(){ measure(); go(index); });
+  init();
+})();
+
+</script>
+</body>
+</html>

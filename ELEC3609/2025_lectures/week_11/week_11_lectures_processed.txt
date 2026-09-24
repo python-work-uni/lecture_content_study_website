@@ -1,0 +1,377 @@
+================================================================================
+ELEC3609 / ELEC9609: INTERNET SOFTWARE PLATFORMS
+WEEK 11 STUDY GUIDE: CONTINUOUS INTEGRATION & CONTINUOUS DEPLOYMENT (CI/CD)
+================================================================================
+
+--------------------------------------------------------------------------------
+1. THE PROBLEM: INTEGRATION HELL & THE NEED FOR CI
+--------------------------------------------------------------------------------
+Historically ("in the dark times"), software development followed a delayed 
+integration model: developers spent weeks or months working on isolated feature 
+branches before attempting to merge their code into a single mainline repository.
+
+[What is "Integration Hell"?]
+Integration Hell is an agonizing state in software development where merging 
+long-lived developer branches into the master codebase becomes extremely difficult, 
+time-consuming, and error-prone. Developers spend more time attempting to resolve 
+broken builds and merge conflicts than actually writing new features.
+
+[Causes of Integration Hell & Engineering Solutions]
++------------------------------------+-------------------------------------------+
+| Cause of Integration Hell          | Direct Engineering Solution               |
++------------------------------------+-------------------------------------------+
+| 1. Code base drift: Developer      | Rebase / Merge Often: Developers must     |
+|    branches deviate significantly  | sync their local branches with master     |
+|    from master over time.          | multiple times per day.                   |
+|                                    |                                           |
+| 2. Giant Changesets: Commits are   | Small Incremental Changes: Scope work     |
+|    too large and touch too many    | into tiny, isolated commits rather than   |
+|    files simultaneously.           | massive multi-file overhauls.             |
++------------------------------------+-------------------------------------------+
+
+[Definition: Continuous Integration (CI)]
+Continuous Integration (CI) is the software engineering practice of merging all 
+developers' working copies into a shared mainline repository several times a day, 
+accompanied by automated builds and tests to verify each check-in immediately.
+
+Core Philosophy: "Move fast and break nothing."
+
+Memory Retention Tip: Think of CI like paying off technical debt daily in tiny 
+installments rather than being hit with a massive bankruptcy fine at the end of 
+the semester.
+
+
+--------------------------------------------------------------------------------
+2. CI GOALS, PRINCIPLES & SYSTEM CONSIDERATIONS
+--------------------------------------------------------------------------------
+[The 7 Primary Goals of Continuous Integration]
+1. Avoid Integration Hell: Eliminate wasted hours spent manually merging code.
+2. Isolated Test Environment: Provide consistent, reproducible environment for tests.
+3. Isolated Build Environment: Standardize builds independent of developer machines.
+4. Increase Deployment Confidence: Guarantee that HEAD is always in a deployable state.
+5. Enforce Code Quality & Style: Automatically enforce formatting and linting rules.
+6. Multi-Environment Testing: Validate code across multiple OS, runtime, and browser versions.
+7. Streamline Workflows: Boost developer productivity by automating repetitive tasks.
+
+[The 4 Pillars of CI Considerations]
+When setting up a CI pipeline, engineers must balance four critical trade-offs:
+
+1. SPEED: 
+   - Feedback loops must be fast (ideally minutes, not hours).
+   - If CI takes too long, developers context-switch or bypass the pipeline.
+
+2. REPRODUCIBILITY:
+   - A build or test must produce identical results on any machine (CI server or local).
+   - Eliminates the "It works on my machine!" excuse.
+
+3. RELIABILITY:
+   - CI results must be trustworthy with zero tolerance for "flaky" (randomly failing) tests.
+   - A red build must strictly mean broken code.
+
+4. CLARITY:
+   - CI error messages and log outputs must be clear, actionable, and easy to trace.
+
+
+--------------------------------------------------------------------------------
+3. SPECTRUM OF INTEGRATION CONFLICTS & STALE BRANCHES
+--------------------------------------------------------------------------------
+Even with isolated components, application modules must eventually integrate. 
+Integration failure can occur across three distinct levels of severity:
+
+[The 3 Types of Integration Conflicts]
+
+1. MERGE CONFLICT (Textual Level)
+   - Cause: Two developers modify the exact same file and line numbers concurrently.
+   - Detection: Git / Version control system automatically flags the collision.
+   - Fix: Developer manually chooses which code lines to keep.
+
+2. FUNCTIONAL CONFLICT (Build/Compilation Level)
+   - Cause: Concurrent changes in separate files break compilation or build scripts.
+   - Example: Developer A changes a function signature in `auth.js`; Developer B calls 
+     the old function signature in `server.js`. Both files merge cleanly without 
+     textual conflicts, but the build fails!
+   - Detection: Automated CI compiler or build runner.
+
+3. LOGICAL CONFLICT (Runtime Level)
+   - Cause: Code merges and compiles without errors, but combined logic produces 
+     incorrect program execution or runtime bugs.
+   - Example: Developer A updates variable `timeout = 500ms`; Developer B assumes 
+     `timeout = 5000ms`. The application compiles, but requests fail silently at runtime.
+   - Detection: Automated Integration / Unit test suites.
+
++-----------------------+----------------------------------+-----------------------+
+| Conflict Type         | Root Cause                       | Detected By           |
++-----------------------+----------------------------------+-----------------------+
+| 1. Merge Conflict     | Direct textual collision         | Git / VCS             |
+| 2. Functional Conflict| Interface / Signature mismatch   | Compiler / Builder    |
+| 3. Logical Conflict   | Behavioral / Business logic clash| Automated Test Suites |
++-----------------------+----------------------------------+-----------------------+
+
+[Stale Branches & The Rebase Penalty]
+- Golden Rule of VCS: `HEAD` (master/main branch) must always remain functional.
+- Responsibility Rule: The developer who lands their branch LAST is responsible for 
+  resolving all integration conflicts.
+
+The Risk of "Stale" Branches:
+- The longer a branch remains unmerged, the more master drifts away.
+- When the branch is finally merged, the developer faces a "Rebase Penalty"—spending 
+  more time rebasing and fixing broken tests than it took to write the feature.
+- Worst Case: The feature branch becomes so obsolete that it must be completely discarded.
+
+[Why Small Incremental Changes Win]
+- Fast Bug Isolation: Small commits mean smaller diffs, making integration bugs easy 
+  to trace and fix.
+- Cheap Rollbacks: If a breaking bug slips through, reverting a tiny commit loses 
+  only a few minutes of work.
+
+
+--------------------------------------------------------------------------------
+4. THE CI PIPELINE: LINTING VS. STATIC ANALYSIS
+--------------------------------------------------------------------------------
+The first gate in a CI pipeline validates code health before running heavy builds.
+
+[Definitions]
+- Linting: The process of running lightweight static checks to analyze code for 
+  syntax errors, style guide violations, and suspicious constructs. (Named after the 
+  unix `lint` tool created for C).
+- Static Analysis: A comprehensive evaluation of program source code without executing 
+  it, analyzing deep AST (Abstract Syntax Tree) structures, control-flow paths, and type systems.
+
+[Linting vs. Static Analysis Comparison Matrix]
++----------------------+---------------------------------+---------------------------------+
+| Feature              | Linting                         | Static Code Analysis            |
++----------------------+---------------------------------+---------------------------------+
+| Execution Speed      | Blazing fast (seconds)          | Slower, computationally heavy   |
+| Scope of Check       | File-by-file                    | Entire codebase / AST           |
+| False Positive Rate  | Zero (100% deterministic rules) | Low-to-Moderate tolerance       |
+| Automatic Fixing     | High (e.g., `eslint --fix`)     | Low (requires manual refactor)  |
++----------------------+---------------------------------+---------------------------------+
+| Typical Rule Targets | - Code style & formatting       | - Cyclomatic Complexity         |
+|                      | - Deprecated APIs               | - N-Path Complexity             |
+|                      | - Syntax errors                 | - Type inference checks         |
+|                      | - Naming conventions            | - Unused functions across modules|
+|                      | - Unused variables / imports    | - Security vulnerability scanning|
++----------------------+---------------------------------+---------------------------------+
+
+Key Distinction:
+- Linting asks: "Is this file written correctly according to our formatting and syntax rules?"
+- Static Analysis asks: "Is this overall architecture structurally sound, complex, or vulnerable?"
+
+
+--------------------------------------------------------------------------------
+5. THE CI PIPELINE: BUILDING BACKEND VS. FRONTEND
+--------------------------------------------------------------------------------
+Traditionally, "building" meant compiling source code into machine code (e.g., C/C++ to binary). 
+However, modern interpreted/dynamic languages (JS, Python, PHP, Ruby) do not compile to binaries. 
+In CI, "building" has evolved into asset preparation and environment setup.
+
+[Backend Build Process (Server-Side)]
+1. Optimizing Autoloaders: Pre-indexing class paths and symbol maps for fast runtime lookup.
+2. Pre-populating Caches: Pre-building route caches, database schemas, and configuration trees.
+3. Pre-rendering Templates: Compiling server-side views/templates (Jinja, EJB, Blade).
+4. Vendoring Dependencies: Downloading and locking backend libraries (`npm ci`, `pip install`).
+
+[Frontend Build Process (Client-Side)]
+1. Asset Bundling: Packing multiple JS/CSS modules into single optimized bundles (Vite, Webpack).
+2. Minification & Obfuscation: Removing whitespace, shortening variable names, and stripping comments.
+3. Image Optimization: Applying lossy or lossless compression to static media assets.
+4. Transpilation (Source-to-Source): Converting modern JS (ES6+) or TypeScript down to ES5 using 
+   tools like Babel so older browsers can execute it.
+5. Vendoring Dependencies: Pulling third-party web libraries into distribution builds.
+
+
+--------------------------------------------------------------------------------
+6. THE CI PIPELINE: TESTING STRATEGIES & TESTING PYRAMID
+--------------------------------------------------------------------------------
+Testing in CI runs in a strict hierarchical order from fast/isolated to slow/broad:
+
+1. UNIT TESTING
+   - Target: Individual functions or classes in complete isolation.
+   - Tools: JUnit (Java), PyTest / Nosetests (Python), Go test (Golang), PHPUnit (PHP), RSpec (Ruby).
+   - Key Traits: White-box testing, zero/minimal external dependencies (uses Mocks/Stubs), 
+     executes in milliseconds.
+
+2. INTEGRATION TESTING
+   - Target: Interaction boundaries between connected modules or external services (e.g., App + Database).
+   - Key Traits: Black-box testing focused on API contracts and data exchange rather than internal code logic. 
+     Runs directly after unit tests pass.
+
+3. ACCEPTANCE (END-TO-END / E2E) TESTING
+   - Target: Whole application workflow from the user's perspective.
+   - Key Traits: Simulates real browser interactions, cross-browser testing (Selenium, Cypress, Playwright). 
+     Slowest to run, but crucial for validating business requirements.
+
+4. REGRESSION TESTING
+   - Target: Ensuring that new changes have not broken existing functionality.
+   - Rule of Thumb: Whenever a bug is discovered in production, write a dedicated regression 
+     test covering that exact edge case before applying the fix!
+
+[The CI Execution Flow Diagram]
+   +-----------------------+
+   | 1. Code Commit        |
+   +-----------+-----------+
+               |
+               v
+   +-----------------------+
+   | 2. Lint & Static Check| ---> (Fails fast on syntax/style)
+   +-----------+-----------+
+               |
+               v
+   +-----------------------+
+   | 3. Build & Transpile  | ---> (Fails on missing imports/assets)
+   +-----------+-----------+
+               |
+               v
+   +-----------------------+
+   | 4. Unit Tests         | ---> (Fails on broken function logic)
+   +-----------+-----------+
+               |
+               v
+   +-----------------------+
+   | 5. Integration Tests  | ---> (Fails on API contract mismatches)
+   +-----------+-----------+
+               |
+               v
+   +-----------------------+
+   | 6. Acceptance (E2E)   | ---> (Fails on broken user flows)
+   +-----------+-----------+
+               |
+               v
+   +-----------------------+
+   | 7. Publish Artifacts  |
+   +-----------------------+
+
+
+--------------------------------------------------------------------------------
+7. PUBLISHING & ARTIFACT MANAGEMENT
+--------------------------------------------------------------------------------
+Once all CI testing gates pass, the pipeline produces immutable output files called Artifacts.
+
+[What is a Build Artifact?]
+A build artifact is a compiled, bundled, or packaged output file produced by a CI job that 
+is ready for distribution or deployment.
+
+Common Artifact Formats:
+- Archives: `.tar.gz`, `.zip` containing static files or backend code.
+- Executable Binaries: Standard compiled binary files (e.g., Go/Rust binaries).
+- Mobile Applications: `.apk` (Android package) or `.ipa` (iOS package).
+- OS Packages: `.deb` (Debian/Ubuntu), `.rpm` (RedHat/CentOS).
+- Container Images: Docker images published to a registry (Docker Hub, ECR).
+
+[The Publishing Phase]
+Publishing is the process of pushing validated CI artifacts to a centralized artifact 
+repository (e.g., Nexus, Artifactory, S3, Docker Registry) so they can be accessed by 
+deployment pipelines.
+
+
+--------------------------------------------------------------------------------
+8. RELEASE & DEPLOYMENT STRATEGIES
+--------------------------------------------------------------------------------
+[Deployment Definition]
+Deployment is the operational process of delivering the validated release artifact to 
+end users on production infrastructure (e.g., updating server fleets, publishing an APK).
+
+Continuous Delivery vs. Continuous Deployment:
+- Continuous Delivery: CI automatically builds and tests code, creating a deployable artifact, 
+  but actual deployment to production requires a manual human approval step.
+- Continuous Deployment: CI/CD automatically deploys every passed change to production 
+  with zero human intervention.
+
+[Two Major Production Deployment Strategies]
+
+1. ROLLING DEPLOYMENT
+   - Concept: Nodes in a server pool are updated incrementally in batches (e.g., 20% at a time).
+   - Mechanism: Traffic is drained from Batch 1 -> Batch 1 updated -> Traffic restored -> Repeat for Batch 2.
+   - Advantages: Zero downtime, requires no extra infrastructure overhead.
+   - Disadvantages: During the deployment window, users will interact with a mix of old (v1) 
+     and new (v2) server versions simultaneously. Database schemas must support backward compatibility!
+
+   ASCII Diagram: Rolling Deployment
+   Step 1: [ v1 ] [ v1 ] [ v1 ] [ v1 ]  (All old version)
+   Step 2: [ v2 ] [ v1 ] [ v1 ] [ v1 ]  (Batch 1 updated)
+   Step 3: [ v2 ] [ v2 ] [ v1 ] [ v1 ]  (Batch 2 updated)
+   Step 4: [ v2 ] [ v2 ] [ v2 ] [ v2 ]  (Rollout complete)
+
+2. BLUE-GREEN DEPLOYMENT
+   - Concept: Maintain two identical physical environments: Blue (Active Production) and Green (Idle/New).
+   - Mechanism:
+     1. Deploy new code (v2) entirely to the idle Green environment.
+     2. Run post-deployment smoke tests on Green.
+     3. Instantly flip the Router/Load Balancer switch to point 100% of user traffic to Green.
+     4. Blue becomes the new idle environment.
+   - Advantages: Zero downtime, zero mix of old/new code, instantaneous rollback (just flip the router 
+     switch back to Blue if an issue occurs).
+   - Disadvantages: Requires 2x infrastructure cost during deployment.
+
+   ASCII Diagram: Blue-Green Deployment
+                 +-------------------+
+                 | Load Balancer /   |
+                 | Router Switch     |
+                 +---------+---------+
+                           |
+             +-------------+-------------+
+             |                           |
+             v                           v
+   +-------------------+       +-------------------+
+   | BLUE ENVIRONMENT  |       | GREEN ENVIRONMENT |
+   | (v1 - ACTIVE)     |       | (v2 - NEW IDLE)   |
+   +-------------------+       +-------------------+
+             |                           |
+             +--- [ Switch Traffic ] ----+
+
+
+--------------------------------------------------------------------------------
+9. POST-DEPLOYMENT VERIFICATION & TELEMETRY
+--------------------------------------------------------------------------------
+Deployment is not the end of the engineering lifecycle. Once code is in the hands of real users, 
+post-deployment monitoring takes over:
+
+1. Automated Smoke Testing: Running high-level synthetic transactions immediately after deployment 
+   to verify basic system health.
+2. Centralized Logging: Aggregating server and application logs (Elasticsearch, Logstash, Kibana) 
+   to catch unhandled exceptions in real time.
+3. Real-Time Telemetry & APM: Monitoring application performance metrics (latency, error rates, 
+   CPU utilization, throughput) to trigger automatic rollbacks if performance degrades.
+
+
+--------------------------------------------------------------------------------
+10. REVISION SUMMARY & MEMORY CHEAT SHEET
+--------------------------------------------------------------------------------
+[Mnemonics for Quick Recall]
+
+- "The 4 CI Considerations" -> R-R-S-C:
+  * Reliability (No flaky tests)
+  * Reproducibility (Identical builds everywhere)
+  * Speed (Fast feedback loops)
+  * Clarity (Actionable build logs)
+
+- "The 3 Conflict Levels" -> M-F-L:
+  * Merge (Textual collision in same file)
+  * Functional (Build/compilation failure across files)
+  * Logical (Runtime behavior failure)
+
+- "Linting vs Static Analysis" -> L-S Matrix:
+  * Linting = Fast, File-level, Formatting, Auto-fixable, Zero false positives.
+  * Static Analysis = Comprehensive, Codebase-wide, Structural/AST, Manual fix, Cyclomatic complexity.
+
+- "Blue-Green vs Rolling":
+  * Blue-Green = 2x Infra cost, Hard router switch, Zero version mixing.
+  * Rolling = 1x Infra cost, Incremental update, Temporary version mixing.
+
+[Quick-Fire True/False Exam Check]
+1. True or False: Interpreted languages like Python or JavaScript do not have a "build" phase in CI.
+   -> FALSE: While they lack compilation to binary, building includes asset bundling, transpilation, 
+      minification, cache pre-populating, and dependency vendoring.
+
+2. True or False: Integration testing is a white-box testing technique that should run before unit tests.
+   -> FALSE: Integration testing is black-box (focusing on API interfaces) and runs AFTER unit tests pass.
+
+3. True or False: Blue-Green deployment requires updating servers in small percentages while serving traffic.
+   -> FALSE: That describes Rolling Deployment. Blue-Green spins up a parallel environment and flips traffic all at once.
+
+4. True or False: Conflicts are expected to be resolved by the developer whose branch was checked out first.
+   -> FALSE: The developer who attempts to merge LAST is responsible for resolving integration conflicts against HEAD.
+
+================================================================================
+END OF WEEK 11 STUDY GUIDE
+================================================================================

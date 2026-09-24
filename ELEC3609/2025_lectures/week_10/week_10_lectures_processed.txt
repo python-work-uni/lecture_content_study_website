@@ -1,0 +1,340 @@
+================================================================================
+ELEC3609 / ELEC9609: INTERNET SOFTWARE PLATFORMS
+WEEK 10 STUDY GUIDE: SOFTWARE QUALITY, TESTING & DEFENSIVE DESIGN
+================================================================================
+
+--------------------------------------------------------------------------------
+1. PHILOSOPHY OF TESTING & THE "TESTING BUDGET"
+--------------------------------------------------------------------------------
+Testing is not about running code aimlessly; it is an economic and engineering 
+trade-off. Every test costs developer time to write, maintenance effort when 
+code changes, and execution time in CI/CD pipelines.
+
+[The Testing Budget Concept]
+- You have a finite "budget" (time, computational resources, human effort).
+- Focus time where it provides the maximum value first.
+- Prioritize Critical Functionality > Depth > General Breadth.
+  * Example: If users cannot log in, testing secondary settings pages is irrelevant.
+
+Key Principle:
+"A test is only as good as the bug it catches or prevents. Tests without clear value 
+are liability debt."
+
+--------------------------------------------------------------------------------
+2. THE FOUR LEVELS OF TESTING (THE TESTING STACK)
+--------------------------------------------------------------------------------
+Testing occurs across different levels of abstraction in software architecture:
+
++--------------------+-----------------------------------+-----------------------------------+
+| Level              | Scope / Target                    | Typical Techniques & Tools        |
++--------------------+-----------------------------------+-----------------------------------+
+| 1. Unit Testing    | Smallest isolated unit (function, | Mocks, Stubs, PyTest, Jest,       |
+|                    | method, or class).                | White-box testing.                |
+|                    |                                   |                                   |
+| 2. Integration     | Interactions and boundaries       | Component stubs, drivers,         |
+|    Testing         | between modules or services.      | API contract testing.             |
+|                    |                                   |                                   |
+| 3. System Testing  | Complete end-to-end (E2E) system  | Selenium, Cypress, Playwright,    |
+|    (End-to-End)    | behavior (UI, DB, network).       | Black-box testing under load.     |
+|                    |                                   |                                   |
+| 4. Acceptance      | Verifying system meets business   | Behavior-Driven Dev (BDD),        |
+|    Testing         | requirements & user expectations. | User stories, automated UAT.      |
++--------------------+-----------------------------------+-----------------------------------+
+
+[Detailed Breakdown of Levels]
+
+1. Unit / Functional Testing:
+   - Target: Single isolated subroutine (e.g., `validate_email()`).
+   - Rule: Isolate from external dependencies (DBs, network, filesystem) using Mocks/Doubles.
+   - Benefit: Runs in milliseconds; pinpoints exact failure location immediately.
+
+2. Integration Testing:
+   - Target: Communication between two or more modules (e.g., Service A calling Database B).
+   - Core Concepts:
+     * Stub: A dummy control module providing hardcoded data to the module under test.
+     * Driver: A wrapper/invoker that simulates the calling module.
+
+3. System (End-to-End) Testing:
+   - Target: The entire system stack operating as a whole.
+   - Validates non-functional qualities alongside core workflows:
+     * Functional correctness across all layers.
+     * Security controls under live network conditions.
+     * Overall performance and hardware resource utilization.
+
+4. Acceptance Testing:
+   - Target: Verification of business requirement satisfaction.
+   - Approach: Driven directly by Use-Cases and User Stories.
+   - Note: While written from the user perspective, acceptance tests can and should be automated.
+
+--------------------------------------------------------------------------------
+3. TESTING PERSPECTIVES: BLACK-BOX VS. WHITE-BOX
+--------------------------------------------------------------------------------
+Tests are categorized by how much internal source code knowledge the tester possesses:
+
++-----------------------+-----------------------------------+-----------------------------------+
+| Feature               | Black-Box Testing                 | White-Box Testing                 |
++-----------------------+-----------------------------------+-----------------------------------+
+| Internal Code Access  | None (Opaque box)                 | Full access (Transparent box)     |
+| Basis of Test Cases   | Functional specs, user stories    | Source code logic, branch paths   |
+| Primary Testing Level | System & Acceptance Testing       | Unit & Integration Testing        |
+| Primary Tester        | QA team, end-users, external pen  | Developers writing the code       |
+| Advantage             | Unbiased; tests actual usage      | Deep code path & edge coverage    |
++-----------------------+-----------------------------------+-----------------------------------+
+
+--------------------------------------------------------------------------------
+4. REGRESSION TESTING
+--------------------------------------------------------------------------------
+Regression testing verifies that new code, configuration, or infrastructure changes 
+have not broken existing, working features.
+
+[Key Execution Strategies]
+- Continuous Integration (CI): Run automated regression test suites on every pull 
+  request / code commit.
+- Fail Fast Ordering: 
+  1. Run Linters and Static Analysis (seconds).
+  2. Run Fast Unit Tests (seconds to tens of seconds).
+  3. Run Integration Tests (minutes).
+  4. Run E2E & System Regression Suites (before release/deploy).
+
+Memory Retention Tip: "Preventing regressions means building a safety net: every fixed 
+bug should immediately become a new regression test so it can never return silently."
+
+--------------------------------------------------------------------------------
+5. INPUT SPACE TESTING: BRUTE-FORCE VS. FUZZING
+--------------------------------------------------------------------------------
+How do we test inputs to ensure robustness?
+
+[Can We Brute-Force All Inputs?]
+- Short Answer: NO.
+- Explanation: The input domain for non-trivial software is functionally infinite.
+  * Example: Testing a phone dialer by calling every possible 10-digit number takes 
+    decades and wastes immense network resources.
+- Gaps left by simple input loops:
+  * Concurrency issues (race conditions).
+  * Request timing and stateful input order.
+  * Seed randomness and non-deterministic behavior.
+  * Hardware / network failures.
+
+[Fuzzing (Fuzz Testing)]
+- Definition: Automated testing that generates invalid, non-standard, or random inputs 
+  to feed into target interfaces to observe crashes or unexpected state changes.
+- How Fuzzing Works:
+  1. Define valid input boundaries/grammar (e.g., valid JSON schema).
+  2. The Fuzzer mutates input (semi-valid/malformed data: overflow strings, weird Unicode, 
+     null bytes, negative numbers).
+  3. Execute target program and monitor for failures.
+- Vulnerabilities Uncovered by Fuzzing:
+  * Unhandled edge cases and exceptions.
+  * Memory leaks and buffer overflows.
+  * Application crashes and denial of service conditions.
+  * Security breaches (injection flaws).
+
+--------------------------------------------------------------------------------
+6. NON-FUNCTIONAL TESTING TYPES & CHAOS ENGINEERING
+--------------------------------------------------------------------------------
+
+[1. Performance & Load Testing]
+Determines how the system behaves under stressful operational conditions.
+- Volume Testing: Verifies functionality when processing large quantities of data.
+- Load Testing: Measures response time and system health under EXPECTED peak user traffic 
+  (e.g., testing 1,000 to 10,000 concurrent users).
+- Stress Testing: Pushes system BEYOND normal limits until it breaks to evaluate 
+  graceful degradation and failure points.
+
+[2. Usability Testing]
+Assesses how intuitive, accessible, and user-friendly the system interface is.
+- Hallway Testing: Asking random people in the building to perform a task.
+- Expert Review: Usability specialists analyzing the workflow against standard heuristics.
+- A/B Testing: Running two UI variants concurrently and measuring user conversion metrics.
+
+[3. Robustness / Destructive Testing]
+Intentionally breaks system components to verify system resilience and recovery capabilities.
+Key questions answered:
+- Will the system gracefully recover from failure?
+- Is there any data loss during a crash?
+- Are database backups operational and verified?
+- How long is the Mean Time to Recovery (MTTR)?
+
+[4. Chaos Engineering: The Netflix Simian Army]
+Netflix pioneered automated, production-level destructive testing to enforce extreme 
+high-availability and fault tolerance.
+
+Simian Army Suite Summary:
++-------------------+-------------------------------------------------------------------+
+| Monkey Tool       | Responsibility / Disruption Action                                |
++-------------------+-------------------------------------------------------------------+
+| Chaos Monkey      | Randomly terminates active production virtual machine instances.  |
+| Latency Monkey    | Injects artificial network delays to simulate slow services.      |
+| Conformity Monkey | Identifies and kills instances not complying with best practices.  |
+| Doctor Monkey     | Detects unhealthy instances and routes traffic away safely.       |
+| Chaos Gorilla     | Simulates a catastrophic outage of an entire Cloud Availability   |
+|                   | Zone (AZ).                                                        |
++-------------------+-------------------------------------------------------------------+
+
+--------------------------------------------------------------------------------
+7. ARCHITECTURAL APPROACHES: THE TEST PYRAMID & ANTI-PATTERNS
+--------------------------------------------------------------------------------
+
+[The Practical Test Pyramid]
+        /\
+       /  \       Acceptance / E2E Tests (Fewest, Slower, High Maintenance Cost)
+      /----\
+     / Integration \   Integration Tests (Moderate count, medium speed)
+    /---------------\
+   /    Unit Tests   \  Unit Tests (Base layer: Thousands, Fast, Isolated, Low Cost)
+  /-------------------\
+
+Why the Pyramid Works:
+- Unit tests catch low-level logic bugs instantly at minimal execution cost.
+- High-level E2E tests are reserved for validating overall workflow wiring.
+
+[The Ice-Cream Cone Anti-Pattern (AVOID THIS!)]
+- Description: Inverted structure with massive manual/E2E test suits at top and 
+  almost no unit tests at bottom.
+- Consequence: Extremely slow test runs, brittle builds, high maintenance effort, and 
+  delayed feedback to developers.
+
+[Key Takeaway for Test Strategy]
+- Prioritize covering ACCEPTANCE CRITERIA over strict adherence to rigid test diagrams.
+- Measure: Risk = (Cost of Incident) x (Likelihood of Occurrence).
+
+--------------------------------------------------------------------------------
+8. LINTING & STATIC CODE ANALYSIS
+--------------------------------------------------------------------------------
+Linters are static analysis tools that analyze code BEFORE execution to find structural, 
+stylistic, and common logic defects.
+
+What Linters Detect Automatically:
+- Unused variables, parameters, and imports.
+- Unreachable code blocks (e.g., code following a `return` or `throw`).
+- Naming convention violations (e.g., PEP 8 in Python, camelCase in JS).
+- Syntax errors and type mismatches (when combined with static type checkers).
+
+--------------------------------------------------------------------------------
+9. DESIGNING HIGH-QUALITY TEST CASES
+--------------------------------------------------------------------------------
+
+[Core Design Guidelines]
+1. Focus on Quality over Quantity: Eliminate duplicate tests that test identical logic.
+2. Diversity of Input: Test normal cases, boundary values, invalid types, and malicious inputs.
+3. Test Basic Path First: Ensure the happy path works before searching for obscure edge cases.
+4. Malicious Mindset: Always ask: "How could an attacker exploit this input field?"
+
+[Technique 1: Equivalence Partitioning]
+- Definition: Dividing input data into equivalence classes (partitions) where the 
+  system treats all items in a partition identically.
+- Purpose: Pick ONE representative test case per partition to minimize redundancy.
+
+[Technique 2: Boundary Value Analysis (BVA)]
+- Bugs concentrate at the edges of partitions (e.g., `>` vs `>=`).
+- Always test:
+  * Minimum value & Maximum value.
+  * Just below boundary & Just above boundary.
+  * Zero (0), empty collections, null/undefined values.
+
+[Technique 3: Guideline-Based Testing]
+- Target common developer oversights:
+  * Multibyte Unicode characters (emoji, Chinese, Arabic).
+  * Right-to-left (RTL) language formatting.
+  * Unreleased memory pointers / resource leaks.
+  * Exception handling when external libraries fail.
+
+--------------------------------------------------------------------------------
+10. PRACTICAL TEST CASE DESIGN EXAMPLES
+--------------------------------------------------------------------------------
+
+[Example 1: Function `oddEven(num)`]
+Code under test:
+```python
+def oddEven(num):
+    if num % 2 == 0:
+        return "Even"
+    return "Odd"
+```
+
+Equivalence Partitions & Test Vectors:
++-------------------------+-------------------------+-----------------------------------+
+| Input Category          | Test Value(s)           | Expected Result / Note            |
++-------------------------+-------------------------+-----------------------------------+
+| Standard Positive Even  | 2, 4                    | "Even"                            |
+| Standard Positive Odd   | 1, 3                    | "Odd"                             |
+| Zero (Boundary)         | 0                       | "Even" (Check modulo 0 handling)  |
+| Negative Numbers        | -1, -2                  | "Odd", "Even"                     |
+| Max Integer (Large)     | 2^31 - 1, 2^63 - 1      | Test integer overflow limit       |
+| Invalid Type (Float)    | 3.14                    | Exception or defined type error   |
+| Invalid Type (String)   | "hello"                 | TypeError / Graceful rejection    |
+| Null / None             | None                    | TypeError / Validation error      |
++-------------------------+-------------------------+-----------------------------------+
+
+[Example 2: Function `isPalindrome(word)`]
+Input categories to cover:
+- Odd length palindrome: `"madam"` -> True
+- Even length palindrome: `"noon"` -> True
+- Non-palindrome: `"hello"` -> False
+- Empty string (Boundary): `""` -> True or validation rule
+- String with spaces/punctuation: `"Madam, I'm Adam"` -> Depends on requirement specification
+- Invalid Data Types: Numbers (`12321`), Objects, Booleans.
+- Null / Undefined: `None` -> Graceful exception
+- Unicode / Multibyte: `"LEVEL"` vs multibyte characters (e.g., `"汉字字汉"`).
+
+[Example 3: User Signup Endpoint / Form]
+Required Test Vectors:
+- Empty Fields: First name, last name, email, date of birth missing.
+- Omitted Request Payload: Missing parameters from JSON body.
+- Field Length Oversized: Extremely long strings (SQL/Buffer attempt: 10,000 characters).
+- Unicode Fields: Names with accents, apostrophes, non-ASCII characters (`José`, `O'Connor`).
+- Out-of-Bound Dates: Birth year `3000`, `-1700`, invalid format (`40/15/2025`).
+- Numeric Characters in Name Fields: `"John123"`.
+- Email Format Violations: `"user@"`, `"user@domain"`, `"user.domain.com"`, `"<script>@x.com"`.
+
+--------------------------------------------------------------------------------
+11. CODE COVERAGE METRICS
+--------------------------------------------------------------------------------
+Code coverage tools track which parts of the source code are executed when tests run.
+
+CRITICAL WARNING:
+"100% Code Coverage does NOT mean 100% Bug-Free Code! It only guarantees that line of 
+code executed at least once during testing. It says nothing about test assertion quality."
+
+[The 5 Types of Code Coverage]
+1. Function Coverage: Percentage of defined functions/methods invoked by tests.
+2. Line Coverage: Percentage of raw executable lines of code hit.
+3. Statement Coverage: Percentage of individual code statements executed.
+4. Branch Coverage: Percentage of decision branches (`if/else`, `switch`, `while`, `for`) 
+   tested in both directions.
+5. Condition Coverage: Percentage of individual boolean sub-expressions within branches 
+   that evaluated to both `True` AND `False`.
+
+Memory Retention Hierarchy:
+Condition Coverage > Branch Coverage > Statement / Line Coverage > Function Coverage
+
+--------------------------------------------------------------------------------
+12. DEFENSIVE PROGRAMMING & DESIGN PATTERNS
+--------------------------------------------------------------------------------
+Defensive programming is the practice of designing software to prevent entire classes 
+of bugs before they can happen.
+
+[Core Defensive Coding Principles]
+1. Never Trust External Data: Validate and sanitize every input at entry boundaries.
+2. Use In-Built Language Constructs:
+   - File & Resource Management: Always use context managers (e.g., Python `with open(...)`) 
+     or `try-finally` blocks to guarantee resource cleanup.
+3. Leverage Established Design Patterns:
+   - Design patterns represent industry consensus for solving recurring architecture 
+     problems safely and predictably.
+4. Trade-off Awareness: Defensive code adds explicit complexity, but yields immense 
+   gains in system availability, error isolation, and security.
+
+================================================================================
+QUICK REVISION CHEAT SHEET
+================================================================================
+1. Test Budget: Focus on high-risk, critical user paths (e.g., Authentication) first.
+2. Pyramid vs Ice-Cream: Write many fast Unit tests at base, moderate Integration 
+   tests, and few expensive E2E/Acceptance tests at top.
+3. Fuzzing: Automated generator of malformed/semi-valid inputs to catch crashes/leaks.
+4. Simian Army: Chaos Monkey (kills instances), Chaos Gorilla (kills entire Cloud AZ).
+5. Equivalence Partitioning: Group inputs into identical behaviors; test 1 per group.
+6. Boundary Values: Bugs live at boundaries (0, empty string, max int, edge conditions).
+7. Linters: Detect static errors (unused imports, dead code) before code runs.
+8. Coverage Trap: 100% code coverage does not mean zero bugs!
+================================================================================

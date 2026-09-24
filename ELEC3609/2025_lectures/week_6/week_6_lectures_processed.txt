@@ -1,0 +1,382 @@
+================================================================================
+ELEC3609 / ELEC9609: INTERNET SOFTWARE PLATFORMS
+WEEK 6 STUDY GUIDE: PRE-PACKAGED SOFTWARE, DOCKER & SYSTEM MONITORING
+================================================================================
+
+--------------------------------------------------------------------------------
+1. PRE-PACKAGED SOFTWARE & DEPLOYMENT SECURITY
+--------------------------------------------------------------------------------
+Pre-packaged web software allows developers and deployment teams to get 
+applications up and running rapidly by standing on the "shoulders of giants."
+
+[Common Pre-Packaged Software Examples]
+- WordPress: Content Management System (CMS) for blogs and websites.
+- vBulletin: Internet forum software platform.
+- MediaWiki: Open-source wiki engine (powers Wikipedia).
+- Phabricator: Project management and code review toolsuite.
+- Memcached: High-performance, distributed memory object caching system.
+
+[Core Components & Responsibility Split]
+Every pre-packaged web application typically consists of three main components:
+1. Application Code (provided by software author/vendor)
+2. Configuration Files (provided as defaults, customized by deployer)
+3. Database & Infrastructure (configured and managed by deployer)
+
++---------------------+--------------------------------------------------------+
+| Component           | Responsibility & Key Role                              |
++---------------------+--------------------------------------------------------+
+| Application Code    | Written by vendor/author; contains core logic.          |
+| Configuration       | Must be audited and hardened by the deployer.          |
+| Database            | Provisioned, permissioned, and secured by the deployer. |
++---------------------+--------------------------------------------------------+
+
+--------------------------------------------------------------------------------
+[Security & Dependency Risks]
+--------------------------------------------------------------------------------
+Deploying third-party software means inheriting not just the core application code, 
+but its ENTIRE supply chain and dependency graph:
+
+1. Software Dependencies:
+   - Frameworks & Libraries (e.g., Node modules, Python packages)
+   - Plugins & Extensions (often third-party, varying code quality)
+   - Container Images (base OS and runtimes from public registries)
+   - System Packages (OS-level binaries and shared objects)
+
+2. Key Supply Chain Threats:
+   - Supply Chain Attacks: Compromise of upstream repositories or build pipelines.
+   - Outdated Dependencies: Known unpatched vulnerabilities (CVEs) in libraries.
+   - Plugin Ecosystem Risks: Unvetted third-party plugins with backdoor/exploit risks.
+   - Untrusted Docker Hub Images: Malicious or outdated public container base images.
+
+[Pre-Deployment Evaluation Checklist]
+Before deploying any pre-packaged software, perform this 5-point audit:
+1. Core Tech & Architecture: What language is it written in? Is the codebase mature?
+2. Development Activity: How frequent and recent are repository commits?
+3. Corporate Adoption: Do major tech companies use it? (Implies prior security review).
+4. Support & Maintenance: Is vendor/community support active? What is the cost?
+5. Vulnerability History: Search CVE databases (e.g., cvedetails.com) for past bugs.
+
+[Automated Vulnerability Scanning Tools]
++--------------------------+---------------------------------------------------+
+| Tool                     | Description & Target Ecosystem                    |
++--------------------------+---------------------------------------------------+
+| npm audit                | Built-in vulnerability scanner for Node.js/npm    |
+| pip-audit                | Scans Python environments/packages for known CVEs |
+| OWASP Dependency-Check   | Software Composition Analysis (SCA) tool for multi|
+|                          | language project dependency analysis              |
+| Snyk Vulnerability DB    | Comprehensive vulnerability database and scanner  |
++--------------------------+---------------------------------------------------+
+
+--------------------------------------------------------------------------------
+[Configuration & Database Hardening]
+--------------------------------------------------------------------------------
+"Secure-by-default" is ideal, but many pre-packaged solutions ship with insecure 
+default configurations for ease of setup.
+
+Configuration Rules:
+- Audit Defaults: Never trust default configuration settings for production.
+- Feature Reduction: Disable unused features/plugins to minimize attack surface area.
+- Verify Online Examples: Never copy-paste online configuration snippets blindly.
+
+Database Hardening & Least Privilege:
+- DB Isolation: Determine if the package shares a DB or requires a dedicated DB.
+- Principle of Least Privilege: Grant the minimum necessary DB user privileges 
+  (e.g., SELECT, INSERT, UPDATE). Avoid granting DROP or administrative rights.
+- Scope of Compromise: If SQL Injection (SQLi) occurs, restricted DB permissions 
+  prevent attackers from executing arbitrary system commands or stealing unrelated data.
+
+
+--------------------------------------------------------------------------------
+2. DEPLOYMENT ARCHITECTURE & REVERSE PROXIES
+--------------------------------------------------------------------------------
+Exposing application web servers (e.g., Node.js, Gunicorn, PHP-FPM) directly to the 
+public Internet is dangerous. Production deployments use an intermediary web layer:
+
+[Reverse Proxy Architecture]
+
+  Public Client (Internet)
+            |
+            v
+  +-------------------+
+  |   Reverse Proxy   |  <-- Nginx / Apache (Edge Layer)
+  +-------------------+
+            |
+      +-----+-----+
+      |           |
+      v           v
+  +-------+   +-------+
+  | App 1 |   | App 2 |  <-- Internal Backend Application Instances
+  +-------+   +-------+
+      |           |
+      +-----+-----+
+            |
+            v
+  +-------------------+
+  | Central Database  |  <-- Shared State (Bottleneck)
+  +-------------------+
+
+[Key Benefits of a Reverse Proxy]
+1. Horizontal Scaling & Load Balancing:
+   - Distributes incoming traffic across multiple application instances.
+   - Increases concurrent request handling capacity.
+   - Note: The database remains the primary bottleneck for shared state.
+
+2. Request Authentication:
+   - Enforces authentication at the network edge BEFORE requests reach internal 
+     application services, preventing anonymous unauthorized access.
+
+3. Web Application Firewall (WAF):
+   - Inspects incoming HTTP payloads for malicious patterns (e.g., SQLi, XSS).
+   - Blocks attack vectors at the perimeter. Must maintain updated rule sets.
+
+--------------------------------------------------------------------------------
+[HTTP Basic Authentication Mechanics]
+--------------------------------------------------------------------------------
+HTTP Basic Authentication enforces simple credential checks via standard HTTP headers.
+
+Step-by-Step Flow:
+
+  Client                                       Server / Reverse Proxy
+    |                                                      |
+    | ------------ 1. Initial GET Request ---------------> |
+    |                                                      |
+    | <--- 2. 401 Unauthorized --------------------------- |
+    |      Header: WWW-Authenticate: Basic realm="..."    |
+    |                                                      |
+    | [3. Prompts user for username & password]            |
+    | [4. Combines string: "username:password"]            |
+    | [5. Base64 encodes: Base64("Aladdin:OpenSesame")]   |
+    |                                                      |
+    | ------------ 6. GET Request with Auth -------------> |
+    |      Header: Authorization: Basic QWxhZGRpbjpPcGVu...|
+    |                                                      |
+    | <--- 7. 200 OK / Resource Content ------------------ |
+
+Headers Quick Reference:
+- Server Challenge: `WWW-Authenticate: Basic realm="User Visible Realm"`
+- Client Response:  `Authorization: Basic <base64_encoded_credentials>`
+  Example String:   `Aladdin:OpenSesame` -> Base64 -> `QWxhZGRpbjpPcGVuU2VzYW1l`
+
+
+--------------------------------------------------------------------------------
+3. DOCKER & CONTAINERIZATION
+--------------------------------------------------------------------------------
+Containers revolutionize deployment by packaging applications with all runtime 
+dependencies into isolated, lightweight environments.
+
+[Virtual Machines vs. Linux Containers]
+
+  Virtual Machines (VMs)                      Linux Containers (Docker)
+  +-------------------------+                 +-------------------------+
+  |  App A   |    App B     |                 |  App A   |    App B     |
+  +----------+--------------+                 +----------+--------------+
+  | Guest OS |   Guest OS   |                 | Container Runtime Engine|
+  +----------+--------------+                 +-------------------------+
+  | Hypervisor (VMware/KVM) |                 |    Host Linux Kernel    |
+  +-------------------------+                 +-------------------------+
+  |     Host OS / Hardware  |                 |     Physical Hardware   |
+  +-------------------------+                 +-------------------------+
+
+Key Comparison:
+- Virtual Machine: Requires full Guest OS per instance; heavy resource overhead.
+- Container: Shares host OS kernel; isolates user-space processes; lightweight & fast.
+
+--------------------------------------------------------------------------------
+[Core Docker Concepts]
+--------------------------------------------------------------------------------
+1. Docker Image: Read-only blueprint/recipe defining the base operating system, 
+   code, dependencies, and environment setup.
+2. Docker Container: A runnable, isolated instance created from a Docker image. 
+   Functions like a lightweight, minimal Linux environment.
+3. Docker Volumes: Host directory mounts enabling DATA PERSISTENCE. 
+   * Docker containers are STATELESS and EPHEMERAL (destroying a container deletes 
+     its internal file system).
+   * Mounting a volume attaches host storage to the container (e.g., MySQL DB files). 
+     Container deletion leaves volume data intact on host.
+4. Docker Networking: Internal container linking and port mapping.
+   * Isolates service communication.
+   * Example: WordPress container communicates directly with MySQL container over 
+     an internal Docker network without opening the database port to the public.
+5. Docker Hub: Central public registry for pre-built container images. 
+   * Provides official base images (e.g., `ubuntu`, `python`, `mysql`).
+   * Deployers must assess image security and vulnerability risks before use.
+6. Docker Compose: Tool for defining and running multi-container applications 
+   via a single configuration file (`docker-compose.yml`).
+
+[Dockerfile Command Anatomy]
+Below is an annotated Dockerfile example:
+
+```dockerfile
+# 1. Base OS / runtime image
+FROM ubuntu:18.04
+
+# 2. Build-time setup commands
+RUN make /app
+
+# 3. Copy application files from host machine context into image
+COPY . /app
+
+# 4. Runtime entrypoint command (executed when container starts)
+CMD python /app/app.py
+```
+
+--------------------------------------------------------------------------------
+[Cloud Container Orchestration]
+--------------------------------------------------------------------------------
+When scaling production workloads from a few containers to fleets of 10s-1000s, 
+container orchestrators manage scheduling, auto-scaling, and health monitoring:
+
+- Kubernetes (K8s) / GKE: Open-source container orchestration engine developed by 
+  Google (Google Kubernetes Engine on Google Cloud).
+- AWS Elastic Container Service (ECS): Amazon's native container orchestration 
+  service integrated within the AWS ecosystem.
+
+
+--------------------------------------------------------------------------------
+4. SYSTEM & APPLICATION MONITORING STACK
+--------------------------------------------------------------------------------
+Large-scale production systems require multi-layered monitoring across four key facets:
+
+[4 Facets of Web Infrastructure Monitoring]
+1. User Interaction: Clickstreams, feature engagement, navigation flows.
+2. User Analytics: Geographical distribution, active usage hours, peak traffic.
+3. HTTP Error Rates: Tracking 500-level server errors and failing endpoints.
+4. Infrastructure Metrics: CPU usage, memory consumption, disk I/O, network bandwidth.
+
+--------------------------------------------------------------------------------
+[Comprehensive Monitoring Tool Matrix]
+--------------------------------------------------------------------------------
++---------------+-----------------------------+------------------------------------+
+| Tool          | Category / Focus            | Key Mechanism / Characteristics    |
++---------------+-----------------------------+------------------------------------+
+| Prometheus    | Time-Series Metrics Store   | PULL model: Scrapes HTTP endpoints |
+| Grafana       | Visualization & Dashboards  | Multi-backend metric dashboarding  |
+| ELK Stack     | Centralized Log Management  | Elasticsearch + Logstash + Kibana  |
+| Nagios        | Infrastructure Monitoring   | Threshold alerts (email/chat)      |
+| Sentry        | Real-Time Error Tracking    | Aggregates app crash stack traces  |
++---------------+-----------------------------+------------------------------------+
+
+[Detailed Tool Breakdown]
+
+1. Prometheus (Metrics Engine):
+   - Focus: High-dimensional time-series data storage and query language (PromQL).
+   - Architecture: Uses a PULL model (scrapes metric endpoints over HTTP periodically, 
+     rather than applications pushing metrics).
+   - Scalability: Employs functional sharding and federation. Member of CNCF.
+
+2. Grafana (Dashboarding):
+   - Focus: Visualizing, querying, and alerting on metrics across backend sources.
+   - System Metrics Tracked: CPU, Memory, Disk Space & I/O, Network Bandwidth, 
+     Load Averages, System Uptime.
+   - Application Metrics Tracked: Response times, Throughput, Error rates, 
+     Requests Per Second (RPS), Latency.
+
+3. ELK Stack (Centralized Logging Pipeline):
+   - Problem Addressed: SSH-ing into individual hosts to view logs is impossible at scale.
+   - Components:
+     * Logstash: Collects, parses, and ingests log data from disparate servers.
+     * Elasticsearch: Distributed, full-text search engine for log index storage.
+     * Kibana: Web-based visualization UI to query Elasticsearch logs.
+
+4. Nagios (Infrastructure Alerting):
+   - Focus: System and network level status monitoring (bandwidth, disk, server health).
+   - Alerting: Sends automated notifications via email, SMS, or chat (Slack/Teams) 
+     when predefined metric thresholds are breached.
+
+5. Sentry (Application Error Tracking):
+   - Focus: Capturing front-end (JS) and back-end (Python, Node, Java) runtime errors.
+   - Aggregation: Groups stack traces and exceptions into a unified event stream 
+     for developer debugging.
+
+
+--------------------------------------------------------------------------------
+5. WEB TRACKING, ANALYTICS & DATA WAREHOUSING
+--------------------------------------------------------------------------------
+
+[Analytics Tools Comparison]
++------------------+-----------------------------+---------------------------------+
+| Metric / Feature | Google Analytics (GA)       | KISSmetrics                     |
++------------------+-----------------------------+---------------------------------+
+| Implementation   | Client-side JS tag          | Deep tracking script            |
+| Primary Focus    | Traffic, browsers, referrers| Granular user funnel behavior   |
+| Multi-Device     | General overview            | Advanced cross-device mapping   |
+| Cost Structure   | Free tier available         | Substantially higher cost       |
++------------------+-----------------------------+---------------------------------+
+
+--------------------------------------------------------------------------------
+[Transactional DB (OLTP) vs. Analytics (OLAP)]
+--------------------------------------------------------------------------------
+Operational databases (e.g., PostgreSQL, MySQL) are optimized for low-latency 
+user operations (OLTP), NOT heavy aggregate analytics queries.
+
+Example Scenario:
+- Calculating single user balance: Simple query (`SELECT SUM(...) WHERE user_id=X`). Fast.
+- Calculating total balance across all users: Scans millions of rows. Slow, locks DB.
+
+Solution: Decouple production databases from analytics using a Data Warehouse.
+
+--------------------------------------------------------------------------------
+[The ETL Pipeline (Extract, Transform, Load)]
+--------------------------------------------------------------------------------
+ETL pipelines ingest operational data into analytics platforms:
+
+1. Extract: Pull raw data from multiple sources (JS clickstreams, HTTP access logs, 
+   database change logs).
+2. Transform: Clean, reformat, and structure data into a unified analytical schema.
+3. Load: Write the transformed data into the target Data Warehouse or search cluster.
+
+--------------------------------------------------------------------------------
+[Distributed Data Processing: MapReduce]
+--------------------------------------------------------------------------------
+When analytics tasks involve massive datasets across clusters, MapReduce splits 
+computation into two distributed steps:
+
+  Raw Dataset ---> [ MAP PHASE ] ---> Intermediate Pairs ---> [ REDUCE PHASE ] ---> Summary Result
+                   (Filter & Sort)                            (Aggregate & Sum)
+
+- Map Step: Filters, maps, and sorts raw inputs into key-value pairs.
+- Reduce Step: Consolidates and aggregates intermediate data into summarized output.
+
+
+--------------------------------------------------------------------------------
+6. REVISION QUICK REFERENCE & EXAM TAKEAWAYS
+--------------------------------------------------------------------------------
+
+[Key Terminology & Acronyms]
+- CMS: Content Management System (e.g., WordPress)
+- SCA: Software Composition Analysis (vulnerability auditing)
+- RP: Reverse Proxy (Nginx, Apache)
+- WAF: Web Application Firewall
+- Base64: Binary-to-text encoding used in HTTP Basic Auth credentials
+- Ephemeral Container: Stateless runtime container easily created/destroyed
+- Docker Volume: Host-mounted persistent file system for containers
+- GKE / ECS: Google Kubernetes Engine / AWS Elastic Container Service
+- CNCF: Cloud Native Computing Foundation (home of Prometheus)
+- ELK: Elasticsearch, Logstash, Kibana log management stack
+- OLTP vs OLAP: Online Transaction Processing vs Online Analytical Processing
+- ETL: Extract, Transform, Load data pipeline
+- MapReduce: Distributed data processing algorithm (Map = Filter/Sort, Reduce = Summary)
+
+[Top Exam Flashcard Concepts]
+1. Q: Why should you avoid direct public access to pre-packaged app web servers?
+   A: To insert a controlling layer (Reverse Proxy / WAF) that handles scaling, 
+      HTTP Basic Auth, and attack vector filtering.
+
+2. Q: What HTTP headers are exchanged during HTTP Basic Authentication?
+   A: Server sends `WWW-Authenticate: Basic realm="..."` with 401 response. 
+      Client responds with `Authorization: Basic <base64(user:pass)>`.
+
+3. Q: How does containerization differ from virtualization?
+   A: Containers share the host OS kernel and run isolated user-space processes 
+      without a heavy Guest OS or hypervisor.
+
+4. Q: How is data persistence achieved in Docker containers?
+   A: By mounting Docker Volumes from host directories into containers.
+
+5. Q: What is the main structural difference between Prometheus and traditional metrics collection?
+   A: Prometheus uses a PULL model over HTTP, scraping endpoints periodically.
+
+6. Q: Why shouldn't heavy analytics queries be run on operational production DBs?
+   A: Operational DBs (OLTP) are optimized for transactional performance; aggregate 
+      analytics queries degrade database speed for active users. Use ETL + Data Warehouses.
+================================================================================
