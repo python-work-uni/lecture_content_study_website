@@ -5,370 +5,454 @@ Data Pre-Processing & Classical Machine Learning
 
 OVERVIEW
 --------
-This lecture covers the essential pipeline before training any ML model: cleaning and preparing data (handling missing values, feature engineering, encoding categorical variables, dealing with class imbalance), then introduces three foundational classical ML algorithms—Gaussian Naïve Bayes, Random Forest, and K-Nearest Neighbours (KNN)—plus validation/testing methodology. These are the "classical" (non-neural-network) methods that still power many real-world systems and provide the conceptual groundwork for understanding modern deep learning next week.
+This lecture covers everything that surrounds a machine-learning algorithm: cleaning data before training, and the three foundational "classical" (non-neural-network) methods you train with. It covers importing data, handling missing values, engineering and selecting features, fixing imbalanced datasets, and encoding categorical variables. It then builds the probabilistic foundations (MAP detection and Bayes' rule) before walking through Gaussian Naïve Bayes, Random Forest, and K-Nearest Neighbours including Weighted KNN. Finally it explains validating and testing a model honestly with K-fold and stratified cross-validation, plus the uniform scikit-learn workflow. These classical methods still power real systems and are the groundwork for Week 5's neural networks.
+
+================================================
+STATS:
+---------------------------------------------
+Classical models|3 (GNB, RF, KNN)
+GNB hyper-parameters|None
+Trees in the example|100
+One-hot dummies|M − 1
 
 ------------------------------------------------
-SECTION 1: DATA PRE-PROCESSING
+SECTION 1: Data Pre-Processing Overview
 ------------------------------------------------
+**Data pre-processing** (data cleaning) turns a raw table of rows and columns into something an algorithm can learn from. In the lecture's table, columns are **features** (the inputs, $K$ of them) and the target is the **label**. The workflow is a sequence of decisions made before training.
 
-1.1 Missing Data
-----------------
-Real-world datasets almost always have gaps—cells left blank because a sensor failed, a survey question was skipped, or a log entry was corrupted. In pandas, these appear as **NaN (Not a Number)** when you load a CSV or Excel file.
+- **Importing data:** load the table (CSV/Excel) into a pandas DataFrame.
+- **Missing data:** some cells are blank because the data was not recorded properly.
+- **Data types:** features may be numeric or categorical; signals may be long time series.
+- **Class balance:** one class may vastly outnumber another.
+- **Scale:** features may have wildly different numeric ranges.
 
-**Three main strategies:**
-- **Drop rows** with `dropna()` — simple but wastes data; only viable if missingness is random and rare.
-- **Fill with a constant** (e.g., 0, mean, median) via `fillna()` — fast, but can bias statistics.
-- **Forward/backward fill** — propagate the last/next known value; useful for time-series.
+💡 **Why It Matters:** The lecture's theme is "Let's keep it clean!" Pre-processing decides whether a model generalises or silently learns from noise and missingness.
 
-💡 **Why it matters**: How you handle missing data can silently skew your model. Dropping rows may remove the rare class you care about. Filling with zero may create artificial patterns.
-
-**Memory aid**: **"DFF"** — **D**rop, **F**ill constant, **F**ill forward/backward.
-
-**Example**: A Power(kW) column has NaN entries. Filling with 200 (a constant) assumes all missing readings were 200 kW—probably wrong. Forward-fill assumes the power didn't change since the last reading—better for steady signals.
-
-1.2 Feature Engineering
------------------------
-Raw signals (e.g., vibration over time) are high-dimensional and noisy. **Feature engineering** = extracting informative, lower-dimensional representations. The lecture calls this "the step that takes the most time in an ML project."
-
-**Main techniques:**
-| Technique | What it does | When to use |
-|-----------|--------------|-------------|
-| **Feature Selection** | Pick inputs with highest correlation to output | Many features, want interpretability |
-| **Variance Threshold** | Drop near-constant features (low variance) | Pre-filter before modelling |
-| **Tree-based Importance** | Train a quick Decision Tree/Random Forest, use feature importances | When relationships are non-linear |
-| **PCA (Principal Component Analysis)** | Project data onto directions of max variance | High-dimensional, correlated features |
-| **Manual/Domain-driven** | Use physics/engineering knowledge (e.g., FFT for frequency features) | When you understand the signal |
-
-💡 **Why it matters**: Good features beat fancy models. A simple model on great features outperforms a complex model on raw data.
-
-**Analogy**: Raw signal = a messy pile of LEGO bricks. Feature engineering = sorting them by colour/shape so you can build the target object efficiently.
-
-1.3 Imbalanced Datasets
------------------------
-When one class dominates (e.g., 95% "normal", 5% "fault"), a model that always predicts "normal" gets 95% accuracy but is useless.
-
-**Resampling methods:**
-- **Oversampling minority** — replicate or synthesize minority samples. **SMOTE** (Synthetic Minority Oversampling Technique) creates new synthetic points along lines between existing minority neighbours.
-- **Undersampling majority** — randomly discard majority samples. Loses data, but faster.
-
-**Cost-Sensitive Learning**: Modify the loss function so False Negatives (missing a fault) cost more than False Positives (false alarm). The model shifts its decision boundary to minimise *cost*, not just error rate.
-
-**Data Augmentation**: Generate realistic synthetic minority samples (e.g., rotate/flip images, add noise to signals).
-
-💡 **Why it matters**: In safety-critical engineering (fault detection, medical diagnosis), the minority class is usually the one you *most* need to catch.
-
-**Memory aid**: **"SMOTE = Synthetic Minority Oversampling Technique"** — say it three times.
-
-**Example**: 90% Class 0 (blue), 10% Class 1 (orange). A test point (yellow triangle) sits in the orange region but has more blue neighbours. Plain KNN → blue. Weighted KNN (inverse distance weighting) → orange. **Weighting fixes the imbalance bias.**
-
-1.4 One-Hot Encoding
---------------------
-Categorical variables (airport names, airlines, gender) can't be multiplied or fed to most ML algorithms directly. **One-hot encoding** converts a categorical variable with M categories into M−1 binary (0/1) "dummy" columns.
-
-**Why M−1, not M?** The last category is implied when all dummies are 0 (the "reference category"). Including all M creates perfect multicollinearity (dummy variable trap).
-
-**Example**: Gender = {Male, Female, Not Given} → two columns:
-- x₁ = 1 if Male, else 0
-- x₂ = 1 if Female, else 0
-- (0,0) = Not Given
-
-**Critical mistake**: Encoding as 0, 1, 2 implies **Male < Female < Not Given** (ordinal relationship). One-hot avoids this.
-
-💡 **Why it matters**: Tree-based models (Random Forest) can handle label encoding (0,1,2) because they split on thresholds. Linear models, SVMs, and neural networks *cannot*—they assume numerical distance semantics.
-
-**Python**: `sklearn.preprocessing.OneHotEncoder` (returns numpy array) or `pd.get_dummies()` (returns DataFrame).
+```text
+Import → Clean → Engineer Features → Encode → Balance → Train → Validate → Test
+```
 
 ------------------------------------------------
-SECTION 2: MATHEMATICAL FOUNDATIONS
+SECTION 2: Missing Data Handling
 ------------------------------------------------
+Loading a file with pandas converts any missing entry to **NaN (Not a Number)**. A danger is that NaN is frequently treated as zero during summing and averaging, which may or may not be sensible.
 
-2.1 MAP (Maximum A Posteriori) Detection
-----------------------------------------
-**Core idea**: For input **x**, we want the output **y** that maximises **P(y|x)** — the posterior probability.
+- `isna` reports missing entries (its opposite is `notna`).
+- `dropna` removes any row containing missing data.
+- `fillna` fills missing values by a chosen method.
 
-- **Classification**: MAP minimises decision error (maximises accuracy).
-- **Regression**: Would use expected value (minimise MSE), not MAP.
+### Strategies
+- **Drop the row** with `dropna()` — simple, but you lose data, possibly including a rare class.
+- **Fill with a constant** via `fillna()` — e.g. filling NaN in a `Power(kW)` column with `200`.
+- **Forward fill** — carry the last known value forward.
+- **Backward fill** — carry the next known value backward.
 
-**Bayes' Rule**: P(y|x) = P(x|y)P(y) / P(x). Denominator P(x) is constant for a given x, so we maximise numerator: **P(x|y)P(y)**.
+⚠️ **Common Trap:** Filling a power reading with `200` assumes every missing reading really was 200 kW, which is probably wrong. Forward fill assumes the signal did not change since the last reading — better for steady signals.
 
-💡 **Why it matters**: Naïve Bayes is literally this formula with simplifying assumptions. Softmax outputs in neural networks approximate P(y|x).
+### Other Pre-Processing
+Engineering data often arrives as **signals measured at regular time intervals**, and important information is often in the **frequency domain**, where class differences appear as frequency artefacts.
 
-2.2 Where P(x|y) Comes From
----------------------------
-Two paths:
-1. **Physics-based model** (e.g., bit error rate p on a noisy channel). If you know the channel, you derive P(x|y) mathematically.
-2. **Learn from data** — the ML approach. Most real systems are too complex for physics models.
+- It is common to **transform between time and frequency domain** using the **Fourier transform** (or another transform).
+- A long sequence is broken into short, appropriately sized **windows**.
+- Extracting dominant features from signals is described as "more an art than a science".
 
 ------------------------------------------------
-SECTION 3: GAUSSIAN NAÏVE BAYES (GNB)
+SECTION 3: Feature Engineering and Selection
 ------------------------------------------------
+**Feature engineering** turns raw, high-dimensional data into informative, lower-dimensional inputs. The lecture stresses it is often **the step that takes the most time in an ML project**.
 
-3.1 The Two "Naïve" Assumptions
--------------------------------
-1. **Conditional Independence**: Features x₁…xₖ are independent *given* class y.
-   - Allows: P(x₁…xₖ|y) = ∏ᵢ P(xᵢ|y) — product of 1D densities instead of a joint K-dimensional density.
-2. **Gaussian Features**: Each P(xᵢ|y) is Gaussian (Normal).
-   - Fully specified by mean μᵢ,ᵧ and variance σ²ᵢ,ᵧ per feature per class.
+| Technique | What it does |
+|---|---|
+| Feature Selection | Picks the best inputs, i.e. highest correlation with the output |
+| Variance Threshold | Removes nearly-constant features |
+| Decision Tree / Random Forest first | Trains a tree model to reveal which features separate classes |
+| PCA (Principal Component Analysis) | Projects data onto directions of maximum variance |
+| Manual feature engineering | Uses human insight into the data |
 
-**Result**: For K features and C classes, we estimate 2×K×C parameters (mean + variance per feature per class). No hyperparameters.
+💡 **Why It Matters:** Good features beat fancy models, and reducing dimensionality speeds every later step.
 
-3.2 Training & Inference
-------------------------
-- **Training**: Compute μᵢ,ᵧ and σ²ᵢ,ᵧ from the training data for each class y and feature i. That's it.
-- **Inference**: For a new x, compute log P(y) + Σᵢ log P(xᵢ|y) for each class y, pick max. (Log avoids underflow.)
+------------------------------------------------
+SECTION 4: Imbalanced Datasets
+------------------------------------------------
+When one class is far more prevalent, training is skewed. **This is called imbalanced data**, and the trained model becomes optimised for the majority case.
 
-**Python**:
+- If 95% of the data is "blue" and the metric is **accuracy**, a model can output "blue" regardless of input and still score 95%.
+- It is not learning — it is exploiting the metric, so imbalance must be handled deliberately.
+
+**Accuracy** = fraction of predictions correct — misleading when one class dominates, because a trivial "always majority" model scores high.
+
+### Resampling Methods
+- **Oversampling the minority** — replicate minority samples or synthesise new ones with **SMOTE (Synthetic Minority Oversampling Technique)**.
+- **Undersampling the majority** — discard some majority samples.
+
+### Other Approaches
+- **Cost-Sensitive Learning** — assign higher penalties to costly errors during training.
+  - Define a new **loss function** reflecting the relative costs of a **false positive (FP)** and a **false negative (FN)**.
+  - The model **shifts its decision boundary** to reduce the more expensive error.
+  - Goal: **minimise overall cost**, not just accuracy.
+- **Data augmentation** — create synthetic but realistic minority-class data.
+
+🧠 **Memory Hook:** **SMOTE = Synthetic Minority Oversampling TEchnique** — it makes *new* minority points, not just copies.
+
+------------------------------------------------
+SECTION 5: One-Hot Encoding
+------------------------------------------------
+Many features are not numbers (airport names, airlines, gender), yet most ML algorithms expect numerical inputs (otherwise you cannot multiply, etc.). **One-hot encoding** is the most basic conversion.
+
+1. Find how many values the categorical variable can take — call it $M$.
+2. Create $M - 1$ "dummy" 0/1 variables, with a 1 in the position for the category.
+
+### Worked Encoding: Gender
+Suppose Gender has values **Male / Female / Not Given** and we want to estimate shop spending.
+
+- Generate $x_1$ for Male and $x_2$ for Female.
+- No third dummy is needed, because $x_1 = x_2 = 0$ already means Not Given.
+
+| Customer | $x_1$ | $x_2$ | Meaning |
+|---|---|---|---|
+| 1 | 1 | 0 | Male |
+| 2 | 1 | 0 | Male |
+| 3 | 0 | 1 | Female |
+| 4 | 0 | 1 | Female |
+| 5 | 0 | 0 | Not Given |
+
+**Question:** could we assign 0 to Male, 1 to Female, 2 to Unknown? **Answer:** No — it would be risky and imply an **ordinal relationship** (Male < Female < Unknown), which is meaningless.
+
+⚠️ **Common Trap:** Using $M$ dummies makes one column perfectly predictable from the others (the **dummy variable trap**). Never give a label-encoded 0,1,2 category to a linear model, SVM, or neural network — they read the numbers as distances.
+
+### Python
+- `sklearn.preprocessing.OneHotEncoder` returns a NumPy array, convertible to a DataFrame.
+- pandas can also build a DataFrame with one-hot columns.
+
+------------------------------------------------
+SECTION 6: Probabilistic Foundations
+------------------------------------------------
+Classical ML starts from probability. Assume we don't know the true relationship between input $x$ and output $y$ (otherwise the model would already be known!). For a given $x$, the output $y$ has some chance of taking each value — e.g. if $x$ is "The quick brown fox", then $P[y = \text{"jumps"} \mid x] = 0.4$, $P[y = \text{"walks"} \mid x] = 0.1$, $P[y = \text{"is"} \mid x] = 0.05$.
+
+**Maximum a posteriori (MAP) detection** answers "which output would we pick?": choose the $y$ that maximises $P[y \mid x]$.
+
+- For **discrete $y$ (classification)**, MAP minimises decision error, i.e. it **maximises accuracy**.
+- **Bayes' rule** computes it: $P(y \mid x) = \dfrac{P(x \mid y)\,P(y)}{P(x)}$.
+- For a fixed observed $x$, the denominator $P(x)$ is a normalising constant, so we compare only $P(x \mid y)P(y)$ across labels.
+
+💡 **Why It Matters:** Probabilistic thinking shaped AI. **Naïve Bayes** is MAP detection with simplifying assumptions, and the "soft" outputs of **softmax** are another indirect manifestation.
+
+### Where Does P(x | y) Come From?
+1. **A physical model.** Over a noisy channel, a bit 0/1 is received as 0/1 with probability of bit error $p$, i.e. $P[0 \text{ received} \mid 1 \text{ transmitted}] = P[1 \text{ received} \mid 0 \text{ transmitted}] = p$. If $p$ is measured, we have the conditional distribution.
+2. **Learned from training data.** Often no simple model matches reality — especially when mimicking cognition, where we don't understand the process well enough. Hence general AI/ML models that "sort of" work.
+
+------------------------------------------------
+SECTION 7: Gaussian Naïve Bayes
+------------------------------------------------
+Assume $K$ features $x_1,\dots,x_K$ and one discrete label $y$. Bayes' rule gives $P(y \mid x_1,\dots,x_K) \propto P(x_1,\dots,x_K \mid y)\,P(y)$.
+
+- The denominator is irrelevant (a normalising constant).
+- $p(y)$ is found from training data.
+- But the **joint** $p(x_1,\dots,x_K \mid y)$ is hard: with binary features there are $2^K$ frequencies to estimate, and there is usually not enough data.
+
+### The Two "Naïve" Assumptions
+1. **Conditional independence** — features are independent given the label:
+   - $p(x_1,\dots,x_K \mid y) = \prod_{i=1}^{K} p(x_i \mid y)$, a product of 1-D densities instead of one K-dimensional joint.
+2. **Gaussian features** — each $p(x_i \mid y)$ is Gaussian.
+   - A Gaussian is fully specified by its **mean** $\mu_{i,y}$ and **variance** $\sigma^2_{i,y}$, so finding those for each feature and class gives the distribution.
+
+```text
+p(x_i | y) = K · exp( − (x_i − μ_{i,y})² / (2 σ²_{i,y}) )
+```
+
+### Training and Inference
+- **Training:** estimate each feature's conditional mean and variance per class. These are the **parameters**.
+- **Inference:** for each class, combine $p(y)$ with the product of per-feature Gaussians and pick the maximiser.
+- Structure depends only on $K$ and the number of classes, so Gaussian NB has **no hyper-parameters**.
+
+### Worked Means Example
+With $y \in \{0,1\}$ and two features:
+
+| $y$ | $x_1$ | $x_2$ |
+|---|---|---|
+| 0 | 0.2 | 0.9 |
+| 0 | −0.6 | 1.2 |
+| 1 | 2.4 | −1.0 |
+| 1 | 3.1 | −0.6 |
+| 1 | 2.8 | −1.4 |
+
+The conditional means are $\mu_{1,0} = -0.2$, $\mu_{2,0} = 1.05$, $\mu_{1,1} = 2.77$, $\mu_{2,1} = -1.0$. Variances are estimated from the data the same way.
+
+### Python
 ```python
 from sklearn.naive_bayes import GaussianNB
-nb = GaussianNB()
-nb.fit(X_train, y_train)
-y_pred = nb.predict(X_test)
-probs = nb.predict_proba(X_test)  # P(y|x) estimates
+nb = GaussianNB()                 # name the model
+nb.fit(X_train, y_train)          # train
+y_pred = nb.predict(X_test)       # predict
+probs = nb.predict_proba(X_test)  # P(y|x)
 ```
 
-💡 **Why it matters**: GNB is fast, works surprisingly well on many text/classification tasks, and is a great baseline. Zero hyperparameters = no tuning needed.
-
-**Complexity**: Training O(N×K×C), Inference O(K×C). Very fast. Memory O(K×C) — just stores means/variances.
-
-**Example**: Two classes (0,1), two features. Class 0: μ₁=−0.2, μ₂=1.05. Class 1: μ₁=2.77, μ₂=−1.0. A new point (2.5, −0.8) is much closer to Class 1's means → predicts Class 1.
+💡 **Why It Matters:** Gaussian NB is fast, needs no tuning, and is a strong baseline — but if features are highly correlated the independence assumption makes its probability estimates poor.
 
 ------------------------------------------------
-SECTION 4: RANDOM FOREST
+SECTION 8: Random Forest Basics
 ------------------------------------------------
+Unlike Gaussian NB, the Random Forest comes from a **computer-science** perspective, built on the **decision tree**:
 
-4.1 Decision Tree Refresher
----------------------------
-A tree recursively splits data by asking questions (xⱼ ≤ threshold?) at each node.
-- **Root** → all data.
-- **Internal nodes** → split on one feature + threshold.
-- **Leaves** → final class prediction (majority class in that leaf).
+- At each level we ask a question that splits the data into two parts.
+- Traversing from the top (**root**) to the bottom (**leaf**) yields the leaf's final decision.
+- A **random forest** runs several trees in parallel and takes a **majority decision**.
 
-**Splitting criterion** (hyperparameter `criterion`):
-- **Gini Impurity**: 1 − Σ pᵢ² — measures "mixedness". Lower = purer.
-- **Entropy**: −Σ pᵢ log pᵢ — information theory view. Similar behaviour.
+### The Ideal Split and the Criterion
+The ideal split puts only one class label on each branch — then no further splitting is needed. We look for the feature and threshold closest to that ideal, measured by the `criterion`:
 
-**Hyperparameters (set by human)**:
-| Parameter | Role |
-|-----------|------|
-| `max_depth` | Max levels; prevents overfitting |
-| `max_features` | Features considered at each split (√p default) |
-| `criterion` | "gini" or "entropy" |
-| `n_estimators` | Number of trees in the forest |
+- **Gini impurity** — how mixed the classes are in a node; lower is purer.
+- **Entropy** — the information-theory version.
 
-**Parameters (learned by machine)**:
-- Which feature to split on at each node.
-- What threshold value to use.
+### Parameters vs Hyper-Parameters
+- **Set by us humans (hyper-parameters):** `max_depth` (maximum tree depth), `max_features` (features considered per node), `criterion` (splitting quality measure), `n_estimators` (number of trees).
+- **Optimised by the machine (parameters):** which feature to split on at each node, and the threshold at each node.
 
-4.2 Randomization = Generalisation
-----------------------------------
-Single trees overfit (memorise training data). Random Forest combats this via:
-1. **Bagging (Bootstrap Aggregating)**: Each tree trains on a bootstrap sample (sampling with replacement) — ~63% unique samples, rest duplicates.
-2. **Random Feature Subsets**: At each split, only consider `max_features` randomly chosen features (default √p for classification).
-
-These make trees *different* from each other. Averaging/voting across diverse trees reduces variance without increasing bias.
-
-💡 **Why it matters**: Random Forest is a go-to "off-the-shelf" classifier—robust, handles mixed data types, gives feature importances, rarely needs heavy tuning.
-
-**Python**:
+### Python
 ```python
 from sklearn.ensemble import RandomForestClassifier
-rf = RandomForestClassifier(n_estimators=100, max_depth=5)
-rf.fit(X_train, y_train)
-y_pred = rf.predict(X_test)
-importances = rf.feature_importances_
+RF = RandomForestClassifier(n_estimators=100, max_depth=5)
+RF.fit(X_train, y_train)
+y_pred = RF.predict(X_test)
 ```
 
-**Complexity**: Training O(n_estimators × N × max_depth × max_features). Inference O(n_estimators × max_depth). Parallelisable across trees.
+💡 **Why It Matters:** Random Forest is a robust off-the-shelf classifier. `max_depth` too large lets trees memorise; `max_features` controls how many candidate features each split may inspect.
 
 ------------------------------------------------
-SECTION 5: K-NEAREST NEIGHBOURS (KNN) & WEIGHTED KNN (WNN)
+SECTION 9: Random Forest Randomisation
 ------------------------------------------------
+A single tree may **overfit** — excelling on training data but failing to generalise. The Random Forest avoids this with many trees, each **randomised** so it differs from the others:
 
-5.1 Standard KNN
-----------------
-**Algorithm**:
-1. Choose odd K (e.g., 5) to avoid ties.
-2. Compute distance from test point **x** to all N training points.
-3. Sort distances, pick K nearest.
-4. Majority vote among their labels → prediction.
+- **Bagging (bootstrap sampling):** each tree trains on a different resampled dataset.
+- **Random feature subsets at each split:** every node investigates only $m$ of $p$ features, chosen randomly and independently.
 
-**Distance metrics** (hyperparameter):
-- **L2 (Euclidean)**: Default, sensitive to scale.
-- **L1 (Manhattan)**: More robust to outliers.
-- **Hamming**: For binary/categorical vectors (count of differing positions).
+The randomisation stops trees turning out the same and defeating the purpose of having many. The lecture calls this "rather clever!"
 
-**Key insight**: K is a **hyperparameter** (set before training). No parameters are "learned"—the training data *is* the model. Decision boundaries are piecewise-linear (Voronoi diagram).
+```text
+Bootstrap sample → grow tree on random feature subsets → repeat T times → majority vote
+```
 
-**Problem**: All N distances computed every prediction → slow at scale. Doesn't work well with high dimensions (curse of dimensionality).
+⚠️ **Common Trap:** Bagging samples **rows** with replacement; random feature subsets sample **columns** at each node. Random Forest does **both**.
 
-**Example**: K=3 → "triangle". K=5 → "square". K changes the decision boundary shape.
+------------------------------------------------
+SECTION 10: K-Nearest Neighbours
+------------------------------------------------
+**K-Nearest Neighbours (KNN)** classifies a new point by looking at the nearest training points. We have $N$ samples $(x_i, y_i)$, $i=1,\dots,N$, where the $y_i$ are **class labels** and the $x_i$ are **feature vectors** (in the example two-dimensional, e.g. "bee," "cat," "dragonfly").
 
-5.2 Weighted KNN (WNN)
-----------------------
-**Fixes**: Imbalanced data + gives closer neighbours more influence.
+### The Algorithm
+1. Set parameter $K$ to an odd value, say 5 (avoids ties).
+2. Denote training vectors $x_i^m$, where $m \in \mathcal{M}$ is the class label and $i$ the sample index.
+3. For a new vector $x$, compute all $N$ distances: $d_i(x) = \| x - x_i^m \|_2$, $i=1,\dots,N$.
+4. Sort smallest to largest, note the $K$ smallest and their labels.
+5. Output the class label with the highest count.
 
-**Algorithm**:
-1. Find K nearest neighbours and their distances dᵢ.
-2. For each class n, compute **Nₙ = Σ (1/dᵢ)** over neighbours of class n.
-3. Predict class with max Nₙ.
+### Choice of K
+- In the example, $K=3$ gives "triangle" but $K=5$ gives "square".
+- There is **no formulaic way** to choose $K$ for a dataset.
+- $K$ does **not** affect computational complexity (all $N$ distances are always computed) but **does** affect accuracy. Complexity grows with $N$, so avoid "too many" training samples.
 
-**Example from lecture**: K=5, neighbours:
+### Distance Measures
+Distances need not be **L2 (Euclidean)**; they may be **L1 (Manhattan)**, **Hamming** (= number of positions where two vectors differ), etc.
+
+⚠️ **Common Trap:** Always normalise features before KNN (Section 12), or one large-scale feature dominates every distance.
+
+------------------------------------------------
+SECTION 11: Weighted KNN and Probability
+------------------------------------------------
+KNN has an imbalanced-data problem: if 90% of training points are class 0 and 10% class 1, the vote is biased. If the test point is the yellow triangle, it may look like it sits in the orange class, yet KNN returns **blue** because there are more blue neighbours. The fix is to **give nearer neighbours higher weight**.
+
+### Weighted Nearest Neighbour (WNN)
+1. Find the $K$ closest points and their distances $d_i(x)$, $i \in \mathcal{I}_K(x)$ (the K indices with smallest distance).
+2. Group by class. For class $n$, compute $N_n = \sum_i \dfrac{1}{d_i(x)}$, summing only over class-$n$ points.
+3. Output the value of $n$ that **maximises** $N_n$.
+
+### Worked Example
+With $K = 5$:
+
 | Point | 1 | 2 | 3 | 4 | 5 |
-|-------|---|---|---|---|---|
+|---|---|---|---|---|---|
 | Class | 0 | 0 | 1 | 1 | 1 |
-| Dist  | 0.5 | 0.4 | 1.0 | 0.8 | 1.5 |
-| 1/d   | 2.0 | 2.5 | 1.0 | 1.25 | 0.67 |
+| Distance | 0.5 | 0.4 | 1.0 | 0.8 | 1.5 |
+| Inverse | 2.0 | 2.5 | 1.0 | 1.25 | 0.67 |
 
-- **KNN**: Class 0 count=2, Class 1 count=3 → **Class 1**
-- **WNN**: N₀=2+2.5=4.5, N₁=1+1.25+0.67=2.92 → **Class 0**
+- **KNN:** $N_0 = 2$, $N_1 = 3$ ∴ output class = 1.
+- **WNN:** $N_0 = 2 + 2.5 = 4.5$, $N_1 = 1 + 1.25 + 0.67 = 2.92$ ∴ output class = 0.
 
-WNN correctly favours the closer Class 0 points.
+WNN flips the answer because the closer class-0 points earn larger weights.
 
-5.3 Probability Estimates
--------------------------
-Both KNN and WNN can estimate P(Cᵢ|x):
-- **KNN**: P(Cᵢ|x) = (count of class i in K) / K
-- **WNN**: P(Cᵢ|x) = Nᵢ / Σⱼ Nⱼ
+### Probability Estimates
+We want $P[C_i \mid x]$ — the **conditional probability** of class $C_i$ **given** features $x$. In KNN and WNN:
 
-In the example:
-- WNN: P(C₀|x) = 4.5/7.42 = 0.606, P(C₁|x) = 0.394
-- KNN: P(C₀|x) = 2/5 = 0.4, P(C₁|x) = 0.6
+```text
+P[C_i | x] = N_i / Σ_k N_k
+```
 
-⚠️ **Caveat**: These are *estimates*. Different classifiers give different probabilities. Calibration (reliability diagrams) needed for trustworthy probabilities.
+where $N_i$ is the weighted or unweighted neighbour count for class $C_i$.
 
-5.4 Normalisation — Critical for KNN
-------------------------------------
-Features on different scales (engine cc vs. year; age vs. height) → large-scale feature dominates distance.
+- **WNN:** $P[C_0 \mid x] = 4.5/(4.5+2.92) = 0.606$ and $P[C_1 \mid x] = 0.394$.
+- **KNN:** $P_{knn}[C_0 \mid x] = 2/5 = 0.4$ and $P_{knn}[C_1 \mid x] = 3/5 = 0.6$.
 
-**Min-Max Normalisation**: x' = (x − min) / (max − min) → maps to [0, 1].
-
-**Python**: `sklearn.preprocessing.MinMaxScaler` (not `normalize` — that's L2 normalisation).
-
-💡 **Why it matters**: Without normalisation, KNN (and SVM, neural nets, etc.) will be dominated by the feature with the largest numeric range.
-
-**Complexity**: Training O(1) — just store data. Inference O(N×K) distance computations. Space O(N×K) — must store all training data. **Not suitable for large N**.
+ℹ️ **Note:** Another classifier gives different estimates again; it is hard to argue one is more accurate — these are estimates, not ground truth.
 
 ------------------------------------------------
-SECTION 6: VALIDATION & TESTING
+SECTION 12: Feature Normalisation
 ------------------------------------------------
+One feature's dynamic range may be vastly different from another:
 
-6.1 Data Splits
----------------
-- **Training set** — fit model parameters.
-- **Validation set** — tune hyperparameters, select model.
-- **Test set** — final unbiased performance estimate. **Touch only once!**
+1. Engine capacity (cc) versus model year.
+2. Age (years) versus height (cm).
+3. Bit rate (bps) versus transmitted power (mW).
 
-6.2 Cross-Validation
---------------------
-Single validation split has high variance. **K-fold CV**:
-1. Shuffle data, split into K folds.
-2. For each fold: train on K−1, validate on 1.
-3. Average the K validation scores → robust estimate.
+Raw distance is then dominated by the larger-range feature, so we **normalise to a standard scale**. **Min-max normalisation** maps values to [0,1]:
 
-**StratifiedKFold** preserves class proportions in each fold (critical for imbalanced data).
+```text
+x' = (x − min) / (max − min)
+```
 
-**Python**:
+The slides note this is implemented in scikit-learn's preprocessing module (named `sklearnnormalize`; the standard equivalent is `MinMaxScaler`).
+
+### KNN and WNN in Python
+```python
+from sklearn.neighbors import KNeighborsClassifier
+knn = KNeighborsClassifier(n_neighbors=5)                     # KNN
+wnn = KNeighborsClassifier(n_neighbors=5, weights="distance") # WNN
+knn.fit(X_train, y_train)
+y_pred = knn.predict(X_test)
+```
+
+### KNN/WNN in the General ML Model
+- A model is a function $f_\theta(x)$ outputting a class label, where $\theta$ is the parameter vector.
+- In KNN/WNN there are **no obvious parameters to optimise**; the training data creates decision regions.
+- The **decision boundaries** (borders between regions) can be considered the "parameters".
+- $K$ is a **hyper-parameter** shaping the model. Hyper-parameters are **not learned or updated** during optimisation — they are fixed before training and set the architecture.
+
+⚠️ **Common Trap:** With KNN, "training" mostly means storing the data; all the work happens at prediction time.
+
+------------------------------------------------
+SECTION 13: Validation and Testing
+------------------------------------------------
+After training, judge the model on labelled data **not** used in training — and remember validation and testing are different.
+
+- **Training** fits the model parameters.
+- **Validation** judges how good the current model is; hyper-parameters and even the model are adjusted in a **training–validation cycle** until the designer is satisfied.
+- **Testing** is the final step on data used at no earlier stage.
+
+### Cross-Validation
+Validation is often **averaged over multiple splits**, called **cross-validation**.
+
+- Most commonly, **K-fold cross-validation**: train on $K-1$ folds, validate on the held-out fold, repeat so every fold is validated once.
+- For imbalanced data use **stratified** K-fold so each fold keeps class proportions.
+
 ```python
 from sklearn.model_selection import StratifiedKFold
 cv = StratifiedKFold(n_splits=5)
-# Use with cross_val_score or GridSearchCV
 ```
 
-💡 **Why it matters**: Reporting test performance without CV is like grading your own exam. CV gives you a reliable estimate *before* you touch the test set.
+### Testing After Validation
+- The performance of the validated model on the **test set** is what should be reported.
+- This estimates performance **after deployment**, on data unseen in training or validation.
 
-6.3 Scikit-Learn Unified API
-----------------------------
-Almost every supervised model follows:
-```python
-model = AlgorithmClass(hyperparameters)
-model.fit(X_train, y_train)
-y_pred = model.predict(X_test)
-y_proba = model.predict_proba(X_test)  # if supported
-score = accuracy_score(y_test, y_pred)
+⚠️ **Common Trap:** A single validation split has high variance; K-fold averaging is far more stable. And if you tune on the test set, it is no longer an honest estimate.
+
+------------------------------------------------
+SECTION 14: Scikit-Learn ML Workflow
+------------------------------------------------
+Almost every supervised model in `sklearn` follows the same five steps:
+
+1. **Create an object** of the algorithm class, setting its hyper-parameters.
+2. **`fit`** to train the model.
+3. **`predict`** to estimate test-sample classes.
+4. **`predict_proba`** to estimate each class's probability given the features.
+5. **Test accuracy** using one or more `metrics`.
+
+```text
+Create object → .fit(X_train, y_train) → .predict(X_test) → .predict_proba(X_test) → metrics
 ```
 
-================================================
+💡 **Why It Matters:** This uniform interface lets you swap Gaussian NB, Random Forest, or KNN by changing only the class name and hyper-parameters.
+
+⚠️ **Common Trap:** `predict` returns hard labels; `predict_proba` returns per-class probabilities. Accuracy uses labels; thresholding and cost-sensitive decisions need probabilities.
+
+------------------------------------------------
 KEY TAKEAWAYS
 ================================================
+1. **Pre-processing is not optional** — missing values, differing scales, categorical variables, and class imbalance silently break a model if ignored.
+2. **Handle missing data deliberately** — pandas turns blanks into NaN; `isna`/`notna` find them, `dropna` removes rows, `fillna` (forward/backward) replaces them.
+3. **Feature engineering often matters more than model choice** — use feature selection, variance threshold, tree-based importance, PCA, and domain features.
+4. **Imbalanced data fools accuracy** — a 95% majority lets a trivial model score 95%; fix with oversampling (SMOTE), undersampling, cost-sensitive learning, or augmentation.
+5. **One-hot encoding uses M − 1 dummies** — the last category is implied by all-zero dummies; 0,1,2 encoding falsely implies ordering.
+6. **MAP detection is the probabilistic core** — choose the label maximising $P(y \mid x)$; $P(x)$ is a constant, so only $P(x \mid y)P(y)$ matters.
+7. **Gaussian NB = MAP + two assumptions** — conditional independence and Gaussian features; it has parameters (means, variances) but no hyper-parameters.
+8. **Decision trees split toward purity** — the `criterion` (Gini impurity or entropy) measures closeness to one class per branch.
+9. **Random Forest = many randomised trees** — bagging (bootstrap rows) plus random feature subsets decorrelate trees, combined by majority vote.
+10. **KNN votes among the K nearest neighbours** — K has no formulaic best value, affects accuracy but not computational complexity; distances can be L2, L1, or Hamming.
+11. **Weighted KNN uses inverse-distance weights** — $N_n = \sum 1/d_i$ over class-$n$ neighbours, fixing the imbalance bias.
+12. **Normalise, then validate before testing** — min-max scaling stops one feature dominating distance, and stratified K-fold CV tunes the model before the test set is touched once.
 
-• **Data pre-processing is not optional** — missing values, scale differences, categorical variables, and class imbalance will silently break your model if ignored.
-• **Gaussian Naïve Bayes** assumes conditional independence + Gaussian features; zero hyperparameters; great fast baseline.
-• **Random Forest** = many decorrelated decision trees (bagging + random feature subsets); robust, handles mixed data, gives feature importances.
-• **KNN/WNN** are instance-based (lazy learners); no training, but slow inference; **must normalise features**; WNN fixes KNN's imbalance bias via inverse-distance weighting.
-• **Validation ≠ Testing** — validation tunes hyperparameters; test set is for final reporting only. Use Stratified K-fold CV for reliable validation.
-• **One-hot encoding** uses M−1 dummies to avoid the dummy variable trap; never encode categories as 0,1,2… (implies false ordinality).
-• **SMOTE** generates synthetic minority samples; cost-sensitive learning shifts the decision boundary via asymmetric loss.
-• **Feature engineering** often matters more than model choice — PCA, variance threshold, tree-based importance, and domain knowledge are your tools.
-
-================================================
+------------------------------------------------
 TERMS TO KNOW
 ================================================
+NaN: Not a Number, pandas' representation for a missing value.
+dropna / fillna: pandas functions that remove rows containing missing data and replace missing values respectively.
+Feature engineering: Turning raw high-dimensional data into informative, lower-dimensional inputs.
+PCA: Principal Component Analysis, projecting data onto directions of maximum variance.
+Imbalanced data: A dataset where one class is far more prevalent than others, skewing training.
+SMOTE: Synthetic Minority Oversampling Technique, which creates new synthetic minority-class samples.
+Cost-sensitive learning: Assigning higher penalties to costly errors so the model minimises overall cost.
+One-hot encoding: Converting an M-category variable into M − 1 binary dummy columns.
+Dummy variable trap: The redundancy from including all M dummies, since one is predictable from the others.
+MAP detector: The maximum a posteriori rule outputting the label that maximises P(y|x).
+Bayes' rule: The identity P(y|x) = P(x|y)P(y)/P(x) used to compute posterior probabilities.
+Conditional independence: The assumption that features are independent given the class, so the joint factorises.
+Gaussian Naïve Bayes: A classifier combining MAP detection with conditional-independence and Gaussian-feature assumptions.
+Gini impurity: A decision-tree split criterion measuring how mixed the classes are in a node.
+Entropy: An information-theoretic split criterion where lower values mean purer nodes.
+Bagging: Bootstrap aggregating, where each tree trains on a different resampled dataset.
+Random feature subsets: Letting each node consider only a random subset of the available features.
+KNN: K-Nearest Neighbours, an instance-based classifier taking a majority vote of the K closest training points.
+Weighted KNN: KNN that weights each neighbour by the inverse of its distance to the test point.
+Min-max normalisation: Scaling a feature to [0,1] via x' = (x − min)/(max − min).
+Hyper-parameter: A value set before training that shapes the model and is not learned.
+Parameter: A value learned from training data, such as tree split thresholds or Gaussian means and variances.
+Cross-validation: Averaging performance over multiple validation splits, most commonly K-fold.
+Stratified K-fold: K-fold cross-validation that preserves class proportions within each fold.
 
-**NaN**: Not a Number — pandas' representation for missing data.
-**MAP (Maximum A Posteriori)**: Decision rule choosing y that maximises P(y|x).
-**Conditional Independence**: P(x₁,x₂|y) = P(x₁|y)P(x₂|y) — features independent given the class.
-**Gini Impurity**: 1 − Σ pᵢ² — measures node purity in decision trees (0 = pure).
-**Entropy**: −Σ pᵢ log pᵢ — information-theoretic splitting criterion.
-**Bagging (Bootstrap Aggregating)**: Training each tree on a bootstrap resample of data.
-**SMOTE (Synthetic Minority Oversampling Technique)**: Creates synthetic minority samples along lines between neighbours.
-**One-Hot Encoding**: Converts M-category variable into M−1 binary dummy columns.
-**Dummy Variable Trap**: Including all M dummies creates perfect multicollinearity.
-**Min-Max Normalisation**: x' = (x − min) / (max − min) → scales features to [0, 1].
-**Stratified K-Fold CV**: K-fold cross-validation preserving class proportions in each fold.
-**Hyperparameter**: Set before training (e.g., K, max_depth, n_estimators); not learned.
-**Parameter**: Learned from data (e.g., tree split thresholds, GNB means/variances).
-**Curse of Dimensionality**: In high dimensions, all points become equidistant; KNN fails.
-**Voronoi Diagram**: Partition of space where each region contains points closest to one training sample — KNN's decision boundaries.
-
-================================================
+------------------------------------------------
 MNEMONICS & QUICK RECALL
 ================================================
+**Missing Data Tactics**: **DFF** — "Drop, Fill, Forward" — Drop the row, Fill with a constant, Forward/backward Fill.
+**SMOTE**: **SOS-T** — "Synthetic Oversampling Saves The minority" — Synthetic Minority Oversampling TEchnique.
+**MAP**: **MAX-POST** — "Maximise the Posterior" — pick the y maximizing P(y|x).
+**Random Forest**: **BAG-FS** — "Bag rows, subset features" — Bagging plus random Feature Subsets.
 
-**DFF** — Missing data strategies: **D**rop, **F**ill constant, **F**ill forward/backward.
-**SMOTE** — **S**ynthetic **M**inority **O**versampling **TE**chnique.
-**MAP** — **M**aximise **A** **P**osteriori (P(y|x)).
-**GINI** — **G**et **I**mpurity **N**ow **I**n trees (1 − Σp²).
-**KNN-WNN** — **W**eighted = **W**ins on imbalanced data (inverse distance).
-
+------------------------------------------------
+CONCRETE EXAMPLES / WORKED SCENARIOS
 ================================================
+### Example 1: One-Hot Encoding Gender
+Gender has three categories (M = 3), so create 2 dummies: $x_1 = 1$ for Male, $x_2 = 1$ for Female. Customers 1–2 male → (1,0); 3–4 female → (0,1); 5 unknown → (0,0). Assigning 0/1/2 instead would imply Male < Female < Unknown — meaningless — so the dummies feed regression or classification.
+
+### Example 2: Gaussian NB Means
+With $y \in \{0,1\}$: class 0 rows (0.2, 0.9), (−0.6, 1.2) give $\mu_{1,0} = (0.2-0.6)/2 = -0.2$ and $\mu_{2,0} = (0.9+1.2)/2 = 1.05$. Class 1 rows (2.4, −1.0), (3.1, −0.6), (2.8, −1.4) give $\mu_{1,1} = (2.4+3.1+2.8)/3 = 2.77$ and $\mu_{2,1} = (-1.0-0.6-1.4)/3 = -1.0$. A new point near (2.6, −0.9) sits closest to class 1's means, so Gaussian NB predicts class 1.
+
+### Example 3: KNN versus Weighted KNN
+With K = 5: two class-0 points at distances 0.4 and 0.5; three class-1 points at 0.8, 1.0, 1.5.
+- **KNN** votes: class 0 = 2, class 1 = 3 → class 1.
+- **WNN** sums inverse distances: $N_0 = 1/0.4 + 1/0.5 = 2.5 + 2.0 = 4.5$; $N_1 = 1/0.8 + 1/1.0 + 1/1.5 = 1.25 + 1.0 + 0.67 = 2.92$ → class 0.
+The closer class-0 points outweigh the more distant class-1 points. Probabilities: WNN $P[C_0|x] = 4.5/7.42 = 0.606$, $P[C_1|x] = 0.394$; KNN $P[C_0|x] = 2/5 = 0.4$, $P[C_1|x] = 3/5 = 0.6$.
+
+------------------------------------------------
 POTENTIAL EXAM FOCUS
 ================================================
-
-• **Trace KNN/WNN**: Given a small 2D dataset, a test point, and K=3, compute distances, identify neighbours, show KNN vs WNN predictions and probability estimates.
-• **Explain why one-hot uses M−1 columns** and what goes wrong if you use M (dummy variable trap) or label encoding (0,1,2…) for linear models.
-• **Compare GNB, Random Forest, KNN** on: training time, inference time, memory, hyperparameters, handling of categorical data, handling of feature scale, interpretability.
-• **Design a validation pipeline**: Given an imbalanced classification task, specify train/val/test split, CV strategy (StratifiedKFold), resampling (SMOTE or cost-sensitive), and why.
-• **Normalisation calculation**: Given a feature with min=10, max=100, compute normalised value for x=55 → (55−10)/(100−10) = 0.5.
-• **Random Forest hyperparameters**: Explain the role of max_depth, max_features, n_estimators, and criterion. What happens if max_depth is too large? (Overfitting)
-• **GNB assumptions**: State the two assumptions. What happens if features are highly correlated? (Violates independence → poor probability estimates, but classification may still work)
-• **Imbalanced data metrics**: Why is accuracy misleading? Name two better metrics (F1, precision/recall, ROC-AUC, PR-AUC).
-
-================================================
-CONCRETE EXAMPLES SUMMARY
-================================================
-
-1. **One-Hot Encoding**: Gender {Male, Female, Not Given} → x₁(Male), x₂(Female); (0,0)=Not Given. Avoid 0/1/2 encoding.
-2. **WNN vs KNN**: 5 neighbours, 2 Class 0 (dist 0.4, 0.5), 3 Class 1 (dist 0.8, 1.0, 1.5). KNN→Class 1, WNN→Class 0.
-3. **Min-Max Normalisation**: Engine capacity 1000–5000cc, Year 2000–2026. Without scaling, capacity dominates distance. After scaling, both in [0,1].
-
-================================================
-COMPLEXITY CHEAT SHEET
-================================================
-
-| Algorithm | Train Time | Inference Time | Memory | Hyperparameters |
-|-----------|------------|----------------|--------|-----------------|
-| GNB | O(N×K×C) | O(K×C) | O(K×C) | None |
-| Random Forest | O(T×N×D×F) | O(T×D) | O(T×D×F) | T, D, F, criterion |
-| KNN | O(1) | O(N×K) | O(N×K) | K, distance metric |
-| WNN | O(1) | O(N×K) | O(N×K) | K, distance metric |
-
-T=n_estimators, D=max_depth, F=max_features, N=training samples, K=features, C=classes.
-
-================================================
-NEXT WEEK PREVIEW
-================================================
-
-Week 5: **Neural Networks** — basic concepts, architectures (MLP, CNN, RNN), why differentiability enables backpropagation, example applications. The classical methods this week are the foundation; NNs generalise them with learnable feature representations.
-
----
-*Study guide generated from ENGG2112 Week 4 lecture slides (Prof. T. J. Lim, Semester 2, 2026)*
+1. Why is accuracy a poor metric on a 95%-majority dataset? → Answer: A model that always predicts the majority scores 95% while learning nothing, so it is optimised for the majority case.
+2. Why does one-hot encoding use M − 1 dummies instead of M? → Answer: The last category is implied when all dummies are 0, so M − 1 suffice; all M creates redundancy (the dummy variable trap).
+3. What is wrong with encoding categories as 0, 1, 2? → Answer: It implies a false ordinal relationship such as Male < Female < Unknown, which the model treats as real.
+4. State the two assumptions of Gaussian Naïve Bayes. → Answer: Conditional independence lets the joint factorise into per-feature distributions; Gaussian features mean each is specified by a mean and variance.
+5. Why can Gaussian NB ignore the Bayes' rule denominator? → Answer: For a fixed x, P(x) is a constant, so comparing P(x|y)P(y) across labels gives the same maximising y.
+6. Why does Gaussian NB have no hyper-parameters? → Answer: Its structure depends only on the feature and class counts; training estimates only means and variances.
+7. Parameter versus hyper-parameter in Random Forest? → Answer: Split feature and threshold are learned parameters; `max_depth`, `max_features`, `criterion`, `n_estimators` are set before training.
+8. What two randomisations make Random Forest trees differ? → Answer: Bagging (bootstrap resampling of rows) and random feature subsets (each node investigates only m of p features).
+9. Does K affect KNN's computational complexity? → Answer: No — all N distances are computed regardless; K affects accuracy, not distance cost.
+10. How does Weighted KNN fix the imbalance problem? → Answer: Nearer neighbours get higher weight via inverse-distance summation, so a few close minority points can outweigh many distant majority points.
+11. How are class probabilities estimated in KNN and WNN? → Answer: P[C_i|x] = N_i / Σ_k N_k, with N_i the weighted (WNN) or unweighted (KNN) count for class i.
+12. Why normalise features before KNN, and what is the formula? → Answer: One large-range feature would dominate distance; min-max normalisation is x' = (x − min)/(max − min), mapping values to [0,1].
+13. Difference between validation and testing? → Answer: Validation tunes hyper-parameters and chooses the model; testing reports final performance on data unseen before, estimating post-deployment behaviour.

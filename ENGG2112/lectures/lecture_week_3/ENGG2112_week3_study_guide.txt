@@ -5,306 +5,430 @@ Engineering Models, AI/ML Pipeline & Performance Metrics
 
 OVERVIEW
 --------
-This lecture introduces the concept of engineering models as mathematical representations of systems, bridges into AI/ML models, and covers the complete AI/ML pipeline from data preparation through deployment. It distinguishes classification vs regression problems and teaches how to properly evaluate model performance using confusion matrices, precision/recall/F1, and MSE. These are foundational concepts you'll use throughout the course and in practical ML work.
+This lecture asks what a model is and how engineers build and judge one. It presents engineering models as mathematical representations of systems and sub-systems, then the universal input-output model $y = f_\theta(x)$, where $\theta$ are the parameters we learn. It walks the full AI/ML pipeline — collect, clean, engineer features, split, train, validate, test, deploy, monitor — and finishes with performance measurement: classification versus regression, the confusion matrix, precision, recall, F1 and accuracy, class imbalance and cost asymmetry, multi-class metrics, and MSE for regression. These ideas let you read, build, and critically evaluate almost any ML system.
+
+================================================
+STATS:
+---------------------------------------------
+Train/Val/Test split|80/10/10
+Audio sampling rate|44.1 kHz
+Accuracy-trap example|94.5% accuracy
+Balanced classifier|all metrics 0.70
 
 ------------------------------------------------
-SECTION 1: What Is an Engineering Model?
+SECTION 1: What Is an Engineering Model
 ------------------------------------------------
+A **model** has two everyday meanings: a scaled three-dimensional representation of a thing (e.g. "a model of St Paul's Cathedral"), or an example to imitate ("the project became a model for other schemes"). Engineering models are closer to the **first**: a **representation of a thing** that must be **useful in engineering design**. Familiar examples are model cars, buildings, and **digital twins**, which allow visualisation and limited experimentation.
 
-An engineering model is a **mathematical representation of a real-world system or sub-system** that lets us simulate, analyse, and design before building. Unlike a physical scale model (like a model car), engineering models are usually equations or algorithms.
+### Whole Systems vs Sub-Systems
 
-Key distinction:
-- **Whole-system models** (digital twins, building models) — visualisation + limited experimentation
-- **Sub-system models** — the real engineering workhorse. Examples:
-  - Human auditory system → filter that suppresses/emphasises frequencies
-  - Water hose flow → equation accounting for nozzle diameter
+Beyond models of a whole complex thing (a car, a building, a process), engineers rely on models of the **sub-systems** inside it. These let us design through computer simulation, mathematical analysis, and lab experiments, and confirm the parts work. Such models are necessarily **mathematical**:
 
-💡 Why it matters: Every engineering discipline relies on sub-system models. You can't design a car engine without modelling combustion, heat transfer, fluid dynamics, etc., separately.
+- The **human auditory system** is modelled as a filter that suppresses frequencies outside our hearing range and emphasises or de-emphasises some within it.
+- The **flow of water through a hose** is modelled with a function that accounts for the nozzle diameter.
 
-------------------------------------------------
-SECTION 2: Input-Output Systems & The General Model
-------------------------------------------------
-
-**System**: Takes input(s) → produces output(s).
-
-Two flavours:
-- **Deterministic**: Same input → always same output. Examples: weighing scale, audio amplifier, car engine response to pedal.
-- **Stochastic**: Same input → possibly different outputs. Examples: natural systems with randomness, LLMs.
-
-**The Universal Model**: `y = f_θ(x)`
-- x = input(s) (usually multi-dimensional vector)
-- y = output(s) (may also be multi-dimensional)
-- θ = parameters we need to learn ("training")
-- f = the model function (could be linear, non-linear, neural net, etc.)
-
-**Training** = finding the best θ for your system using data.
-
-Memory aid: **"X goes in, Y comes out, Theta makes it work"** — X, Y, Θ.
+💡 **Why It Matters:** Almost every discipline designs through sub-system models — you cannot design an engine without separately modelling combustion, heat, and fluid flow.
 
 ------------------------------------------------
-SECTION 3: Three Concrete Model Examples
+SECTION 2: Input-Output Systems and the Model
 ------------------------------------------------
+A **system** takes one or more **inputs** and produces one or more **outputs** in response. A **deterministic system** always responds the same way to a given input; a **stochastic** system does not necessarily give the same output for a given input.
 
-### Example 1: Discrete-Time Feedforward Model (FIR Filter)
-```
-y[n] = Σ(w[k] * x[n-k])  for k = 0 to 2
-```
-- x[n] = input signal samples (e.g., audio at 44.1 kHz)
-- y[n] = output signal samples
-- w[0], w[1], w[2] = weights (these are θ!)
-- **What θ is**: The three weights. By choosing them, you design a filter (e.g., suppress high frequencies).
-- **Use case**: Model unknown input-output system from data.
+| System | Behaviour | Examples |
+|---|---|---|
+| Deterministic | Same input gives same output | Weighing scale, TV audio amplifier, car engine vs gas pedal |
+| Stochastic | Same input may give different output | Natural systems with randomness; LLMs and engineered mimics of it |
 
-### Example 2: Non-Linear Model (Power Amplifier)
-```
-y[n] = A * tanh(g * x[n])
-```
-- Models a memory-less power amplifier
-- **Parameters to learn (θ)**: A (amplitude scaling) and g (gain)
-- **How to learn**: Control input x, measure output y, fit A and g
+### The General Mathematical Model
 
-### Example 3: Neural Network (MLP)
-- Simplest NN = Multi-Layer Perceptron
-- **Parameters (θ)**: All weights and biases across layers
-- **Making it more powerful**: Add layers, add neurons, change activation functions
-- **Finding best weights**: Gradient descent / backpropagation (covered later)
-
-💡 Why it matters: These three examples show the spectrum from simple linear (Example 1) to non-linear parametric (Example 2) to highly flexible universal approximators (Example 3). LLMs sit at the far end of this spectrum.
-
-------------------------------------------------
-SECTION 4: Datasets & Supervised Learning Terminology
-------------------------------------------------
-
-**Dataset structure**: Rows = samples (records), Columns = features + label(s)
-- Features (x₁...xₖ) = inputs/observations
-- Label/Response (y) = ground truth output
-- **Inference** = estimation/prediction = using the model to predict y from x
-
-**Supervised Learning**: Training on labelled data (each x has a true y).
-- Ground truth = the correct y for a given x
-- Features go into model → model outputs prediction → compare to ground truth
-
-Memory aid: **"Features Feed Forward, Labels Look Back"** — Features go into the model (forward), labels are what you check against (look back).
-
-------------------------------------------------
-SECTION 5: The AI/ML Pipeline (End-to-End Cycle)
-------------------------------------------------
+The universal input-output model is:
 
 ```
-Data Collection → Cleaning/Preprocessing → Feature Engineering
-       ↓
-   Data Split (Train / Val / Test)  ←  80/10/10 typical
-       ↓
-   Training (optimise θ) ↔ Validation (tune hyperparameters)
-       ↓
-   Testing (final unbiased evaluation)
-       ↓
-   Deployment (API, mobile, firmware, etc.)
-       ↓
-   Monitoring → back to redesign if needed
+y = f_θ(x)
 ```
 
-### 5.1 Data Preparation
-- **Collection**: "Garbage In, Garbage Out" — use public datasets, read documentation/papers
-- **Cleaning**: Handle missing, corrupted, wrong-format, noisy data
-- **Feature Engineering**: Extract relevant attributes manually or via architecture
+- **x** is the input, usually multi-dimensional.
+- **y** is the output, possibly also multi-dimensional.
+- **f** is the function (linear, non-linear, neural network, ...).
+- **θ** is the set of **parameters**.
 
-### 5.2 Data Split — Critical Rules
-- **Training set**: Adjust θ for a given model + hyperparameters
-- **Validation set**: Choose hyperparameters (learning rate, layers, etc.)
-- **Test set**: Final evaluation only — **never touch during development**
-- **Leakage**: Reusing data across sets inflates performance artificially. Split once, respect boundaries.
+We must find the **best parameter θ** for the system — this search is **training**.
 
-### 5.3 Training & Evaluation
-- **Loss function**: Measures prediction quality
-  - Regression → MSE (Mean Squared Error)
-  - Classification → Cross-entropy
-- **Must be differentiable** w.r.t. θ
-- **Gradient Descent**: Iteratively adjust θ to minimise loss
-- **SGD (Stochastic GD)**: Use mini-batch averages instead of true expectation E[…]
-
-### 5.4 Deployment & Monitoring
-- **Constraints**: Memory, speed, real-time — different from training environment
-- **Mismatch**: Deployment sensors often noisier than lab sensors
-- **Key fact**: Models are **static after training**; they don't learn on-the-fly. Retrain periodically.
-
-💡 Why it matters: This pipeline is the industry standard. Skipping steps (especially validation/test separation or monitoring) leads to models that fail in production.
+🧠 **Memory Hook:** "**X goes in, Y comes out, Theta makes it work**".
 
 ------------------------------------------------
-SECTION 6: Classification vs Regression
+SECTION 3: Worked Model Examples
 ------------------------------------------------
+$y = f_\theta(x)$ becomes concrete in three examples that climb a ladder of flexibility: linear, non-linear parametric, and neural.
+
+### Example 1: Discrete-Time Feedforward Model
+
+```
+y[n] = Σ_{k=0}^{2} w_k · x[n−k]
+```
+
+- **x[n]** is a sampled signal — e.g. audio at **44.1 kHz**; **y[n]** are output samples.
+- We design the weights w₀, w₁, w₂ to do things like **suppress high frequencies**, or to model an **unknown input-output system**.
+- **θ = {w₀, w₁, w₂}**.
+
+### Example 2: Non-Linear Model
+
+```
+y[n] = A · tanh(g · x[n])
+```
+
+Models a **memory-less power amplifier** (output depends only on the current input). We do not know its characteristics, but we have the device: control the input, measure the output, and fit the parameters **A** (amplitude) and **g** (gain). An interactive HTML demo is on Canvas.
+
+### Example 3: Neural Network Model
+
+The simplest neural network is a **multi-layer perceptron (MLP)**. Its parameters are all the **weights and biases** across layers. Make it **more powerful** by adding layers or neurons, or changing activation functions. The best weights are found by training.
+
+### How LLMs Fit In
+
+Large language models are the most flexible form of $y = f_\theta(x)$, with huge parameter counts, and behave as **stochastic systems**.
+
+✅ **Exam Tip:** Asked for θ, separate the known structure from the unknown numbers: FIR = weights; tanh = A and g; MLP = weights and biases.
+
+------------------------------------------------
+SECTION 4: Datasets and Terminology
+------------------------------------------------
+Training data is organised as rows of $(x_1, \ldots, x_K, y)$ with **K scalar features** and **one scalar response (label)**, often stored as CSV or Excel.
+
+Think of a dataset as a spreadsheet with **N rows and K columns**:
+
+- Each **row** is a **data record** or **sample**.
+- Some columns are **features** (inputs, also called observations); others are **responses** or **labels** (outputs).
+- The machine **estimates** or **predicts** the label from the features; **inference** is another word for estimation and prediction.
+
+### Supervised Learning
+
+In **supervised learning** the model is trained on **labelled data** — each record has a true y value for its x values. That true value is the **ground truth** label. The x values fed into the model are the **features** or **observations**.
+
+🧠 **Memory Hook:** "**Features Feed Forward, Labels Look Back**" — features go into the model; labels are what you compare against.
+
+------------------------------------------------
+SECTION 5: The AI/ML Pipeline Overview
+------------------------------------------------
+AI/ML applications are described as a **pipeline** of functions, one leading into the next. With monitoring/feedback it is a **cycle**.
+
+```
+Data Collection → Cleaning/Preprocessing → Feature Engineering → Data Split → Training → Validation → Testing → Deployment → Monitoring
+```
+
+1. **Collection** — gather the right data.
+2. **Cleaning/Preprocessing** — fix missing, corrupted, wrong-format, noisy data.
+3. **Feature Engineering** — extract relevant attributes manually or via the architecture.
+4. **Data Split** — training / validation / test sets.
+5. **Training** — adjust parameters θ.
+6. **Validation** — tune hyper-parameters.
+7. **Testing** — final assessment on unseen data.
+8. **Deployment** — put the model into production.
+9. **Monitoring** — watch performance; on failure, cycle back and redesign.
+
+💡 **Why It Matters:** The pipeline is the map of the course; skip a stage — especially validation/test separation or monitoring — and the model fails in the real world.
+
+------------------------------------------------
+SECTION 6: Data Preparation
+------------------------------------------------
+### Data Collection
+
+Collect the right data — "**Garbage In, Garbage Out**". In this unit you will likely use public datasets, so read the overview and description; academic papers often release data too, so read the paper to see what the authors did with it.
+
+### Cleaning and Preprocessing
+
+Data may be **missing, corrupted, in the wrong format, or noisy**, so it usually needs cleaning before training and testing.
+
+### Feature Engineering
+
+Extract the relevant attributes **manually or automatically** (through the AI architecture). Good features make learning easier; poor features make it harder.
+
+⚠️ **Common Trap:** Never train before checking your data — no amount of tuning fixes corrupted or unrepresentative inputs.
+
+------------------------------------------------
+SECTION 7: Data Split and Leakage
+------------------------------------------------
+A dataset is N rows (samples) by K columns (features or labels). In an image application each sample is one image, the k-th column a pixel value, and the last column a label such as "dog", "car", or "bicycle".
+
+**Training needs some samples but not all:**
+
+- Use everything for training and none is left for **validation** — deciding whether the model is good or should change.
+- Some must remain for **testing** — the final assessment on **unseen** data to see how well the model **generalises**.
+
+Reusing data across training, validation, or testing causes "**leakage**": information from validation/test sets contaminates training and yields **better-than-normal results**. So split the data, for example **80/10/10**.
+
+| Split | Purpose |
+|---|---|
+| **Training set** | Adjust parameters for a given model and hyper-parameter setting |
+| **Validation set** | Adjust hyper-parameter settings |
+| **Testing set** | Evaluate the final model/settings; if unacceptable, redesign from the start |
+
+ℹ️ **Note:** Hyper-parameters are chosen before training; θ is learned during training.
+
+✅ **Exam Tip:** "A student uses test accuracy to pick between two models — what is wrong?" → Test-set leakage; selection belongs to the validation set, and the test set is used once, at the end.
+
+------------------------------------------------
+SECTION 8: Training and Loss Functions
+------------------------------------------------
+Training is conceptually easy but mathematically intricate. Define a **loss function** measuring statistically how well the model predicts labels:
+
+- **Regression** → a variant of **mean squared error (MSE)**.
+- **Classification** → **cross-entropy**.
+
+The loss must be **differentiable with respect to θ**. We then use a variant of **gradient descent** to minimise it:
+
+```
+Minimise L(θ) by gradient descent → best parameters θ*
+```
+
+The loss is formally a statistical expectation $E[\cdot]$, which is not knowable exactly, so we approximate it with **averages over the training samples** — this gives **stochastic gradient descent (SGD)**.
+
+| Split | Adjusts |
+|---|---|
+| **Training set** | Parameters θ for a given model and hyper-parameter setting |
+| **Validation set** | Hyper-parameter settings |
+| **Testing set** | Nothing; final evaluation only, then redesign if unacceptable |
+
+Performance is then judged with **accuracy, precision, recall, F1, and related metrics**.
+
+🧠 **Memory Hook:** "**Regression → MSE, Classification → Cross-entropy**".
+
+------------------------------------------------
+SECTION 9: Deployment and Monitoring
+------------------------------------------------
+An AI application must be **deployed** — as an API, a phone app, firmware on a microcontroller or DSP chip, etc. Deployment adds constraints absent during training:
+
+- **Different constraints**: memory, processing speed, real-time requirements.
+- **Mismatch** between training and deployment — e.g. deployment sensors may be **noisier** than lab sensors.
+
+**Monitoring** after deployment is therefore critical; if it fails, go back to the first step and re-design.
+
+ℹ️ **Note:** Contrary to popular belief, AI systems generally **do not learn on-the-fly**. The model is **static after training** and is **re-trained periodically** — a favourite exam fact.
+
+------------------------------------------------
+SECTION 10: Classification vs Regression
+------------------------------------------------
+The two basic ML problem types differ in the set of possible outputs, $\mathcal{S}_y$.
 
 | Aspect | Classification | Regression |
-|--------|---------------|------------|
-| Output space (S_y) | Finite set of classes | Uncountable/infinite (continuous) |
-| Task | Decide which class | Estimate a value |
-| Examples | Fault detection, brake decision, object pick-up | Rainfall prediction, traffic volume, age from photo |
-| Output | Often probability distribution (soft) | Often probability distribution (soft) |
-
-**Soft estimates** (probability distributions) > **Point estimates** (single values) — they convey uncertainty.
-
-Memory aid: **"Class = Category, Regress = Real number"**
-
-------------------------------------------------
-SECTION 7: Classification Performance Metrics
-------------------------------------------------
-
-### 7.1 Confusion Matrix (Binary)
-| | Predicted + | Predicted - |
 |---|---|---|
-| **Actual +** | True Positive (TP) | False Negative (FN) |
-| **Actual -** | False Positive (FP) | True Negative (TN) |
+| Output set | **Finite** set of classes | **Uncountable** (infinite, continuous) |
+| Task | Decide which class | Estimate a value |
+| Examples | Sensor fault? Brake? Pick up object? | Rainfall tomorrow, 5pm traffic volume, age from a photo |
 
-### 7.2 Core Metrics
-- **Accuracy** = (TP + TN) / Total — **misleading on imbalanced data!**
-- **Precision** = TP / (TP + FP) — Of predicted positives, how many are correct?
-- **Recall (Sensitivity)** = TP / (TP + FN) — Of actual positives, how many caught?
-- **F1 Score** = 2 × (Precision × Recall) / (Precision + Recall) — harmonic mean, balances both
+In both cases $y = f_\theta(x)$ applies. Machines often output the **probability distribution**:
 
-### 7.3 The Accuracy Trap (Example 1)
-- Dataset: 94.5% negative, 5.5% positive
-- Classifier predicts "negative" for everything
-- **Accuracy = 94.5%** — looks great!
-- **Precision = 33%**, **Recall = 10%** — actually terrible
-- **Lesson**: Never trust accuracy alone on imbalanced data.
+- a **point estimate** is a single output value;
+- a **soft estimate** is a range of outputs with probabilities — useful because it conveys uncertainty.
 
-### 7.4 Cost Asymmetry — Choose the Right Metric
-| Application | FN Cost | FP Cost | Focus On |
-|-------------|---------|---------|----------|
-| Medical diagnosis | High (missed treatment) | Low (extra tests) | **Recall** |
-| Intrusion detection | High (breach undetected) | Medium (expert review) | **Recall** |
-| Phone face unlock | Low (retry) | High (unauthorised access) | **Precision** |
-
-**F1** = good default when costs are balanced or unknown.
-
-### 7.5 Multi-Class Confusion Matrix
-- Rows = Actual, Columns = Predicted
-- Diagonal = correct predictions
-- Accuracy = sum(diagonal) / total
-- Precision/Recall/F1 computed per class (one-vs-rest) or macro/micro averaged
-
-### 7.6 The "Mediocre But Balanced" Classifier (Example 2)
-- 50/50 balanced data
-- 70% correct on both classes
-- All metrics = 0.70
-- **Verdict**: Mediocre in both directions → redesign needed!
+🧠 **Memory Hook:** "**Class = Category, Regress = Real number**".
 
 ------------------------------------------------
-SECTION 8: Regression Performance
+SECTION 11: Observation Space and Errors
 ------------------------------------------------
+Input vectors can be visualised as points in a geometrical **observation space**; take a 2D slice of that multi-dimensional space and you get a picture. In a three-class task, the classifier divides the space into three **non-overlapping decision regions**.
 
-**Key difference**: Error occurs with probability 1 (continuous outputs never match exactly).
+Classifiers make errors — how often does your phone fail to recognise your face? Suppose crosses are the blue class and stars the yellow class, and a slanted line is the **decision boundary**: right of it is "blue", left is "yellow". Because the classifier is imperfect (perhaps it can only draw straight boundaries):
 
-- True label: y₀, Model output: ŷ
-- Error: e = ŷ - y₀
-- **MSE (Mean Squared Error)**: ζ = E[(ŷ - y₀)²]
-- E[·] = statistical mean (average over samples)
-- Regression typically uses **only MSE** as performance measure
+- **1 of 6 crosses** is wrongly labelled yellow.
+- **1 of 7 stars** is wrongly labelled blue.
 
-Memory aid: **"MSE = Mean Squared Error = Average of (guess minus truth) squared"**
+This raises the key question: **how do we quantify classifier performance?**
+
+💡 **Why It Matters:** A single accuracy number hides the structure of errors; the confusion matrix exposes where a classifier succeeds and fails.
+
+------------------------------------------------
+SECTION 12: Binary Classification Metrics
+------------------------------------------------
+A **confusion matrix** counts the four binary outcomes: TP, FN, FP, TN.
+
+| | Predicted Positive | Predicted Negative |
+|---|---|---|
+| **Actual Positive** | True Positive (TP) | False Negative (FN) |
+| **Actual Negative** | False Positive (FP) | True Negative (TN) |
+
+- **TP**: actually positive, predicted positive.
+- **FN**: actually positive, predicted negative (a missed positive).
+- **FP**: actually negative, predicted positive (a false alarm).
+- **TN**: actually negative, predicted negative.
+
+The core metrics:
+**Accuracy** = (TP + TN) / Total — fraction of all predictions correct; inflated on imbalanced data.
+**Precision** = TP / (TP + FP) — of those flagged positive, the fraction truly positive; few false alarms.
+**Recall** = TP / (TP + FN) — of truly positive cases, the fraction caught; also called sensitivity.
+**F1** = 2 × (Precision × Recall) / (Precision + Recall) — harmonic mean of precision and recall; high only if both are high.
+
+### The Accuracy Trap
+
+The lecture's first example "does a bad job" but appears terrific:
+
+- **Accuracy = 94.5%**.
+- **Precision = 33%** — only 1/3 of predicted positives were actually positive.
+- **Recall = 10%** — only 1 in 10 true positives was detected.
+
+The dataset is **heavily skewed towards negative**, so a classifier can output "negative" almost always and still score high accuracy. Never trust accuracy alone on imbalanced data.
+
+### A Balanced but Mediocre Classifier
+
+With **500 positive and 500 negative** samples, a classifier is correct at a **70%** rate on both classes, so **recall, precision, accuracy, and F1 are all 0.70**. Good enough? Depends on the application — but this is mediocre in both directions and a good candidate for re-design.
+
+✅ **Exam Tip:** Memorise the four formulas and be ready to compute every metric from TP, FP, TN, FN.
+
+------------------------------------------------
+SECTION 13: Imbalanced Data and Costs
+------------------------------------------------
+A **False Negative often costs more or less than a False Positive**, so the designer must pick the metric matching the real risk.
+
+| Application | FN cost | FP cost | Prioritise |
+|---|---|---|---|
+| Medical diagnosis | Missed timely treatment | Extra tests | **Recall** |
+| Intrusion detection | Breach undetected, major costs | Experts called in | **Recall** |
+| Phone face unlock | Try again | Unauthorised access | **Precision** |
+
+The **F1 score** is the **harmonic mean of recall and precision**, balancing the two; it is only high when both are high — a sensible default when costs are balanced or unknown.
+
+🧠 **Memory Hook:** "**Medical Miss = Bad**" (prioritise recall), but "**Unlock Fail = Annoying, Unlock Success = Dangerous**" (prioritise precision).
+
+------------------------------------------------
+SECTION 14: Multi-Class and Regression
+------------------------------------------------
+### More Than Two Classes
+
+For non-binary classification the confusion matrix grows; rows are the **actual** class and columns the **predicted** class:
+
+| Actual \ Predicted | A | B | C | D |
+|---|---|---|---|---|
+| **A** | 85 | 2 | 10 | 3 |
+| **B** | 1 | 95 | 1 | 3 |
+| **C** | 12 | 1 | 82 | 5 |
+| **D** | 2 | 2 | 3 | 93 |
+
+- **Accuracy** = proportion of correct decisions (the diagonal): $(85+95+82+93)/400 = 0.8875$, about **88.75%**.
+- **Recall, precision, and F1** are defined **class-by-class**, or "**one-vs-rest**": treat one class as positive and all others as negative.
+
+### Regression Errors
+
+**Regression errors occur with probability one**, because the model output and the ground-truth label are both **continuous**, so they are essentially never identical. With true label $y_0$ and model output $\hat{y}$:
+
+```
+e = ŷ − y₀
+```
+
+The goal is to choose the model and θ minimising the **mean squared error (MSE)**:
+
+```
+ζ = E[(ŷ − y₀)²]
+```
+
+$E[\cdot]$ is the **statistical mean operator** — just the average you know. Unlike classification, regression generally uses **only MSE**.
+
+🧠 **Memory Hook:** "**MSE = average of (guess minus truth), squared**".
 
 ------------------------------------------------
 KEY TAKEAWAYS
 ================================================
-
-1. Engineering models are mathematical representations of sub-systems, not just visual replicas.
-2. The universal model `y = f_θ(x)` covers everything from FIR filters to LLMs — θ is what we learn.
-3. Deterministic systems give consistent outputs; stochastic systems (including LLMs) don't.
-4. The AI/ML pipeline is a cycle: Data → Split → Train/Val → Test → Deploy → Monitor → Redesign.
-5. **Never reuse data across train/val/test** — leakage creates false confidence.
-6. Classification = finite classes, Regression = continuous values.
-7. **Accuracy lies on imbalanced data** — always check precision, recall, F1.
-8. **FN vs FP costs differ by application** — pick metrics accordingly (Recall for medical/security, Precision for auth).
-9. F1 is the harmonic mean of precision & recall — only high if both are high.
-10. Regression error is inevitable; MSE is the standard measure.
-11. Models are static after deployment; they require periodic retraining, not online learning.
+1. **Engineering models are mathematical representations** of systems and sub-systems, used for simulation, analysis, and design — not just visual replicas.
+2. **Deterministic vs stochastic** — a deterministic system always gives the same output for a given input; a stochastic system (including LLMs) may not.
+3. **The universal model** $y = f_\theta(x)$ spans everything from an FIR filter to an LLM; the function form is the design, and θ is what training learns.
+4. **Know your θ** — FIR: the weights; tanh amplifier: A and g; MLP: all weights and biases.
+5. **Supervised learning uses labelled data** — features x go in, the model predicts a label, and the ground truth measures the error.
+6. **The AI/ML pipeline is a cycle** — collect, clean, engineer features, split, train, validate, test, deploy, monitor, then redesign if needed.
+7. **Split the data properly** — training fits θ, validation tunes hyper-parameters, testing is a one-time final check; a typical split is 80/10/10.
+8. **Avoid leakage** — reusing data across training, validation, or testing inflates results and destroys trust in your numbers.
+9. **Training needs a differentiable loss** — regression uses MSE, classification uses cross-entropy, and gradient descent (in practice SGD) minimises it.
+10. **Models are static after training** — they do not learn on-the-fly; they are re-trained periodically and must be monitored in deployment.
+11. **Classification vs regression** — classification has a finite output set, regression an uncountable one; probability/soft estimates beat point estimates.
+12. **Accuracy alone is dangerous** — on imbalanced data a high-accuracy model can have terrible precision and recall; choose the metric matching the real FN/FP costs.
 
 ------------------------------------------------
 TERMS TO KNOW
 ================================================
-
-Engineering model: Mathematical representation of a system/sub-system used for design and simulation
-Deterministic system: Same input always produces same output
-Stochastic system: Same input may produce different outputs (inherent randomness)
-Parameters (θ): Learnable values in a model that define its behaviour
-Training: Process of finding optimal θ using data
-Ground truth: True/correct label for a training sample
-Features: Input variables (x) fed into a model
-Label/Response: Output variable (y) the model predicts
-Inference: Using a trained model to predict on new data
-Supervised learning: Learning from labelled data (x, y pairs)
-Data leakage: Information from val/test sets contaminating training → inflated metrics
-Loss function: Quantifies prediction error; differentiated for gradient descent
-Gradient descent: Iterative optimisation to minimise loss
-SGD (Stochastic Gradient Descent): Gradient descent using mini-batch approximations
-Hyperparameters: Settings chosen before training (learning rate, architecture, etc.)
-Validation set: Data for tuning hyperparameters
-Test set: Held-out data for final unbiased evaluation
-Confusion matrix: Table showing TP, FP, TN, FN for a classifier
-Precision: TP / (TP + FP) — correctness of positive predictions
-Recall (Sensitivity): TP / (TP + FN) — coverage of actual positives
-F1 score: Harmonic mean of precision and recall
-MSE (Mean Squared Error): Average squared difference between predicted and true values (regression)
-Deployment: Putting a trained model into production (API, firmware, app, etc.)
-Monitoring: Tracking model performance in production to detect drift/failure
+Engineering model: A mathematical representation of a system or sub-system that is useful for engineering design and analysis.
+Deterministic system: A system that always responds the same way to a given input.
+Stochastic system: A system that may give different outputs for the same input because of inherent randomness.
+Parameters (θ): The learnable values of a model function that training adjusts to fit the system.
+Training: The process of finding the best parameters θ for a system using data.
+Feature: An input variable x fed into a model, also called an observation.
+Label: The output variable y a model predicts, also called the response.
+Inference: Using a trained model to estimate or predict outputs from inputs.
+Supervised learning: Training a model on labelled data where each input has a true output value.
+Ground truth: The true, correct label corresponding to a set of features.
+Data leakage: Information from validation or test sets contaminating training and inflating performance.
+Loss function: A differentiable function that statistically measures how poorly a model predicts labels.
+Mean squared error (MSE): The expectation of the squared difference between model output and true label, the standard regression measure.
+Cross-entropy: The loss function used for classification tasks.
+Gradient descent: An iterative optimisation method that adjusts θ to minimise the loss.
+Stochastic gradient descent (SGD): Gradient descent that approximates the true expectation with averages over training samples.
+Hyper-parameters: Settings chosen before training, tuned using the validation set.
+Validation set: Data used to adjust hyper-parameter settings.
+Test set: Held-out data used once for the final unbiased evaluation of a model.
+Confusion matrix: A table of TP, FP, FN, and TN counts summarising a classifier's decisions.
+Accuracy: The proportion of all predictions that are correct, equal to (TP + TN) divided by the total.
+Precision: The fraction of predicted positives that are truly positive, equal to TP divided by (TP + FP).
+Recall: The fraction of actual positives that were detected, equal to TP divided by (TP + FN), also called sensitivity.
+F1 score: The harmonic mean of precision and recall, high only when both are high.
+Monitoring: Tracking model performance after deployment to detect failure or mismatch.
 
 ------------------------------------------------
 MNEMONICS & QUICK RECALL
 ================================================
-
-**Pipeline Order**: **C-C-F-S-T-V-T-D-M** → "Cool Cats Find Sweet Treats, Very Tasty Donuts Made"
-- Collection, Cleaning, Feature Engineering, Split, Train, Validate, Test, Deploy, Monitor
-
-**Metrics Priority**: **P-R-F-A** → "Please Remember: F1 Always" (Precision, Recall, F1, Accuracy — in order of reliability)
-
-**FN vs FP Cost**: **"Medical Miss = Bad"** → Medical diagnosis prioritises Recall (catch every case)
-**"Unlock Fail = Annoying, Unlock Success = Dangerous"** → Face unlock prioritises Precision (avoid false unlocks)
-
-**Model Spectrum**: **Linear → Non-linear Parametric → Neural Net → LLM** (increasing flexibility)
-
-**Data Split Rule**: **Train tunes θ, Val tunes hyper-θ, Test touches nothing**
+**Universal model**: **XYT** — "X goes in, Y comes out, Theta makes it work" — X is the input, Y the output, θ the parameters.
+**Pipeline order**: **DCFSTVTDM** — "Don't Cheat, Find Sweet Training Values, Then Deploy Monitored" — Data, Clean, Feature engineering, Split, Train, Validate, Test, Deploy, Monitor.
+**Data split rule**: **TVT** — "Train tunes Theta, Validation tunes hyper, Test touches nothing" — the three sets have distinct jobs.
+**Metric choice**: **PRF** — "Please Remember F1" — check Precision, Recall, and F1 before trusting Accuracy.
+**Error costs**: **MF** — "Medical Miss, Facial False" — diagnosis prioritises Recall, face unlock prioritises Precision.
 
 ------------------------------------------------
 CONCRETE EXAMPLES / WORKED SCENARIOS
 ================================================
+### Example 1: Designing a Simple FIR Filter
 
-### Example 1: Designing a Simple FIR Filter (from lecture)
-- Audio signal sampled at 44.1 kHz → x[n]
-- Want to suppress high frequencies
-- Model: y[n] = w[0]x[n] + w[1]x[n-1] + w[2]x[n-2]
-- θ = {w[0], w[1], w[2]}
-- Learn θ by measuring input/output of unknown system, or design analytically for known filter response
+An audio signal is sampled at **44.1 kHz**, giving x[n]. We want to suppress high frequencies, using three taps:
 
-### Example 2: Medical Diagnosis Classifier
-- Disease prevalence: 2% (highly imbalanced)
-- Classifier A: Predicts "healthy" for everyone → Accuracy = 98%, Recall = 0%
-- Classifier B: Precision = 80%, Recall = 90%, F1 = 0.85, Accuracy = 97%
-- **Choose B** — accuracy alone would misleadingly favour A
+- Model: `y[n] = w₀·x[n] + w₁·x[n−1] + w₂·x[n−2]`.
+- Parameters: **θ = {w₀, w₁, w₂}**.
+- If the system is known, design the weights analytically for the desired frequency response; if unknown, control the input, measure the output, and fit the weights.
 
-### Example 3: Regression MSE Calculation
-- True house prices: [500k, 750k, 1.2M, 900k]
-- Model predictions: [520k, 730k, 1.15M, 950k]
-- Errors: [20k, -20k, -50k, 50k]
-- Squared errors: [400M, 400M, 2500M, 2500M] (in k²)
-- MSE = (400+400+2500+2500)/4 = 1450M k² = 1.45×10¹²
-- RMSE = √MSE ≈ 1.2M — typical error magnitude
+### Example 2: Fitting a Power Amplifier
+
+Model a memory-less power amplifier as `y[n] = A·tanh(g·x[n])`. We do not know A or g, but we can feed controlled inputs and measure outputs.
+
+- Parameters to learn: **A** (amplitude) and **g** (gain).
+- Training adjusts A and g so the tanh curve matches the measured input-output pairs.
+
+### Example 3: The Accuracy Trap
+
+A dataset is **94.5% negative**. A classifier that predicts "negative" almost always achieves **accuracy = 94.5%** but only **precision = 33%** and **recall = 10%**. It looks excellent yet is useless: the skewed data lets it ride the majority class, so accuracy must be checked against precision and recall.
+
+### Example 4: A Balanced but Mediocre Classifier
+
+With **500 positive and 500 negative** samples, a classifier is correct **70%** of the time on each class.
+
+- Accuracy = 700/1000 = **0.70**.
+- Recall = 350/500 = **0.70**; Precision = 350/500 = **0.70**; F1 = **0.70**.
+
+Every metric agrees at 0.70, so the classifier is mediocre in both directions — a good candidate for re-design.
+
+### Example 5: Multi-Class Accuracy
+
+Using the lecture's four-class matrix, rows are actual and columns predicted, and the diagonal holds correct predictions:
+
+- Accuracy $= (85 + 95 + 82 + 93) / 400 = 355/400 = 0.8875$, about **88.75%**.
+- For class A: TP = 85, FN = 2 + 10 + 3 = 15, so **Recall_A = 85/100 = 0.85**; FP = 1 + 12 + 2 = 15, so **Precision_A = 85/100 = 0.85**; **F1_A = 0.85**.
 
 ------------------------------------------------
 POTENTIAL EXAM FOCUS
 ================================================
-
-1. **Define and distinguish**: Deterministic vs stochastic system with one example each.
-2. **Identify θ**: Given a model equation (e.g., y[n] = A·tanh(g·x[n]) or y = w₀x + w₁x[n-1]), state what the learnable parameters are.
-3. **Pipeline ordering**: Arrange these steps in correct sequence: Hyperparameter tuning, Data cleaning, Final evaluation, Parameter training, Deployment, Data collection.
-4. **Leakage scenario**: "A student uses test set accuracy to choose between two models. What is wrong?" → Answer: Test set leakage; should use validation set.
-5. **Metric selection**: "Design a classifier for detecting engine failure in aircraft. False negative = crash. False positive = unnecessary maintenance. Which metric matters most?" → Recall.
-6. **Confusion matrix calculation**: Given TP=45, FP=5, TN=85, FN=15, compute accuracy, precision, recall, F1.
-7. **Accuracy trap explanation**: "A cancer screening test has 99% accuracy on a population where 1% have cancer. The test predicts 'no cancer' for everyone. What are precision and recall?" → Precision undefined (0/0), Recall = 0%.
-8. **Regression vs classification**: "Predicting tomorrow's temperature" vs "Predicting whether it will rain" — classify each and justify.
-9. **MSE computation**: Given 4 (y_true, y_pred) pairs, calculate MSE step by step.
-10. **Deployment constraints**: List 3 ways deployment environment differs from training environment and why monitoring is needed.
-11. **Model static-ness**: "True or False: A deployed ML model continues learning from new user data." → False; models are static, retrained periodically.
-12. **F1 vs Accuracy**: "When is F1 a better metric than accuracy?" → Imbalanced classes, or when FN/FP costs differ.
-13. **Multi-class confusion matrix**: Given a 3×3 matrix, compute per-class precision/recall and macro-F1.
-14. **Feature engineering purpose**: "Why might you create polynomial features for a linear regression model?" → Capture non-linear relationships.
-15. **Gradient descent requirement**: "What property must a loss function have for gradient descent to work?" → Differentiable w.r.t. parameters θ.
+1. Define an engineering model and say how it differs from a scale model. → Answer: It is a representation of a thing that must be useful for engineering design; sub-system models are typically mathematical and support simulation and analysis.
+2. Distinguish deterministic and stochastic systems with one example each. → Answer: A deterministic system always gives the same output for a given input (e.g. a weighing scale); a stochastic system may not (e.g. an LLM).
+3. What are the parameters θ of y[n] = Σ w_k·x[n−k]? → Answer: The weights w₀, w₁, w₂.
+4. What are the parameters of y[n] = A·tanh(g·x[n]) and how are they learned? → Answer: A and g; control the amplifier input, measure the output, and fit A and g to the data.
+5. What do you learn for an MLP, and how can you make it more powerful? → Answer: All weights and biases; add layers or neurons, or change the activation functions.
+6. Arrange the AI/ML pipeline stages in order. → Answer: Data collection, cleaning/preprocessing, feature engineering, data split, training, validation, testing, deployment, monitoring.
+7. A student uses test-set accuracy to choose between two models. What is wrong? → Answer: That is leakage; model selection belongs to the validation set, and the test set is used once for final evaluation.
+8. What is the purpose of each of the training, validation, and test sets? → Answer: Training adjusts parameters θ; validation adjusts hyper-parameter settings; testing gives the final assessment on unseen data.
+9. What property must a loss function have for gradient descent, and why is SGD used? → Answer: It must be differentiable with respect to θ; SGD approximates the unknowable statistical expectation with averages over training samples.
+10. Detecting aircraft engine failure: an FN means a crash, an FP means extra maintenance. Which metric matters most? → Answer: Recall, because missing a true failure is by far the costlier error.
+11. Given TP = 45, FP = 5, TN = 85, FN = 15, compute accuracy, precision, recall, and F1. → Answer: Accuracy = (45+85)/150 = 0.867; Precision = 45/50 = 0.90; Recall = 45/60 = 0.75; F1 ≈ 0.818.
+12. A test has 99% accuracy where 1% have the disease but predicts "negative" for everyone. What happens to precision and recall? → Answer: Recall = 0 because no true positive is caught, proving accuracy is meaningless on such imbalanced data.
+13. Classify each task: predicting tomorrow's temperature versus predicting whether it will rain. → Answer: Temperature is regression (continuous); rain is classification (finite yes/no classes).
+14. When is F1 better than accuracy, and why? → Answer: On imbalanced data or when FN/FP costs differ; F1 is the harmonic mean of precision and recall and is high only when both are high.

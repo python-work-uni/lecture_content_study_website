@@ -1,0 +1,392 @@
+================================================
+ENGG2112 Week 5 – Study Guide
+Neural Networks: MLPs, Training & CNNs
+================================================
+
+OVERVIEW
+--------
+This lecture introduces neural networks (NNs): machine-learning models loosely inspired by the brain that learn patterns directly from data. It explains why NNs matter in engineering (structural health monitoring, defect detection, predictive maintenance, autonomous control), then builds up the artificial neuron and the Multi-Layer Perceptron (MLP). It covers how networks learn through loss functions, stochastic gradient descent (SGD) and backpropagation, and how to manage learning rate and overfitting. It finishes with why plain MLPs struggle on images, how Convolutional Neural Networks (CNNs), convolution and pooling fix that, and how softmax turns raw outputs into probabilities.
+
+================================================
+STATS:
+---------------------------------------------
+Core building block|Artificial neuron
+Training algorithm|SGD + backpropagation
+Activation functions|sigmoid, tanh, ReLU
+Image architecture|CNN (LeNet-5)
+
+------------------------------------------------
+SECTION 1: Why Neural Networks for Engineering
+------------------------------------------------
+
+A **neural network** learns patterns directly from data by stacking many simple units called **neurons**. NNs are powerful in engineering because they learn complicated relationships from raw sensor signals and images without a human hand-designing the rules.
+
+| Application | What the network does |
+|---|---|
+| Structural Health Monitoring | Detecting cracks, fatigue and anomalies in bridges and aircraft from vibration and sensor signals |
+| Automated Defect Detection | Spotting defects on production lines from images; faster and more consistent than manual inspection |
+| Predictive Maintenance | Forecasting equipment failure from sensor data before it happens |
+| Autonomous Control Systems | Learning control policies for robots, drones and self-driving vehicles directly from data |
+
+The lecture roadmap has four parts:
+
+1. **MLPs** — neurons, layers and activation functions, the building blocks.
+2. **Training** — how networks learn using stochastic gradient descent and backpropagation.
+3. **CNNs** — convolutions for images and spatially structured engineering data.
+4. **Code** — hands-on examples in scikit-learn and PyTorch.
+
+💡 **Why It Matters:** Manual inspection is slow and inconsistent, and physics models are hard to write for messy signals. NNs learn the pattern from data instead, exactly what predictive maintenance and defect detection need.
+
+------------------------------------------------
+SECTION 2: The Artificial Neuron
+------------------------------------------------
+
+The artificial neuron borrows from biology. In a **biological neuron**, signals arrive at the **dendrites**, are combined in the **cell body**, and — if strong enough — fire down the **axon**. The artificial neuron copies this: inputs are scaled by **weights**, summed, and passed through an **activation function** to produce an output.
+
+The full computation of a neuron (the **perceptron**) is:
+
+```
+ŷ = σ(w₁x₁ + w₂x₂ + ⋯ + w_Kx_K + b) = σ(z)
+```
+
+Here σ(·) is the **activation function**. It is usually non-linear, and hence the perceptron performs a non-linear operation. The weighted sum is often written `z = w₁x₁ + ⋯ + w_Kx_K + b`.
+
+- The **weights** `w₁, …, w_K` and the **bias** `b` are the **parameters** that must be learned during training.
+- The **inputs** `x₁, …, x_K` are the input features in the first layer, and the outputs of a prior layer in the hidden layers.
+- The output is labelled `ŷ`, but it is only the network output at the **output layer**; at other layers it is just an input to another layer of neurons.
+
+💡 **Why It Matters:** The bias `b` shifts the activation like a threshold. Without it, the decision boundary would always pass through the origin.
+
+🧠 **Memory Hook:** A neuron is a tiny "weighted vote" — each input votes with a weight, the bias is a tie-breaker, and the activation function decides the answer.
+
+------------------------------------------------
+SECTION 3: Activation Functions
+------------------------------------------------
+
+An **activation function** decides how the weighted sum `z` is squashed into the neuron's output. The lecture names three common choices.
+
+| Activation | Formula | Range | Typical use |
+|---|---|---|---|
+| Sigmoid | σ(z) = 1 / (1 + e⁻ᶻ) | (0, 1) | Classic choice for output probabilities |
+| Tanh | tanh(z) | (−1, 1) | Zero-centred, common in hidden layers |
+| ReLU | max(0, z) | [0, ∞) | Cheap and effective, the default for hidden layers today |
+
+**Sigmoid** `σ(z) = 1/(1+e⁻ᶻ)` squashes every value into (0,1), making it natural for producing probabilities. **Tanh** `tanh(z)` squashes to (−1,1) and is zero-centred, so it is common in hidden layers. **ReLU** `max(0,z)` keeps positive values and zeroes out negatives; it is cheap, effective, and the default for hidden layers today.
+
+🧠 **Memory Hook:** "Sigmoid for **S**cores-as-probabilities (0 to 1), **T**anh for hidden layers centred at 0, **R**eLU is the modern default."
+
+------------------------------------------------
+SECTION 4: Non-Linearity and Depth
+------------------------------------------------
+
+The reason activation functions matter is **non-linearity**. Without an activation function, even a complex multi-layered system will be **linear** and cannot model cognitive systems or other complex systems. With activation functions to introduce non-linearity, increasing the complexity of the NN architecture lets us mimic cognitive functions such as image recognition.
+
+A **Multi-Layer Perceptron (MLP)** stacks neurons into layers. The lecture's example has **hidden layer 1 (4 neurons)**, **hidden layer 2 (4 neurons)** and an **output layer (2 classes)**. Each layer feeds its outputs forward to the next, which is why an MLP is a **feedforward** network.
+
+Complex non-linear **decision boundaries** can be synthesized by an MLP. The more layers and neurons, the more flexible the boundaries can be. This is both a blessing and a curse:
+
+- If training data is **sufficient**, an MLP can solve very complex classification problems it has not seen before.
+- If training is **insufficient**, the model may **overfit** and not generalize well.
+
+💡 **Why It Matters:** Depth (more layers) and width (more neurons) buy flexibility — but only with enough data. Without non-linearity, no amount of depth helps.
+
+------------------------------------------------
+SECTION 5: Loss Functions
+------------------------------------------------
+
+In supervised learning we want the model output `ŷ` to be as close to the ground-truth label `y` as possible. In **classification** we might maximize `P(y = ŷ)`; in **regression** we might minimize `E[(y − ŷ)²]`. Both cases need the probability distribution of features and labels, which we learn from training data — so more data is better. Either way, we define a **loss function** to minimize over the parameters `θ`: **MSE** (mean square error) for regression, and **cross entropy** as a proxy for classification (the probability of error itself is not suitable).
+
+### Mean Squared Error (MSE)
+
+In regression the model directly outputs a continuous estimate, `ŷ = f_θ(x)`. For a given `x`, `ŷ` is a function of `θ`, so `(y − ŷ)²` is too. We want the `θ` minimizing the average of `(y − ŷ)²` over the distribution of `x` and `y`. Since we only have training data, we approximate that average over all training samples:
+
+```
+L(θ) = (1/N) Σ_{i=1}^{N} (yᵢ − ŷᵢ)²
+```
+
+This is generally not a simple function of `θ`, so we cannot minimize it in closed form.
+
+### Cross Entropy
+
+In classification, `y` has a sample space of `L` values and the model outputs a probability distribution over them — its confidence that `y` takes each value:
+
+```
+p₁, …, p_L   such that   Σ_{l=1}^{L} p_l = 1
+```
+
+We want `max(p₁, …, p_L) = p_y`, the probability of the ground-truth label, for all samples. But that statement gives no way to find the optimal `θ`, so we bring in **entropy**. The cross entropy of two distributions P and Q over a discrete sample space `𝒮` is:
+
+```
+H(P, Q) = − Σ_{x∈𝒮} P(x) log₂ Q(x)
+```
+
+It is minimal when `P = Q`, so it acts as a distance between distributions. Suppose `𝒮_y = {1,2,3,4}` and the true value is `y = 2`: the true distribution is one-hot, `p₁ = p₃ = p₄ = 0` and `p₂ = 1`. The model estimates a different distribution `p̂_l`. Since the true distribution puts all mass on `y`, the cross entropy collapses to `−log₂ p̂_y` — an elegant result. Because `p̂_y` is the y-th model output, its relationship to `θ` is explicit. Here `yᵢ` is the ground-truth label of the i-th sample.
+
+💡 **Why It Matters:** MSE is for predicting numbers, cross-entropy for predicting classes. Cross-entropy punishes confident wrong answers hard, exactly what you want when the model outputs probabilities.
+
+------------------------------------------------
+SECTION 6: Gradient Descent Training
+------------------------------------------------
+
+Both MSE and cross-entropy are differentiable with respect to `θ`, but we still cannot solve `∇L(θ) = dL/dθ = 0` algebraically. A simple numerical method is to "descend" toward the nearest minimum in a sequence of steps along the direction of steepest descent.
+
+- The direction of steepest **ascent** is `∇L(θ)`, so steepest **descent** is its **negative**.
+- With step size (learning rate) `μ`, the steepest-descent iteration is:
+
+```
+θ_{t+1} = θ_t − μ ∇L(θ_t)
+```
+
+- Iterations continue until a **stopping criterion** is met, e.g. `θ` changes by less than a threshold, or a maximum number of iterations is reached.
+
+💡 **Why It Matters:** Gradient descent is the engine of all NN training. The gradient says which way is uphill; we step the opposite way, scaled by the learning rate, to walk downhill on the loss surface.
+
+------------------------------------------------
+SECTION 7: Batch and Mini-Batch SGD
+------------------------------------------------
+
+Our loss functions average over the **entire** training set, which is normally very large (at least thousands of samples). The computational complexity and time of gradient calculation both scale **linearly with N**, so using all samples (**batch** processing) consumes a lot of resources and is very slow. Instead we approximate the gradient with a **mini-batch**:
+
+```
+L_batch(θ) = (1/N_b) Σ_{i∈mini-batch} lᵢ(θ)
+```
+
+where `N_b ≪ N` is the mini-batch size and `lᵢ(θ)` is squared error or cross entropy for the i-th sample.
+
+The mini-batch size `N_b` can be anything from 1 to N:
+
+| Method | Mini-batch size | Meaning |
+|---|---|---|
+| Batch GD | N_b = N | Use all training samples per iteration |
+| Mini-Batch GD | 2 ≤ N_b < N | Use more than 1 but fewer than all samples per iteration |
+| Stochastic GD | N_b = 1 | Use only one sample per iteration |
+
+**SGD** is also often used loosely to mean mini-batch GD. The key idea: use `N_b` as a **trade-off** — smaller `N_b` gives noisier but faster and less complex updates. The default in scikit-learn is `N_b = 200`, resettable via the `batch_size` input parameter.
+
+Each complete pass through the training data is a training **epoch**. The number of epochs is arbitrary — it depends on how much time and computational resources we have.
+
+```
+Mini-batches → weights updated once per mini-batch → repeat over several epochs using GD
+```
+
+💡 **Why It Matters:** Mini-batching makes huge datasets practical. One update per full batch is far too slow; one per sample is too noisy — a mini-batch sits in between.
+
+------------------------------------------------
+SECTION 8: Learning Rate and Overfitting
+------------------------------------------------
+
+The learning rate `μ` controls how far each step moves:
+
+- **Too small:** crawls toward the minimum — training takes far longer than necessary.
+- **Just right:** converges quickly and smoothly toward the minimum.
+- **Too large:** overshoots the minimum — can oscillate or even diverge.
+
+You don't need to pick the step size manually; optimizers like **Adam** adapt it automatically.
+
+If we have more parameters than training data — e.g. an MLP with **1000 weights** and **500 training samples** — we can drive the loss to match every input feature perfectly with its class. This is an extreme case of **overfitting**, and generalization performance will be poor. To address it:
+
+- Ensure the number of training samples exceeds the number of parameters.
+- But overfitting is usually because the underlying model is simpler than assumed — and we don't know the underlying model! All we can do is drive small, essentially redundant weights down to zero.
+- The usual way is to **penalize the norm of the parameter vector**, adding a term that drives the norm toward zero (**regularization**).
+
+💡 **Why It Matters:** A model that memorizes its training data is useless on new data. Regularization and enough data keep the model's flexibility in check.
+
+------------------------------------------------
+SECTION 9: Backpropagation
+------------------------------------------------
+
+In SGD we need gradients of the loss with respect to each and every weight. We use the **chain rule**, starting from the output layer and progressing **backwards** — hence **backpropagation**. For an output-layer weight:
+
+```
+ŷ = σ(w₁x₁ + ⋯) = σ(z)
+dL/dw₁ = (dL/dŷ) · (dŷ/dw₁) = (dL/dŷ) · σ'(z) · x₁
+```
+
+All terms on the right can be calculated. The lecture also demonstrates the derivative with respect to a **hidden-layer** weight the same way.
+
+💡 **Why It Matters:** Backpropagation is just the chain rule applied layer by layer. Going backward from the output lets us reuse computed terms, making gradients efficient.
+
+🧠 **Memory Hook:** "Chain rule, Backwards from Output" — CBO. Forward pass to predict, backward pass to assign blame.
+
+------------------------------------------------
+SECTION 10: Why CNNs for Images
+------------------------------------------------
+
+A plain MLP is poorly suited to images because it assumes features are just a **flat list**: swapping two features in the order fed to the MLP leaves the result unchanged. In other words, **adjacency carries no information**, since feature ordering is arbitrary. Feeding an image means "**flattening**" the pixels — turning the 2D matrix into a 1D vector — which creates two problems.
+
+| Problem | What goes wrong |
+|---|---|
+| 1. Parameter explosion | A 128 × 128 grayscale image becomes 16,384 features at the input layer. With a first hidden layer of only 128 neurons, we already need over 2 million weights in that first layer. |
+| 2. No shift invariance | Any detail (a face, a sign) shifted even one pixel is not recognized as the same thing. The MLP has no built-in notion that something is the "same pattern but moved". |
+
+💡 **Why It Matters:** Images are spatially structured — nearby pixels are related. Flattening throws that structure away and simultaneously blows up the parameter count.
+
+------------------------------------------------
+SECTION 11: Convolution and Pooling
+------------------------------------------------
+
+**Convolution** (linear filtering) is nothing new: a 2D image filter can amplify certain colours or sharpen edges, as digital image processing has done for years. The effect depends critically on the **filter kernel** `w_{j,k}`, whose total number of weights is user-defined. The filter output is:
+
+```
+y_{m,n} = Σ_j Σ_k w_{j,k} x_{m−j, n−k}
+```
+
+Pictorially this is much less obtuse than the equation. The lecture illustrates a **vertical edge detector** kernel: if the window contains a vertical edge — say value 10 in the first two columns and 0 in the third — the filter responds. Different kernels reveal different **feature maps**: the original image, vertical edges, horizontal edges and blur.
+
+### The CNN Convolutional Layer
+
+A CNN starts with a **convolutional layer** where the kernels are **not hand-designed but learned from the data**. Instead of manually deciding what features to extract, we let the learning algorithm decide. If the task is deciding whether a picture contains a furry animal, "furriness" might matter more than "vertical edge". This automatic feature extraction is the key to solving the **2nd problem** — the MLP's inability to recognize a shifted feature. It does not solve the complexity issue, which is where **max pooling** comes in.
+
+### Pooling
+
+Images carry **redundancy** — an edge (and a colour or texture) carries over multiple pixels, and this translates into the feature map. So it suffices to **collapse a small region of a feature map into one number**: within a 2 × 2 square, keep only the largest value to represent the feature's presence in that region.
+
+- This is **max-pooling**, and it solves the **1st** problem of parameter explosion.
+- **Average-pooling** instead retains the average of the region.
+- Max pooling keeps the strongest activation in each region — the clearest indication the feature was found — which is all the next layer needs for face recognition or anomaly detection.
+- It reduces the number of inputs to the next layer by a **factor of 4** without losing (much) information.
+
+**LeNet-5** is the pioneering CNN highlighted in the lecture.
+
+```
+Input image → Convolutional layer (learned kernels) → Max pooling → … → Softmax output
+```
+
+💡 **Why It Matters:** Convolution handles "same pattern, different position"; pooling handles "too many parameters". Together they make image recognition practical.
+
+🧠 **Memory Hook:** "**C**onvolution for **C**overing shifts, **P**ooling to shrink **P**arameters."
+
+------------------------------------------------
+SECTION 12: Softmax and Probabilities
+------------------------------------------------
+
+In a classification problem with `L` label values, the model should output probabilities `p₁, …, p_L`, where `p_l` is its confidence that the true label is `l`. Forward propagation produces `L` values, but there is no way those values sum to 1 without normalization. This normalization is **softmax**:
+
+```
+softmax_i(z₁, …, z_L) = e^{z_i} / Σ_{l=1}^{L} e^{z_l}
+```
+
+There are many ways to turn `L` raw numbers into a distribution, but softmax makes the most sense because:
+
+- It allows the raw input to be any real value (negative or positive).
+- The exponentiation **magnifies the gap** between the largest and smallest values.
+- Most importantly, it has a simple derivative with respect to any `z_i`.
+
+The lecture's examples (classifying "dog", "cat", "airplane"):
+
+- Raw outputs (2.0, 1.0, 0.1) → softmax (0.659, 0.242, 0.099). Instead of a factor of two between the top two, the ratio is now 2.72.
+- Raw outputs (1, 2, 8) → softmax (0.001, 0.002, 0.997). The model is more confident, and softmax accentuates that certainty.
+
+💡 **Why It Matters:** Networks produce raw scores, not probabilities. Softmax turns them into a valid distribution that pairs naturally with cross-entropy loss.
+
+------------------------------------------------
+SECTION 13: Parameters vs Hyperparameters
+------------------------------------------------
+
+Keep the two kinds of "knobs" separate.
+
+| | Parameters | Hyperparameters |
+|---|---|---|
+| What they are | Weights `w` and bias `b` | Settings chosen before training |
+| Who sets them | Learned from data during training | Chosen by the human designer |
+| Examples | `w₁, …, w_K`, `b` | Learning rate `μ`, mini-batch size `N_b`, epochs, layers/neurons, CNN kernel size |
+
+**Parameters** are learned by minimizing the loss with SGD and backpropagation. **Hyperparameters** shape training — how big each batch is, how large each step is, how long to train, and how big the network is. The number of epochs is described in the lecture as arbitrary, depending on available time and compute.
+
+The lecture closes with hands-on examples in **scikit-learn** and **PyTorch**. In scikit-learn the mini-batch size defaults to 200 and is reset via the `batch_size` input parameter; optimizers such as **Adam** remove the need to hand-pick the step size.
+
+💡 **Why It Matters:** Most training mistakes come from hyperparameters like step size, batch size and epochs, not from the parameters the optimizer learns.
+
+------------------------------------------------
+KEY TAKEAWAYS
+================================================
+1. **Neural networks learn patterns from data** — loosely inspired by the brain, they are used in engineering for structural health monitoring, automated defect detection, predictive maintenance and autonomous control.
+2. **The artificial neuron combines then decides** — inputs are scaled by weights, summed with a bias, then passed through an activation: `ŷ = σ(Σ w_k x_k + b)`.
+3. **Weights and bias are the learned parameters** — inputs are features in the first layer and hidden-layer outputs thereafter; only the output layer produces the network output.
+4. **Activation functions add non-linearity** — sigmoid squashes to (0,1) for output probabilities, tanh to (−1,1) and is zero-centred for hidden layers, and ReLU (`max(0,z)`) is the cheap modern default.
+5. **Match the loss to the task** — MSE, `L(θ) = (1/N) Σ (yᵢ − ŷᵢ)²`, for regression; cross-entropy for classification, which reduces to `−log₂ p̂_y` for a one-hot label.
+6. **Gradient descent walks downhill** — since `∇L(θ)=0` has no closed form, iterate `θ_{t+1} = θ_t − μ∇L(θ_t)` until a stopping criterion is met.
+7. **Mini-batch SGD trades noise for speed** — N_b = N is batch GD, 2 ≤ N_b < N is mini-batch GD, N_b = 1 is stochastic GD; smaller N_b is noisier but faster, and scikit-learn defaults to 200.
+8. **An epoch is one full pass through the data** — the number is arbitrary, and the learning rate must be not too small, not too large, with optimizers like Adam adapting it automatically.
+9. **Overfitting happens when the model is too flexible** — e.g. 1000 weights with 500 samples; fix it with more data and by penalizing the parameter-vector norm.
+10. **Backpropagation is the chain rule applied backwards** — from the output layer back, e.g. `dL/dw₁ = (dL/dŷ)·σ'(z)·x₁`.
+11. **MLPs fail on images, but CNNs fix it** — parameter explosion (128 × 128 → 16,384 inputs → 2M+ weights) and no shift invariance; convolution learns kernels while pooling cuts inputs by 4×.
+------------------------------------------------
+TERMS TO KNOW
+================================================
+Perceptron: The full computation of a single neuron, `ŷ = σ(Σ w_k x_k + b)`.
+Activation function: A usually non-linear function applied to a neuron's weighted sum to produce its output.
+Sigmoid: An activation `1/(1+e^{-z})` squashing values into (0,1), classically used for output probabilities.
+ReLU: An activation `max(0,z)`, cheap and effective, the default for hidden layers today.
+Multi-Layer Perceptron (MLP): A feedforward neural network that stacks neurons into hidden layers and an output layer.
+Loss function: A differentiable measure of how far the output is from the ground-truth label, minimized over the parameters.
+MSE: The regression loss `(1/N) Σ (yᵢ − ŷᵢ)²`, the average squared error over training data.
+Cross entropy: The classification loss and distance between distributions, `H(P,Q) = −Σ P(x) log₂ Q(x)`.
+Gradient descent: The method that repeatedly steps in the direction of steepest descent to minimize the loss.
+Learning rate: The step size `μ` controlling how far each gradient-descent update moves.
+Mini-batch GD: Gradient descent using more than one but fewer than all samples per iteration, 2 ≤ N_b < N.
+Stochastic GD: Gradient descent using a single sample per iteration, N_b = 1; also loosely used for mini-batch GD.
+Epoch: One complete pass through the entire training dataset.
+Overfitting: Fitting the training data so closely that generalization to new data becomes poor.
+Regularization: Penalizing the norm of the parameter vector to drive small, redundant weights toward zero.
+Backpropagation: Computing every weight's gradient via the chain rule, moving backward from the output layer.
+Convolution: A linear filtering operation `y_{m,n} = Σ_j Σ_k w_{j,k} x_{m−j,n−k}` where a kernel slides over the input.
+Max pooling: Collapsing a feature-map region to its largest value, cutting inputs by a factor of 4 against parameter explosion.
+Softmax: A normalization converting L raw scores into a probability distribution summing to 1.
+Parameter: A value learned from data during training, such as a weight or bias.
+Hyperparameter: A setting chosen before training, such as learning rate, mini-batch size, epochs or architecture.
+
+------------------------------------------------
+MNEMONICS & QUICK RECALL
+================================================
+**Activation choices**: **STR** — "Sigmoid, Tanh, ReLU" — the three common activations, squashing to (0,1), (−1,1) and [0,∞).
+**Batch size variants**: **BMS** — "Batch, Mini, Stochastic" — N_b = N, 2 ≤ N_b < N, and N_b = 1.
+**Backprop direction**: **CBO** — "Chain rule, Backwards from Output" — how every weight's gradient is computed.
+**Loss by task**: **MC** — "MSE for regression, Cross-entropy for classification" — matching the loss to the label type.
+**Neuron parts**: **WAB** — "Weights, Bias, Activation" — the three ingredients of a perceptron.
+**CNN fixes**: **CP** — "Convolution for Position, Pooling for Parameters" — the two MLP image problems CNNs solve.
+
+------------------------------------------------
+CONCRETE EXAMPLES / WORKED SCENARIOS
+================================================
+### Example 1: Softmax Turns Raw Scores into Probabilities
+Classifying an image as "dog", "cat" or "airplane":
+
+- Raw NN outputs (2.0, 1.0, 0.1) → softmax (0.659, 0.242, 0.099).
+- Check for dog: `e^2 = 7.389`, `e^1 = 2.718`, `e^0.1 = 1.105`, sum = 11.212, so `7.389 / 11.212 ≈ 0.659`.
+- The raw ratio between the top two was a factor of 2; after softmax it is 2.72 — the gap is magnified.
+- Raw outputs (1, 2, 8) → (0.001, 0.002, 0.997): the model is far more confident, and softmax accentuates that certainty.
+
+### Example 2: The Parameter Explosion of an Image MLP
+Feeding a 128 × 128 grayscale image to an MLP requires flattening it to 1D:
+
+1. Pixel count = 128 × 128 = 16,384 features at the input layer.
+2. With a first hidden layer of 128 neurons, weights = 16,384 × 128 = 2,097,152 — over 2 million in just the first layer.
+3. Flattening also destroys spatial adjacency, so a one-pixel shift is not recognized as the same pattern.
+
+### Example 3: Cross-Entropy from a One-Hot Label
+Suppose `𝒮_y = {1, 2, 3, 4}` and the true label is `y = 2`:
+
+- The true distribution is one-hot: `p₁ = p₃ = p₄ = 0`, `p₂ = 1`.
+- In `H(P,Q) = −Σ P(x) log₂ Q(x)` only the `y = 2` term survives, so cross-entropy = `−log₂ p̂₂`.
+- If `p̂₂ = 0.7`, loss = `−log₂ 0.7 ≈ 0.515` bits; if `p̂₂ = 0.99`, loss = `−log₂ 0.99 ≈ 0.0145` bits.
+
+### Example 4: Max Pooling Shrinks a Feature Map
+2 × 2 max pooling on a 128 × 128 feature map yields a 64 × 64 map — a factor-of-4 reduction. For the region `[[0.2, 0.9], [0.4, 0.1]]`, pooling keeps `0.9`, the strongest activation and clearest sign the feature was found.
+
+------------------------------------------------
+POTENTIAL EXAM FOCUS
+================================================
+1. Why is a non-linear activation essential? → Without it, even a deep multi-layer system stays linear; non-linearity lets the network model complex systems and cognitive functions such as image recognition.
+2. Write the perceptron equation. → `ŷ = σ(Σ w_k x_k + b) = σ(z)`, where the weights and bias are learned parameters.
+3. Compare the three common activation functions. → Sigmoid squashes to (0,1) for output probabilities; tanh to (−1,1), zero-centred, for hidden layers; ReLU is `max(0,z)`, cheap and the default for hidden layers today.
+4. Distinguish parameters from hyperparameters. → Parameters (weights, bias) are learned from data; hyperparameters (learning rate, mini-batch size, epochs, architecture) are chosen before training.
+5. What happens if the learning rate is too small or too large? → Too small crawls toward the minimum; too large overshoots and can oscillate or diverge.
+6. What is backpropagation and which rule does it use? → Computing each weight's gradient with the chain rule, starting at the output layer and progressing backwards.
+7. Give the chain-rule expression for an output-layer weight. → `dL/dw₁ = (dL/dŷ)·σ'(z)·x₁`, and all terms can be calculated.
+8. State the two problems of feeding images to an MLP. → Parameter explosion from flattening and the lack of shift invariance.
+9. How do convolution and pooling address those problems? → Convolution learns kernels detecting features regardless of position; max pooling collapses regions to one value, cutting inputs by 4× to fight parameter explosion.
+10. Write the convolution formula. → `y_{m,n} = Σ_j Σ_k w_{j,k} x_{m−j,n−k}`, where kernel `w_{j,k}` holds the filter weights.
+11. What does softmax do and why is it preferred? → It normalizes L raw scores into probabilities summing to 1; it accepts any real values, magnifies score gaps, and has a simple derivative.
+12. Which loss for regression versus classification, and why? → MSE for regression with continuous labels; cross-entropy for classification, reducing to `−log₂ p̂_y` for one-hot labels.
+13. How can overfitting be reduced? → Ensure training samples exceed parameters, gather more data, and penalize the parameter-vector norm to shrink redundant weights.

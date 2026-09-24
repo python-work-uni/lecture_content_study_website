@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="ENGG2112 Week 5 study guide — a calm, complete walkthrough designed for first-time readers and active recall.">
+<title>ENGG2112 Week 5 — Neural Networks: MLPs, Training &amp; CNNs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     ENGG2112 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
+<header class="topbar">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">ENGG2112</span>
+    <span class="brand-week">Week 5</span>
+  </a>
+  <div class="topbar-tools">
+    <div class="search">
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
+    </div>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Table of contents">
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+
+  <main class="content" id="content">
+<section class="hero" id="top">
+  <span class="hero-eyebrow">ENGG2112 · Week 5 · Neural Networks</span>
+  <h1 class="hero-title">Neural Networks: MLPs, Training &amp; CNNs</h1>
+  <p class="hero-sub">How machines learn patterns straight from data — from a single artificial neuron, through how networks train, to the convolutional architecture that made image recognition work.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> A neural network is just many tiny "weighted votes" stacked in layers. Each neuron scales its inputs by weights, adds a bias, then passes the sum through a non-linear activation. Training measures how wrong the network is with a <em>loss function</em>, then nudges every weight downhill using <em>gradient descent</em> and <em>backpropagation</em>. For images, plain networks break — <em>convolution</em> and <em>pooling</em> fix them.</div>
+  <div class="hero-meta">
+    <span class="meta-chip"><span class="dot"></span>~22 min read</span>
+    <span class="meta-chip">20 sections</span>
+    <span class="meta-chip">14 practice questions</span>
+    <span class="meta-chip">24 key terms</span>
+  </div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list">
+      <li>Explain what an artificial neuron and a multi-layer perceptron (MLP) compute, and why non-linearity is essential.</li>
+      <li>Write the perceptron equation and say which quantities are learned parameters.</li>
+      <li>Choose the right loss function — MSE for regression, cross-entropy for classification.</li>
+      <li>Describe gradient descent, mini-batch SGD, epochs, learning rate and backpropagation.</li>
+      <li>Explain why MLPs fail on images and how convolution and pooling fix the two problems.</li>
+      <li>Turn raw network scores into probabilities with softmax.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="guide-section" id="big-picture" data-title="Why Neural Networks">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Why Neural Networks for Engineering?</h2></div>
+  <p class="section-kicker">Neural networks learn the rules from raw data, so you don't have to hand-write them.</p>
+  <p>Traditional engineering leans on equations you derive from physics. But many real signals — vibration traces, camera images, sensor logs — are too messy for a tidy formula. A <span class="keyterm">neural network</span> (NN) sidesteps this: it learns patterns directly from data by stacking many simple units called <span class="keyterm">neurons</span>. Show it enough examples and it finds the relationship itself, without a human specifying the rules.</p>
+  <p class="muted">Lecture by Professor T. J. Lim.</p>
+
+  <h3 class="sub-title">Four engineering applications</h3>
+  <div class="grid grid-2">
+    <div class="card"><h3 class="card-title">🌉 Structural Health Monitoring</h3><p>Detecting cracks, fatigue and anomalies in bridges and aircraft from vibration and sensor signals.</p></div>
+    <div class="card"><h3 class="card-title">🔎 Automated Defect Detection</h3><p>Spotting defects on production lines from images — faster and more consistent than manual inspection.</p></div>
+    <div class="card"><h3 class="card-title">🛠️ Predictive Maintenance</h3><p>Forecasting equipment failure from sensor data <em>before</em> it happens.</p></div>
+    <div class="card"><h3 class="card-title">🤖 Autonomous Control Systems</h3><p>Learning control policies for robots, drones and self-driving vehicles directly from data.</p></div>
+  </div>
+
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Manual inspection is slow and inconsistent, and physics is hard to write for messy signals. NNs learn the pattern from data instead — exactly what predictive maintenance and defect detection need.</div></div>
+
+  <h3 class="sub-title">The lecture roadmap</h3>
+  <div class="flow">
+    <span class="flow-step">1 · MLPs</span><span class="flow-arrow">→</span>
+    <span class="flow-step">2 · Training</span><span class="flow-arrow">→</span>
+    <span class="flow-step">3 · CNNs</span><span class="flow-arrow">→</span>
+    <span class="flow-step">4 · Code</span>
+  </div>
+  <ul>
+    <li><strong>MLPs</strong> — neurons, layers and activation functions: the building blocks.</li>
+    <li><strong>Training</strong> — how networks learn with stochastic gradient descent and backpropagation.</li>
+    <li><strong>CNNs</strong> — convolutions for images and spatially structured engineering data.</li>
+    <li><strong>Code</strong> — hands-on examples in scikit-learn and PyTorch.</li>
+  </ul>
+
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Before reading on, name one engineering task where the "rule" is too hard to write by hand. Could a network learn it from examples instead?</div></div>
+</section>
+
+<section class="guide-section" id="neuron" data-title="The Artificial Neuron">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Borrowing from Biology: The Artificial Neuron</h2></div>
+  <p class="section-kicker">One neuron does three things: scale, add, then decide.</p>
+  <p>The artificial neuron copies a <strong>biological neuron</strong>. In the brain, signals arrive at the <span class="keyterm">dendrites</span>, are combined in the <span class="keyterm">cell body</span>, and — if strong enough — fire down the <span class="keyterm">axon</span>. The artificial version does the same job with arithmetic: <strong>inputs are scaled by weights, summed, and passed through an activation function to produce an output.</strong></p>
+
+  <h3 class="sub-title">The perceptron</h3>
+  <p>The full computation performed by a single neuron — called a <span class="keyterm">perceptron</span> — is:</p>
+  <div class="formula">
+    <div class="formula-label">Perceptron (one neuron)</div>
+    <div class="math">ŷ = σ(w₁x₁ + w₂x₂ + ⋯ + w_K x_K + b) = σ(z)</div>
+  </div>
+  <p>Here σ(·) is the <span class="keyterm">activation function</span>. It is usually non-linear, which is why the perceptron performs a non-linear operation. The weighted sum is often written separately as <code>z = w₁x₁ + ⋯ + w_K x_K + b</code>.</p>
+
+  <div class="grid grid-2">
+    <div class="card"><h3 class="card-title"><span class="tag">learned</span> Weights and bias</h3><p>The weights <code>w₁, …, w_K</code> and the bias <code>b</code> are the <span class="keyterm">parameters</span> that must be learned during training.</p></div>
+    <div class="card"><h3 class="card-title"><span class="tag">given</span> Inputs</h3><p>The inputs <code>x₁, …, x_K</code> are the input features in the first layer, and the outputs of a prior layer of neurons in the hidden layers.</p></div>
+  </div>
+
+  <div class="def-card"><span class="dc-term">Output ŷ</span> — labelled <code>ŷ</code>, but it is only the network output at the <strong>output layer</strong>. At every other layer the neuron output is just an input to the next layer of neurons.</div>
+
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember:</strong> A neuron is a tiny "weighted vote" — each input votes with a weight, the bias acts as the threshold/tie-breaker, and the activation function decides the answer.</div></div>
+</section>
+
+<section class="guide-section" id="activations" data-title="Activation Functions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Activation Functions</h2></div>
+  <p class="section-kicker">The activation function decides how the weighted sum is squashed into the neuron's output.</p>
+  <p>After a neuron adds up its weighted inputs, an <span class="keyterm">activation function</span> transforms that raw sum <code>z</code> into the neuron's output. The lecture names three common choices.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Activation</th><th>Formula</th><th>Output range</th><th>Typical use</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Sigmoid</strong></td><td><code>σ(z) = 1 / (1 + e⁻ᶻ)</code></td><td>(0, 1)</td><td>Classic choice for output probabilities</td></tr>
+        <tr><td><strong>Tanh</strong></td><td><code>tanh(z)</code></td><td>(−1, 1)</td><td>Zero-centred — common in hidden layers</td></tr>
+        <tr><td><strong>ReLU</strong></td><td><code>max(0, z)</code></td><td>[0, ∞)</td><td>Cheap and effective — the default for hidden layers today</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><strong>Sigmoid</strong> squashes every value into the interval (0, 1), which makes it a natural fit for output probabilities. <strong>Tanh</strong> squashes to (−1, 1) and is <em>zero-centred</em>, so it is common in hidden layers. <strong>ReLU</strong> keeps positive values and zeroes out negatives; it is cheap, effective, and the default for hidden layers today.</p>
+
+  <div class="mnemonic">
+    <div class="mnemonic-letters">S · T · R</div>
+    <div class="mnemonic-phrase">“Sigmoid, Tanh, ReLU”</div>
+    <div class="mnemonic-expand">The three common activations — squashing to (0,1) for probabilities, (−1,1) and zero-centred for hidden layers, and [0,∞) as the modern default.</div>
+  </div>
+
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Which activation would you pick for a hidden layer, and which for the final probability output? Why?</div></div>
+</section>
+
+<section class="guide-section" id="nonlinearity-mlp" data-title="Non-Linearity &amp; MLP">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Non-Linearity and Stacking Neurons</h2></div>
+  <p class="section-kicker">Without a non-linear activation, a deep network is still just a straight line.</p>
+  <p>Why bother with activations at all? Because of <span class="keyterm">non-linearity</span>. Without an activation function, even a complex multi-layered system collapses into a <strong>linear</strong> model and cannot represent cognitive systems or other complex systems. Add non-linear activations, and increasing the complexity of the network lets us mimic cognitive functions such as image recognition.</p>
+
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Key idea:</strong> Stacking linear layers just gives another linear layer. Non-linearity between the layers is what lets depth buy real expressive power.</div></div>
+
+  <h3 class="sub-title">Stacking neurons: the multilayer perceptron</h3>
+  <p>Stack neurons into layers and you get a <span class="keyterm">Multi-Layer Perceptron (MLP)</span> — a <strong>feedforward</strong> network, because each layer feeds its outputs forward to the next. The lecture's example has:</p>
+  <div class="flow">
+    <span class="flow-step">Hidden layer 1 · 4 neurons</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Hidden layer 2 · 4 neurons</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Output layer · 2 classes</span>
+  </div>
+
+  <h3 class="sub-title">What is the network actually learning?</h3>
+  <p>An MLP synthesises complex non-linear <span class="keyterm">decision boundaries</span> — the surfaces that separate one class from another. The more layers and neurons you add, the more flexible those boundaries can be. This is both a blessing and a curse:</p>
+  <ul>
+    <li>If training data is <strong>sufficient</strong>, an MLP can solve very complex classification problems it has never seen before.</li>
+    <li>If training is <strong>insufficient</strong>, the model may <span class="keyterm">overfit</span> and generalise poorly.</li>
+  </ul>
+  <p class="muted">We return to overfitting and how to control it later in this guide.</p>
+</section>
+
+<section class="guide-section" id="losses" data-title="Loss Functions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Loss Functions: Measuring How Wrong We Are</h2></div>
+  <p class="section-kicker">You can't improve what you can't measure — the loss turns "how wrong" into a single number.</p>
+  <p>In any <strong>supervised learning</strong> setting we want the model output <code>ŷ</code> to be as close as possible to the ground-truth label <code>y</code>. But "close" needs precision. In classification we might try to maximise <code>P(y = ŷ)</code>; in regression we might minimise <code>E[(y − ŷ)²]</code>. Both need the probability distribution of the features and the label — conceptually we learn that distribution from training data, so the more data we have, the better.</p>
+  <p>Either way, we define a <span class="keyterm">loss function</span> to minimise over the model parameters θ. For regression, <strong>MSE (mean square error)</strong> is the natural choice. For classification, the probability of error is not suitable, so we use a proxy called <strong>cross entropy</strong>.</p>
+
+  <div class="compare">
+    <div class="compare-col a"><h3>Regression → MSE</h3><p>Predicts a continuous number. Penalises the average squared gap between the prediction and the true value.</p></div>
+    <div class="compare-col b"><h3>Classification → Cross entropy</h3><p>Predicts a class. Penalises confident wrong probabilities; measures the distance between two distributions.</p></div>
+  </div>
+
+  <h3 class="sub-title">Mean Squared Error (MSE)</h3>
+  <p>In regression the model directly outputs an estimate of the continuous label, <code>ŷ = f_θ(x)</code>. For a given input <code>x</code>, the prediction <code>ŷ</code> is a function of θ, so the squared error <code>(y − ŷ)²</code> is a function of θ too. We want the θ that minimises the <em>average</em> of <code>(y − ŷ)²</code> over the distribution of <code>x</code> and <code>y</code>. Since we only have training data (not the true distributions), we approximate that average over all training samples:</p>
+  <div class="formula">
+    <div class="formula-label">Mean squared error</div>
+    <div class="math">L(θ) = (1/N) Σᵢ (yᵢ − ŷᵢ)²   for i = 1 … N</div>
+  </div>
+  <p>This is generally not a simple function of θ, so we cannot minimise it with a closed-form expression — which is why we need iterative training.</p>
+
+  <h3 class="sub-title">Cross entropy</h3>
+  <p>In classification, <code>y</code> has a sample space of <code>L</code> values and the model must output a probability distribution over those values — its confidence that <code>y</code> takes each value:</p>
+  <div class="formula">
+    <div class="formula-label">A valid distribution</div>
+    <div class="math">p₁, …, p_L   such that   Σₗ p_l = 1   for l = 1 … L</div>
+  </div>
+  <p>Naturally we want <code>max(p₁, …, p_L) = p_y</code> — the probability the model assigns to the ground-truth label — to be as high as possible for every training sample. But that statement gives us no way to find the optimal θ. So we bring in the concept of <strong>entropy</strong>. The <span class="keyterm">cross entropy</span> of two distributions P and Q over the same discrete sample space 𝒮 is:</p>
+  <div class="formula">
+    <div class="formula-label">Cross entropy</div>
+    <div class="math">H(P, Q) = − Σ_{x∈𝒮} P(x) log₂ Q(x)</div>
+  </div>
+  <p>Cross entropy is minimal when <code>P = Q</code> — when the two distributions are identical. In that sense it behaves like a <em>distance</em> between distributions.</p>
+
+  <h3 class="sub-sub">The elegant one-hot result</h3>
+  <p>Suppose the label sample space is <code>𝒮_y = {1, 2, 3, 4}</code> and the true value is <code>y = 2</code>. The true distribution is <em>one-hot</em>: <code>p₁ = p₃ = p₄ = 0</code> and <code>p₂ = 1</code>. The model estimates a different distribution <code>p̂_l</code>. Because the true distribution puts all its mass on the label <code>y</code>, only one term of the sum survives, and the cross entropy collapses to:</p>
+  <div class="formula">
+    <div class="formula-label">Cross entropy for a one-hot label</div>
+    <div class="math">H = − log₂ p̂_y</div>
+  </div>
+  <p>This is an incredibly elegant result: <code>p̂_y</code> is the <code>y</code>-th output of the model, so its relationship to the parameter vector θ is explicit. Here <code>yᵢ</code> denotes the ground-truth label of the <code>i</code>-th data sample. Worked illustration: if <code>p̂₂ = 0.7</code>, the loss is <code>−log₂ 0.7 ≈ 0.515</code> bits; if the model is very confident at <code>p̂₂ = 0.99</code>, the loss drops to <code>−log₂ 0.99 ≈ 0.0145</code> bits.</p>
+
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Don't use MSE for a class label or cross-entropy for a continuous target. Match the loss to the type of <code>y</code> — that pairing is a favourite exam point.</div></div>
+</section>
+
+<section class="guide-section" id="gradient-descent" data-title="Gradient Descent">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Training by Gradient Descent</h2></div>
+  <p class="section-kicker">The gradient points uphill; we step the opposite way to walk downhill on the loss.</p>
+  <p>Both MSE and cross-entropy are <strong>differentiable</strong> with respect to θ. But we still cannot solve the stationarity condition algebraically:</p>
+  <div class="formula">
+    <div class="formula-label">We can't solve this directly</div>
+    <div class="math">∇L(θ) = dL/dθ = 0</div>
+  </div>
+  <p>A simple numerical method is to "descend" toward the nearest minimum through a sequence of steps taken in the direction of steepest descent.</p>
+  <ul>
+    <li>The direction of steepest <strong>ascent</strong> is given by the gradient <code>∇L(θ)</code>; therefore the direction of steepest <strong>descent</strong> is the <strong>negative</strong> of that.</li>
+    <li>Denoting the step size (or <span class="keyterm">learning rate</span>) by <code>μ</code>, the steepest-descent iteration is:</li>
+  </ul>
+  <div class="formula">
+    <div class="formula-label">Steepest-descent update</div>
+    <div class="math">θ_{t+1} = θ_t − μ ∇L(θ_t)</div>
+  </div>
+  <p>Iterations continue until a <strong>stopping criterion</strong> is met — for example, θ changes by less than a threshold from one iteration to the next, or a maximum number of iterations is reached.</p>
+
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Gradient descent is the engine of all neural-network training. The gradient says which way is uphill; you step the opposite way, scaled by the learning rate, to reduce the loss.</div></div>
+
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If the gradient is zero, what has the iteration found — and why might that not be the global minimum?</div></div>
+</section>
+
+<section class="guide-section" id="sgd-batches" data-title="Batch &amp; Mini-Batch SGD">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Batch, Mini-Batch and Stochastic Gradient Descent</h2></div>
+  <p class="section-kicker">Using every sample per step is slow; using one is noisy. A mini-batch sits in between.</p>
+  <p>Our two loss functions are averages over the <strong>entire</strong> training set, which is normally very large (at least in the thousands). The computational complexity and time of gradient calculation both scale <strong>linearly with N</strong>, the training-set size. Using all samples — known as <strong>batch</strong> processing — therefore consumes a lot of resources and is very slow. Instead we approximate the gradient with a <span class="keyterm">mini-batch</span>:</p>
+  <div class="formula">
+    <div class="formula-label">Mini-batch loss</div>
+    <div class="math">L_batch(θ) = (1/N_b) Σ_{i ∈ mini-batch} lᵢ(θ)</div>
+  </div>
+  <p>where <code>N_b ≪ N</code> is the mini-batch size and <code>lᵢ(θ)</code> is either the squared error or the cross entropy for the i-th training sample.</p>
+
+  <h3 class="sub-title">The three variants</h3>
+  <p>The mini-batch size <code>N_b</code> can be anything from 1 to N. The generally accepted terminology is:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Method</th><th>Mini-batch size</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Batch GD</strong></td><td><code>N_b = N</code></td><td>Use all training samples per iteration</td></tr>
+        <tr><td><strong>Mini-Batch GD</strong></td><td><code>2 ≤ N_b &lt; N</code></td><td>Use more than 1 but fewer than all samples per iteration</td></tr>
+        <tr><td><strong>Stochastic GD</strong></td><td><code>N_b = 1</code></td><td>Use only one sample per iteration</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Unfortunately, <strong>SGD</strong> is also often used loosely to refer to mini-batch GD. Putting terminology aside, the main idea is to use <code>N_b</code> as a <strong>trade-off variable</strong>: a smaller <code>N_b</code> gives noisier but faster and less complex updates. The default in scikit-learn is <code>N_b = 200</code>, and it can be reset using the <code>batch_size</code> input parameter.</p>
+
+  <h3 class="sub-title">Epochs and batches</h3>
+  <p>As we proceed through the batches, we eventually pass all the training data through the SGD solver. Each complete pass through the training data is known as a training <span class="keyterm">epoch</span>. The number of epochs we use is arbitrary — it depends on how much time and computational resources we have.</p>
+  <div class="flow">
+    <span class="flow-step">Mini-batches</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Weights updated once per mini-batch using GD</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Repeat over several epochs</span>
+  </div>
+
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember (BMS):</strong> <strong>B</strong>atch = all N, <strong>M</strong>ini = more than 1 but fewer than N, <strong>S</strong>tochastic = exactly 1 sample per step.</div></div>
+</section>
+
+<section class="guide-section" id="learning-rate" data-title="Learning Rate &amp; Optimizers">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Choice of Step Size (Learning Rate)</h2></div>
+  <p class="section-kicker">The learning rate is the single most important knob in training.</p>
+  <p>The learning rate <code>μ</code> controls how far each gradient-descent step moves. It has three regimes:</p>
+  <div class="grid grid-3">
+    <div class="card"><h3 class="card-title">🐢 Too small</h3><p>Crawls toward the minimum — training takes far longer than necessary.</p></div>
+    <div class="card"><h3 class="card-title">✅ Just right</h3><p>Converges quickly and smoothly toward the minimum.</p></div>
+    <div class="card"><h3 class="card-title">💥 Too large</h3><p>Overshoots the minimum — it can oscillate or even diverge.</p></div>
+  </div>
+  <p>Good news: you don't need to pick the step size manually. Optimizers like <strong>Adam</strong> adapt the step size automatically.</p>
+
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Do this:</strong> If training loss bounces or explodes, your learning rate is too large. If it barely moves, it is too small. When in doubt, reach for an adaptive optimizer like Adam.</div></div>
+</section>
+
+<section class="guide-section" id="overfitting" data-title="Overfitting &amp; Regularization">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Overfitting and Regularization</h2></div>
+  <p class="section-kicker">A model that memorises its training data is useless on new data.</p>
+  <p>If we have more parameters than training data — for example, an MLP with <strong>1000 weights</strong> and only <strong>500 training samples</strong> — we can drive the loss to a value that matches every input feature perfectly with its class. This is an extreme case of the <span class="keyterm">overfitting</span> phenomenon, and its generalisation performance will be poor.</p>
+
+  <h3 class="sub-title">How to fight it</h3>
+  <ul>
+    <li>Ensure the number of training samples exceeds the number of model parameters — an obvious first line of defence.</li>
+    <li>But overfitting is not always due to such an easily detected scenario. It is usually because the underlying model is <em>simpler</em> than what we assumed — and we don't know the underlying model!</li>
+    <li>All we can do is try to drive the smallish, essentially redundant weights down to zero.</li>
+    <li>The usual way is to <strong>penalise the norm of the parameter vector</strong> — adding a term that drives the norm toward zero. This is <span class="keyterm">regularization</span>.</li>
+  </ul>
+
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> A flexible model can fit noise as easily as signal. Enough data and a norm penalty keep that flexibility in check so the model generalises.</div></div>
+
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Your model gets 100% on training data but 60% on the test set. Is it overfitting or underfitting — and what would you change first?</div></div>
+</section>
+
+<section class="guide-section" id="backprop" data-title="Backpropagation">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Backpropagation</h2></div>
+  <p class="section-kicker">Backpropagation is just the chain rule, applied layer by layer from the output backwards.</p>
+  <p>In SGD we need the gradient of the loss with respect to each and every weight in the network. To do this we use the <strong>chain rule of differentiation</strong>, starting from the output layer and progressing <strong>backwards</strong> — hence <span class="keyterm">backpropagation</span>.</p>
+  <p>To illustrate, consider one of the output-layer weights:</p>
+  <div class="formula">
+    <div class="formula-label">Output-layer neuron</div>
+    <div class="math">ŷ = σ(w₁x₁ + ⋯) = σ(z)</div>
+  </div>
+  <p>Applying the chain rule:</p>
+  <div class="formula">
+    <div class="formula-label">Chain rule for a weight</div>
+    <div class="math">dL/dw₁ = (dL/dŷ) · (dŷ/dw₁) = (dL/dŷ) · σ'(z) · x₁</div>
+  </div>
+  <p>All the terms on the right-hand side can be calculated. In the lecture, the derivative with respect to one of the <strong>hidden-layer</strong> weights is demonstrated the same way.</p>
+
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember (CBO):</strong> <strong>C</strong>hain rule, <strong>B</strong>ackwards from <strong>O</strong>utput. Forward pass to predict, backward pass to assign blame to each weight.</div></div>
+</section>
+
+<section class="guide-section" id="cnn-motivation" data-title="Why Images Break MLPs">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Why Images Are Problematic for MLPs</h2></div>
+  <p class="section-kicker">Images are spatially structured; a plain MLP throws that structure away and explodes in size.</p>
+  <p>An MLP assumes that features are just a <strong>flat list</strong>: if you swap two features in the order they are fed in, the result is unchanged. In other words, <strong>adjacency carries no information</strong>, because the ordering of features is arbitrary. That is fine for a table of independent measurements — but disastrous for an image, where nearby pixels are strongly related.</p>
+  <p>To feed an image into an MLP we would <strong>flatten</strong> the pixels, turning the 2D matrix of pixel values into a 1D vector. This creates two problems.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Problem</th><th>What goes wrong</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1. Parameter explosion</strong></td><td>A 128 × 128 grayscale image becomes <strong>16,384 features</strong> at the input layer. If the first hidden layer has only 128 neurons, we already need over <strong>2 million weights</strong> in that first layer.</td></tr>
+        <tr><td><strong>2. No shift invariance</strong></td><td>Any detail (a face, a sign) shifted by even one pixel is not recognised as the same thing. The MLP has no built-in notion that something is the "same pattern but moved".</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="formula">
+    <div class="formula-label">The arithmetic behind problem 1</div>
+    <div class="math">128 × 128 = 16,384 inputs;   16,384 × 128 = 2,097,152 weights</div>
+  </div>
+
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Flattening both destroys spatial structure and blows up the parameter count. CNNs are designed to keep the 2D structure and share weights instead.</div></div>
+</section>
+
+<section class="guide-section" id="convolution" data-title="Convolution &amp; Feature Maps">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Convolution: Filtering to Reveal Features</h2></div>
+  <p class="section-kicker">A small filter slides over the image and lights up wherever its pattern appears.</p>
+  <p><strong>Convolution</strong> (or linear filtering) is nothing new. A filter for a 2D image can change the image so that certain colours are amplified or edges are sharpened — digital image processing has been doing this for years. The effect of filtering depends critically on the <span class="keyterm">filter kernel</span> <code>w_{j,k}</code>, where the total number of weights in the kernel is user-defined. The filter output is:</p>
+  <div class="formula">
+    <div class="formula-label">2D convolution</div>
+    <div class="math">y_{m,n} = Σ_j Σ_k w_{j,k} · x_{m−j, n−k}</div>
+  </div>
+  <p>Depicted pictorially, this is much less obtuse than the equation looks: the kernel is a small window that slides across the image, and at each position it multiplies the overlapping pixels by its weights and sums them.</p>
+
+  <h3 class="sub-title">The vertical edge detector</h3>
+  <p>The lecture's illustrative kernel is a <strong>vertical edge detector</strong>. If the image window contains a vertical edge — say a value of 10 in the first two columns and 0 in the third — the filter responds strongly, because the kernel contrasts neighbouring columns. Where there is no transition, the response is weak. Different kernels reveal different <span class="keyterm">feature maps</span>: the lecture shows the original image, its vertical edges, its horizontal edges, and a blur.</p>
+
+  <h3 class="sub-title">The CNN convolutional layer</h3>
+  <p>A CNN starts with a <strong>convolutional layer</strong> where the kernels are <strong>not hand-designed but learned from the data</strong>. Instead of manually deciding what features to extract, we let the learning algorithm decide. If the task is deciding whether a picture contains a furry animal, "furriness" could be a more important feature than "vertical edge".</p>
+  <p>This <strong>automatic feature extraction</strong> is the key to solving the <strong>2nd</strong> MLP problem — the inability to recognise a feature that has been shifted. It does <em>not</em> solve the complexity issue, which is where max pooling comes in.</p>
+
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Key idea:</strong> A learned kernel is just a set of weights. Because the same kernel slides everywhere, a feature is detected no matter where it appears — that is shift invariance for free.</div></div>
+</section>
+
+<section class="guide-section" id="pooling-lenet" data-title="Pooling &amp; LeNet-5">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Pooling and the LeNet-5 CNN</h2></div>
+  <p class="section-kicker">Pooling shrinks each feature map without losing the evidence that a feature was found.</p>
+  <p>An image carries <strong>redundancy</strong> — an edge carries over multiple pixels, and so does a single colour or a texture. This redundancy translates into the feature map too. It is therefore sufficient to <strong>collapse a small region of a feature map into just one number</strong>: within a 2 × 2 pixel square, retain only the largest value to represent the presence of that feature in the region.</p>
+  <p>This operation is called <span class="keyterm">max pooling</span>, and it solves the <strong>1st</strong> MLP problem of parameter explosion. We can also use <span class="keyterm">average pooling</span>, which keeps the average of the feature map in each region.</p>
+
+  <div class="compare">
+    <div class="compare-col a"><h3>Max pooling</h3><p>Keeps the strongest activation in each region — the clearest indication that the feature was found. That is all the next layer needs for face recognition or anomaly detection.</p></div>
+    <div class="compare-col b"><h3>Average pooling</h3><p>Keeps the average of the region instead of the maximum. Smoother, but less selective about the strongest evidence.</p></div>
+  </div>
+
+  <div class="formula">
+    <div class="formula-label">Max pooling, 2 × 2</div>
+    <div class="math">[[0.2, 0.9], [0.4, 0.1]] → 0.9   (strongest activation kept)</div>
+  </div>
+  <p>We just reduced the number of inputs to the next layer by a <strong>factor of 4</strong> without losing (much) information — for example, a 128 × 128 feature map becomes 64 × 64 after 2 × 2 pooling.</p>
+
+  <h3 class="sub-title">LeNet-5: the pioneering CNN</h3>
+  <p>The lecture highlights <strong>LeNet-5</strong> as the pioneering convolutional neural network. Its pipeline is the template every modern CNN still follows:</p>
+  <div class="flow">
+    <span class="flow-step">Input image</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Convolutional layer (learned kernels)</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Max pooling</span><span class="flow-arrow">→</span>
+    <span class="flow-step">… layers …</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Softmax output</span>
+  </div>
+
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember (CP):</strong> <strong>C</strong>onvolution fixes <strong>P</strong>osition (same pattern, any location); <strong>P</strong>ooling fixes <strong>P</strong>arameter count (shrink the map). Together they make image recognition practical.</div></div>
+</section>
+
+<section class="guide-section" id="softmax" data-title="Softmax &amp; Probabilities">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Softmax: Turning Scores into Probabilities</h2></div>
+  <p class="section-kicker">The network produces raw scores; softmax normalises them into a valid probability distribution.</p>
+  <p>Recall that in a classification problem where the label space has <code>L</code> values, a model should produce probability values <code>p₁, …, p_L</code>, where <code>p_l</code> quantifies the model's confidence that the true label is <code>l</code>. Forward propagation through a network is designed to produce <code>L</code> values, but there is no way those values will sum to 1 without normalisation. This normalisation operation is <span class="keyterm">softmax</span>:</p>
+  <div class="formula">
+    <div class="formula-label">Softmax</div>
+    <div class="math">softmax_i(z₁, …, z_L) = e^{z_i} / Σₗ e^{z_l}   for l = 1 … L</div>
+  </div>
+  <p>There are many ways to transform <code>L</code> raw numbers into a probability distribution, but softmax makes the most sense because:</p>
+  <ul>
+    <li>It allows the raw input to be any real value — negative or positive.</li>
+    <li>The exponentiation <strong>magnifies the gap</strong> between the largest and smallest values.</li>
+    <li>Most importantly, it has a simple derivative with respect to any <code>z_i</code> — which is exactly what backpropagation needs.</li>
+  </ul>
+
+  <h3 class="sub-title">Worked examples: dog, cat or airplane</h3>
+  <p><strong>Example 1.</strong> The task is classifying an image as "dog", "cat" or "airplane". If the raw network outputs are <code>(2.0, 1.0, 0.1)</code>, the softmax outputs are <code>(0.659, 0.242, 0.099)</code>. Instead of a factor of two between the top two choices, the ratio is now <strong>2.72</strong> — the gap has been magnified. Check: <code>e² = 7.389</code>, <code>e¹ = 2.718</code>, <code>e^0.1 = 1.105</code>, sum <code>= 11.212</code>, and <code>7.389 / 11.212 ≈ 0.659</code>.</p>
+  <p><strong>Example 2.</strong> Same task. If the raw outputs are <code>(1, 2, 8)</code>, the model is more confident in the most likely label than above. Softmax accentuates that certainty and outputs probabilities of <code>(0.001, 0.002, 0.997)</code>.</p>
+
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Networks output raw scores, not probabilities. Softmax turns them into a valid distribution that pairs naturally with cross-entropy loss.</div></div>
+</section>
+
+<section class="guide-section" id="hyperparameters" data-title="Parameters vs Hyperparameters">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Parameters vs Hyperparameters (and the Code)</h2></div>
+  <p class="section-kicker">Keep the two kinds of "knobs" separate — the model learns one, you choose the other.</p>
+  <p>It is easy to blur two ideas that both sound like "settings". Keep them apart:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th></th><th>Parameters</th><th>Hyperparameters</th></tr></thead>
+      <tbody>
+        <tr><td><strong>What they are</strong></td><td>Weights <code>w</code> and bias <code>b</code></td><td>Settings chosen before training</td></tr>
+        <tr><td><strong>Who sets them</strong></td><td>Learned from data during training</td><td>Chosen by the human designer</td></tr>
+        <tr><td><strong>Examples</strong></td><td><code>w₁, …, w_K</code>, <code>b</code></td><td>Learning rate <code>μ</code>, mini-batch size <code>N_b</code>, epochs, layers/neurons, CNN kernel size</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Parameters</strong> are learned by minimising the loss with SGD and backpropagation. <strong>Hyperparameters</strong> shape training — how big each batch is, how large each step is, how long to train, and how big the network is. The number of epochs is described in the lecture as arbitrary, depending on available time and compute.</p>
+
+  <h3 class="sub-title">The hands-on code</h3>
+  <p>The lecture closes with hands-on examples in <strong>scikit-learn</strong> and <strong>PyTorch</strong>. In scikit-learn the mini-batch size defaults to 200 and is reset via the <code>batch_size</code> input parameter; optimizers such as <strong>Adam</strong> remove the need to hand-pick the step size.</p>
+
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Most training mistakes come from hyperparameters — step size, batch size, epochs — not from the parameters the optimiser learns. Tune those first.</div></div>
+</section>
+
+<section class="guide-section" id="exam-focus" data-title="Exam &amp; Assignment Focus">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Exam and Assignment Focus</h2></div>
+  <p class="section-kicker">The questions this lecture is most likely to be tested on.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Likely question</th><th>Model answer</th></tr></thead>
+      <tbody>
+        <tr><td>Why is a non-linear activation essential?</td><td>Without it, even a deep multi-layer system stays linear; non-linearity lets the network model complex systems and cognitive functions such as image recognition.</td></tr>
+        <tr><td>Write the perceptron equation.</td><td><code>ŷ = σ(Σ w_k x_k + b) = σ(z)</code>, where the weights and bias are learned parameters.</td></tr>
+        <tr><td>Compare the three common activations.</td><td>Sigmoid squashes to (0,1) for output probabilities; tanh to (−1,1), zero-centred, for hidden layers; ReLU is <code>max(0,z)</code>, cheap and the modern default.</td></tr>
+        <tr><td>Parameters vs hyperparameters?</td><td>Parameters (weights, bias) are learned from data; hyperparameters (learning rate, batch size, epochs, architecture) are chosen before training.</td></tr>
+        <tr><td>What if the learning rate is too small or too large?</td><td>Too small crawls toward the minimum; too large overshoots and can oscillate or diverge.</td></tr>
+        <tr><td>What is backpropagation and which rule does it use?</td><td>Computing each weight's gradient with the chain rule, starting at the output layer and moving backwards.</td></tr>
+        <tr><td>Chain-rule expression for an output-layer weight?</td><td><code>dL/dw₁ = (dL/dŷ) · σ'(z) · x₁</code> — all terms can be calculated.</td></tr>
+        <tr><td>The two problems of feeding images to an MLP?</td><td>Parameter explosion from flattening, and the lack of shift invariance.</td></tr>
+        <tr><td>How do convolution and pooling address them?</td><td>Convolution learns kernels that detect features regardless of position; max pooling collapses regions to one value, cutting inputs by 4× to fight parameter explosion.</td></tr>
+        <tr><td>Write the convolution formula.</td><td><code>y_{m,n} = Σ_j Σ_k w_{j,k} x_{m−j,n−k}</code>, where kernel <code>w_{j,k}</code> holds the filter weights.</td></tr>
+        <tr><td>What does softmax do and why is it preferred?</td><td>It normalises L raw scores into probabilities summing to 1; it accepts any real values, magnifies score gaps, and has a simple derivative.</td></tr>
+        <tr><td>Which loss for regression vs classification?</td><td>MSE for regression with continuous labels; cross-entropy for classification, reducing to <code>−log₂ p̂_y</code> for one-hot labels.</td></tr>
+        <tr><td>How can overfitting be reduced?</td><td>Ensure training samples exceed parameters, gather more data, and penalise the parameter-vector norm to shrink redundant weights.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways">
+    <div class="takeaway"><span class="tk-num">1</span><p><strong>Neural networks learn patterns from data</strong> — loosely inspired by the brain, used in engineering for structural health monitoring, automated defect detection, predictive maintenance and autonomous control.</p></div>
+    <div class="takeaway"><span class="tk-num">2</span><p><strong>A neuron scales, sums, then decides</strong> — inputs are scaled by weights, summed with a bias, and passed through an activation: <code>ŷ = σ(Σ w_k x_k + b)</code>.</p></div>
+    <div class="takeaway"><span class="tk-num">3</span><p><strong>Weights and bias are the learned parameters</strong> — inputs are features in the first layer and hidden-layer outputs thereafter; only the output layer produces the network output.</p></div>
+    <div class="takeaway"><span class="tk-num">4</span><p><strong>Activations add non-linearity</strong> — sigmoid squashes to (0,1) for output probabilities, tanh to (−1,1) and is zero-centred for hidden layers, and ReLU (<code>max(0,z)</code>) is the cheap modern default.</p></div>
+    <div class="takeaway"><span class="tk-num">5</span><p><strong>Match the loss to the task</strong> — MSE, <code>L(θ) = (1/N) Σ (yᵢ − ŷᵢ)²</code>, for regression; cross-entropy for classification, which reduces to <code>−log₂ p̂_y</code> for a one-hot label.</p></div>
+    <div class="takeaway"><span class="tk-num">6</span><p><strong>Gradient descent walks downhill</strong> — since <code>∇L(θ) = 0</code> has no closed form, iterate <code>θ_{t+1} = θ_t − μ∇L(θ_t)</code> until a stopping criterion is met.</p></div>
+    <div class="takeaway"><span class="tk-num">7</span><p><strong>Mini-batch SGD trades noise for speed</strong> — <code>N_b = N</code> is batch GD, <code>2 ≤ N_b &lt; N</code> is mini-batch GD, <code>N_b = 1</code> is stochastic GD; smaller <code>N_b</code> is noisier but faster, and scikit-learn defaults to 200.</p></div>
+    <div class="takeaway"><span class="tk-num">8</span><p><strong>An epoch is one full pass through the data</strong> — its number is arbitrary, and the learning rate must be not too small, not too large, with optimizers like Adam adapting it automatically.</p></div>
+    <div class="takeaway"><span class="tk-num">9</span><p><strong>Overfitting happens when the model is too flexible</strong> — e.g. 1000 weights with 500 samples; fix it with more data and by penalising the parameter-vector norm (regularization).</p></div>
+    <div class="takeaway"><span class="tk-num">10</span><p><strong>Backpropagation is the chain rule applied backwards</strong> — from the output layer back, e.g. <code>dL/dw₁ = (dL/dŷ) · σ'(z) · x₁</code>.</p></div>
+    <div class="takeaway"><span class="tk-num">11</span><p><strong>MLPs fail on images, but CNNs fix it</strong> — parameter explosion (128 × 128 → 16,384 inputs → 2M+ weights) and no shift invariance; convolution learns kernels while pooling cuts inputs by 4×.</p></div>
+    <div class="takeaway"><span class="tk-num">12</span><p><strong>Softmax makes probabilities</strong> — it normalises L raw scores so they sum to 1, magnifying gaps and keeping a simple derivative.</p></div>
+  </div>
+</section>
+
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools">
+    <button class="chip active" type="button" data-cat="all">All</button>
+    <button class="chip" type="button" data-cat="concept">Core concepts</button>
+    <button class="chip" type="button" data-cat="method">Methods &amp; process</button>
+    <button class="chip" type="button" data-cat="metric">Metrics &amp; evaluation</button>
+  </div>
+  <div class="terms">
+    <div class="term-card" data-cat="concept"><div class="term-name">Neural network (NN)</div><div class="term-meaning">A machine-learning model, loosely inspired by the brain, that learns patterns directly from data by stacking simple units called neurons.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Perceptron</div><div class="term-meaning">The full computation of a single neuron: <code>ŷ = σ(Σ w_k x_k + b)</code>. The basic building block of a network.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Activation function</div><div class="term-meaning">A usually non-linear function σ(·) applied to a neuron's weighted sum to produce its output; it is what gives the network non-linearity.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Sigmoid</div><div class="term-meaning">An activation, <code>σ(z) = 1/(1+e⁻ᶻ)</code>, that squashes values into (0,1) — classically used for output probabilities.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Tanh</div><div class="term-meaning">An activation, <code>tanh(z)</code>, that squashes to (−1,1). It is zero-centred, so it is common in hidden layers.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">ReLU</div><div class="term-meaning">An activation, <code>max(0, z)</code>: cheap and effective, the default choice for hidden layers today.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Multi-Layer Perceptron (MLP)</div><div class="term-meaning">A feedforward neural network that stacks neurons into hidden layers and an output layer; the most straightforward NN.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Non-linearity</div><div class="term-meaning">The property introduced by activation functions that lets a network model complex, curved relationships; without it, even a deep network is linear.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Decision boundary</div><div class="term-meaning">The surface separating classes in the input space. More layers and neurons let an MLP synthesise more flexible non-linear boundaries.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Loss function</div><div class="term-meaning">A differentiable measure of how far the model output is from the ground-truth label, minimised over the parameters during training.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Overfitting</div><div class="term-meaning">Fitting the training data so closely (e.g. more parameters than samples) that generalisation to new data becomes poor.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Parameter</div><div class="term-meaning">A value learned from data during training — specifically a weight <code>w</code> or bias <code>b</code>.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Hyperparameter</div><div class="term-meaning">A setting chosen by the designer before training — such as learning rate, mini-batch size, epochs, or architecture.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">Gradient descent</div><div class="term-meaning">The method that repeatedly steps in the direction of steepest descent (the negative gradient) to minimise the loss.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">Learning rate (μ)</div><div class="term-meaning">The step size controlling how far each gradient-descent update moves; too small crawls, too large overshoots or diverges.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">Epoch</div><div class="term-meaning">One complete pass through the entire training dataset; the number of epochs used is arbitrary.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">Stochastic / mini-batch GD</div><div class="term-meaning">Gradient descent using a subset of samples per step: mini-batch uses <code>2 ≤ N_b &lt; N</code>, stochastic uses <code>N_b = 1</code>; "SGD" is often used loosely for mini-batch GD.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">Backpropagation</div><div class="term-meaning">Computing every weight's gradient via the chain rule, moving backwards from the output layer to the input.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">Regularization</div><div class="term-meaning">Penalising the norm of the parameter vector — adding a term that drives small, redundant weights toward zero to reduce overfitting.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">Convolution</div><div class="term-meaning">A linear filtering operation, <code>y_{m,n} = Σ_j Σ_k w_{j,k} x_{m−j,n−k}</code>, where a small kernel slides over the input to reveal features.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">Max pooling</div><div class="term-meaning">Collapsing a feature-map region (e.g. 2 × 2) to its largest value, cutting the next layer's inputs by a factor of 4 to fight parameter explosion.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">Softmax</div><div class="term-meaning">A normalisation, <code>e^{z_i} / Σ_l e^{z_l}</code>, that converts L raw scores into a probability distribution summing to 1.</div></div>
+    <div class="term-card" data-cat="metric"><div class="term-name">Mean Squared Error (MSE)</div><div class="term-meaning">The regression loss <code>(1/N) Σ (yᵢ − ŷᵢ)²</code>, the average squared error over the training data.</div></div>
+    <div class="term-card" data-cat="metric"><div class="term-name">Cross entropy</div><div class="term-meaning">The classification loss and a distance between distributions, <code>H(P,Q) = −Σ P(x) log₂ Q(x)</code>; for a one-hot label it reduces to <code>−log₂ p̂_y</code>.</div></div>
+  </div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+
+  <article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">Why is a non-linear activation function essential in a neural network?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Without an activation function, even a complex multi-layered system remains linear and cannot model cognitive systems or other complex systems. Adding non-linearity lets increasing the network's complexity mimic cognitive functions such as image recognition.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+
+  <article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Write the perceptron equation and identify which quantities are learned parameters.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> <code>ŷ = σ(w₁x₁ + ⋯ + w_K x_K + b) = σ(z)</code>. The weights <code>w₁, …, w_K</code> and the bias <code>b</code> are the parameters learned during training; the inputs <code>x</code> are features (first layer) or prior-layer outputs (hidden layers).</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+
+  <article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">Compare the three common activation functions: sigmoid, tanh and ReLU.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Sigmoid <code>1/(1+e⁻ᶻ)</code> squashes to (0,1) and is classically used for output probabilities. Tanh <code>tanh(z)</code> squashes to (−1,1), is zero-centred, and is common in hidden layers. ReLU <code>max(0,z)</code> keeps positives, zeroes negatives, is cheap and effective, and is the default for hidden layers today.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+
+  <article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">Distinguish parameters from hyperparameters, with examples of each.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Parameters (weights and bias) are learned from data during training. Hyperparameters (learning rate, mini-batch size, number of epochs, architecture/layers/neurons, CNN kernel size) are chosen by the designer before training.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+
+  <article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">Which loss function suits regression versus classification, and why?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Regression uses MSE, <code>L(θ) = (1/N) Σ (yᵢ − ŷᵢ)²</code>, because the model outputs a continuous estimate. Classification uses cross entropy because the model outputs a probability distribution over L labels; the raw probability of error is not a suitable objective, so cross entropy is the proxy.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+
+  <article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">Using <code>𝒮_y = {1,2,3,4}</code> and true label <code>y = 2</code>, explain why cross entropy becomes <code>−log₂ p̂_y</code>, and compute it for <code>p̂₂ = 0.7</code>.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The true distribution is one-hot: <code>p₁ = p₃ = p₄ = 0</code>, <code>p₂ = 1</code>. In <code>H(P,Q) = −Σ P(x) log₂ Q(x)</code>, only the <code>x = 2</code> term survives, leaving <code>−log₂ p̂₂</code>. For <code>p̂₂ = 0.7</code>, loss <code>= −log₂ 0.7 ≈ 0.515</code> bits; at <code>p̂₂ = 0.99</code> it is <code>≈ 0.0145</code> bits.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+
+  <article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">State the gradient-descent update rule and explain the stopping criterion.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Steepest ascent is <code>∇L(θ)</code>, so descent is its negative. With learning rate <code>μ</code>, update <code>θ_{t+1} = θ_t − μ∇L(θ_t)</code>. Iterate until a stopping criterion is met — e.g. θ changes by less than a threshold, or a maximum number of iterations is reached. We cannot solve <code>∇L(θ) = 0</code> in closed form.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+
+  <article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">Distinguish batch, mini-batch and stochastic gradient descent. What is an epoch, and what is scikit-learn's default batch size?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Batch GD uses all samples per iteration (<code>N_b = N</code>); mini-batch GD uses <code>2 ≤ N_b &lt; N</code>; stochastic GD uses one sample (<code>N_b = 1</code>). Smaller <code>N_b</code> is noisier but faster and less complex per update. An epoch is one complete pass through the training data, and its number is arbitrary. scikit-learn's default is <code>N_b = 200</code>, resettable via <code>batch_size</code>.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+
+  <article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">What happens if the learning rate is too small or too large? How do you avoid choosing it manually?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Too small: training crawls toward the minimum. Too large: it overshoots and can oscillate or even diverge. Just right: it converges quickly and smoothly. You avoid manual tuning by using adaptive optimizers such as Adam, which adjust the step size automatically.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+
+  <article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">Explain overfitting with the 1000-weights / 500-samples example, and how to reduce it.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> With more parameters (1000 weights) than training samples (500), the network can drive the loss down by matching every training input perfectly to its class — an extreme case of overfitting, with poor generalisation. Reduce it by ensuring training samples exceed parameters, gathering more data, and penalising the norm of the parameter vector (regularization) to shrink small, redundant weights toward zero.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+
+  <article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">What is backpropagation, and write the chain-rule expression for an output-layer weight.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Backpropagation computes the gradient of the loss with respect to every weight using the chain rule, starting at the output layer and progressing backwards. For an output-layer weight, <code>dL/dw₁ = (dL/dŷ) · (dŷ/dw₁) = (dL/dŷ) · σ'(z) · x₁</code>; all terms on the right can be calculated.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+
+  <article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">State the two problems of feeding an image to an MLP, and do the parameter arithmetic for a 128 × 128 grayscale image with a 128-neuron first hidden layer.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) Parameter explosion: flattening a 2D image into a 1D vector creates huge input counts. (2) No shift invariance: a detail shifted by one pixel is not recognised as the same pattern, because adjacency is lost. Arithmetic: <code>128 × 128 = 16,384</code> inputs; with 128 neurons that is <code>16,384 × 128 = 2,097,152</code> weights — over 2 million in the first layer alone.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+
+  <article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">How do convolution and pooling address the two MLP image problems? Include the factor-of-4 reduction.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Convolution solves the shift problem: kernels are learned from data and slide over the image, so a feature is detected regardless of position. Pooling solves parameter explosion: max pooling collapses a 2 × 2 region to its largest value, reducing the next layer's inputs by a factor of 4 (e.g. 128 × 128 → 64 × 64) while keeping the strongest evidence the feature was found. LeNet-5 is the pioneering CNN.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+
+  <article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">What does softmax do, why is it preferred, and what are the outputs for raw scores (2.0, 1.0, 0.1)?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Softmax normalises L raw scores into a probability distribution that sums to 1. It is preferred because it accepts any real input, exponentiation magnifies the gap between the largest and smallest values, and it has a simple derivative with respect to any <code>z_i</code>. For <code>(2.0, 1.0, 0.1)</code> the output is <code>(0.659, 0.242, 0.099)</code> — the top-two ratio grows from 2 to 2.72.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+</section>
+
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist">
+    <label class="check-item"><input type="checkbox"> I can name four engineering applications of neural networks.</label>
+    <label class="check-item"><input type="checkbox"> I can write the perceptron equation and say what is learned.</label>
+    <label class="check-item"><input type="checkbox"> I can compare sigmoid, tanh and ReLU and say where each is used.</label>
+    <label class="check-item"><input type="checkbox"> I can explain why non-linearity is essential.</label>
+    <label class="check-item"><input type="checkbox"> I can state the MSE and cross-entropy formulas and when to use each.</label>
+    <label class="check-item"><input type="checkbox"> I can explain why cross entropy reduces to −log₂ p̂_y for a one-hot label.</label>
+    <label class="check-item"><input type="checkbox"> I can write the gradient-descent update and describe the stopping criterion.</label>
+    <label class="check-item"><input type="checkbox"> I can distinguish batch, mini-batch and stochastic GD, and define an epoch.</label>
+    <label class="check-item"><input type="checkbox"> I can describe the effect of too small, just right, and too large a learning rate.</label>
+    <label class="check-item"><input type="checkbox"> I can explain overfitting and how regularization reduces it.</label>
+    <label class="check-item"><input type="checkbox"> I can explain backpropagation with the chain rule for an output-layer weight.</label>
+    <label class="check-item"><input type="checkbox"> I can state the two MLP image problems and their parameter arithmetic.</label>
+    <label class="check-item"><input type="checkbox"> I can explain how convolution and pooling solve those two problems.</label>
+    <label class="check-item"><input type="checkbox"> I can describe what softmax does and work through an example.</label>
+    <label class="check-item"><input type="checkbox"> I can distinguish parameters from hyperparameters.</label>
+  </div>
+</section>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">⌂ All guides</a>
+    <a href="../lecture_week_4/ENGG2112_week4_study_guide.html">← Week 4</a>
+    <span class="spacer"></span>
+    <a href="../lecture_week_6/ENGG2112_week6_study_guide.html">Week 6 →</a>
+    <span class="spacer"></span>
+  </div>
+  <p>ENGG2112 Multi-Disciplinary Engineering · Week 5 · Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Theme ---------- */
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('engg2112-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('engg2112-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
+  }
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
+
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
+
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
+  function onScroll(){
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
+      });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
+  }
+
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'engg2112-5-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
+  });
+
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
+      var shown = 0;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
+      });
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
+    });
+  });
+
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
+  function runSearch(){
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
+      });
+    }
+    suggest.classList.add('open');
+  }
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
+  }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'engg2112-5-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
+})();
+</script>
+</body>
+</html>
