@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Learn symmetric ciphers from Caesar and Vigenère to DES and AES, plus the number theory, block modes, and randomness that secure the Internet.">
+<title>INFO3616 Week 4 — Symmetric Cryptography</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     INFO3616 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
+<header class="topbar">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">INFO3616</span>
+    <span class="brand-week">Week 4</span>
+  </a>
+  <div class="topbar-tools">
+    <div class="search">
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
+    </div>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Table of contents">
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+
+  <main class="content" id="content">
+<section class="hero" id="top">
+  <span class="hero-eyebrow">INFO3616 · Week 4 · Symmetric Cryptography</span>
+  <h1 class="hero-title">One Key to Lock and Unlock: Symmetric Cryptography</h1>
+  <p class="hero-sub">This week you learn how secret-key cryptography actually works, from Caesar's shift cipher through to the AES that protects most of the Internet. Along the way you meet the maths the lecture assumes — XOR, modular arithmetic, finite fields — plus the ideas of confusion and diffusion, the one-time pad, Feistel and substitution-permutation networks, cipher block modes, and random number generation.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> Hold one mental model for the whole week — <em>a symmetric cipher is a keyed scramble, and every design choice is a fight against patterns.</em> Natural language and real data are full of repeating structure; encryption is good only when that structure is hidden. Historical ciphers failed because they left patterns visible. Modern ciphers (DES, AES) exist to smash those patterns with substitution, transposition, many rounds, and the confusion and diffusion that Shannon named. Everything else this week — S-boxes, key schedules, block modes, random seeds — is machinery in service of that one fight.</div>
+  <div class="hero-meta">
+    <span class="meta-chip"><span class="dot"></span>~32 min read</span>
+    <span class="meta-chip">16 teaching sections</span>
+    <span class="meta-chip">14 practice questions</span>
+    <span class="meta-chip">30 key terms</span>
+  </div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list">
+      <li>Define cryptography, name its four goals, and draw the symmetric cipher model.</li>
+      <li>Distinguish symmetric from asymmetric cryptography and state Kerkhoff's Principle.</li>
+      <li>Apply XOR, modular arithmetic and congruence, and explain groups, rings, fields and finite fields.</li>
+      <li>Encrypt and decrypt with Caesar, Vigenère and rail fence ciphers, and break Vigenère using frequency analysis and the Kasiski examination.</li>
+      <li>Explain confusion, diffusion and perfect secrecy, and why the one-time pad is impractical.</li>
+      <li>Name the four attacker models and contrast stream ciphers with block ciphers.</li>
+      <li>Describe S-boxes, P-boxes, Feistel networks and substitution-permutation networks.</li>
+      <li>Explain DES's 16 rounds, its key-length weakness, how 3DES works, and block cipher design principles.</li>
+      <li>Describe AES's finite-field arithmetic and four round stages, compare ECB, CBC and CTR modes, and explain PRNGs versus CSPRNGs.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="guide-section" id="what-is-cryptography" data-title="What Is Cryptography?">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">What Is Cryptography?</h2>
+  </div>
+  <p class="section-kicker">Cryptography is the science of keeping data safe across distance and across time — and it is a double-edged sword that punishes careless use.</p>
+  <p><strong>Cryptography</strong> is the science of securely transmitting data, <em>spatially</em> and <em>temporally</em>. Both words matter:</p>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3 class="card-title">📡 Spatially — across distance</h3>
+      <p>Keeping data safe as it travels a physical distance. For example, securing the traffic between one of your browser tabs and a remote web server such as <code>www.google.com</code>.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">🗄️ Temporally — across time</h3>
+      <p>Keeping data secure far into the future. Encrypting archival data today so it stays unreadable decades from now, even as computing power and cryptanalysis improve.</p>
+    </div>
+  </div>
+  <h3 class="sub-title">What cryptography is used for</h3>
+  <p>Cryptography is an <strong>indispensable tool</strong> in secure protocols and systems. It is used to ensure four things:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Goal</th><th>What it means</th><th>Achieved by</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Confidentiality</strong></td><td>Only the intended reader can understand the data.</td><td>Encryption (symmetric and asymmetric)</td></tr>
+        <tr><td><strong>Integrity</strong></td><td>The data has not been altered.</td><td>Signatures, Message Authentication Codes (MACs), hash functions</td></tr>
+        <tr><td><strong>Authentication &amp; data origin verification</strong></td><td>You know who sent the data.</td><td>Signatures, MACs, and protocols</td></tr>
+        <tr><td><strong>Non-repudiation</strong></td><td>The sender cannot later deny sending it.</td><td>Signatures</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>This unit focuses on the first three — <strong>confidentiality, integrity and authentication</strong>. Other applications such as <strong>privacy</strong> and <strong>anonymity</strong> exist but are out of scope here. The unit teaches cryptography from a <em>functional</em> point of view, with less emphasis on formal mathematical proofs — though you still need a solid base of maths, which is why the number-theory and abstract-algebra handouts are assessable.</p>
+  <h3 class="sub-title">A double-edged sword</h3>
+  <p>Cryptography is complex and full of subtleties. Applying it carelessly can produce an insecure system — and worse, one that <em>looks</em> secure to its developers and users. Remember that the attacker does not know the system is "supposed" to be secure, and will happily take it apart.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Historical warning — GSM A5/1:</strong> the second-generation GSM mobile systems of the 1990s used a secret, proprietary stream cipher called <strong>A5</strong> (with variants A5/1 and A5/2) to encrypt traffic between the phone and the base station. It used a 64-bit secret key. Serious weaknesses were found by 1994, and by the late 1990s cryptanalytic plus hardware attacks made it practically breakable. Because of the GSM protocol's structure, a <strong>ciphertext-only attack</strong> was possible: an eavesdropper who simply gathered a run of encrypted frames could recover the secret key with only moderate computing power. A system its designers believed secure was not.</div></div>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Rule number one of implementation:</strong> do not implement (or "cook") your own cryptography for real-world use. Always use known, standardised methods. Implementing crypto needs deep experience with the quirks of hardware and programming languages. The recognised path to proficiency is to practise, find a mentor, and discuss with other implementers — a long career path with no shortcuts.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A5/1 was secret, yet it was broken. If the algorithm had been published instead, would it have been more or less secure in the long run? Hold that thought — it is exactly what Kerkhoff's Principle answers in a couple of sections.</div></div>
+</section>
+
+<section class="guide-section" id="symmetric-vs-asymmetric" data-title="Two Forms of Cryptography">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Symmetric vs Asymmetric Cryptography</h2>
+  </div>
+  <p class="section-kicker">The whole field splits in two, based on one question: is the decryption key the same as the encryption key?</p>
+  <p>Cryptography comes in two forms, and the difference is entirely about the keys.</p>
+  <div class="compare">
+    <div class="compare-col a">
+      <h3>Symmetric cryptography</h3>
+      <ul>
+        <li>The encryption key and decryption key are the <strong>same</strong>: <em>ke = kd</em>.</li>
+        <li>Or, at least, the decryption key can be <strong>derived</strong> from the encryption key (<em>kd ← ke</em>).</li>
+        <li>Also called <strong>shared-key cryptography</strong>.</li>
+        <li>Built from algorithms that <strong>shuffle symbols around and map them to others</strong>.</li>
+        <li>This week's topic.</li>
+      </ul>
+    </div>
+    <div class="compare-col b">
+      <h3>Asymmetric cryptography</h3>
+      <ul>
+        <li>The keys are <strong>different</strong>: <em>ke ≠ kd</em>.</li>
+        <li>It is <strong>infeasible</strong> to compute the decryption key <em>kd</em> from the encryption key <em>ke</em>.</li>
+        <li>Also called <strong>public-key cryptography</strong>.</li>
+        <li>Built on the <strong>hardness of some mathematical problem</strong>.</li>
+        <li>Covered in a later week (e.g. RSA).</li>
+      </ul>
+    </div>
+  </div>
+  <p>The practical difference is the <strong>key-distribution problem</strong>. With symmetric crypto, both parties must already share one secret key — which is awkward if they have never met. Asymmetric crypto removes that problem by letting one key be public, at the cost of being much slower. In practice, the two are combined: asymmetric crypto is often used to agree on a symmetric key, and then symmetric crypto does the bulk encryption.</p>
+  <h3 class="sub-title">The symmetric cipher model</h3>
+  <p>Picture the basic operation of symmetric-key cryptography as a pipeline with one shared key feeding both ends:</p>
+  <div class="flow">
+    <span class="flow-step">Plaintext p</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Encrypt with key k</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Ciphertext c</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Decrypt with the same key k</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Plaintext p</span>
+  </div>
+  <p>Notice that the <em>same</em> key appears on both sides. An eavesdropper who sees only the ciphertext must recover the key to read the message.</p>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why the distinction matters:</strong> symmetric algorithms get their security from <em>shuffling and mapping symbols</em> so thoroughly that patterns vanish. Asymmetric algorithms get theirs from a maths problem that is believed hard. That is why this week's maths — finite fields and modular arithmetic — underpins symmetric ciphers such as AES, while a different hardness problem (factorisation, discrete logs) underpins asymmetric ones.</div></div>
+</section>
+
+<section class="guide-section" id="kerckhoffs-principle" data-title="Kerkhoff's Principle">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Kerkhoff's Principle</h2>
+  </div>
+  <p class="section-kicker">Security must live in the key alone — never in the secrecy of the design.</p>
+  <div class="formula">
+    <div class="formula-label">Kerkhoff's Principle</div>
+    <div class="math">The security of a cryptographic mechanism must depend only on the security of the keys, and never on the mechanism (or anything else except the keys) being secret.</div>
+  </div>
+  <p>(You may also see the name spelled <strong>Kerckhoffs's Principle</strong>. The lecture uses "Kerkhoff's".) The idea is simple but powerful: assume the enemy knows your algorithm completely. The only secret left is the key.</p>
+  <p>This is why almost every mainstream algorithm in use — AES, RSA, DES — is <strong>publicly disclosed</strong>. We know exactly how they work. Their security rests purely on the secrecy of the keys.</p>
+  <h3 class="sub-title">The "many eyes" argument</h3>
+  <p>Open design is not a weakness; it is a strength. When the design is public, many researchers and engineers can inspect it and find flaws. That is why <strong>NIST</strong> (the US National Institute of Standards and Technology) runs <em>open competitions</em>, inviting the global cryptographic community to submit algorithms for public review and scrutiny. The winners — like AES — have been attacked by experts worldwide and survived. The transparency of the process is exactly what makes the resulting standards robust and free of hidden vulnerabilities.</p>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> "The lock is public; only the key is secret." Every real-world lock works this way — everyone can see how a deadbolt is made, but only you hold the key.</div></div>
+  <h3 class="sub-title">When designers ignore the principle</h3>
+  <p>History has repeatedly punished secrecy-based design:</p>
+  <ul>
+    <li><strong>GSM A5/1 and A5/2</strong> — initially secret, later found weak (as we saw earlier).</li>
+    <li><strong>DVD Content Scrambling System (CSS)</strong> — the next example.</li>
+  </ul>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>DVD Content Scrambling System (CSS):</strong> CSS was created to stop DVDs sold in one region being played in another, to stop copying of DVD content, and — because the algorithm was not disclosed — to stop unapproved software or hardware players (players not licensed by the Copy Control Association) from playing discs. It relied on <em>secrecy of the algorithm</em> for its security. The DVD Consortium assumed that keeping the algorithm secret would keep the system safe. Once the algorithm was reverse-engineered and published, the entire copyright system was compromised. A textbook violation of Kerkhoff's Principle.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If a company tells you "our encryption is secure because our algorithm is proprietary and nobody knows it", which principle are they violating, and what is the likely outcome?</div></div>
+</section>
+
+<section class="guide-section" id="crypto-notation" data-title="Basic Definitions &amp; Notation">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Basic Definitions and Notation</h2>
+  </div>
+  <p class="section-kicker">Five words — plaintext, encryption, ciphertext, decryption, key — plus the functions Enc and Dec. Learn the symbols now and the rest of the week reads smoothly.</p>
+  <div class="def-card"><span class="dc-term">Plaintext</span> — the non-encrypted, unprotected data, written <em>p</em>. It is built from symbols of an alphabet <em>R = {r1, r2, …, rn}</em>. For example, ordinary English comes from the alphabet of letters, digits and punctuation: {[A-Z], [a-z], [0-9]}.</div>
+  <div class="def-card"><span class="dc-term">Encryption</span> — the process that encodes plaintext using the cipher function <em>Enc</em> and a key <em>ke</em>, producing ciphertext <em>c</em>. In symbols: <em>Enc<sub>ke</sub>(p) = c</em>.</div>
+  <div class="def-card"><span class="dc-term">Ciphertext</span> — the encrypted output, written <em>c</em>. It need not come from the same alphabet as the plaintext, and its alphabet may be a different size. We denote the ciphertext alphabet <em>S = {s1, s2, …, sm}</em>.</div>
+  <div class="def-card"><span class="dc-term">Decryption</span> — the process that decodes ciphertext using the decipher function <em>Dec</em> and a key <em>kd</em>, producing the original plaintext <em>p</em>. In symbols: <em>Dec<sub>kd</sub>(c) = p</em>.</div>
+  <div class="def-card"><span class="dc-term">Key</span> — the secret value that parameterises the cipher. In symmetric cryptography <em>ke = kd</em> (or <em>kd</em> can be derived from <em>ke</em>); in asymmetric cryptography <em>ke ≠ kd</em>.</div>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Why ciphertext alphabets differ:</strong> a Caesar cipher maps letters to letters, so plaintext and ciphertext share one alphabet. A modern block cipher turns a 128-bit plaintext block into a 128-bit ciphertext block, so the "alphabet" is the set of all 2<sup>128</sup> possible blocks. The size of the plaintext alphabet <em>n</em> and the ciphertext alphabet <em>m</em> need not match.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> In <em>Enc<sub>ke</sub>(p) = c</em> and <em>Dec<sub>kd</sub>(c) = p</em>, which symbols are inputs, which is output, and what must be true of <em>ke</em> and <em>kd</em> for the scheme to be symmetric?</div></div>
+</section>
+
+<section class="guide-section" id="math-foundations" data-title="Maths You Need">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Maths You Need: XOR, Modular Arithmetic, Groups and Fields</h2>
+  </div>
+  <p class="section-kicker">The lecture assumes a maths toolkit. Here is all of it, in plain English, so you are never blocked by notation.</p>
+  <p>The slides list the maths you are expected to know: the <strong>XOR function</strong>, <strong>modular arithmetic</strong>, the <strong>Extended Euclidean Algorithm</strong>, <strong>primitive roots</strong>, the <strong>discrete logarithm problem</strong>, and <strong>groups, rings and fields</strong> (including finite fields). These are assessable and you will need them all unit long. Let us build them up from zero.</p>
+
+  <h3 class="sub-title">1. The XOR function</h3>
+  <p><strong>XOR</strong> (exclusive OR, written ⊕) is a bitwise operation. It takes two bits and returns 1 if they are <em>different</em>, and 0 if they are the <em>same</em>:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>a</th><th>b</th><th>a ⊕ b</th></tr></thead>
+      <tbody>
+        <tr><td>0</td><td>0</td><td>0</td></tr>
+        <tr><td>0</td><td>1</td><td>1</td></tr>
+        <tr><td>1</td><td>0</td><td>1</td></tr>
+        <tr><td>1</td><td>1</td><td>0</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Applied to whole bit strings, XOR works bit by bit. Four properties make it the favourite tool of cryptography:</p>
+  <ul>
+    <li><strong>Self-cancelling:</strong> <em>a ⊕ a = 0</em> (a value XORed with itself vanishes).</li>
+    <li><strong>Identity:</strong> <em>a ⊕ 0 = a</em>.</li>
+    <li><strong>Commutative and associative:</strong> order and grouping do not matter.</li>
+    <li><strong>Self-inverse:</strong> <em>(a ⊕ b) ⊕ b = a</em>, which is why encryption and decryption with XOR are the same operation.</li>
+  </ul>
+  <div class="formula">
+    <div class="formula-label">Worked example</div>
+    <div class="math">10111011 ⊕ 00111101 = 10000110</div>
+  </div>
+  <p>Check the first bit: 1 ⊕ 0 = 1. Second: 0 ⊕ 0 = 0. Third: 1 ⊕ 1 = 0. Third from last: 1 ⊕ 1 = 0, and so on. Notice that XORing the ciphertext with the plaintext recovers the key: <em>10000110 ⊕ 10111011 = 00111101</em>.</p>
+
+  <h3 class="sub-title">2. Modular arithmetic and congruence</h3>
+  <p><strong>Modular arithmetic</strong> is "clock arithmetic". <em>a mod n</em> is the remainder when <em>a</em> is divided by <em>n</em>, always a value from 0 to <em>n − 1</em>. For example, <em>26 mod 5 = 1</em> (5 goes into 26 five times with 1 left over), and <em>74 mod 11 = 8</em>.</p>
+  <p>Two numbers are <strong>congruent</strong> modulo <em>n</em>, written <em>a ≡ b (mod n)</em>, when they have the <em>same remainder</em> — equivalently, when <em>n</em> divides their difference <em>(a − b)</em>. So <em>26 ≡ 11 (mod 5)</em>, because both leave remainder 1. Congruence is an <strong>equivalence relation</strong>:</p>
+  <ul>
+    <li><strong>Reflexive:</strong> <em>a ≡ a</em>.</li>
+    <li><strong>Symmetric:</strong> if <em>a ≡ b</em> then <em>b ≡ a</em>.</li>
+    <li><strong>Transitive:</strong> if <em>a ≡ b</em> and <em>b ≡ c</em>, then <em>a ≡ c</em>. (Careful: this does <strong>not</strong> mean <em>a = c</em> — 26, 11 and 16 are all congruent mod 5 yet all different.)</li>
+  </ul>
+  <p>Congruence is preserved by addition and multiplication: if <em>a ≡ b</em> and <em>c ≡ d</em>, then <em>a + c ≡ b + d</em> and <em>a × c ≡ b × d</em>. This is what lets us do arithmetic inside a modulus.</p>
+  <div class="formula">
+    <div class="formula-label">Residue classes</div>
+    <div class="math">Every integer belongs to exactly one class mod n. Mod 5 the classes are {…, −5, 0, 5, …}, {…, 1, 6, 11, …}, and so on.</div>
+  </div>
+
+  <h3 class="sub-title">3. The Extended Euclidean Algorithm</h3>
+  <p>The <strong>greatest common divisor</strong> (gcd) of two integers is the largest number dividing both. Euclid's algorithm finds it by repeated remainder-taking. The <strong>Extended Euclidean Algorithm</strong> goes further: it finds integers <em>x</em> and <em>y</em> such that</p>
+  <div class="formula">
+    <div class="formula-label">Bézout's identity</div>
+    <div class="math">a·x + b·y = gcd(a, b)</div>
+  </div>
+  <p>Its main use in cryptography is finding a <strong>modular inverse</strong>. The inverse of <em>a</em> modulo <em>n</em> is the number <em>a<sup>−1</sup></em> with <em>a · a<sup>−1</sup> ≡ 1 (mod n)</em>. Such an inverse exists <strong>if and only if</strong> gcd(a, n) = 1 (that is, <em>a</em> and <em>n</em> are coprime). To find it, solve <em>a·x + n·y = 1</em>; the value <em>x</em> is the inverse.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Worked example:</strong> find the inverse of 3 mod 11. Run Euclid: 11 = 3·3 + 2, then 3 = 1·2 + 1. Back-substitute: 1 = 3 − 1·2 = 3 − 1·(11 − 3·3) = 4·3 − 1·11. So 4·3 + (−1)·11 = 1, giving x = 4. Check: 3 × 4 = 12 ≡ 1 (mod 11). The inverse of 3 mod 11 is 4. Note that 2 has <em>no</em> inverse mod 6, because gcd(2, 6) = 2 ≠ 1.</div></div>
+
+  <h3 class="sub-title">4. Groups, rings and fields</h3>
+  <p>These are sets with operations that obey tidy rules. Read the table as a ladder: a ring is a group plus a second operation; a field is a ring where you can also divide.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Structure</th><th>Operations</th><th>Requirements (informally)</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Group</strong></td><td>one (say +)</td><td>Closed, associative, has an identity, and every element has an inverse. If order does not matter it is <em>Abelian</em>.</td><td>(Z<sub>n</sub>, +)</td></tr>
+        <tr><td><strong>Ring</strong></td><td>two (+, ×)</td><td>A group under +, plus × is associative and distributes over +.</td><td>Z<sub>n</sub> under + and ×</td></tr>
+        <tr><td><strong>Field</strong></td><td>two (+, ×)</td><td>A commutative ring in which every <em>non-zero</em> element has a multiplicative inverse (so division works).</td><td>Z<sub>p</sub> when p is prime</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Here Z<sub>n</sub> means the integers {0, 1, 2, …, n − 1} under arithmetic mod <em>n</em>. The single most examinable fact is this: <strong>Z<sub>p</sub> is a field if and only if p is prime.</strong> For example:</p>
+  <ul>
+    <li><strong>Mod 7</strong> → {0, 1, 2, 3, 4, 5, 6} is a field, because 7 is prime.</li>
+    <li><strong>Mod 6</strong> → {0, 1, 2, 3, 4, 5} is <em>not</em> a field. Take 2: its multiples mod 6 are 0, 2, 4, 0, 2, 4 — the value 1 never appears, so 2 has no inverse.</li>
+  </ul>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <em>Prime ⇒ Field.</em> If the modulus is composite, some element is a zero divisor and cannot be divided by. The zero divisors are exactly the elements sharing a factor with the modulus.</div></div>
+
+  <h3 class="sub-title">5. Finite fields and GF(2<sup>8</sup>)</h3>
+  <p>A <strong>finite field</strong> (also called a <strong>Galois field</strong>, written GF) is simply a field with finitely many elements. A finite field must have <em>p<sup>k</sup></em> elements for some prime <em>p</em> and integer <em>k</em>. There are two flavours:</p>
+  <ul>
+    <li><strong>Prime fields GF(p)</strong> — the integers mod a prime, e.g. GF(7).</li>
+    <li><strong>Extension fields GF(p<sup>k</sup>)</strong> — built from polynomials, e.g. <strong>GF(2<sup>8</sup>)</strong>, the field with 256 elements that AES uses.</li>
+  </ul>
+  <p>In GF(2<sup>8</sup>) each element is a <strong>byte</strong> (8 bits), treated as a polynomial with coefficients in {0, 1}. For example the byte <em>11010111</em> is the polynomial <em>x<sup>7</sup> + x<sup>6</sup> + x<sup>4</sup> + x<sup>2</sup> + x + 1</em>. The operations are:</p>
+  <ul>
+    <li><strong>Addition</strong> = bitwise <strong>XOR</strong> (because coefficients are mod 2). So <em>A + B = (a<sub>i</sub> XOR b<sub>i</sub>)</em> for each bit position.</li>
+    <li><strong>Multiplication</strong> = ordinary polynomial multiplication, then reduction modulo an <strong>irreducible polynomial</strong>. AES uses <em>m(x) = x<sup>8</sup> + x<sup>4</sup> + x<sup>3</sup> + x + 1</em>. "Irreducible" means it cannot be factored further, which is what guarantees every non-zero element has an inverse.</li>
+  </ul>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why GF(2<sup>8</sup>)?</strong> A byte has 8 bits, so GF(2<sup>8</sup>) is the natural field in which to do byte-wise arithmetic on a computer. Addition is a single cheap XOR instruction, and multiplication is a small table or a short shift-and-XOR routine. AES exploits exactly this.</div></div>
+
+  <h3 class="sub-title">6. Primitive roots and the discrete logarithm problem</h3>
+  <p>A <strong>primitive root</strong> (or generator) modulo a prime <em>p</em> is an element <em>g</em> whose powers generate <em>every</em> non-zero residue:</p>
+  <div class="formula">
+    <div class="formula-label">Generator property</div>
+    <div class="math">g<sup>1</sup>, g<sup>2</sup>, g<sup>3</sup>, …, g<sup>p−1</sup> (mod p) hit every value 1, 2, …, p−1 exactly once.</div>
+  </div>
+  <p>The <strong>order</strong> of an element is the smallest positive <em>k</em> with <em>g<sup>k</sup> ≡ 1</em>. A primitive root has order <em>p − 1</em>. For example, mod 7 the powers of 3 are 3, 2, 6, 4, 5, 1 — all six non-zero values — so 3 is a primitive root mod 7.</p>
+  <p>The <strong>discrete logarithm problem</strong> is the reverse: given <em>g</em>, <em>p</em> and <em>h = g<sup>x</sup> mod p</em>, find the exponent <em>x</em>. It is believed to be computationally hard for large primes, and it is the foundation of asymmetric schemes such as Diffie–Hellman key exchange and ElGamal — you will meet it again later in the unit.</p>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Mod 6, why does the element 2 fail to have a multiplicative inverse, and what does that tell you about whether {0,1,2,3,4,5} is a field? (Answer: its multiples only ever hit 0, 2 and 4, never 1; the set is not a field because 6 is composite.)</div></div>
+</section>
+
+<section class="guide-section" id="historical-ciphers" data-title="Historical Ciphers">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Historical Ciphers: Substitution and Transposition</h2>
+  </div>
+  <p class="section-kicker">Every classical cipher is one of two moves — change the symbols, or change their positions — and both leave patterns behind.</p>
+  <p>Historical symmetric ciphers are built from two fundamental techniques:</p>
+  <div class="compare">
+    <div class="compare-col a">
+      <h3>Transposition</h3>
+      <ul>
+        <li>Shifts the <strong>positions</strong> of symbols according to a rule.</li>
+        <li>Changes the <em>order</em> of symbols, not the symbols themselves.</li>
+        <li>Example: the rail fence cipher (later this section).</li>
+      </ul>
+    </div>
+    <div class="compare-col b">
+      <h3>Substitution</h3>
+      <ul>
+        <li><strong>Replaces</strong> symbols with other symbols according to a rule.</li>
+        <li>The symbols change; their positions stay put.</li>
+        <li>Example: the Caesar cipher.</li>
+      </ul>
+    </div>
+  </div>
+  <p>Both techniques are usually <strong>parameterised by a key</strong> (for example, the shift amount), so that only someone with the key can reverse the rule. It is also common for the same cipher to combine transposition <em>and</em> substitution to increase its strength.</p>
+  <h3 class="sub-title">The Caesar cipher</h3>
+  <p>The <strong>Caesar cipher</strong> is the simplest form of <strong>substitution cipher</strong>, and specifically a <strong>monoalphabetic</strong> one: a symbol from the plaintext alphabet is <em>always</em> mapped to the same symbol in the ciphertext alphabet. Every letter is shifted by <em>n</em> positions. With <em>n = 3</em>: a → d, b → e, c → f, and so on.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Plaintext symbol</th><th>→</th><th>Ciphertext symbol</th></tr></thead>
+      <tbody>
+        <tr><td>r1</td><td>→</td><td>s5</td></tr>
+        <tr><td>r2</td><td>→</td><td>s2</td></tr>
+        <tr><td>r3</td><td>→</td><td>s9</td></tr>
+        <tr><td>…</td><td>→</td><td>…</td></tr>
+        <tr><td>rn</td><td>→</td><td>s17</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Roman historian Suetonius claimed the cipher was used by Gaius Iulius Caesar, though others used similar methods earlier. By today's standards its security is very low — there are only 25 useful shifts to try — but thousands of years ago, when few people were literate, it may have been effective enough.</p>
+  <h3 class="sub-title">Why substitution fails: frequency analysis</h3>
+  <p>Every natural language has a characteristic frequency at which each letter occurs. In English, <strong>'E' is the most common letter</strong>. A monoalphabetic substitution cipher <em>preserves</em> these frequencies in the ciphertext: the most frequent ciphertext symbol is very likely the encryption of 'E'. An attacker can then guess the mapping, perhaps aided by a dictionary, and recover the message. This technique is called <strong>frequency analysis</strong>, and it is the classic weakness of monoalphabetic ciphers. On top of that, brute-forcing a substitution cipher would take only seconds on a modern computer.</p>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>The lesson:</strong> a cipher is only as strong as its ability to hide statistical patterns. This single observation drives the entire rest of the week — polyalphabetic ciphers, confusion and diffusion, and eventually AES.</div></div>
+</section>
+
+<section class="guide-section" id="vigenere" data-title="The Vigenère Cipher">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Vigenère Cipher and How to Break It</h2>
+  </div>
+  <p class="section-kicker">Use a different Caesar shift for each letter, cycling through a keyword — polyalphabetic encryption that flattens letter frequencies, yet still falls to clever statistics.</p>
+  <p>The <strong>Vigenère cipher</strong> is a <strong>polyalphabetic cipher</strong>: each plaintext character is encrypted with a <em>different</em> Caesar cipher, and which one to use is determined by the corresponding letter of a keyword. This directly attacks the frequency-analysis weakness, because the same plaintext letter can map to different ciphertext letters at different positions.</p>
+  <h3 class="sub-title">Encryption and decryption, step by step</h3>
+  <p>Use a 26-letter alphabet <em>A</em> with values <em>A = 0, B = 1, …, Z = 25</em>, so <em>N = 26</em>. Take plaintext <em>P</em> = "HELLO" → {7, 4, 11, 11, 14} and keyword <em>K</em> = "KEY" → {10, 4, 24}, so |K| = 3.</p>
+  <div class="formula">
+    <div class="formula-label">Encryption</div>
+    <div class="math">C<sub>i</sub> = (P<sub>i</sub> + K<sub>i mod |K|</sub>) mod 26</div>
+  </div>
+  <div class="formula">
+    <div class="formula-label">Decryption</div>
+    <div class="math">P<sub>i</sub> = (C<sub>i</sub> − K<sub>i mod |K|</sub> + 26) mod 26</div>
+  </div>
+  <p>The subscript <em>i mod |K|</em> is the trick: the keyword repeats, so its letters are used cyclically. Working the example:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Position</th><th>Plaintext</th><th>Key (cycling)</th><th>Calculation</th><th>Ciphertext</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>H = 7</td><td>K = 10</td><td>(7 + 10) mod 26 = 17</td><td>R</td></tr>
+        <tr><td>2</td><td>E = 4</td><td>E = 4</td><td>(4 + 4) mod 26 = 8</td><td>I</td></tr>
+        <tr><td>3</td><td>L = 11</td><td>Y = 24</td><td>(11 + 24) mod 26 = 35 mod 26 = 9</td><td>J</td></tr>
+        <tr><td>4</td><td>L = 11</td><td>K = 10</td><td>(11 + 10) mod 26 = 21</td><td>V</td></tr>
+        <tr><td>5</td><td>O = 14</td><td>E = 4</td><td>(14 + 4) mod 26 = 18</td><td>S</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>So "HELLO" with key "KEY" becomes <strong>"RIJVS"</strong>. Decryption reverses the arithmetic: R = 17 with key K = 10 gives (17 − 10 + 26) mod 26 = 7 = H, and so on.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>A longer worked example:</strong> with key "CRYPTO" and plaintext "THISISAGREATDAY", the first letters give C(2) + T(19) = 21 = V, C(2) + A(0) = 2 = C, and C(2) + D(3) = 5 = F, so the ciphertext begins "VYGHBGCXPTTHFRW". The keyword CRYPTO repeats to cover all 15 letters.</div></div>
+  <h3 class="sub-title">Breaking Vigenère when you know the key length</h3>
+  <p>The key insight is that there will be positions where the <em>same key letter</em> encrypts different plaintext letters. Collect all ciphertext characters that were encrypted by the <em>first</em> key letter, and run frequency analysis on them — they now behave like a single Caesar cipher. Suppose the most common such ciphertext character is "G" (value 6), and you assume it encrypts "E" (value 4). Then <em>6 − c ≡ 4 (mod 26)</em>, so <em>c = 2</em>, and the first key letter is "C". Repeat for each key position to recover the whole key. This step still involves some guesswork and trial and error, as all cryptanalysis does.</p>
+  <h3 class="sub-title">Breaking Vigenère when you do not know the key length</h3>
+  <p>You could simply try different key lengths and repeat the process until sensible text appears. But natural language lets you do better with the <strong>Kasiski examination</strong>, which finds the key length.</p>
+  <p>The idea: if the plaintext contains the same sequence of symbols at intervals that are multiples of the key length, those sequences are encrypted by the <em>same part of the key</em> and so produce the <em>same repeated pattern</em> in the ciphertext. This is not a coincidence — natural languages repeat words like "the" constantly, and Vigenère keys are short. So: find repeated patterns, measure the distances between them, and the <strong>greatest common divisor</strong> of those distances is likely the key length.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Worked Kasiski example (key = "KEY"):</strong> In the example text, the distance between the 1st and 2nd repetitions is <strong>33</strong>, so the key size must be one of its factors: 1, 3, 11 or 33. The distance between the 2nd and 3rd repetitions is <strong>27</strong>, so the key size must be one of 1, 3, 9 or 27. The common factors are 1 and 3; ignore 1 because it is a very weak key that can be brute-forced. The possible key size is therefore <strong>3</strong>.</div></div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook for Kasiski:</strong> <em>Repeats reveal rhythm.</em> Repeated ciphertext chunks are echoes of repeated plaintext, and the gcd of the gaps between echoes is the key length. Also note the other statistical test mentioned in the slides: the <strong>Friedman test</strong>.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If a ciphertext shows repeated chunks at distances of 12 and 18, what key lengths should you consider, and which common factors survive? (Answer: factors of 12 are 1, 2, 3, 4, 6, 12; factors of 18 are 1, 2, 3, 6, 9, 18; common factors are 1, 2, 3 and 6 — with 6 a plausible key length.)</div></div>
+</section>
+
+<section class="guide-section" id="modern-ideas" data-title="From Classic to Modern">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">From Classic to Modern: Rail Fence, Confusion and Diffusion</h2>
+  </div>
+  <p class="section-kicker">Transposition in action (rail fence), then Shannon's two design goals that every modern cipher must satisfy.</p>
+  <h3 class="sub-title">The rail fence cipher</h3>
+  <p>The <strong>rail fence cipher</strong> is a transposition cipher. The plaintext is written down as a sequence of diagonals (like a zig-zag), then read off as a sequence of rows.</p>
+  <p>Example: "MEET ME AFTER THE TOGA PARTY" with a rail fence of <strong>depth 2</strong> (remove the spaces). Write the letters alternately onto two rows:</p>
+  <div class="formula">
+    <div class="formula-label">Two rails</div>
+    <div class="math">Row 1 (odd positions): M E M A T R H T G P R Y<br>Row 2 (even positions): E T E F E T E O A A T</div>
+  </div>
+  <p>Reading row 1 then row 2 gives the ciphertext: <strong>MEMATRHTGPRYETEFETEOAAT</strong>. To decrypt, you count how many letters go on each rail, split the ciphertext accordingly, and interleave them back into the zig-zag. With only two rails, the pattern is easy to guess — which is exactly why real ciphers combine transposition with substitution and many rounds.</p>
+  <h3 class="sub-title">Shannon's two design goals</h3>
+  <p>Polyalphabetic ciphers fixed one shortcoming of monoalphabetic ciphers: that frequency analysis can yield the key. Modern ciphers push the same idea much further. <strong>Claude Shannon</strong> identified two design goals that a modern cipher must meet:</p>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3 class="card-title">🌫️ Diffusion</h3>
+      <p><strong>Blur statistically significant characteristics in the plaintext.</strong> Every ciphertext symbol must depend on <em>many</em> plaintext symbols. On average, flipping one plaintext bit should change <em>half</em> the ciphertext bits. Achieved mainly through <strong>transposition</strong> — spreading the influence of each plaintext bit across the whole ciphertext.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">🌀 Confusion</h3>
+      <p><strong>Blur the dependency between the ciphertext and the key.</strong> Each ciphertext symbol must depend on <em>several</em> symbols of the key, so an attacker cannot relate ciphertext to key even with lots of ciphertext. Achieved mainly through <strong>substitution</strong> — replacing data with other data in a complex way.</p>
+    </div>
+  </div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <em>Diffusion = plaintext spreads; Confusion = key hides.</em> Diffusion scrambles the message's fingerprints; confusion stops you reading the key off the ciphertext. Every modern cipher you meet this week is judged on both.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><p><strong>Pause &amp; predict:</strong> Which goal does the Caesar cipher satisfy — diffusion or confusion — and why is it terrible at the other? (Answer: Caesar is pure substitution, so it offers weak confusion and almost no diffusion: changing one plaintext letter changes only one ciphertext letter, and the frequency pattern survives.)</p></div>
+</section>
+
+<section class="guide-section" id="one-time-pad" data-title="One-Time Pad">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The One-Time Pad and Perfect Secrecy</h2>
+  </div>
+  <p class="section-kicker">The only cipher with provably perfect secrecy — and the reason almost nobody can use it.</p>
+  <p>The <strong>One-Time Pad (OTP)</strong> is a symmetric scheme, and it is a special case of a stream cipher. Do not confuse it with the <strong>One-Time Password</strong> used in multi-factor authentication (MFA) — different thing entirely.</p>
+  <p>The OTP is a random sequence of bits <em>o</em> with |o| ≥ |p|, meaning the key is at least as long as the plaintext. The ciphertext is simply:</p>
+  <div class="formula">
+    <div class="formula-label">One-time pad</div>
+    <div class="math">c = o ⊕ p</div>
+  </div>
+  <p>Decryption uses the same XOR: <em>p = c ⊕ o</em>. (XOR is convenient but not mandatory — you could equally use modular addition mod 26.) Because the key never repeats, encrypting the same plaintext twice produces completely unrelated ciphertexts. This leads to the OTP's defining property.</p>
+  <div class="def-card"><span class="dc-term">Perfect security (perfect secrecy)</span> — given a ciphertext, every possible plaintext is <em>equally likely</em> to be the correct one. The ciphertext conveys no information about the plaintext content. Equivalently, the probability distribution of possible plaintexts is independent of the ciphertext.</div>
+  <p>It can be proved that <strong>any perfectly secret scheme must use at least as much key material as there is plaintext to encrypt</strong>. The OTP is perfectly secure <em>if and only if</em>:</p>
+  <ol class="steps">
+    <li>The key <em>o</em> is <strong>truly random</strong>.</li>
+    <li>The key is at least as long as the plaintext: <strong>|o| ≥ |p|</strong>.</li>
+    <li>The key is <strong>never used twice</strong> — not even in part.</li>
+  </ol>
+  <h3 class="sub-title">Why the OTP is impractical</h3>
+  <p>OTPs have been used in extremely high-value situations (such as the famous "red telephone" hotline), but only rarely, because the conditions on <em>o</em> are much too hard to achieve:</p>
+  <ul>
+    <li><strong>Key distribution is a problem.</strong> How do Alice and Bob securely exchange a key as long as the message? If they already had a secure channel to do that, they would not need the OTP in the first place.</li>
+    <li><strong>Generating that much true randomness is hard.</strong> Applications that communicate frequently would need enormous volumes of genuinely random key material.</li>
+  </ul>
+  <h3 class="sub-title">Breaking the OTP when the key is reused</h3>
+  <p>If a one-time pad key is reused (a "many-time pad", or a looping one-time pad), it can be broken. Suppose two plaintexts <em>P1</em> and <em>P2</em> are encrypted with the same key <em>K</em>, giving <em>C1 = P1 ⊕ K</em> and <em>C2 = P2 ⊕ K</em>. An attacker who captures both ciphertexts can XOR them together:</p>
+  <div class="formula">
+    <div class="formula-label">Cancelling the key</div>
+    <div class="math">C1 ⊕ C2 = (P1 ⊕ K) ⊕ (P2 ⊕ K) = P1 ⊕ P2 &nbsp;&nbsp;(because K ⊕ K is all zeros)</div>
+  </div>
+  <p>The key has vanished! This also means <em>P1 = (P1 ⊕ P2) ⊕ P2</em> and <em>P2 = (P1 ⊕ P2) ⊕ P1</em>. The attacker now uses <strong>crib dragging</strong>: guess a word likely to appear in one plaintext (in English, "the" is a good bet) and slide it along all positions, XORing it with the combined string <em>P1 ⊕ P2</em> to see whether readable text appears in the other. If it does, extend the guess and continue. (See the worked example linked in the notes by Travis Dazell.)</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>The cardinal sin:</strong> never reuse any part of a one-time pad. Reuse collapses two "perfectly secret" messages into a solvable puzzle — essentially a known-plaintext attack once you guess a crib.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Two messages are encrypted with the same OTP. If you can guess the word "ATTACK" appears at the start of one, what do you instantly learn about the other message at that position? (Answer: XOR "ATTACK" into the combined stream to reveal the other message's first six characters.)</div></div>
+</section>
+
+<section class="guide-section" id="attacks" data-title="Attacks on Cryptography">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Attacks on Cryptographic Systems</h2>
+  </div>
+  <p class="section-kicker">A system is compromised if the attacker learns plaintexts they should not, or the decryption key — and the attacker's power is defined by what they are allowed to see.</p>
+  <p>A cryptographic system is <strong>compromised</strong> if an adversary can do either of the following:</p>
+  <ul>
+    <li>Obtain plaintexts for certain ciphertexts, or</li>
+    <li>Obtain the decryption key <em>kd</em> when given the encryption key <em>ke</em>.</li>
+  </ul>
+  <p><strong>Cryptanalysis</strong> is the science (and art) of decrypting <em>without</em> knowledge of the key. Attacks are classified by how much the attacker is allowed to see — the more access, the stronger the attacker, and the harder the cipher must work to stay safe.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Attack model</th><th>What the attacker may do</th><th>Real-world example</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Ciphertext-only</strong></td><td>See only ciphertexts.</td><td>World War II: intercepting encrypted military messages without knowing their plaintext, and trying to decrypt purely from the ciphertext.</td></tr>
+        <tr><td><strong>Known plaintext</strong></td><td>See some plaintexts and their corresponding ciphertexts.</td><td>Bletchley Park breaking Enigma because the Allies knew likely plaintext phrases (weather reports, common military terms) and could match them to ciphertext.</td></tr>
+        <tr><td><strong>Chosen plaintext</strong></td><td>Choose a plaintext and see the resulting ciphertext. (This is the standard model for asymmetric cryptography.)</td><td>The BEAST attack on SSL/TLS: attackers chose plaintext blocks and studied the corresponding ciphertext blocks to uncover vulnerabilities.</td></tr>
+        <tr><td><strong>Chosen ciphertext</strong></td><td>Choose a ciphertext and see its decrypted plaintext — a so-called "oracle attack".</td><td>Bleichenbacher's attack on PKCS#1 v1.5: exploiting a decryption oracle to infer details about the key.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why this matters for design:</strong> a cipher must be secure even against the strongest realistic attacker. A scheme that is only safe against ciphertext-only attacks but leaks under chosen plaintext is dangerous — and "chosen plaintext" is often easy to arrange in the real world, since an attacker can often influence the data being encrypted.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If an attacker knows one plaintext/ciphertext pair for a simple XOR stream cipher, which attack model are they using, and what can they derive? (Answer: known plaintext; for a raw XOR they can XOR the two to recover the keystream, then decrypt everything encrypted with it.)</div></div>
+</section>
+
+<section class="guide-section" id="stream-vs-block" data-title="Stream vs Block Ciphers">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Stream Ciphers vs Block Ciphers</h2>
+  </div>
+  <p class="section-kicker">Symmetric ciphers come in two shapes: those that process a trickle of bits, and those that process fixed-size blocks.</p>
+  <div class="compare">
+    <div class="compare-col a">
+      <h3>Stream ciphers</h3>
+      <ul>
+        <li>Encrypt data <strong>one bit or byte at a time</strong>.</li>
+        <li>Combine each plaintext bit/byte with a corresponding bit/byte of a <strong>keystream</strong> derived from the secret key.</li>
+        <li>The process runs continuously, like a stream — hence the name.</li>
+        <li>Examples: <strong>RC4</strong> (now considered insecure) and <strong>Salsa20</strong>.</li>
+      </ul>
+    </div>
+    <div class="compare-col b">
+      <h3>Block ciphers</h3>
+      <ul>
+        <li>Encrypt data in <strong>fixed-size blocks</strong> (typically 64 or 128 bits).</li>
+        <li>Take a block of plaintext, process it with the key, output a block of ciphertext of the <em>same size</em>.</li>
+        <li>If the plaintext is smaller than the block, <strong>padding</strong> is added to fill it.</li>
+        <li>Examples: <strong>DES</strong> (now considered insecure) and <strong>AES</strong>.</li>
+      </ul>
+    </div>
+  </div>
+  <h3 class="sub-title">How a stream cipher works</h3>
+  <p>The idea is to generate a keystream from the secret key. Apply a cryptographic function <em>f</em> to the key <em>k</em> to obtain a stream of bits <em>b = b0, b1, b2, …, bn</em>. Then combine this keystream with the plaintext <em>p = p0, p1, p2, …, pn</em> using a combination function — most commonly XOR. The ciphertext is:</p>
+  <div class="formula">
+    <div class="formula-label">Stream cipher</div>
+    <div class="math">c = b ⊕ p</div>
+  </div>
+  <p>The central challenge is that the keystream must be as <strong>unpredictable</strong> as possible without knowledge of the key <em>k</em>. Rephrased: it must be computationally <em>infeasible</em> to determine whether the keystream is random or deterministic — because if it were recognisably deterministic, that would imply a discoverable pattern. This is exactly the job of a pseudo-random function (see the PRNG section).</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Where the OTP fits:</strong> the one-time pad is a stream cipher whose keystream is <em>completely random</em>. Ordinary stream ciphers use a <em>pseudo-random</em> keystream generated from a much shorter key. That difference is exactly why the OTP is impractical but real stream ciphers are not.</div></div>
+</section>
+
+<section class="guide-section" id="block-structures" data-title="S-boxes, P-boxes &amp; Networks">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Block Cipher Structures: S-boxes, P-boxes, Feistel and SPN</h2>
+  </div>
+  <p class="section-kicker">Inside a block cipher: substitution boxes and permutation boxes, wired together into rounds, and the two famous network shapes that arrange them.</p>
+  <p>In a block cipher, the two classical techniques become hardware-friendly building blocks:</p>
+  <ul>
+    <li><strong>Substitution</strong> is implemented via <strong>substitution boxes (S-boxes)</strong>.</li>
+    <li><strong>Permutation</strong> (transposition) is implemented via <strong>permutation boxes (P-boxes)</strong>.</li>
+  </ul>
+  <p>These are executed over <strong>multiple rounds</strong> of the algorithm to improve <strong>diffusion and confusion</strong>. The rounds are arranged into structures called <strong>"networks"</strong>. Two networks dominate this unit.</p>
+  <h3 class="sub-title">The Feistel cipher</h3>
+  <p>The <strong>Feistel cipher</strong> defines the steps of a block cipher over multiple rounds. Every round has the same structure:</p>
+  <ol class="steps">
+    <li><strong>Split</strong> the data block <em>X</em> into two halves: <em>L<sub>n</sub></em> (left) and <em>R<sub>n</sub></em> (right).</li>
+    <li><strong>Substitution</strong> is performed on one half — the right half goes through a keyed function <em>F</em>.</li>
+    <li><strong>Permutation</strong> is the interchange of the two halves: the output of <em>F</em> is XORed with the left half, and the halves swap.</li>
+  </ol>
+  <div class="formula">
+    <div class="formula-label">Feistel round</div>
+    <div class="math">L<sub>n+1</sub> = R<sub>n</sub><br>R<sub>n+1</sub> = L<sub>n</sub> ⊕ F(R<sub>n</sub>, key<sub>n</sub>)</div>
+  </div>
+  <p>Because the halves swap each round, the <em>same</em> structure can be run backwards for decryption — a major design advantage. The Feistel structure is used in many block ciphers: <strong>DES, Blowfish, Twofish, RC6</strong>. We will look inside the function <em>F</em> when we reach DES.</p>
+  <h3 class="sub-title">The substitution-permutation network (SPN)</h3>
+  <p>An alternative network structure is the <strong>Substitution-Permutation Network (SPN)</strong>, which is what <strong>AES</strong> uses. Rather than swapping halves, an SPN alternates layers of S-boxes and P-boxes across the whole block each round, mixing everything together. The two structures are the main ways of arranging S-boxes and P-boxes.</p>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <em>Feistel swaps halves; SPN mixes the whole block.</em> DES = Feistel. AES = SPN. If you remember only that pairing, you can answer a lot of exam questions.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> In a Feistel round, which half of the data passes through the function <em>F</em>, and what is done with <em>F</em>'s output? (Answer: the right half passes through <em>F</em>; its output is XORed with the left half, and the halves are then interchanged.)</div></div>
+</section>
+
+<section class="guide-section" id="des" data-title="DES, 3DES &amp; Design Principles">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">DES, 3DES and Block Cipher Design Principles</h2>
+  </div>
+  <p class="section-kicker">DES was the first modern standard: a beautiful 16-round Feistel design with a fatal flaw — a 56-bit key.</p>
+  <p>The <strong>Data Encryption Standard (DES)</strong> was published in 1977 and standardised in 1979. It is a block cipher with a <strong>Feistel structure between rounds</strong>. Key facts:</p>
+  <ul>
+    <li>The key in each round is a <strong>subkey</strong> derived from the actual key (the round key).</li>
+    <li>There are a total of <strong>8 S-boxes</strong>.</li>
+    <li>Outputs from the S-boxes are sent through <strong>one P-box</strong> to achieve a good spread over the S-boxes in the next round.</li>
+    <li>It runs for <strong>16 rounds</strong>, and it can be shown that 16 really is necessary to achieve security.</li>
+  </ul>
+  <h3 class="sub-title">S-boxes and why decryption still works</h3>
+  <p><strong>S-boxes</strong> are look-up tables: they map an input block of bits to an output block of bits, and the mapping is carefully chosen and vetted. Changing one input bit flips, on average, <strong>half</strong> the output bits — a diffusion effect. But how can decryption be possible if the S-box scrambles bits? There are two options:</p>
+  <ul>
+    <li><strong>Invertible S-boxes:</strong> every possible output has a unique input that produced it, so the transformation can simply be reversed.</li>
+    <li><strong>Invertible arrangement:</strong> even if individual S-boxes are <em>not</em> invertible, the way they are combined in the overall algorithm can still make the whole cipher reversible. <strong>This is what DES uses.</strong></li>
+  </ul>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Worked S-box example (S[0] of DES):</strong> the input is 6 bits, <em>(b0, b1, b2, b3, b4, b5)</em>. Bits <strong>b0 and b5</strong> give the <em>row</em>; bits <strong>(b1, b2, b3, b4)</strong> give the <em>column</em>. For input <strong>(1,1,0,1,1,1)</strong>: row = (11)<sub>2</sub> = (3)<sub>10</sub>, column = (1011)<sub>2</sub> = (11)<sub>10</sub>. The table cell at that position reads 14, so the output is (14)<sub>10</sub> = (1110)<sub>2</sub> = <strong>1110</strong>. DES has eight S-boxes like this one.</div></div>
+  <h3 class="sub-title">P-boxes</h3>
+  <p>Transposition is handled by <strong>P-boxes</strong>, which are simple <strong>index permutations</strong> — re-orderings of bits. P-boxes are used together with S-boxes to form a chain: S-boxes → P-box → S-boxes, and so on. A P-box takes the output from the S-boxes and <strong>distributes the bits of one S-box across as many of the following S-boxes as possible</strong>, ensuring effective diffusion.</p>
+  <h3 class="sub-title">The operation of DES in detail</h3>
+  <p>DES accepts <strong>64-bit data blocks</strong> and has a <strong>56-bit key</strong>. The round-key generator produces <strong>16 round keys of 48 bits each</strong>. Inside each round:</p>
+  <ol class="steps">
+    <li>The 64-bit input is split into two 32-bit halves (left and right).</li>
+    <li>The right half goes through the function <em>F</em>. First, its 32 bits are <strong>expanded to 48 bits</strong> using an expansion box, so it matches the round-key size.</li>
+    <li>The expanded output is <strong>XORed with the 48-bit round key</strong>.</li>
+    <li>The resulting 48-bit intermediate is sent to the <strong>8 S-boxes</strong>. Each S-box takes a 6-bit input (48 ÷ 8 = 6) and produces a 4-bit output, giving 32 bits total — exactly right for the next round.</li>
+    <li>This process repeats <strong>16 times</strong>.</li>
+  </ol>
+  <h3 class="sub-title">The security of DES</h3>
+  <p>DES is <strong>no longer considered secure</strong>. Its major limitation is the short key length. There are 2<sup>56</sup> possible keys, a key space of about <strong>7.2 × 10<sup>16</sup></strong>. Modern rates make this far too small:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Attacker's speed</th><th>Time to break DES</th></tr></thead>
+      <tbody>
+        <tr><td>10<sup>9</sup> keys/second (a multicore computer)</td><td>≈ 1.2 years</td></tr>
+        <tr><td>10<sup>13</sup> keys/second (a supercomputer)</td><td>≈ 1 hour</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Example calculation (learn this method):</strong> key space = 2<sup>56</sup> = 7.2 × 10<sup>16</sup>. Brute force tries all keys in the worst case, but on average you find the key after trying <em>half</em> of them, so assume 2<sup>55</sup> attempts. At 10<sup>9</sup> keys/second: 2<sup>55</sup> ÷ 10<sup>9</sup> ≈ 36,028,797 seconds ≈ <strong>1.2 years</strong>. At 10<sup>13</sup> keys/second: 2<sup>55</sup> ÷ 10<sup>13</sup> ≈ 3,600 seconds ≈ <strong>1 hour</strong>. (The lecture notes flag a typo in the last row of the summary table — work it out yourself using this method.)</div></div>
+  <h3 class="sub-title">3DES — the intermediate fix</h3>
+  <p>As an intermediate solution to the risks of DES, <strong>3DES (Triple DES)</strong> was introduced. It applies DES three times, but with a twist. First encrypt with <em>K1</em>: <em>E<sub>K1</sub>(p)</em>. Then <strong>decrypt</strong> with <em>K2</em>: <em>D<sub>K2</sub>(E<sub>K1</sub>(p))</em> — note we use the <em>decryption</em> function, but with a different key, so we do <em>not</em> get the plaintext back. Then encrypt again with <em>K3</em>:</p>
+  <div class="formula">
+    <div class="formula-label">3DES (EDE)</div>
+    <div class="math">C = E<sub>K3</sub>( D<sub>K2</sub>( E<sub>K1</sub>(p) ) )</div>
+  </div>
+  <p>3DES uses either <strong>two keys (K1, K2)</strong> or <strong>three keys (K1, K2, K3)</strong>, giving effective key sizes of <strong>112 bits</strong> (56 × 2) or <strong>168 bits</strong> (56 × 3). The two options balance performance against security, and 168 bits puts brute force out of reach.</p>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why Encrypt–Decrypt–Encrypt and not Encrypt–Encrypt–Encrypt?</strong> One key reason is <strong>backward compatibility</strong>: if you set all three keys equal (K1 = K2 = K3), then E then D then E collapses back to a single DES encryption. That means 3DES hardware can still speak plain DES when needed. The middle <em>D</em> is what makes this collapse possible.</div></div>
+  <h3 class="sub-title">Block cipher design principles</h3>
+  <p>Three principles govern how a block cipher like DES or AES is designed:</p>
+  <ul>
+    <li><strong>Number of rounds.</strong> More rounds make cryptanalysis harder even if the function <em>F</em> is weak, providing the element of <strong>confusion</strong> in a Feistel cipher.</li>
+    <li><strong>Design of function F.</strong> It should be <strong>nonlinear</strong> and have good <strong>avalanche</strong> properties — defined by the <strong>Strict Avalanche Criterion (SAC)</strong> and the <strong>Bit Independence Criterion (BIC)</strong>. Both strengthen the confusion function.</li>
+    <li><strong>Key schedule algorithm.</strong> It should generate one subkey per round from the main key, guaranteeing key/ciphertext SAC and BIC. No fully general principles exist yet, but SAC and BIC are the desired properties.</li>
+  </ul>
+  <div class="def-card"><span class="dc-term">Strict Avalanche Criterion (SAC)</span> — whenever a single input bit is complemented (flipped), each of the output bits changes with a 50% probability.</div>
+  <div class="def-card"><span class="dc-term">Bit Independence Criterion (BIC)</span> — output bits <em>j</em> and <em>k</em> should change <em>independently</em> when any single input bit <em>i</em> is inverted, for all <em>i</em>, <em>j</em> and <em>k</em>.</div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A colleague proposes protecting data by running DES three times with the same key. What have they actually built, and why is it not helpful? (Answer: with all three keys equal, EDE collapses to plain DES — same 56-bit security, three times the cost.)</div></div>
+</section>
+
+<section class="guide-section" id="aes" data-title="Advanced Encryption Standard">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Advanced Encryption Standard (AES)</h2>
+  </div>
+  <p class="section-kicker">Today's de-facto Internet cipher: an SPN over the finite field GF(2<sup>8</sup>), chosen in an open competition, with four elegant round stages.</p>
+  <p>The <strong>Advanced Encryption Standard (AES)</strong> is the current <strong>de-facto block cipher on the Internet</strong> and the successor to DES. It was chosen in an <strong>open competition</strong> to replace DES. Key properties:</p>
+  <ul>
+    <li>Operates at key lengths of <strong>128, 192 and 256 bits</strong>, with a block size of <strong>128 bits</strong>.</li>
+    <li>Uses <strong>S-boxes and P-boxes</strong>, but — unlike DES — it does <strong>not</strong> use a Feistel network. It is built on a <strong>substitution-permutation network (SPN)</strong>.</li>
+    <li>Its S-boxes actually describe a mathematical function believed to achieve excellent diffusion and confusion. Cryptanalysts have tried to describe that function in simpler terms, but so far all attempts have failed.</li>
+  </ul>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Fun fact:</strong> strictly speaking, "AES is not a cipher". The algorithm that won the competition is the <strong>Rijndael cipher</strong>, and it was <em>selected</em> to become the Advanced Encryption Standard (AES). People use the names interchangeably.</div></div>
+  <h3 class="sub-title">Finite field arithmetic in AES</h3>
+  <p>AES does its arithmetic in the finite field <strong>GF(2<sup>8</sup>)</strong>, using the irreducible polynomial <em>m(x) = x<sup>8</sup> + x<sup>4</sup> + x<sup>3</sup> + x + 1</em>. That means the usual addition and multiplication are replaced by the finite-field versions we built earlier:</p>
+  <ul>
+    <li><strong>Multiplication</strong> of two bytes is multiplication in GF(2<sup>8</sup>): polynomial multiply, then reduce modulo <em>m(x)</em>.</li>
+    <li><strong>Addition</strong> of two bytes is the bitwise <strong>XOR</strong> operation. For bytes <em>A = (a7 a6 … a1 a0)</em> and <em>B = (b7 b6 … b1 b0)</em>, the sum is <em>A + B = (c7 c6 … c1 c0)</em> where each <em>c<sub>i</sub> = a<sub>i</sub> XOR b<sub>i</sub></em>.</li>
+  </ul>
+  <h3 class="sub-title">AES structure and key expansion</h3>
+  <p>AES takes 128-bit blocks and an <em>M</em>-bit key (128, 192 or 256) and runs <strong>10, 12 or 14 rounds</strong> respectively. For clarity, the lecture focuses on the <strong>128-bit key</strong> case.</p>
+  <p>The <strong>key expansion algorithm</strong> takes the 16-byte key (4 words) and expands it into a linear array of <strong>44 32-bit words</strong> — a total of <strong>176 bytes</strong> (44 words × 4 bytes). This gives <strong>11 round keys</strong>, each 128 bits (16 bytes): 11 × 16 = 176 bytes. The round key used in each round is 4 distinct words for AES-128, 6 words for AES-192, and 8 words for AES-256.</p>
+  <h3 class="sub-title">The four stages inside each AES round</h3>
+  <p>Each full round applies four stages — one permutation and three substitutions:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Stage</th><th>Type</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Substitute bytes</strong> (SubBytes)</td><td>Substitution</td><td>Uses an S-box to perform a byte-by-byte substitution of the block.</td></tr>
+        <tr><td><strong>ShiftRows</strong></td><td>Permutation</td><td>A simple permutation that shifts rows of the state.</td></tr>
+        <tr><td><strong>MixColumns</strong></td><td>Substitution</td><td>A substitution that uses arithmetic over GF(2<sup>8</sup>).</td></tr>
+        <tr><td><strong>AddRoundKey</strong></td><td>Combination</td><td>A simple bitwise XOR of the current block with a portion of the expanded key.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>This structure is repeated round after round, with the S-boxes and finite-field arithmetic spreading and hiding information, which is why AES achieves such strong diffusion and confusion.</p>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook for the four stages:</strong> <em>Sub, Shift, Mix, Add.</em> SubBytes changes values, ShiftRows moves them, MixColumns blends columns using GF(2<sup>8</sup>) maths, and AddRoundKey folds in the key with XOR.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Which of the four AES stages relies on the finite field GF(2<sup>8</sup>), and which is the only one that uses the secret key directly? (Answer: MixColumns uses GF(2<sup>8</sup>) arithmetic; AddRoundKey is the stage that XORs in the round key.)</div></div>
+</section>
+
+<section class="guide-section" id="block-modes" data-title="Cipher Block Modes">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Cipher Block Modes</h2>
+  </div>
+  <p class="section-kicker">Block ciphers fix one block; real messages are longer. Block modes chain the blocks — and a badly used mode can destroy an otherwise strong cipher.</p>
+  <p>Ciphers must handle messages of <strong>arbitrary length</strong>. The solution is to split messages into blocks and process them according to a <strong>cipher block mode</strong>. Crucially, these modes of operation can introduce <em>new</em> security problems if they are not designed <em>and used</em> properly.</p>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3 class="card-title">Classic block modes</h3>
+      <p>Only encrypt data: <strong>Electronic Codebook (ECB)</strong>, <strong>Cipher Block Chaining (CBC)</strong>, <strong>Counter (CTR)</strong>, and others such as CFB and OFB.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">Modern modes</h3>
+      <p>Provide <strong>authenticated encryption (AE, AEAD)</strong>, combining encryption <em>with</em> integrity protection: <strong>Galois Counter Mode (GCM)</strong>, <strong>Counter-with-CBC-MAC (CCM)</strong>, and others.</p>
+    </div>
+  </div>
+  <h3 class="sub-title">Electronic Codebook (ECB)</h3>
+  <p>In ECB, each plaintext block is encrypted independently: <em>c<sub>i</sub> = Enc<sub>k</sub>(m<sub>i</sub>)</em>. It is simple and good for teaching, but <strong>do not use it</strong> beyond that.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>The problem with ECB:</strong> plaintext usually contains repeating patterns (think of the uniform white background of an image). In ECB, the <em>same</em> plaintext block always produces the <em>same</em> ciphertext block, so those patterns remain visible in the ciphertext. The classic demonstration is an image encrypted with ECB where the picture's outline is still recognisable. This is why ECB is not used in practice today.</div></div>
+  <h3 class="sub-title">Cipher Block Chaining (CBC)</h3>
+  <p>CBC fixes ECB by <strong>chaining</strong> the blocks: each plaintext block is XORed with the <em>previous ciphertext block</em> before being encrypted, so the encryption of each block depends on all previous ones.</p>
+  <div class="formula">
+    <div class="formula-label">CBC</div>
+    <div class="math">Encrypt: c<sub>i</sub> = Enc<sub>k</sub>( c<sub>i−1</sub> ⊕ m<sub>i</sub> )<br>Decrypt: m<sub>i</sub> = Dec<sub>k</sub>( c<sub>i</sub> ) ⊕ c<sub>i−1</sub></div>
+  </div>
+  <p>The first block has no previous ciphertext, so it is XORed with an <strong>initialisation vector (IV)</strong>. This ensures that even identical plaintext blocks produce different ciphertexts, masking patterns. The same plaintext no longer maps to the same ciphertext.</p>
+  <div class="def-card"><span class="dc-term">Initialisation Vector (IV)</span> — a random or pseudo-random value used as the first input in the encryption process. Its purpose is to introduce randomness so that encrypting the same plaintext twice with the same key gives different ciphertexts each time. The IV <strong>does not need to be kept secret</strong> and is often transmitted alongside the ciphertext so the receiver can decrypt. Its security comes from unpredictability, not secrecy.</div>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>The IV must never repeat with the same key.</strong> If the same IV and key encrypt identical plaintext blocks, the resulting ciphertext blocks will be identical — revealing patterns and reintroducing exactly the ECB vulnerability. This is a real-world failure, not a theoretical one.</div></div>
+  <h3 class="sub-title">Case study: Wired Equivalent Privacy (WEP)</h3>
+  <p><strong>WEP</strong>, an early wireless-network security protocol, uses the <strong>RC4 stream cipher</strong> with a secret key and an IV. Its IV is only <strong>24 bits</strong> long — far too small. After a modest amount of traffic, the same IV is likely to be reused; on a busy network, IVs repeat very quickly. When the same IV is reused with the same key, RC4 generates the <em>same keystream</em>. An attacker who captures multiple packets with the same IV can observe how that keystream interacts with different plaintexts. If parts of the plaintext are known or predictable (headers, protocol fields), the attacker can recover other plaintexts, eventually deduce the keystream, and finally recover the secret key itself. WEP is a textbook lesson in mode/IV misuse.</p>
+  <h3 class="sub-title">Counter Mode (CTR)</h3>
+  <p>Although CBC overcomes ECB's limitations, it is <strong>inefficient</strong>: encryption is sequential, and each step depends on the previous output, so CBC <strong>cannot be parallelised</strong>. Counter mode solves this.</p>
+  <p>In <strong>CTR mode</strong>, a <strong>counter</strong> is incremented for each block. The counter combined with a <strong>nonce</strong> is encrypted to produce a keystream, which is then XORed with the plaintext. Because each block's keystream can be generated independently, the work can be parallelised — giving both efficiency and security.</p>
+  <div class="def-card"><span class="dc-term">Nonce</span> — a "number used once", playing the same role in CTR mode as the IV plays in CBC. Like an IV, it does not need to be secret, but it <strong>must never be reused with the same key</strong>. Reusing a nonce with the same key regenerates the same keystream, letting an attacker recover plaintext by comparing repeated patterns.</div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <em>ECB: same in, same out (bad). CBC: chain + IV (no parallel). CTR: counter + nonce (parallel).</em> The one rule that unites CBC and CTR: the IV/nonce is public but must be unique per key.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Your team needs to encrypt a large file on a GPU, and speed matters. Which classic mode would you pick — CBC or CTR — and why? (Answer: CTR, because its blocks are independent and can be processed in parallel; CBC is inherently sequential.)</div></div>
+</section>
+
+<section class="guide-section" id="prng" data-title="Pseudo-Random Number Generation">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Pseudo-Random Number Generation</h2>
+  </div>
+  <p class="section-kicker">Cryptography runs on randomness — keys, IVs, nonces, keystreams — but computers are deterministic, so we need generators whose output only <em>looks</em> random.</p>
+  <p>Random numbers are essential in cryptography because they introduce unpredictability and underpin security. They are used for:</p>
+  <ul>
+    <li><strong>Key distribution</strong> and reciprocal authentication schemes.</li>
+    <li><strong>Session key generation</strong> — a fresh key for each communication session.</li>
+    <li><strong>Generating keys for RSA</strong> public-key encryption (next week's lecture).</li>
+    <li><strong>Generating a bit stream</strong> for symmetric stream encryption (the keystream we discussed).</li>
+    <li>Generating <strong>IVs and nonces</strong>, which prevent patterns emerging in encrypted data.</li>
+  </ul>
+  <p>If an attacker could predict or reproduce these values, they could potentially decrypt messages or forge signatures. Without strong randomness, systems become vulnerable to attacks that exploit predictable patterns.</p>
+  <div class="def-card"><span class="dc-term">Pseudorandom Number Generator (PRNG)</span> — outputs a <strong>deterministic</strong> sequence of numbers. It takes a <strong>seed</strong> value as its starting point, and the output sequence depends entirely on that seed. Given the same seed, you get the same sequence.</div>
+  <div class="def-card"><span class="dc-term">Cryptographically Secure PRNG (CSPRNG)</span> — a PRNG that is cryptographically secure. It must satisfy two conditions: (1) it is computationally <strong>infeasible to brute-force the seed</strong> (try all possible values) to predict the output, and (2) it is computationally <strong>infeasible to distinguish the output sequence from true randomness</strong>. The only realistic option left to an attacker is to somehow know the <strong>seed</strong>.</div>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Where does the seed come from?</strong> If a PRNG is only as good as its seed, the seed itself must be unpredictable. In practice it is gathered from physical sources of entropy — timing jitter, hardware noise, mouse movements and so on — then fed into the generator. Predictable seeds are a classic real-world catastrophe.</div></div>
+  <h3 class="sub-title">Stream cipher standards you should know</h3>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3 class="card-title">ChaCha20 and Salsa20</h3>
+      <p>A family of related stream ciphers by <strong>DJ Bernstein</strong>. They are the <strong>current de-facto standard for stream ciphers on the Internet</strong>, and form the basis of the CSPRNG in <strong>OpenBSD and Linux</strong>.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">RC4</h3>
+      <p>Used to be the de-facto standard for <strong>TLS/SSL</strong>. A <strong>feasible breakage</strong> was demonstrated in <strong>2013</strong>. <strong>Avoid it today.</strong></p>
+    </div>
+  </div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <em>PRNG = deterministic from a seed. CSPRNG = that, plus you cannot brute-force the seed or spot the pattern.</em> Remember the standards pairing: <em>ChaCha20/Salsa20 = good, RC4 = avoid.</em></div></div>
+</section>
+
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways">
+    <div class="takeaway"><span class="tk-num">1</span><p><strong>Cryptography</strong> is the science of secure transmission across space and time. It delivers confidentiality (encryption), integrity (MACs, hashes), authentication (signatures, MACs) and non-repudiation (signatures).</p></div>
+    <div class="takeaway"><span class="tk-num">2</span><p><strong>Symmetric cryptography</strong> uses one key for both directions (<em>ke = kd</em>); <strong>asymmetric</strong> uses different keys and is based on hard maths problems. Symmetric ciphers shuffle and map symbols.</p></div>
+    <div class="takeaway"><span class="tk-num">3</span><p><strong>Kerkhoff's Principle:</strong> security must rest only on the secrecy of the key, never on the algorithm. Open design invites the "many eyes" that find flaws. CSS and A5/1 are cautionary tales.</p></div>
+    <div class="takeaway"><span class="tk-num">4</span><p><strong>Maths toolkit:</strong> XOR is self-inverse; <em>a ≡ b (mod n)</em> means the same remainder; the Extended Euclidean Algorithm finds modular inverses; <em>Z<sub>p</sub></em> is a field iff <em>p</em> is prime; AES works in GF(2<sup>8</sup>).</p></div>
+    <div class="takeaway"><span class="tk-num">5</span><p><strong>Historical ciphers</strong> are substitution or transposition. Caesar is monoalphabetic and falls to frequency analysis; Vigenère is polyalphabetic but falls to Kasiski plus frequency analysis; rail fence is pure transposition.</p></div>
+    <div class="takeaway"><span class="tk-num">6</span><p><strong>Shannon's goals:</strong> <em>diffusion</em> (each ciphertext bit depends on many plaintext bits; flip one bit, half the output flips) and <em>confusion</em> (each ciphertext symbol depends on several key symbols).</p></div>
+    <div class="takeaway"><span class="tk-num">7</span><p><strong>The one-time pad</strong> is perfectly secure (ciphertext reveals nothing about plaintext) if the key is truly random, at least as long as the message, and never reused. It is impractical because key distribution and true randomness are too hard. Reuse falls to crib dragging.</p></div>
+    <div class="takeaway"><span class="tk-num">8</span><p><strong>Attacker models</strong>, weakest to strongest: ciphertext-only, known plaintext, chosen plaintext, chosen ciphertext. A system is compromised if plaintexts or the decryption key leak.</p></div>
+    <div class="takeaway"><span class="tk-num">9</span><p><strong>Stream ciphers</strong> XOR a keystream (bit by bit); <strong>block ciphers</strong> encrypt fixed blocks (64 or 128 bits) with padding. Inside block ciphers: S-boxes (substitution) and P-boxes (permutation), arranged in Feistel (DES) or SPN (AES) networks.</p></div>
+    <div class="takeaway"><span class="tk-num">10</span><p><strong>DES</strong> is a 16-round Feistel cipher with eight S-boxes, 64-bit blocks and a 56-bit key (2<sup>56</sup> ≈ 7.2 × 10<sup>16</sup>). That key is too short — about 1 hour on a supercomputer — so it is insecure. <strong>3DES</strong> chains E–D–E for 112- or 168-bit effective keys, and collapses back to DES when the keys match.</p></div>
+    <div class="takeaway"><span class="tk-num">11</span><p><strong>AES</strong> is the Internet's de-facto cipher: Rijndael, 128-bit blocks, 128/192/256-bit keys, 10/12/14 rounds, an SPN (not Feistel). Each round does SubBytes, ShiftRows, MixColumns and AddRoundKey; MixColumns uses GF(2<sup>8</sup>) arithmetic.</p></div>
+    <div class="takeaway"><span class="tk-num">12</span><p><strong>Block modes</strong> handle long messages: ECB leaks patterns (never use it), CBC chains blocks with an IV (no parallel), CTR uses a counter and nonce (parallelisable). Modern modes (GCM, CCM) add authenticated encryption. <strong>CSPRNGs</strong> turn unpredictable seeds into keystreams; ChaCha20/Salsa20 are current, RC4 is broken.</p></div>
+  </div>
+</section>
+
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools">
+    <button class="chip active" type="button" data-cat="all">All</button>
+    <button class="chip" type="button" data-cat="concept">Core concepts</button>
+    <button class="chip" type="button" data-cat="cipher">Ciphers &amp; algorithms</button>
+    <button class="chip" type="button" data-cat="maths">Maths</button>
+    <button class="chip" type="button" data-cat="mode">Modes &amp; randomness</button>
+  </div>
+  <div class="terms">
+    <div class="term-card" data-cat="concept"><div class="term-name">Cryptography</div><div class="term-meaning">The science of securely transmitting data spatially (across distance) and temporally (across time). It provides confidentiality, integrity, authentication and non-repudiation.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Plaintext (p)</div><div class="term-meaning">The non-encrypted, unprotected data, built from symbols of an alphabet R = {r1, …, rn}. English, for example, uses letters and digits.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Ciphertext (c)</div><div class="term-meaning">The encrypted output of the cipher. It need not use the same alphabet, or alphabet size, as the plaintext; its alphabet is S = {s1, …, sm}.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Key</div><div class="term-meaning">The secret value that parameterises a cipher. Encryption uses ke and decryption uses kd; in symmetric cryptography ke = kd or kd is derivable from ke.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Symmetric cryptography</div><div class="term-meaning">Cryptography where the encryption and decryption keys are the same (ke = kd), also called shared-key cryptography. Algorithms shuffle and map symbols.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Asymmetric cryptography</div><div class="term-meaning">Cryptography where the keys differ (ke ≠ kd) and it is infeasible to derive kd from ke. Also called public-key cryptography; based on hard maths problems.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Kerkhoff's Principle</div><div class="term-meaning">Security must depend only on the secrecy of the keys, never on the secrecy of the algorithm. Open design lets many experts find flaws faster.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Confusion</div><div class="term-meaning">Shannon's goal that each ciphertext symbol depends on several key symbols, so the relationship between ciphertext and key is complex. Achieved mainly by substitution.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Diffusion</div><div class="term-meaning">Shannon's goal that every ciphertext symbol depends on many plaintext symbols; on average, flipping one plaintext bit changes half the ciphertext bits. Achieved mainly by transposition.</div></div>
+    <div class="term-card" data-cat="cipher"><div class="term-name">Caesar cipher</div><div class="term-meaning">The simplest substitution cipher: every letter is shifted by n positions (n = 3 gives a → d). Monoalphabetic, so it is trivially broken by frequency analysis.</div></div>
+    <div class="term-card" data-cat="cipher"><div class="term-name">Vigenère cipher</div><div class="term-meaning">A polyalphabetic cipher that applies a different Caesar shift per letter, cycling through a keyword. C<sub>i</sub> = (P<sub>i</sub> + K<sub>i mod |K|</sub>) mod 26.</div></div>
+    <div class="term-card" data-cat="cipher"><div class="term-name">Kasiski examination</div><div class="term-meaning">A technique to find a Vigenère key length: find repeated ciphertext patterns, measure the distances between them, and take the greatest common divisor. Repeated patterns arise when the same plaintext is encrypted by the same key part.</div></div>
+    <div class="term-card" data-cat="cipher"><div class="term-name">One-Time Pad (OTP)</div><div class="term-meaning">A stream cipher with c = o ⊕ p where the random key o is at least as long as the plaintext and never reused. Perfectly secure under those conditions, but impractical to distribute.</div></div>
+    <div class="term-card" data-cat="cipher"><div class="term-name">Stream cipher</div><div class="term-meaning">A cipher that encrypts one bit or byte at a time by XORing the plaintext with a pseudo-random keystream derived from the key. Examples: RC4 (insecure), Salsa20.</div></div>
+    <div class="term-card" data-cat="cipher"><div class="term-name">Block cipher</div><div class="term-meaning">A cipher that encrypts fixed-size blocks (typically 64 or 128 bits), padding the last block if needed. Examples: DES (insecure), AES.</div></div>
+    <div class="term-card" data-cat="cipher"><div class="term-name">S-box (substitution box)</div><div class="term-meaning">A carefully chosen look-up table mapping an input bit block to an output bit block; implements substitution. Flipping one input bit flips about half the output bits.</div></div>
+    <div class="term-card" data-cat="cipher"><div class="term-name">P-box (permutation box)</div><div class="term-meaning">A simple index permutation that re-orders bits (transposition). Chained with S-boxes to spread the bits of one S-box across many later S-boxes.</div></div>
+    <div class="term-card" data-cat="cipher"><div class="term-name">Feistel cipher</div><div class="term-meaning">A block cipher structure that splits the data into halves and repeats the same round: substitute on one half, then swap. Used by DES, Blowfish, Twofish and RC6.</div></div>
+    <div class="term-card" data-cat="cipher"><div class="term-name">DES</div><div class="term-meaning">Data Encryption Standard: a 16-round Feistel block cipher with eight S-boxes, 64-bit blocks and a 56-bit key. Standardised in 1979 and now insecure due to its short key.</div></div>
+    <div class="term-card" data-cat="cipher"><div class="term-name">3DES</div><div class="term-meaning">Triple DES: applies Encrypt–Decrypt–Encrypt with two or three keys, giving effective key sizes of 112 or 168 bits. Collapses to plain DES if all keys are equal.</div></div>
+    <div class="term-card" data-cat="cipher"><div class="term-name">AES</div><div class="term-meaning">Advanced Encryption Standard: the Rijndael cipher, the Internet's de-facto block cipher. 128-bit blocks, 128/192/256-bit keys, 10/12/14 rounds, an SPN using GF(2<sup>8</sup>) arithmetic.</div></div>
+    <div class="term-card" data-cat="maths"><div class="term-name">XOR (⊕)</div><div class="term-meaning">Bitwise exclusive OR: output 1 when the bits differ, 0 when they match. Self-inverse (a ⊕ a = 0), so encrypting and decrypting with a keystream use the same operation.</div></div>
+    <div class="term-card" data-cat="maths"><div class="term-name">Modular arithmetic &amp; congruence</div><div class="term-meaning">"Clock arithmetic": a mod n is the remainder after dividing a by n, always in 0…n−1. Values are congruent, a ≡ b (mod n), when n divides (a − b), i.e. they share the same remainder. Congruence is transitive (a ≡ c) but is not equality (a = c).</div></div>
+    <div class="term-card" data-cat="maths"><div class="term-name">Finite field (GF)</div><div class="term-meaning">A field with finitely many elements, of size p<sup>k</sup> for prime p. GF(p) is the integers mod a prime; GF(2<sup>8</sup>) is AES's 256-element field of bytes.</div></div>
+    <div class="term-card" data-cat="maths"><div class="term-name">Discrete logarithm problem</div><div class="term-meaning">Given g, p and h = g<sup>x</sup> mod p, find x. Believed hard for large primes; the basis of Diffie–Hellman and ElGamal. A primitive root g generates every non-zero residue.</div></div>
+    <div class="term-card" data-cat="mode"><div class="term-name">Electronic Codebook (ECB)</div><div class="term-meaning">A block mode that encrypts each block independently: c<sub>i</sub> = Enc<sub>k</sub>(m<sub>i</sub>). Identical plaintext blocks give identical ciphertext blocks, so patterns leak. Do not use it.</div></div>
+    <div class="term-card" data-cat="mode"><div class="term-name">Cipher Block Chaining (CBC)</div><div class="term-meaning">A block mode that XORs each plaintext block with the previous ciphertext before encrypting: c<sub>i</sub> = Enc<sub>k</sub>(c<sub>i−1</sub> ⊕ m<sub>i</sub>). Masks patterns but is sequential, so it cannot be parallelised.</div></div>
+    <div class="term-card" data-cat="mode"><div class="term-name">Initialisation Vector (IV)</div><div class="term-meaning">A random value XORed with the first block in CBC. It need not be secret but must never repeat with the same key, otherwise patterns reappear. Transmitted with the ciphertext.</div></div>
+    <div class="term-card" data-cat="mode"><div class="term-name">Nonce</div><div class="term-meaning">A "number used once", combined with a counter in CTR mode to build a keystream. Like an IV: public, but never reused with the same key.</div></div>
+    <div class="term-card" data-cat="mode"><div class="term-name">CSPRNG</div><div class="term-meaning">Cryptographically Secure Pseudo-Random Number Generator: a PRNG whose seed cannot feasibly be brute-forced and whose output cannot be distinguished from true randomness. Only the seed need be secret.</div></div>
+  </div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+  <article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">In a cryptosystem, c = p XOR k. With p = 10111011 and k = 00111101, state which are true: (a) c = 10000110; (b) c XOR p = k; (c) p = c XOR k; (d) an attacker needs only one plaintext/ciphertext pair to derive the key.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> All of (a), (b), (c) and (d) are true. (a) 10111011 XOR 00111101 = 10000110, so c = 10000110. (b) 10000110 XOR 10111011 = 00111101 = k — a property of XOR. (c) 10000110 XOR 00111101 = 10111011 = p — again the self-inverse property. (d) Since c = p XOR k, one known pair lets the attacker compute k = c XOR p; this is the known-plaintext attack.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">'BWGWBHQSJBBKNF' is a Vigenère ciphertext produced with a two-letter key. You also know the second plaintext letter is "I". What is the correct plaintext, and how do you know? (Options: AIMISTHEANSWER, SIXISTHEANSWER, AIDISTHEANSWER, HITISTHEANSWER.)</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> SIXISTHEANSWER. The key idea is that the same key letter plus the same plaintext letter gives the same ciphertext. With a two-letter key, positions 2, 4, 6, … share the second key letter; the ciphertext is W at positions 2 and 4, so if position 2 is "I" then position 4 must also be "I". Also positions 1, 5 and 11 share the same key letter and all show ciphertext B, so their plaintext letters must be equal. Only SIXISTHEANSWER has its 1st, 5th and 11th characters the same. (The other options can be eliminated on this basis.)</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">Which statement about the one-time pad is NOT true: (a) once generated, OTPs can be reused; (b) OTP length must be at least as long as the plaintext; (c) practical use of OTP is difficult; (d) OTP gives perfect security?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (a) is NOT true — an OTP can be used only once. If the key is reused and an attacker has one message in both plaintext and ciphertext form, they can recover the key (a known-plaintext attack). The other three are true: the key must be at least as long as the plaintext (to avoid repetition); key distribution makes practical use difficult; and the OTP provides perfect secrecy because the ciphertext gives no information about the plaintext.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">What is TRUE about the initialisation vector (IV) in symmetric cryptography: (a) the IV must be kept secret; (b) IVs can be repeated; (c) the IV ensures the same plaintext block does not generate the same ciphertext; (d) IVs are used in ECB mode?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Only (c) is true. The IV's purpose is to ensure that identical plaintext blocks do not produce identical ciphertext blocks. (a) is false — the IV need not be secret and is usually sent in plaintext with the ciphertext. (b) is false — repeating an IV with the same key reintroduces the OTP-reuse problem and reveals patterns. (d) is false — ECB is precisely the mode with no IV; IVs are used in modes such as CBC to fix ECB's weaknesses.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">Which are TRUE about congruence modulo n: (a) 26 ≡ 11 (mod 5); (b) 74 ≡ 30 (mod 11); (c) if a ≡ b (mod n) and b ≡ c (mod n) then a ≡ c (mod n); (d) if a ≡ b (mod n) and b ≡ c (mod n) then a = c?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (a), (b) and (c) are true; (d) is false. (a) 26 mod 5 = 1 and 11 mod 5 = 1. (b) 74 mod 11 = 8 and 30 mod 11 = 8. (c) Congruence is transitive: write a = k1·n + p1 and b = k2·n + p1, and b = k3·n + p2 and c = k4·n + p2; combining gives c = (k4 + k2 − k3)·n + p1, so a ≡ c. (d) False — give a counter-example: a = 26, b = 11, c = 16, n = 5. All are congruent mod 5, yet a ≠ c. Congruence is not equality.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">Which of the following is NOT a finite field under the given modulus: (a) {0,1} mod 2; (b) {0,1,2,3,4,5} mod 6; (c) {0,1,2,3,4,5,6} mod 7; (d) {0,1,…,30} mod 31?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (b) is not a field. The rule is that {0,1,…,p−1} is a field when p is prime, so (a) mod 2, (c) mod 7 and (d) mod 31 are all fields. For (b), the modulus 6 is not prime, so some elements lack a multiplicative inverse. Take 2: 2×0 = 0, 2×1 = 2, 2×2 = 4, 2×3 = 0, 2×4 = 2, 2×5 = 4 (all mod 6) — the value 1 never appears, so 2 has no inverse and the set is not a field.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">"DES is still considered secure." TRUE or FALSE?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> FALSE. DES is insecure because of its short 56-bit key. With 2<sup>56</sup> keys (≈ 7.2 × 10<sup>16</sup>), brute force takes roughly 1.2 years at 10<sup>9</sup> keys/second on a multicore computer, and only about an hour at 10<sup>13</sup> keys/second on a supercomputer. This is why AES, with 128-, 192- and 256-bit keys, replaced it.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">AES uses a … bit block size and a key size of … bits. (a) 128; 128 or 256 (b) 64; 128 or 192 (c) 256; 128, 192 or 256 (d) 128; 128, 192 or 256.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (d) 128; 128, 192 or 256. AES is a block cipher with a fixed 128-bit block size and three supported key sizes: 128, 192 or 256 bits, giving 10, 12 or 14 rounds respectively.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">"Like DES, AES also uses a Feistel structure." TRUE or FALSE?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> FALSE. AES does not use a Feistel structure; it uses a substitution-permutation network (SPN). Each full AES round consists of four separate functions: byte substitution (SubBytes), permutation (ShiftRows), arithmetic operations over a finite field (MixColumns), and XOR with a key (AddRoundKey). DES is the Feistel one.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">Compute the output of the DES S-box S[0] for the input 010000. (Options: 0011, 0001, 0000, 1010.)</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> 0011. Split the 6-bit input 010000: bits b0 and b5 give the row — b0 = 0 and b5 = 0, so row = (00)<sub>2</sub> = 0. Bits b1 b2 b3 b4 give the column — (1000)<sub>2</sub> = 8. The table cell at row 0, column 8 reads 3, which is (0011)<sub>2</sub>. So the output is 0011.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">Distinguish confusion from diffusion, name the classical technique used to achieve each, and state what a one-bit plaintext change should do on average.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> <strong>Confusion</strong> hides the relationship between ciphertext and key: each ciphertext symbol must depend on several key symbols, and it is achieved mainly by <strong>substitution</strong>. <strong>Diffusion</strong> spreads the influence of each plaintext bit across the ciphertext: every ciphertext symbol must depend on many plaintext symbols, and it is achieved mainly by <strong>transposition</strong>. On average, flipping one plaintext bit should change <strong>half</strong> of the ciphertext bits.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">Explain why ECB is unsafe and how CBC fixes it. What is the IV's role, and what single rule must the IV obey?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> In ECB each block is encrypted independently, so identical plaintext blocks always produce identical ciphertext blocks — patterns in the plaintext (such as an image's background) remain visible in the ciphertext. CBC XORs each plaintext block with the previous ciphertext block before encrypting, so each block's encryption depends on all the earlier ones and identical plaintexts produce different ciphertexts. The first block is XORed with the <strong>IV</strong>, which introduces randomness. The IV need not be secret, but it <strong>must never be reused with the same key</strong>, otherwise identical plaintext blocks again map to identical ciphertext blocks and the ECB weakness returns.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">Describe 3DES's operation and explain why it uses an Encrypt–Decrypt–Encrypt sequence rather than Encrypt–Encrypt–Encrypt.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> 3DES encrypts with K1, then applies DES <em>decryption</em> with K2, then encrypts again with K3: C = E<sub>K3</sub>(D<sub>K2</sub>(E<sub>K1</sub>(p))). Using two keys gives 112 bits of effective key; using three gives 168 bits, making brute force infeasible. The middle Decrypt step is not a mistake: it provides <strong>backward compatibility</strong>. If all three keys are set equal, the E–D–E sequence collapses back to a single DES encryption, so existing DES hardware can still be used. It is not a matter of convenience either — the goal is simply to avoid DES's 56-bit key weakness.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">Two messages are encrypted with the same one-time pad. Show how an attacker can attack them without knowing the key, and describe crib dragging.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> With C1 = P1 ⊕ K and C2 = P2 ⊕ K, the attacker XORs the two ciphertexts: C1 ⊕ C2 = (P1 ⊕ K) ⊕ (P2 ⊕ K) = P1 ⊕ P2, because K ⊕ K is all zeros. The key cancels out, leaving the XOR of the two plaintexts. The attacker then uses <strong>crib dragging</strong>: guess a likely word (for example "the" in English), slide it along every position, XOR it with P1 ⊕ P2, and look for readable text appearing in the other message. Extend successful guesses and repeat. Reusing any part of an OTP therefore destroys its perfect secrecy.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+</section>
+
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist">
+    <label class="check-item"><input type="checkbox"> I can define cryptography and list its four goals (confidentiality, integrity, authentication, non-repudiation).</label>
+    <label class="check-item"><input type="checkbox"> I can contrast symmetric and asymmetric cryptography, and state Kerkhoff's Principle with an example of it being ignored.</label>
+    <label class="check-item"><input type="checkbox"> I can explain XOR's key properties and use it to encrypt and decrypt.</label>
+    <label class="check-item"><input type="checkbox"> I can explain congruence mod n, the Extended Euclidean Algorithm, and when a modular inverse exists.</label>
+    <label class="check-item"><input type="checkbox"> I can distinguish groups, rings and fields, and explain why Z<sub>p</sub> is a field only when p is prime.</label>
+    <label class="check-item"><input type="checkbox"> I can describe GF(2<sup>8</sup>) and how AES uses its addition (XOR) and multiplication.</label>
+    <label class="check-item"><input type="checkbox"> I can encrypt with Caesar and Vigenère, and break Vigenère with frequency analysis and Kasiski.</label>
+    <label class="check-item"><input type="checkbox"> I can explain confusion and diffusion and name the classical technique behind each.</label>
+    <label class="check-item"><input type="checkbox"> I can state the three OTP conditions, explain perfect secrecy, and perform crib dragging.</label>
+    <label class="check-item"><input type="checkbox"> I can name the four attacker models in order of strength, and contrast stream and block ciphers.</label>
+    <label class="check-item"><input type="checkbox"> I can explain S-boxes, P-boxes, the Feistel round and the SPN, and which cipher uses which.</label>
+    <label class="check-item"><input type="checkbox"> I can describe DES, its key-length weakness, 3DES, and the block cipher design principles (SAC, BIC).</label>
+    <label class="check-item"><input type="checkbox"> I can list AES's four round stages and explain its key expansion into 44 words.</label>
+    <label class="check-item"><input type="checkbox"> I can compare ECB, CBC and CTR, and state the one rule for IVs and nonces.</label>
+    <label class="check-item"><input type="checkbox"> I can explain PRNG vs CSPRNG and name the current and broken stream cipher standards.</label>
+  </div>
+</section>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">&#8962; All guides</a>
+    <span class="spacer"></span>
+    <a href="../week_3/INFO3616_week3_study_guide.html">&#8592; Week 3</a>
+    <a href="../week_5/INFO3616_week5_study_guide.html">Week 5 &#8594;</a>
+  </div>
+  <p>INFO3616 Security Engineering &#183; Week 4 &#183; Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Theme ---------- */
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('info3616-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('info3616-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
+  }
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
+
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
+
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
+  function onScroll(){
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
+      });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
+  }
+
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'info3616-4-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
+  });
+
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
+      var shown = 0;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
+      });
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
+    });
+  });
+
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
+  function runSearch(){
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
+      });
+    }
+    suggest.classList.add('open');
+  }
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
+  }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'info3616-4-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Key distribution with KDCs and PKI, X.509 certificates and trust chains, authentication factors, MFA, Kerberos and forward secrecy explained for first-time readers.">
+<title>INFO3616 Week 7 — Authentication and Key Distribution</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     INFO3616 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
+<header class="topbar">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">INFO3616</span>
+    <span class="brand-week">Week 7</span>
+  </a>
+  <div class="topbar-tools">
+    <div class="search">
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
+    </div>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Table of contents">
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+
+  <main class="content" id="content">
+<section class="hero" id="top">
+  <span class="hero-eyebrow">INFO3616 · Week 7 · Authentication &amp; Key Distribution</span>
+  <h1 class="hero-title">Getting the Keys to the Kingdom: Authentication and Key Distribution</h1>
+  <p class="hero-sub">Every cipher you have met so far quietly assumed you already had the right key. This week answers the question we kept postponing: how do two parties who have never spoken before end up holding the same secret key, or the correct public key for each other? We meet trusted third parties (KDCs and CAs), certificates and the X.509 standard, the machinery of authentication (passwords, biometrics, one-time passwords), and the protocol that ties it all together — Kerberos.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> Hold one mental model for the whole week — <em>you cannot conjure trust out of nothing; you must inherit it from someone both sides already trust.</em> That is Boyd's theorem in a sentence. Symmetric keys are introduced by a Key Distribution Centre, public keys are vouched for by a Certificate Authority, and remote logins are brokered by an Authentication Server. Almost every mechanism this week is a different way of routing trust through that one trusted third party, then using fresh, short-lived keys so that a single future compromise cannot unlock the past.</div>
+  <div class="hero-meta">
+    <span class="meta-chip"><span class="dot"></span>~28 min read</span>
+    <span class="meta-chip">16 teaching sections</span>
+    <span class="meta-chip">12 practice questions</span>
+    <span class="meta-chip">31 key terms</span>
+  </div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list">
+      <li>State the key distribution problem and explain why every cryptographic primitive hits the same bootstrapping wall.</li>
+      <li>Describe the Dolev-Yao attacker and contrast it with the weaker attacker models from earlier weeks.</li>
+      <li>State Boyd's theorem and explain why Diffie-Hellman alone fails against an active attacker.</li>
+      <li>Explain how a Key Distribution Centre uses a two-level key hierarchy to hand out session keys.</li>
+      <li>Reproduce the Needham-Schroeder key distribution scenario and the public-key scheme with nonces.</li>
+      <li>Compare the four ways of distributing public keys and explain why certificates won.</li>
+      <li>Describe X.509, the chain of trust, root stores, intermediate certificates and certificate revocation.</li>
+      <li>Define authentication, list the three corroborative-evidence factors and critique each one.</li>
+      <li>Explain MFA, OTPs, challenge-response, forward secrecy and the Kerberos exchanges.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="guide-section" id="key-distribution-problem" data-title="The Key Distribution Problem">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Key Distribution Problem</h2>
+  </div>
+  <p class="section-kicker">Cryptography gives us confidentiality and integrity, but it never tells us where the keys come from — and that gap is the whole lecture.</p>
+  <p>For six weeks we have been building a toolkit. <strong>Symmetric cryptography</strong> (for example AES) keeps data confidential once two parties share a secret key. <strong>Asymmetric cryptography</strong> (for example RSA) lets us encrypt to a public key or sign with a private key. But all of them rest on an assumption we never justified: that the right key is already in the right hands.</p>
+  <ul>
+    <li>With <strong>symmetric encryption</strong>, we assumed both parties already share a key.</li>
+    <li>With <strong>public-key encryption</strong>, we assumed the sender reliably knows the receiver's public key.</li>
+  </ul>
+  <p>In practice, neither assumption is free. The <strong>key distribution problem</strong> is the challenge of securely establishing shared secret keys (or authentic public keys) between parties who wish to communicate securely, <em>without</em> relying on a pre-existing secure channel to do so.</p>
+  <div class="def-card"><span class="dc-term">Bootstrapping problem</span> — the circular difficulty that every protection mechanism needs a key before it can protect anything, including the distribution of the next key.</div>
+  <p>Look at how the circle closes on itself. No matter which primitive we pick, we still need something we do not yet have:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Primitive</th><th>What it needs first</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Diffie-Hellman key exchange</strong></td><td>To know the other party's public key in a reliable way (to stop an active attacker).</td></tr>
+        <tr><td><strong>Hybrid cryptography</strong></td><td>To know the other party's public key in a reliable way.</td></tr>
+        <tr><td><strong>MACs / AES</strong></td><td>A pre-shared symmetric key.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>So the honest summary is: <em>the bootstrapping problem remains.</em> This lecture is about the two broad families of answers.</p>
+  <h3 class="sub-title">Two families of answers</h3>
+  <div class="compare">
+    <div class="compare-col a">
+      <h3>Without a third party</h3>
+      <ul>
+        <li>Secure <strong>physical shipment</strong> of keys.</li>
+        <li>Only done for very high-value communication — for example keys carried to embassies, or device pairing done face-to-face with a QR code.</li>
+        <li>Expensive and does not scale to internet size.</li>
+      </ul>
+    </div>
+    <div class="compare-col b">
+      <h3>With a third party</h3>
+      <ul>
+        <li><strong>Symmetric case</strong>: a <strong>Key Distribution Centre (KDC)</strong>.</li>
+        <li><strong>Asymmetric case</strong>: a <strong>Public Key Infrastructure (PKI)</strong>.</li>
+        <li>Scales, but introduces a party you must trust.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why this matters:</strong> a perfect cipher with a badly distributed key is worthless. Historically, breaking the key management has been far easier than breaking the mathematics, so this is where real systems live or die.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> you want to message a stranger securely tomorrow. Could you solve it by simply mailing them an AES key today? What assumption about the postal service does that quietly rely on, and what would it cost at a million users?</div></div>
+</section>
+
+<section class="guide-section" id="dolev-yao" data-title="Attacker Model: Dolev-Yao">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Attacker Model: Dolev-Yao</h2>
+  </div>
+  <p class="section-kicker">Before designing any protocol, decide who you are fighting — and for this lecture, the enemy owns the network.</p>
+  <p>In earlier weeks we defined several attackers by what they could see: one who only has ciphertext, one who can obtain some plaintext, and so on. Formally defining an attacker's capability is called <strong>threat modelling</strong>. From now on we upgrade to a much stronger and more realistic adversary: the <strong>Dolev-Yao model</strong>.</p>
+  <p>The slogan to remember is: <em>"The attacker carries the message."</em> In the Dolev-Yao model the attacker has <strong>full control over the network</strong> and can:</p>
+  <ul>
+    <li><strong>Eavesdrop</strong> on any message in transit.</li>
+    <li><strong>Delay, delete, modify, replay and inject</strong> messages.</li>
+    <li><strong>Impersonate</strong> any legitimate party.</li>
+  </ul>
+  <p>That sounds hopeless, but there is one crucial limit. The Dolev-Yao attacker is <strong>fundamentally constrained by cryptography</strong>:</p>
+  <ul>
+    <li>It <strong>cannot modify an integrity-protected message</strong> without the receiver noticing.</li>
+    <li>It <strong>cannot decrypt</strong> a message encrypted with a key it does not hold.</li>
+  </ul>
+  <p>Intuitively, this is exactly the attacker we picture for secure electronic communication: a hostile router, a malicious Wi-Fi hotspot, or an internet service provider that reads and rewrites traffic. The design goal of every protocol this week is to achieve security <em>despite</em> such an attacker.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Contrast with earlier models:</strong> the ciphertext-only or known-plaintext attackers only passively observe data. Dolev-Yao is <strong>active</strong> — it changes, removes and fabricates messages at will. A protocol that is safe against a passive eavesdropper can still collapse against Dolev-Yao, as we are about to see.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> if the attacker controls the medium but cannot break cryptography, what is the only kind of weakness it can still exploit? (Hint: think about the <em>protocol</em>, not the mathematics.)</div></div>
+</section>
+
+<section class="guide-section" id="boyds-theorem" data-title="Boyd's Theorem">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Boyd's Theorem and the Limits of Diffie-Hellman</h2>
+  </div>
+  <p class="section-kicker">You cannot build trust from nothing: without a secure channel, a trusted mediator is not a convenience — it is a necessity.</p>
+  <p><strong>Boyd's theorem</strong> governs the whole field of key distribution. It says:</p>
+  <div class="formula">
+    <div class="formula-label">Boyd's theorem</div>
+    <div class="math">Assuming the absence of a secure channel, two entities cannot establish an authenticated session without the existence of an entity that can mediate between the two and which both parties trust and have a secure channel with.</div>
+  </div>
+  <p>Rephrased in Alice-and-Bob language: Alice and Bob <strong>cannot</strong> securely establish keys between them if they do not already have existing, established keys. The only way is an <strong>'introduction' via a third party</strong>, with which both Alice and Bob already have established keys.</p>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> think of a school playground. Two children who do not know each other can still be introduced by a teacher both of them trust. Without the teacher, a stranger can claim to be anyone. Boyd's theorem says: <strong>find the teacher</strong>.</div></div>
+  <h3 class="sub-title">Why Diffie-Hellman is not enough</h3>
+  <p>Diffie-Hellman key exchange is secure <strong>if the attacker is passive</strong>. It lets two parties compute the same secret over a public channel without ever sending the secret. But under our new Dolev-Yao attacker, passivity is no longer guaranteed.</p>
+  <p>With an <strong>active attacker</strong>, we must protect the Diffie-Hellman exchange with some form of <strong>origin authentication</strong> — proof of who the values really came from. Each available tool has a catch:</p>
+  <ul>
+    <li><strong>A MAC</strong> requires a previously exchanged symmetric key — which is the very thing we are trying to establish.</li>
+    <li><strong>A digital signature</strong> requires that the public key be known, <em>and</em> that the mapping between the entity (origin) and that public key be correct.</li>
+  </ul>
+  <p>That last point is the heart of it: knowing <em>a</em> public key is useless if you cannot be sure whose it is. This is precisely the gap that certificates and PKI (later in this lecture) fill.</p>
+  <p>We need that protection only to secure the Diffie-Hellman exchange itself. Once the exchange has completed securely once, we do have a secure channel — and from then on we can use it to bootstrap everything else. Diffie-Hellman also gives us <strong>forward secrecy</strong>: the session keys used to encrypt and decrypt information change frequently and automatically, so even if the most recent key or the long-term key is breached, only a minimal amount of sensitive data is exposed.</p>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Alice signs her Diffie-Hellman value and sends it to Bob. The attacker swaps in its own signed value. Which of the two catches above (MAC or signature) failed to stop it — and why?</div></div>
+</section>
+
+<section class="guide-section" id="symmetric-kdc" data-title="Symmetric Key Distribution with a KDC">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Symmetric Key Distribution with a KDC</h2>
+  </div>
+  <p class="section-kicker">The symmetric answer to Boyd's theorem: a mutually trusted third party that everyone already shares a secret with, brokering short-lived keys on demand.</p>
+  <p>Two parties who wish to communicate securely face the bootstrapping problem: how do they share a key without already having one? The solution is to introduce a <strong>Key Distribution Centre (KDC)</strong> — a mutually trusted third party.</p>
+  <ul>
+    <li>Each party shares a <strong>long-term master key</strong> with the KDC, established <strong>out-of-band</strong> (that is, outside the network — for example by physical delivery).</li>
+    <li>The KDC uses those master keys to broker <strong>session keys</strong> for individual communications.</li>
+  </ul>
+  <p>A KDC is always online and shares a long-term key with every member. In practice those keys are pre-configured by administrators, or derived from a strong password. KDCs are among the most important technologies we use — even newer systems such as OpenID and OAuth fall into this category. The KDC is the basis for the famous <strong>Kerberos</strong> protocol, which is used across Windows, Linux, UNIX, macOS, AIX and Solaris. Microsoft's <strong>Active Directory</strong> relies on Kerberos.</p>
+  <h3 class="sub-title">The two-level key hierarchy</h3>
+  <p>KDC-based distribution relies on a <strong>key hierarchy</strong>. At a minimum, two levels of keys are used:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Key</th><th>Who shares it</th><th>How it is distributed</th><th>Lifetime</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Master key</strong></td><td>KDC and each end system or user</td><td>Non-cryptographically — physical delivery, or bundled with managed software (e.g. copied by IT when they set up your laptop)</td><td>Long-lived</td><td>Used only to protect session keys</td></tr>
+        <tr><td><strong>Session key</strong></td><td>Two end systems, for one logical connection</td><td>Obtained from the KDC, transmitted encrypted under the master key</td><td>Short-lived — one per logical connection, then discarded</td><td>Used for the actual communication</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Why the hierarchy? Frequent key changes are desirable, because they limit how much data is compromised if an attacker learns a key. Session keys are cheap and disposable; master keys are precious and rarely used. Encrypting the many short-lived keys with the few long-lived ones keeps the expensive secret out of harm's way.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>How a KDC works, in one sentence:</strong> A asks the KDC for a session key to use with B; the KDC generates one, encrypts it under the master key it shares with A, and either sends B's copy directly to B or gives it to A to forward — encrypted under the master key the KDC shares with B.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> the KDC is online all the time and holds a key for every user. If it were compromised, what would an attacker gain? Keep this in mind — it is the price of centralised trust.</div></div>
+  <h3 class="sub-title">The key distribution scenario</h3>
+  <p class="lede">The concrete five-step dance — also called the Needham-Schroeder protocol — that hands Alice and Bob a fresh session key and proves both are really present.</p>
+  <p>This scenario assumes that each user shares a <strong>unique master key</strong> with the KDC. User A wishes to establish a <strong>logical connection</strong> with B and requires a <strong>one-time session key</strong> to protect the data over that connection. A holds master key <code>Ka</code>, known only to A and the KDC; B shares <code>Kb</code> with the KDC.</p>
+  <p>First, the notation you will see throughout the week:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Symbol</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>Ka</code>, <code>Kb</code></td><td>Master keys shared by the KDC with A and with B</td></tr>
+        <tr><td><code>Ks</code></td><td>The one-time session key</td></tr>
+        <tr><td><code>N1</code>, <code>N2</code></td><td><strong>Nonces</strong> — unique identifiers used once, to prevent masquerade and replay (a timestamp, a counter, or a random number)</td></tr>
+        <tr><td><code>IDA</code>, <code>IDB</code></td><td>Identifiers of A and B (for example, a network address)</td></tr>
+        <tr><td><code>E(K, m)</code></td><td>The message <code>m</code> encrypted under key <code>K</code></td></tr>
+        <tr><td><code>f</code></td><td>A generic function that transforms a nonce (for example, adding one)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <ol class="steps">
+    <li><strong>A requests a session key.</strong> A sends the KDC the identities of A and B and a unique identifier <code>N1</code> for this transaction (the nonce). The nonce may be a timestamp, a counter or a random number; the minimum requirement is that it differs with each request, and it should be hard for an opponent to guess — so a random number is a good choice.</li>
+    <li><strong>The KDC responds, encrypted under <code>Ka</code>.</strong> Because only A can read this, A knows it originated at the KDC. The message contains two items <em>for A</em>: the one-time session key <code>Ks</code>, and the original request including the nonce, so A can match the response to the request and confirm freshness (not a replay). It also contains two items <em>for B</em>: the session key <code>Ks</code> and an identifier of A, <code>IDA</code> — both encrypted under <code>Kb</code>.</li>
+    <li><strong>A forwards the ticket to B.</strong> A stores <code>Ks</code> and forwards <code>E(Kb, [Ks &#8214; IDA])</code>. Because it is encrypted under <code>Kb</code>, it is protected from eavesdropping. B now knows the session key, knows the other party is A, and knows the information originated at the KDC.</li>
+    <li><strong>B challenges A with a fresh nonce.</strong> Using the new session key, B sends <code>N2</code> to A.</li>
+    <li><strong>A answers with <code>f(N2)</code>.</strong> Also under <code>Ks</code>, A returns a transformed version of <code>N2</code> (for example, <code>N2 + 1</code>).</li>
+  </ol>
+  <p>Steps 4 and 5 assure B that the message it received in step 3 was not a replay — because A proved she could read the fresh challenge and react to it. Note that the actual <em>key distribution</em> happens in steps 1–3, but steps 3–5 together perform an <em>authentication</em> function. This is the <strong>Needham-Schroeder protocol</strong>, and we will revisit it in detail under Kerberos.</p>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> be ready to write the five steps from memory and to say which steps distribute the key (1–3) versus which authenticate (3–5). The role of <code>N1</code> (freshness of the KDC reply) and <code>N2</code> (freshness for B) is a classic short-answer question.</div></div>
+</section>
+
+<section class="guide-section" id="asymmetric-key-distribution" data-title="Asymmetric Key Distribution">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Distributing Keys with Asymmetric Encryption</h2>
+  </div>
+  <p class="section-kicker">Public-key cryptography is far too slow for bulk data — so we use it for its real strength: wrapping and delivering secret keys. But naive sharing invites the person in the middle.</p>
+  <p>Because public-key cryptosystems are inefficient, they are almost never used to encrypt large blocks of data; they are limited to relatively small blocks. One of their most important uses is to <strong>encrypt secret keys for distribution</strong>. We already know hybrid cryptography works <em>if</em> we reliably know the receiver's public key — but simply advertising the public key does not work.</p>
+  <h3 class="sub-title">The person-in-the-middle (PITM) attack</h3>
+  <p>Any attempt to distribute public keys naively can result in a <strong>person-in-the-middle attack</strong>. Let the attacker be D. The classic five-step failure goes like this:</p>
+  <ol class="steps">
+    <li>A generates a public/private key pair <code>{PUa, PRa}</code> and transmits <code>PUa</code> plus an identifier of A, <code>IDA</code>, intended for B.</li>
+    <li>D intercepts the message, creates its own key pair <code>{PUd, PRd}</code>, and sends <code>PUd &#8214; IDA</code> to B — so B believes D's key is A's.</li>
+    <li>B generates a secret key <code>Ks</code> and transmits <code>E(PUd, Ks)</code>.</li>
+    <li>D intercepts it and learns <code>Ks</code> by computing <code>D(PRd, E(PUd, Ks))</code>.</li>
+    <li>D forwards <code>E(PUa, Ks)</code> to A.</li>
+  </ol>
+  <p>The result is that both A and B know <code>Ks</code> and are unaware that D also knows it. They happily exchange messages with <code>Ks</code>, while D quietly decrypts everything. D no longer needs to interfere actively — it simply eavesdrops. This simple protocol is therefore only useful where the sole threat is passive eavesdropping.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> the attack works because the <em>binding</em> between the identifier <code>IDA</code> and the key <code>PUa</code> was never verified. Encryption itself was perfect; the protocol was broken. This is exactly why certificates exist.</div></div>
+  <h3 class="sub-title">Adding confidentiality and authentication</h3>
+  <p>The fix is to protect against both active and passive attacks, using <strong>nonces</strong>. Assume now that A and B already reliably know each other's public keys (<code>PUa</code>, <code>PUb</code>) — we will see shortly how that is achieved. <code>PRa</code> is A's private key; <code>N1</code> and <code>N2</code> are A's and B's nonces respectively.</p>
+  <ol class="steps">
+    <li><strong>A → B:</strong> A encrypts, under B's public key, a message containing <code>IDA</code> and the nonce <code>N1</code>, which identifies this transaction uniquely.</li>
+    <li><strong>B → A:</strong> B replies encrypted under <code>PUa</code>, containing A's nonce <code>N1</code> and B's new nonce <code>N2</code>. Because only B could have decrypted message 1, the presence of <code>N1</code> assures A that the correspondent really is B.</li>
+    <li><strong>A → B:</strong> A returns <code>N2</code> encrypted under B's public key, assuring B that its correspondent is A.</li>
+    <li><strong>A → B:</strong> A selects a secret key <code>Ks</code> and sends <code>M = E(PUb, E(PRa, Ks))</code>. Encryption with B's public key ensures only B can read it; encryption with A's private key ensures only A could have sent it.</li>
+    <li><strong>B:</strong> B computes <code>D(PUa, D(PRb, M))</code> to recover the secret key.</li>
+  </ol>
+  <p>The result is a scheme that ensures both <strong>confidentiality</strong> and <strong>authentication</strong> in the exchange of a secret key.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>A hybrid scheme:</strong> another way to use public-key encryption is a hybrid approach once used on IBM mainframes. It keeps a KDC that shares a secret master key with each user and distributes session keys under that master key, but uses a public-key scheme to distribute the <em>master keys</em>. The public-key layer gives a secure, efficient way to distribute master keys — an advantage when a single KDC serves widely distributed users.</div></div>
+</section>
+
+<section class="guide-section" id="public-key-distribution" data-title="Four Ways to Distribute Public Keys">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Four Ways to Distribute Public Keys</h2>
+  </div>
+  <p class="section-kicker">Four proposals have been made over the years; each fixes the weaknesses of the one before, until certificates win.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Scheme</th><th>How it works</th><th>Weakness</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1. Public announcement</strong></td><td>Any participant can send or broadcast their public key (for example, PGP users appending their key to messages on forums).</td><td><strong>Anyone can forge</strong> a public announcement.</td></tr>
+        <tr><td><strong>2. Publicly available directory</strong></td><td>A trusted entity maintains a dynamic directory of name-and-public-key entries for each participant.</td><td>If the <strong>directory authority's private key is compromised</strong>, the adversary can pass out counterfeit keys, impersonate anyone and eavesdrop on messages to any participant. Records can also be tampered with.</td></tr>
+        <tr><td><strong>3. Public-key authority</strong></td><td>Tighter control over distribution from the directory, based on the Needham-Schroeder protocol.</td><td>The authority becomes a <strong>bottleneck</strong> — a user must appeal to it for every other user they wish to contact. The directory is still vulnerable to tampering.</td></tr>
+        <tr><td><strong>4. Public-key certificate</strong></td><td>Participants exchange keys without contacting an authority, yet as reliably as if the keys came directly from one. The central idea is <strong>certificates</strong>, used in PKIs.</td><td><strong>This is the better option and what we use today.</strong></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why certificates win:</strong> they remove the online bottleneck and the single point of failure. A certificate is a portable, signed statement that anyone can carry and anyone can verify offline, using only a public key they already trust.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> schemes 1–3 all fail for the same underlying reason. Can you name it in one phrase? (Answer: there is no trustworthy binding between the identity and the key.)</div></div>
+</section>
+
+<section class="guide-section" id="certificates-x509" data-title="Certificates and X.509">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Certificates and X.509</h2>
+  </div>
+  <p class="section-kicker">A certificate is a signed marriage of an identity and a public key — and X.509 is the universally accepted format for that marriage.</p>
+  <p>In essence, a <strong>certificate</strong> consists of three things:</p>
+  <ul>
+    <li>A <strong>public key</strong> <code>PU</code>.</li>
+    <li>An <strong>identifier</strong> <code>ID</code> of the key owner.</li>
+    <li>The whole block <strong>signed by a trusted third party</strong> — typically a <strong>Certificate Authority (CA)</strong>, such as a government agency or financial institution trusted by the user community.</li>
+  </ul>
+  <p>A user presents their public key to the authority in a secure manner and obtains a certificate, which they can then publish. Anyone needing that user's public key can obtain the certificate and verify it via the attached trusted signature. Formally, for participant A the authority issues:</p>
+  <div class="formula">
+    <div class="formula-label">Certificate creation and verification</div>
+    <div class="math">CA = E(PRauth, [T &#8214; IDA &#8214; PUa])&nbsp;&nbsp;&nbsp;&nbsp;D(PUauth, CA) = (T &#8214; IDA &#8214; PUa)</div>
+  </div>
+  <p>Here <code>PRauth</code> is the authority's private key and <code>PUauth</code> its public key; <code>T</code> is a timestamp. Because the certificate is readable only with the authority's public key, a successful decryption proves it came from the CA. The elements <code>IDA</code> and <code>PUa</code> give the recipient the holder's name and public key.</p>
+  <h3 class="sub-title">Why the timestamp matters</h3>
+  <p>The timestamp <code>T</code> counters a subtle attack. Suppose A's private key is learned by an adversary. A generates a new key pair and applies for a new certificate. Meanwhile the adversary <strong>replays the old certificate</strong> to B. If B encrypts messages using the compromised old public key, the adversary can read them. In this context the compromise of a private key is like the loss of a credit card: the owner cancels the number but is at risk until everyone knows the old card is obsolete. The timestamp acts as an expiration date — if a certificate is sufficiently old, it is assumed expired.</p>
+  <div class="def-card"><span class="dc-term">Digital certificate</span> — a cryptographic binding between an identifier and a public key that is to be associated with that identifier. An issuer creates the binding and takes the role of a trusted third party (TTP), in accordance with Boyd's theorem.</div>
+  <h3 class="sub-title">X.509</h3>
+  <p>One scheme has become universally accepted for formatting public-key certificates: the <strong>X.509 standard</strong>. X.509 certificates are used in most network security applications, including IP security (IPsec), transport layer security (TLS) and S/MIME. X.509 is based on public-key cryptography and digital signatures. The standard does <em>not</em> dictate a specific digital signature algorithm or hash function.</p>
+  <p>The certificate for Bob's public key contains unique identifying information for Bob, Bob's public key, and identifying information about the CA, plus other fields. This information is signed by hashing it and generating a digital signature using the hash value and the CA's private key — X.509 indicates that the signature is formed by encrypting the hash value.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Real-world anchor:</strong> the lecturer showed an example X.509 <strong>version 3</strong> certificate taken from Google Chrome for ChatGPT. If you ever click the padlock in your browser and inspect the certificate, you are reading exactly this structure.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> a certificate proves that a key was bound to an identity <em>at some moment</em>. What does it <em>not</em> prove about the present? (This question sets up revocation.)</div></div>
+</section>
+
+<section class="guide-section" id="pki-chain-of-trust" data-title="PKI, Trust Chains and Root Stores">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">PKI, the Chain of Trust and Root Stores</h2>
+  </div>
+  <p class="section-kicker">Certificates only help if you can trace them back to a source you already trust. That tracing is the chain of trust, and its endpoint is a root CA pre-installed on your machine.</p>
+  <p>The problem in one line: <strong>how does Bob know a given public key is actually Alice's?</strong> The solution is a <strong>Public Key Infrastructure (PKI)</strong>. The trust anchor is achieved through certificates issued by a trusted third party, the CA.</p>
+  <div class="def-card"><span class="dc-term">Public Key Infrastructure (PKI)</span> — a system of hardware, software, people, policies and procedures needed to create, manage, distribute, use, store, verify and revoke digital certificates, and to manage public-key encryption. Its principal objective is to enable secure, convenient and efficient acquisition of public keys.</div>
+  <p>In practice, Bob may not have a certificate that Alice can verify directly. Instead Bob presents a <strong>certificate chain</strong> that lets Alice trace the trust back to a common trusted entity. For example, a CA <code>I1</code> issues a certificate to a subordinate CA <code>I2</code>, and <code>I2</code> issues a certificate to Bob, represented as <code>X</code>. The chain of trust is <code>I1 → I2 → X</code>. Alice verifies Bob's certificate <code>X</code> by following the chain from <code>X</code>, through <code>I2</code>, up to <code>I1</code>, which she trusts. This process is called <strong>certificate chaining</strong>.</p>
+  <div class="flow">
+    <span class="flow-step">Root CA (I1)</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Intermediate CA (I2)</span><span class="flow-arrow">→</span>
+    <span class="flow-step">End entity (X)</span>
+  </div>
+  <p>Trust is <strong>transitive</strong>: if I1 signs I2, and I2 signs X, then I1 vouches for I2 vouches for X. To verify X, you follow the arrows back to a source you already trust.</p>
+  <h3 class="sub-title">The self-signed root and the trust gap</h3>
+  <p>The <strong>Root CA</strong> sits at the top and signs its own certificate. This creates a <strong>trust gap</strong>: you cannot verify a Root CA through a chain, because there is no higher authority to vouch for it. The solution is that root certificates are <strong>pre-installed</strong> in your browser or operating system. To trust Alice, Bob's computer checks every signature in the chain until it hits a pre-installed root.</p>
+  <h3 class="sub-title">Hierarchical PKI: from one CA to many</h3>
+  <p>The naive idea is a single global issuer trusted by everyone. This is not practical, for several reasons:</p>
+  <ul>
+    <li>It would be overwhelmed by too many requests.</li>
+    <li>Deciding <em>which</em> global authority is trustworthy is itself a huge problem.</li>
+    <li>The verification steps would have to be universally agreed.</li>
+    <li>Names are not globally unique — distinguishing between people both called "John Smith" would need unique global identifiers akin to passports.</li>
+  </ul>
+  <p>The pragmatic solution is to allow <strong>many global CAs</strong> and accept them all as equals. But then how do users come to trust them? The answer is that <strong>the public keys of 'trusted' CAs are shipped with your OS and/or browser</strong>. A consequence is that <strong>users do not actually get to choose which CAs they trust</strong> — the nature of the verification process is defined between vendors and CAs. Identity verification in different jurisdictions can differ, and there is a concern of <strong>too much centralisation</strong>.</p>
+  <h3 class="sub-title">Root certificate stores</h3>
+  <ul>
+    <li><strong>The repository:</strong> root stores hold the certificates of trusted CAs.</li>
+    <li><strong>Trust anchors:</strong> they specifically contain the <strong>self-signed root certificates</strong> that serve as the mathematical starting point for all validation chains.</li>
+    <li><strong>Application use:</strong> every application that uses X.509 (for example browsers) or the operating system itself must maintain a root store. Windows, Apple, Linux and the browsers each have their own.</li>
+    <li><strong>Recall:</strong> root certificates are self-signed because they are the apex of the hierarchy; they cannot be verified mathematically via a higher authority and must be trusted by decree through pre-installation.</li>
+  </ul>
+  <p>If a certificate's chain ends at a root that is <em>not</em> in your store, verification fails. That is the source of the familiar browser warning: the site's certificate chain ends with a CA your browser does not recognise.</p>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> a root store is a <em>guest list</em> printed on your machine at the factory. Anyone on the list can sign for anyone else, and you were never asked who to invite.</div></div>
+</section>
+
+<section class="guide-section" id="identity-verification-intermediates" data-title="Identity Verification &amp; Intermediates">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Identity Verification and Intermediate Certificates</h2>
+  </div>
+  <p class="section-kicker">Before a CA signs anything, it must check that it is signing for the right person — and intermediate certificates let the crown jewels stay locked in a safe.</p>
+  <h3 class="sub-title">Verifying identity before issuing</h3>
+  <p>The issuance process embeds a critical step: there are industry-agreed steps that must be carried out. Before issuing a certificate, the issuer must be sure that it is issuing to the <strong>correct identity</strong> and that the identity <strong>really holds that particular key</strong>. The required rigour varies with the purpose and value of the certificate.</p>
+  <div class="compare">
+    <div class="compare-col a">
+      <h3>Baseline verification</h3>
+      <ul>
+        <li>Commonly used for domains (e.g. <code>suranga.me</code>).</li>
+        <li><strong>Proof of ownership:</strong> the CA asks the domain operator to place a specific file on the web server, or to be able to receive email under that domain name.</li>
+        <li>Note: this relies on technologies that might themselves be insecure for identity verification.</li>
+      </ul>
+    </div>
+    <div class="compare-col b">
+      <h3>Extended verification</h3>
+      <ul>
+        <li>High-assurance certificates requiring <strong>legal documentation and background checks</strong>.</li>
+        <li>More expensive and rigorous, providing a higher level of "human" trust.</li>
+      </ul>
+    </div>
+  </div>
+  <p>It is easier said than done: which verification process is acceptable to everyone? That is the perennial hard question of PKI.</p>
+  <h3 class="sub-title">Why intermediate certificates?</h3>
+  <p><strong>Intermediate certificates</strong> are "middle-link" certificates that are neither the trusted root nor the final end-entity. Certificates signed by the root certificate are called intermediate certificates; most websites hold certificates signed by an intermediate, not directly by the root. They form a bridge in the chain of trust, and they exist for two main reasons:</p>
+  <ol class="steps">
+    <li><strong>Delegated authority (sub-CAs):</strong> a root CA can delegate signing powers to different organisations, departments or geographical regions. This enables a hierarchical web of trust without every user contacting the main root CA directly.</li>
+    <li><strong>Risk mitigation and root protection:</strong> the root CA's private key can be kept <strong>offline in a highly secure, air-gapped location</strong> (often a physical safe), while daily signing operations are handled by the intermediate CA. If an intermediate CA is compromised, it can be revoked without needing to replace the root CA in every user's root store — a process that would otherwise take years.</li>
+  </ol>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> the root key is the single most valuable secret in the whole system. Intermediates mean it almost never has to be used, so the risk of its exposure is tiny — and a mistake costs only an intermediate, not the entire internet's trust.</div></div>
+</section>
+
+<section class="guide-section" id="revocation-pkix" data-title="Revocation, CRLs, OCSP &amp; PKIX">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Certificate Revocation, CRLs, OCSP and PKIX</h2>
+  </div>
+  <p class="section-kicker">A certificate is a promise made at a moment in time — so we need a way to ask, right now, whether that promise still holds.</p>
+  <p>A certificate is merely a signed statement that a binding <em>was</em> valid at the moment of issuance. We must be able to invalidate it if the trust foundation collapses before the expiration date. There are three classic reasons to revoke:</p>
+  <ul>
+    <li><strong>Private key compromise:</strong> the key is stolen, leaked, or suspected of being accessed by an unauthorised party (for example, a server breach).</li>
+    <li><strong>Identity fraud or change:</strong> identity verification was flawed, domain ownership changed, or the entity (company or employee) no longer exists.</li>
+    <li><strong>CA compromise:</strong> the CA that issued the certificate is itself compromised, making all its promises untrustworthy.</li>
+  </ul>
+  <p>To be sure the binding is valid at the time of interest — the moment the receiver receives the message — the receiver must be able to perform a <strong>real-time revocation check</strong>.</p>
+  <h3 class="sub-title">Certificate Revocation Lists (CRLs)</h3>
+  <p>A <strong>CRL</strong> is a list of certificates considered revoked. It should be issued, updated and maintained by every CA. Certificates are identified by <strong>serial number</strong>, and every CRL must be time-stamped and signed. Technically, a browser should download the CRL (and update it after the given time) and look up the host certificate every time it connects to a server. This is <strong>too slow and is not done in practice anymore</strong>.</p>
+  <h3 class="sub-title">Online Certificate Status Protocol (OCSP) and stapling</h3>
+  <p>Because CRLs can be massive and stale, we use <strong>OCSP</strong> for live, per-certificate status checks. It is a query-response model: the CRL is hosted server-side rather than on the local host, the query is a lookup of a certificate in a server-side CRL-like structure, and the response contains a certificate status that must be signed.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Mode</th><th>Mechanism</th><th>Drawbacks / benefits</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Standard OCSP</strong> (client-side check)</td><td>The client (Bob) queries the CA's "OCSP responder" with a certificate serial number. The CA returns a signed status: <em>Good</em>, <em>Revoked</em> or <em>Unknown</em>.</td><td>Drawbacks: it slows the initial connection (latency) and <strong>leaks Bob's browsing history to the CA</strong> (privacy).</td></tr>
+        <tr><td><strong>OCSP stapling</strong> (server-side solution)</td><td>The server (Alice) fetches the signed OCSP response from the CA periodically and "staples" it to the certificate during the handshake. Bob receives both the certificate and the proof of validity in one go.</td><td>Benefits: <strong>zero extra latency</strong> for Bob and total privacy from the CA.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3 class="sub-title">The PKIX model</h3>
+  <p>While X.509 defines the "data structure" of a certificate, the <strong>PKIX</strong> model defines how that data moves across the global internet. The Internet Engineering Task Force (IETF) developed the PKIX profile, <strong>RFC 5280</strong>, so that different vendors (Microsoft, Google, Cisco) can all interoperate using the same rules. PKIX standardises the entire lifecycle, not just the "ID card": it defines <strong>Certificate Revocation Lists</strong> (the "blacklist" of certificates compromised before expiry), <strong>OCSP</strong> (a real-time way for Bob to ask the CA whether Alice's key is still valid right now), and the <strong>trust models</strong> — formalising the hierarchical PKI structure as the technical "rules of the road" for Certificate Authorities.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Serial numbers:</strong> a serial number is an integer value unique within the issuing CA and unambiguously associated with a certificate. Both CRLs and OCSP refer to certificates by serial number, which is why the exam may ask you to identify it.</div></div>
+</section>
+
+<section class="guide-section" id="x509-problems" data-title="Problems of X.509">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Problems of X.509</h2>
+  </div>
+  <p class="section-kicker">Certificates are only as trustworthy as the weakest CA on the guest list — and that list is enormous.</p>
+  <p>In modern browsers, <strong>all pre-installed Root CAs are equally trusted</strong>. This means a compromise of a single, obscure CA in a distant jurisdiction can be used to issue a fake certificate for any global domain.</p>
+  <p><strong>Verification failures (identity fraud):</strong></p>
+  <ul>
+    <li><strong>The "Trickster" attack:</strong> adversaries have successfully convinced CAs of forged identities, obtaining valid certificates for domains they do not own — for example the <strong>Comodo</strong> and <strong>DigiNotar</strong> incidents.</li>
+    <li><strong>Hacked CAs:</strong> direct attacks on CA infrastructure have allowed hackers to issue fraudulent certificates at will.</li>
+  </ul>
+  <p><strong>Systemic weaknesses revealed by research:</strong></p>
+  <ul>
+    <li><strong>Lax certification practices:</strong> many CAs prioritise speed and profit over rigorous identity verification.</li>
+    <li><strong>Operator mismanagement:</strong> many website administrators deploy certificates with errors, such as mismatched domain names or expired chains.</li>
+    <li><strong>High-value bias:</strong> effective X.509 deployment is often seen only in top-tier, high-value websites; the "long tail" of the internet remains poorly secured.</li>
+  </ul>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> do not assume "it has a valid certificate" means "it is trustworthy". A valid certificate only proves that <em>some</em> trusted CA signed a binding — and any one of thousands of CAs can sign for any domain.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> if one obscure CA is compromised, why can it forge a certificate for a bank it has nothing to do with? (Answer: browsers trust all roots equally, so any root's signature is accepted for any name.)</div></div>
+</section>
+
+<section class="guide-section" id="authentication-factors" data-title="Authentication &amp; Evidence">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">What Authentication Is and Corroborative Evidence</h2>
+  </div>
+  <p class="section-kicker">Authentication is not just "checking a password" — it is a process that must prove a second party actually took part.</p>
+  <p>We met authentication briefly under access control: before you can use the filesystem, you must log in, and the login is a form of authentication. After authentication, you have <strong>authorisation</strong> for certain things. But what <em>is</em> authentication?</p>
+  <div class="def-card"><span class="dc-term">Authentication</span> (Menezes et al.) — the process whereby one party is assured (through the acquisition of corroborative evidence) of the identity of a second party involved in a protocol, <strong>and that the second has actually participated</strong>.</div>
+  <p>Notice the three elements needed to ascertain identity:</p>
+  <ol class="steps">
+    <li><strong>Corroborative evidence</strong> — the proof itself.</li>
+    <li><strong>A process between (at least) two parties.</strong></li>
+    <li><strong>Involvement and participation of the second party.</strong></li>
+  </ol>
+  <p>The last element is the one people forget: it is not enough that someone <em>knows</em> the secret — they must demonstrate they are present and acting right now.</p>
+  <h3 class="sub-title">Corroborative evidence: the three classic factors</h3>
+  <p>We look for factors that are unique to an entity. The classic categorisation is:</p>
+  <div class="grid grid-3">
+    <div class="card">
+      <h3 class="card-title">🔑 Possession</h3>
+      <p><strong>Something you have.</strong> A physical key, or a phone that receives SMS codes.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">🖐️ Inherence</h3>
+      <p><strong>Something you are.</strong> Biometrics: fingerprints, iris scans, face and voice recognition.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">🧠 Knowledge</h3>
+      <p><strong>Something you know.</strong> Passwords, security questions (mother's maiden name, and so on).</p>
+    </div>
+  </div>
+  <p>These can be used stand-alone or in combination.</p>
+  <h3 class="sub-title">The problems with each factor</h3>
+  <p><strong>Possession.</strong> The obvious problem is <strong>loss of the physical device</strong>. Others are subtler: how is the phone identified — by phone number, or SIM? SMS messages are sent to a number, and numbers can be rerouted. <strong>SS7</strong>, the global signalling network that also carries SMS, has a bunch of known vulnerabilities.</p>
+  <p><strong>Inherence.</strong> In general, you <strong>cannot change</strong> biometrics. Some can be easily inferred: fingerprints are everywhere, and even standard cameras can capture them (a demonstrated attack). They are also more susceptible to forgery via recordings, generative AI and 3D printing — including the emerging threat of deepfake fingerprints.</p>
+  <p><strong>Knowledge.</strong> We have already discussed the usability and strength of passwords, and note that databases of cracked passwords exist. Security questions are often very standard, with predictable answers and limited possibilities: "Mother's maiden name?" — depending on culture, try Smith, Chang, Kim, Schmidt; "First car?" — try Golf, Yaris, Corolla. Social networks help attackers collect the additional personal information needed to answer these questions.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> biometrics feel secure because they are unique and unchangeable — but unchangeable is exactly the problem. If your fingerprint leaks, you cannot reset it like a password.</div></div>
+</section>
+
+<section class="guide-section" id="mfa-otp" data-title="MFA and One-Time Passwords">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Multi-Factor Authentication and One-Time Passwords</h2>
+  </div>
+  <p class="section-kicker">Combining factors from different categories raises the bar — but same-category factors add little, and social engineering can still walk straight through.</p>
+  <p><strong>Multi-factor authentication (MFA)</strong> increases security by requiring multiple factors for authentication, <strong>in general from different categories</strong>. A special form is <strong>two-factor authentication (2FA)</strong>. The canonical example is a password plus a code sent as a text to your phone. This needs a very motivated attacker and assumes a targeted attack, not a broad sweep.</p>
+  <p>Some factors are stronger than others, so choose factors according to the problem and the setting. For example, possession is strong, but loss and forgetfulness are real problems.</p>
+  <ul>
+    <li>2FA is <strong>standard today for high-value sites</strong>, such as webmail providers and social networks.</li>
+    <li>MFA often comes with mechanisms that check <strong>plausibility</strong>: a login from an unusual country the user has never logged in from; many failed login attempts; an IP from a range known to be the origin of other attacks. Then MFA is switched on, or additional factors are required — for example password, plus phone code, plus an email access token.</li>
+    <li>Implementation must follow the principle of <strong>psychological acceptability</strong>: if authentication frustrates users, they will find ways around it, and security suffers.</li>
+  </ul>
+  <h3 class="sub-title">The limits of MFA</h3>
+  <ul>
+    <li><strong>MFA places a bigger onus on the user.</strong> Remember psychological acceptability. Generally, MFA is more readily accepted in high-value, high-risk scenarios.</li>
+    <li><strong>MFA with factors from the same category is not guaranteed stronger.</strong> Asking for two passwords, both of which may be weak, adds no real security.</li>
+    <li><strong>Social engineering can still easily overcome multiple factors.</strong> A phone call that tricks the user into disclosing both the password and the phone code defeats the whole scheme.</li>
+  </ul>
+  <h3 class="sub-title">One-Time Passwords (OTPs)</h3>
+  <p>Authentication can be strengthened with <strong>one-time passwords</strong>, which are valid for <strong>one login only</strong>. This defeats the attacker who records a password and tries to reuse it. There are two categories:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Type</th><th>How it works</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Static OTP</strong></td><td>An indexed list of OTPs is given to the user in advance.</td></tr>
+        <tr><td><strong>Dynamic OTP</strong></td><td>Follows a <strong>challenge-response</strong> principle, so the OTP generated depends on the specific challenge presented.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Examples include Google Authenticator, Microsoft OTP and Yubikey. Note that <strong>OTP can be done as MFA</strong>: for instance, the OTP is computed by a device the user must possess, or the website sends a challenge as a code which the user types into the device to derive the OTP. This allows <strong>context-specific OTPs</strong>. A bank might require an OTP before processing a high-value payment, generated by a device the user possesses or in response to a challenge code from the website.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Which factor is an OTP?</strong> An OTP is a form of <strong>possession</strong> — a token or device you must have. Contrast: a fingerprint is inherence; a PIN or a secret-question answer is knowledge. This distinction is a favourite exam question.</div></div>
+</section>
+
+<section class="guide-section" id="console-network-protocols" data-title="Login Modes &amp; Protocols">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Console vs Network Login, and Authentication Protocols</h2>
+  </div>
+  <p class="section-kicker">Sitting at a keyboard proves participation; logging in over a network does not — and that difference forces us to design protocols.</p>
+  <h3 class="sub-title">Console login</h3>
+  <p>With a console login, <strong>participation is guaranteed by physical keyboard input</strong>: the password must be typed locally by someone present. This is a clean example of the "process between at least two parties" element. Even USB attack devices that try to guess passwords face rate-limiting delays — UNIX systems introduce a slight delay between password attempts to defend against rapid automated guessing.</p>
+  <h3 class="sub-title">Network login: the participation problem</h3>
+  <p>Over a network there is no physical presence, so it is difficult to prove active participation. The key issues are:</p>
+  <ul>
+    <li>Credentials transmitted over the network <strong>can be captured</strong>.</li>
+    <li><strong>Replay attacks:</strong> intercepted credentials can be reused later.</li>
+    <li>You <strong>cannot distinguish</strong> a legitimate user actively logging in, malware sending stored credentials, or an attacker replaying captured data.</li>
+  </ul>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Implication:</strong> network authentication requires additional mechanisms — challenge-response, nonces and time-based tokens — to cryptographically prove <em>fresh, active</em> participation, beyond merely "knowing" the password.</div></div>
+  <h3 class="sub-title">Authentication protocols</h3>
+  <p>So far we applied cryptography mostly to single messages. For authentication over a network we must do better: a <strong>sequence of steps</strong>. A sequence of well-defined steps to achieve a goal is a <strong>protocol</strong>; if we add cryptographic protection, it is a <strong>cryptographic protocol</strong>.</p>
+  <p>Warning: composing cryptographic operations into secure protocols is <strong>hard</strong>. Even if the cryptography is perfect, we can leave loopholes in the protocol — just like the replay of an encrypted password.</p>
+  <h3 class="sub-title">The person-in-the-middle replay</h3>
+  <p>Alice tries to send password <code>p</code> to Bob, encrypted with key <code>k</code>. The attacker can simply record <code>c = Enck(p)</code> and replay it later. Bob does not actually know whether Alice has participated. Neither MACs nor signatures help — they can be replayed as well. We must somehow <strong>bind the transmission of the password to the current communication</strong>.</p>
+  <h3 class="sub-title">Building protocols from primitives</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Primitive</th><th>What it gives us</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Cryptographically secure random numbers</strong></td><td>An essential ingredient in all that follows.</td></tr>
+        <tr><td><strong>Cryptographic hash functions</strong></td><td>MACs (by mixing in a shared secret).</td></tr>
+        <tr><td><strong>Public-key cryptography</strong></td><td>Key exchange over certain untrusted channels; confidentiality (through hybrid encryption of symmetric keys); origin authentication and data integrity.</td></tr>
+        <tr><td><strong>Symmetric-key cryptography</strong></td><td>Confidentiality (the actual data transfer); origin authentication and data integrity through MACs.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> an encrypted password is replayed and Bob accepts it. Whose failure was it — the cipher's, or the protocol's? Say it in one word before reading on.</div></div>
+</section>
+
+<section class="guide-section" id="ake" data-title="Authentication and Key Establishment">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Authentication and Key Establishment (AKE)</h2>
+  </div>
+  <p class="section-kicker">Freshness defeats replay: challenge-response with nonces, signed Diffie-Hellman, forward secrecy, and APIs that stop developers from making dangerous choices.</p>
+  <h3 class="sub-title">Constructing an authentication protocol</h3>
+  <p><strong>Setup:</strong> Alice (A) wants to authenticate to Bob (B). The <strong>goal</strong> is that A proves possession or knowledge of something only A has. <strong>Assumptions:</strong> Alice and Bob share a secret key <code>kA,B</code>, and Bob has a way to verify Alice's password.</p>
+  <div class="compare">
+    <div class="compare-col a">
+      <h3>Naive attempt #1: send the encrypted password</h3>
+      <p><code>A → B: c = Enck(p)</code></p>
+      <p><strong>Problem:</strong> replay attack. Attacker C intercepts <code>c</code> and replays it; Bob accepts C as Alice. C never needed to know <code>p</code> or <code>k</code> — it just replays <code>c</code>.</p>
+    </div>
+    <div class="compare-col b">
+      <h3>Naive attempt #2: add a MAC</h3>
+      <p><code>A → B: c, MACkA,B(c)</code></p>
+      <p><strong>Still broken:</strong> the MAC prevents tampering but not replay. C captures both and replays <code>c, MACkA,B(c)</code>; Bob verifies the MAC successfully and accepts C as Alice.</p>
+    </div>
+  </div>
+  <p><strong>Key insight:</strong> we need a way to ensure <strong>freshness</strong> and prove <strong>active participation</strong>, not just knowledge of the key.</p>
+  <h3 class="sub-title">Challenge-response with nonces</h3>
+  <p>Let <code>{m}</code> denote an encrypted <em>and</em> integrity-protected message. A <strong>nonce</strong> is a "random number used once". The protocol plays out as:</p>
+  <div class="formula">
+    <div class="formula-label">Challenge-response</div>
+    <div class="math">A → B : NA&nbsp;&nbsp;&nbsp;&nbsp;B → A : {NA, NB}&nbsp;&nbsp;&nbsp;&nbsp;A → B : {NA, NB + 1}</div>
+  </div>
+  <p>B now has assurance that A participated and reacted to precisely the second message, because A was able to read <code>NB</code> (the challenge) and increment it (the response). Nonces can be replaced with timestamps in some cases, but we do not show that here.</p>
+  <h3 class="sub-title">AKE: combining authentication and key establishment</h3>
+  <p>Most protocols <strong>combine authentication and key establishment</strong>. There are multiple approaches:</p>
+  <ul>
+    <li><strong>Password-based methods</strong> (with challenge-response to prevent replay): use nonces or timestamps to ensure freshness, and derive session keys from the password exchange. Examples: encrypted key exchange protocols.</li>
+    <li><strong>Diffie-Hellman based methods:</strong> establish a shared secret without a pre-shared password, combined with authentication (certificates, signatures). Examples: TLS and SSH key exchange.</li>
+  </ul>
+  <p>There are important rules for session key management:</p>
+  <ol class="steps">
+    <li>Always generate session keys from your actual, <strong>master keys</strong>.</li>
+    <li>Use session keys for one communication session, then <strong>delete them</strong>.</li>
+    <li><strong>Never reuse session keys.</strong></li>
+    <li><strong>Both parties should be involved</strong> in the key creation.</li>
+  </ol>
+  <p>A <strong>simple AKE</strong> uses long-term asymmetric keys to protect short-term symmetric keys. In the simplest hybrid approach, Alice generates a symmetric key <code>k</code>. A better scheme has both sides contribute: Alice and Bob each choose half, so even if one chooses a poor key half by accident, the scheme remains secure. Variants of this are in use, but are being phased out.</p>
+  <h3 class="sub-title">Diffie-Hellman recap</h3>
+  <p>Let <code>p</code> be prime and <code>g</code> a generator for <code>&#8484;p*</code> (the multiplicative group modulo p).</p>
+  <div class="formula">
+    <div class="formula-label">Diffie-Hellman key exchange</div>
+    <div class="math">Alice: choose random a &lt; p, compute X = g^a mod p, send X to Bob.<br>Bob: choose random b &lt; p, compute Y = g^b mod p, send Y to Alice.<br>Alice computes k = Y^a mod p.&nbsp;&nbsp;Bob computes k = X^b mod p.<br>Y^a = (g^b)^a = g^(ab) = (g^a)^b = X^b mod p — both sides obtain the same k.</div>
+  </div>
+  <p>Diffie-Hellman allows key establishment over an insecure channel, <em>under a passive attacker</em>. In practice we <strong>sign</strong> the Diffie-Hellman values: Alice sends <code>X, SigA(X)</code> and Bob sends <code>Y, SigB(Y)</code>. This protects against an active attacker trying to modify them. Alice and Bob use their long-term secret private keys for that, for example RSA keys.</p>
+  <h3 class="sub-title">Forward secrecy</h3>
+  <p>Using Diffie-Hellman every time we run a protocol gives us fresh session keys every time — <strong>'ephemeral' keys</strong>. But we must choose fresh <code>a</code>, <code>b</code> every time and <strong>delete the old ones</strong>. This is <strong>forward secrecy</strong>:</p>
+  <ul>
+    <li>If the attacker learns the long-term signing keys, all messages protected with session keys remain secure.</li>
+    <li>If the attacker learns one pair <code>(ai, bi)</code>, all messages protected with <code>(aj, bj)</code> where <code>i ≠ j</code> are still secure.</li>
+  </ul>
+  <div class="def-card"><span class="dc-term">Forward secrecy (Perfect Forward Secrecy, PFS)</span> — a property of key-agreement protocols ensuring that a session key will not be compromised even if the long-term private keys (the "master keys") are compromised in the future. The compromise of long-term keys does not compromise the confidentiality of <em>past</em> session keys.</div>
+  <p>This is achieved by generating unique session keys for each session that are independent of the long-term keys. <strong>Ephemeral Diffie-Hellman (DHE)</strong> and <strong>Ephemeral Elliptic-Curve Diffie-Hellman (ECDHE)</strong> refer to using Diffie-Hellman to establish a new, temporary key for each session, used exclusively for that session and then discarded. Forward secrecy and perfect forward secrecy are used interchangeably and mean the same thing.</p>
+  <h3 class="sub-title">Modern cryptographic APIs</h3>
+  <p><strong>The problem:</strong> there are too many ways to make mistakes. Common developer errors include:</p>
+  <ul>
+    <li>Poor key lengths or weak random values (predictable seeds).</li>
+    <li>Wrong or no padding (leading to padding oracle attacks).</li>
+    <li>Insecure block cipher modes (ECB mode reveals patterns).</li>
+    <li>Mixing encryption and authentication incorrectly.</li>
+    <li>Reusing nonces or IVs with stream ciphers.</li>
+  </ul>
+  <p><strong>The design philosophy:</strong> don't give developers dangerous choices — make safe defaults the only option. Real-world examples include <strong>libsodium / NaCl</strong>, the <strong>AWS Encryption SDK</strong> and <strong>Google Tink</strong>. <strong>TLS 1.3</strong> went further and removed weak cipher suites entirely (no RSA key exchange, no CBC mode). What modern APIs <em>cannot</em> prevent are semantic flaws in the protocol — which is why we use standardised, thoroughly vetted protocols such as Kerberos.</p>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook for forward secrecy:</strong> change the locks after every visitor, and burn the old key. Even if a thief later steals your master keyring, the rooms from last week stay shut.</div></div>
+</section>
+
+<section class="guide-section" id="kerberos" data-title="Needham-Schroeder and Kerberos">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Needham-Schroeder and Kerberos</h2>
+  </div>
+  <p class="section-kicker">The theory becomes a deployed reality: an authentication server that hands out tickets, and the protocol that runs logins on Windows, Linux and macOS.</p>
+  <h3 class="sub-title">Needham-Schroeder: the basic idea</h3>
+  <p>The <strong>Needham-Schroeder protocol</strong> introduces an intermediary <strong>'Authentication Server' (AS)</strong> that helps Alice and Bob. It establishes a session key between two users over an insecure network; several variants exist, and we focus on the symmetric-key one. In short, Needham-Schroeder <strong>is a way to build a Key Distribution Centre (KDC)</strong>.</p>
+  <p>The symmetric-key version proceeds as follows. First, the initiator sends a request; a nonce identifies the session:</p>
+  <div class="formula">
+    <div class="formula-label">Needham-Schroeder protocol</div>
+    <div class="math">1. A → AS : IDA, IDB, N1<br>2. AS → A : E(Ka, [Ks &#8214; IDA &#8214; IDB &#8214; N1]) &#8214; E(Kb, [Ks &#8214; IDA])<br>3. A → B : E(Kb, [Ks &#8214; IDA])<br>4. B → A : E(Ks, N2)<br>5. A → B : E(Ks, f(N2))</div>
+  </div>
+  <p>Step by step:</p>
+  <ul>
+    <li><strong>Initiate:</strong> the nonce identifies the session.</li>
+    <li><strong>The AS creates the session key <code>Ks</code></strong> and encrypts it with the key shared with Bob — this encrypted block is called the <strong>'ticket'</strong>. It sends A both A's copy (encrypted under <code>Ka</code>) and Bob's ticket (encrypted under <code>Kb</code>).</li>
+    <li><strong>Forward the ticket:</strong> A passes <code>E(Kb, [Ks &#8214; IDA])</code> to B.</li>
+    <li><strong>Prove knowledge of the session key (freshness!):</strong> B sends <code>E(Ks, N2)</code> to A.</li>
+    <li><strong>Prove knowledge of the session key and nonce:</strong> A returns <code>E(Ks, f(N2))</code>, where <code>f</code> is a generic function that modifies the value of the nonce.</li>
+  </ul>
+  <h3 class="sub-title">Kerberos</h3>
+  <p><strong>Kerberos</strong> is a widespread protocol for authentication and access control, much deployed as a backend protocol. Built on Needham-Schroeder, it has remarkable features:</p>
+  <ul>
+    <li>A <strong>ticket concept</strong> that allows users to access services.</li>
+    <li>Users authenticate with a <strong>password</strong> and then request access to a server.</li>
+    <li><strong>Timestamps</strong> give tickets a lifetime, after which reauthentication is necessary.</li>
+    <li>It can be used to <strong>'federate' several administrative domains</strong>.</li>
+  </ul>
+  <p>Instead of implementing complex authentication protocols on each server, Kerberos centralises the process with an <strong>Authentication Server (AS)</strong> whose primary function is to authenticate users to servers and vice versa — much like Needham-Schroeder. To stop ticket-granting tickets being captured and misused before they expire, the AS gives both the client and the <strong>Ticket Granting Server (TGS)</strong> a secret piece of information securely. Even if a ticket is stolen, the thief cannot use it without also having that secret. The client proves its identity to the TGS by revealing the secret securely — efficiently implemented as an encryption key called a <strong>session key</strong>, which is both the secret and the means of secure communication.</p>
+  <p>The Kerberos exchanges run in six messages. Here <code>Kc</code> is encryption based on the user's password, and <code>TS</code> values are timestamps:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Exchange</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>C → AS : IDc &#8214; IDtgs &#8214; TS1</code></td><td>The client requests a ticket-granting ticket. <code>IDtgs</code> tells the AS the user wants access to the TGS; <code>TS1</code> lets the AS verify the client's clock is synchronised with its own.</td></tr>
+        <tr><td>2</td><td><code>AS → C : E(Kc, [Kc,tgs &#8214; IDtgs &#8214; TS2 &#8214; Lifetime2 &#8214; Tickettgs])</code></td><td>The AS returns the ticket-granting ticket. <code>Kc</code> (from the user's password) lets AS and client verify the password and protects the contents; <code>Kc,tgs</code> is a session key for secure exchange between client and TGS without a permanent shared key; <code>TS2</code> is the issue time; <code>Lifetime2</code> the ticket's lifetime.</td></tr>
+        <tr><td>3</td><td><code>C → TGS : IDv &#8214; Tickettgs &#8214; Authenticatorc</code></td><td>The client requests a service-granting ticket. <code>IDv</code> names the desired server; <code>Tickettgs</code> proves the user was authenticated by the AS; the <strong>authenticator</strong> is generated by the client to validate the ticket.</td></tr>
+        <tr><td>4</td><td><code>TGS → C :</code> service-granting ticket</td><td>The TGS returns a ticket for server V. <code>Kc,tgs</code> protects the message; <code>Kc,v</code> is the session key for client and server V; <code>Ticketv</code> is the ticket to access server V.</td></tr>
+        <tr><td>5</td><td><code>C → V : Ticketv</code></td><td>The client requests the service. <code>Ticketv</code> assures the server that the user has been authenticated by the AS.</td></tr>
+        <tr><td>6</td><td><code>V → C :</code> optional server authentication, service granted</td><td>Optional authentication of the server to the client. <code>Kc,v</code> assures the client the message is from V; returning <code>TS5 + 1</code> assures C this is not a replay of an old reply.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> remember the two servers — the <strong>Authentication Server (AS)</strong> issues the ticket-granting ticket, and the <strong>Ticket Granting Server (TGS)</strong> issues service-granting tickets. Kerberos is based on Needham-Schroeder (TRUE), and its main target is the <strong>person-in-the-middle</strong> attack.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> a thief steals a valid Kerberos ticket. Why can they not simply present it to the server? (Answer: the ticket alone is useless without the matching session key or authenticator.)</div></div>
+</section>
+
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways">
+    <div class="takeaway"><span class="tk-num">1</span><p><strong>The key distribution problem</strong> is how to establish shared secret keys or authentic public keys without a pre-existing secure channel. Every primitive hits this bootstrapping wall.</p></div>
+    <div class="takeaway"><span class="tk-num">2</span><p><strong>Dolev-Yao</strong> is the attacker model for the week: it controls the network entirely (eavesdrop, delay, delete, modify, replay, inject, impersonate) but is limited by cryptography.</p></div>
+    <div class="takeaway"><span class="tk-num">3</span><p><strong>Boyd's theorem:</strong> without a secure channel, two entities cannot establish an authenticated session without a mutually trusted mediator they both already have a secure channel with.</p></div>
+    <div class="takeaway"><span class="tk-num">4</span><p><strong>Diffie-Hellman</strong> is safe only against a passive attacker; an active attacker needs origin authentication, which itself needs a key — hence certificates or a KDC.</p></div>
+    <div class="takeaway"><span class="tk-num">5</span><p><strong>Symmetric distribution uses a KDC</strong> and a two-level hierarchy: long-lived master keys (shared out-of-band) protect short-lived session keys (one per logical connection).</p></div>
+    <div class="takeaway"><span class="tk-num">6</span><p><strong>Needham-Schroeder</strong> is the five-step KDC scenario; steps 1–3 distribute the key, and the nonce challenge in steps 3–5 authenticates and prevents replay.</p></div>
+    <div class="takeaway"><span class="tk-num">7</span><p><strong>Naive public-key sharing invites the person-in-the-middle attack.</strong> Certificates fix this by having a trusted CA sign the binding of identity to public key.</p></div>
+    <div class="takeaway"><span class="tk-num">8</span><p><strong>X.509 is the universal certificate format.</strong> A certificate is a public key plus an identifier, signed by a CA; its timestamp acts as an expiry date.</p></div>
+    <div class="takeaway"><span class="tk-num">9</span><p><strong>PKI is a chain of trust</strong> ending at a self-signed root CA pre-installed in your OS or browser. Intermediate CAs let the root key stay offline and be revocable.</p></div>
+    <div class="takeaway"><span class="tk-num">10</span><p><strong>Revocation matters:</strong> CRLs are too slow, so we use OCSP; OCSP stapling removes latency and protects the client's privacy. PKIX (RFC 5280) standardises all of this.</p></div>
+    <div class="takeaway"><span class="tk-num">11</span><p><strong>Authentication</strong> requires corroborative evidence and proof of active participation, using factors of possession, inherence or knowledge — each with its own weaknesses.</p></div>
+    <div class="takeaway"><span class="tk-num">12</span><p><strong>MFA and OTPs</strong> raise the bar, but same-category factors add little and social engineering still works. Freshness (nonces, timestamps, challenge-response) is what defeats replay.</p></div>
+    <div class="takeaway"><span class="tk-num">13</span><p><strong>Forward secrecy</strong> uses ephemeral Diffie-Hellman keys so past sessions stay secure even if long-term keys leak. Modern APIs enforce safe defaults.</p></div>
+    <div class="takeaway"><span class="tk-num">14</span><p><strong>Kerberos</strong> is the deployed child of Needham-Schroeder: an AS and a TGS issue time-limited tickets so users authenticate once and access many services.</p></div>
+  </div>
+</section>
+
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools">
+    <button class="chip active" type="button" data-cat="all">All</button>
+    <button class="chip" type="button" data-cat="kd">Key distribution</button>
+    <button class="chip" type="button" data-cat="pki">PKI &amp; certificates</button>
+    <button class="chip" type="button" data-cat="auth">Authentication</button>
+    <button class="chip" type="button" data-cat="proto">Protocols &amp; Kerberos</button>
+  </div>
+  <div class="terms">
+    <div class="term-card" data-cat="kd"><div class="term-name">Key distribution problem</div><div class="term-meaning">The challenge of securely establishing shared secret keys (or authentic public keys) between parties who wish to communicate securely, without relying on a pre-existing secure channel.</div></div>
+    <div class="term-card" data-cat="kd"><div class="term-name">Bootstrapping problem</div><div class="term-meaning">The circular difficulty that every protection mechanism needs a key before it can protect anything, including the distribution of the next key.</div></div>
+    <div class="term-card" data-cat="kd"><div class="term-name">Dolev-Yao model</div><div class="term-meaning">An attacker model in which the adversary has full control of the network — eavesdropping, delaying, deleting, modifying, replaying, injecting and impersonating — but cannot break cryptography (cannot forge integrity-protected messages or decrypt without the key).</div></div>
+    <div class="term-card" data-cat="kd"><div class="term-name">Boyd's Theorem</div><div class="term-meaning">Assuming no secure channel, two entities cannot establish an authenticated session without a mutually trusted mediator with which both already have a secure channel. In short: you need an introduction from a trusted third party.</div></div>
+    <div class="term-card" data-cat="kd"><div class="term-name">Forward secrecy (PFS)</div><div class="term-meaning">A property of key-agreement protocols ensuring a session key is not compromised even if long-term private keys are later compromised. Past sessions stay secure. Also called perfect forward secrecy.</div></div>
+    <div class="term-card" data-cat="kd"><div class="term-name">Ephemeral key</div><div class="term-meaning">A temporary key generated fresh for a single session and discarded afterwards. DHE and ECDHE establish ephemeral keys and are what give forward secrecy.</div></div>
+    <div class="term-card" data-cat="kd"><div class="term-name">Key Distribution Center (KDC)</div><div class="term-meaning">A mutually trusted third party, always online, that shares a long-term master key with every member and brokers session keys between them. The basis of Kerberos.</div></div>
+    <div class="term-card" data-cat="kd"><div class="term-name">Master key</div><div class="term-meaning">A long-lived key shared between the KDC and an end system or user, distributed non-cryptographically (for example by physical delivery). Used only to protect session keys.</div></div>
+    <div class="term-card" data-cat="kd"><div class="term-name">Session key</div><div class="term-meaning">A short-lived key used for the actual communication between two end systems, one per logical connection, obtained from the KDC encrypted under the master key and then discarded.</div></div>
+    <div class="term-card" data-cat="pki"><div class="term-name">Public-key certificate</div><div class="term-meaning">A public key plus an identifier of the owner, signed by a trusted third party (a CA). It is a cryptographic binding between an identifier and a public key.</div></div>
+    <div class="term-card" data-cat="pki"><div class="term-name">Certificate Authority (CA)</div><div class="term-meaning">A trusted third party (such as a government agency or financial institution) that verifies identities and issues signed certificates, in accordance with Boyd's theorem.</div></div>
+    <div class="term-card" data-cat="pki"><div class="term-name">X.509</div><div class="term-meaning">The universally accepted standard defining the format of public-key certificates. Based on public-key cryptography and digital signatures; used in IPsec, TLS and S/MIME.</div></div>
+    <div class="term-card" data-cat="pki"><div class="term-name">Public Key Infrastructure (PKI)</div><div class="term-meaning">The hardware, software, people, policies and procedures needed to create, manage, distribute, use, store, verify and revoke digital certificates, and to manage public-key encryption.</div></div>
+    <div class="term-card" data-cat="pki"><div class="term-name">Chain of trust</div><div class="term-meaning">The transitive chain of certificates (for example I1 → I2 → X) by which a verifier follows signatures back to a root they already trust. Also called certificate chaining.</div></div>
+    <div class="term-card" data-cat="pki"><div class="term-name">Root CA / trust anchor</div><div class="term-meaning">The CA at the apex of the hierarchy. It signs its own (self-signed) certificate and cannot be verified through a chain, so it is trusted by pre-installation.</div></div>
+    <div class="term-card" data-cat="pki"><div class="term-name">Root certificate store</div><div class="term-meaning">A repository of trusted CA certificates, specifically the self-signed root certificates that form the starting point for all validation chains. Maintained by operating systems and browsers.</div></div>
+    <div class="term-card" data-cat="pki"><div class="term-name">Intermediate certificate</div><div class="term-meaning">A middle-link certificate signed by the root but not the end-entity. It delegates signing authority (sub-CA) and protects the root key, which can stay offline.</div></div>
+    <div class="term-card" data-cat="pki"><div class="term-name">Certificate Revocation List (CRL)</div><div class="term-meaning">A time-stamped, signed list of certificates a CA has revoked, identified by serial number. Technically correct but too slow to download and check on every connection.</div></div>
+    <div class="term-card" data-cat="pki"><div class="term-name">Online Certificate Status Protocol (OCSP)</div><div class="term-meaning">A live, per-certificate revocation check in which the client queries the CA's OCSP responder with a serial number and receives a signed status: Good, Revoked or Unknown. OCSP stapling has the server fetch and attach the response, removing latency and protecting privacy.</div></div>
+    <div class="term-card" data-cat="pki"><div class="term-name">PKIX (RFC 5280)</div><div class="term-meaning">The IETF profile that defines how X.509 data moves across the internet, standardising the certificate lifecycle including CRLs, OCSP and trust models so different vendors interoperate.</div></div>
+    <div class="term-card" data-cat="auth"><div class="term-name">Authentication</div><div class="term-meaning">The process whereby one party is assured, through corroborative evidence, of the identity of a second party involved in a protocol, and that the second has actually participated.</div></div>
+    <div class="term-card" data-cat="auth"><div class="term-name">Corroborative evidence</div><div class="term-meaning">The factors unique to an entity that are used to establish identity. The classic categories are possession, inherence and knowledge.</div></div>
+    <div class="term-card" data-cat="auth"><div class="term-name">Multi-factor authentication (MFA)</div><div class="term-meaning">Requiring multiple authentication factors, in general from different categories, to raise security. Two-factor authentication (2FA) is the special case of two factors.</div></div>
+    <div class="term-card" data-cat="auth"><div class="term-name">One-time password (OTP)</div><div class="term-meaning">A password valid for a single login only. Static OTPs come from an indexed list; dynamic OTPs follow a challenge-response principle. OTPs act as a possession factor and can be part of MFA.</div></div>
+    <div class="term-card" data-cat="auth"><div class="term-name">Replay attack</div><div class="term-meaning">An attack in which a recorded message (even an encrypted password, MAC or signature) is captured and sent again later to impersonate a legitimate party. Defeated by freshness — nonces, timestamps and challenge-response.</div></div>
+    <div class="term-card" data-cat="auth"><div class="term-name">Person-in-the-middle (PITM) attack</div><div class="term-meaning">An active attack in which the adversary interposes between two parties, substituting its own public key so that both believe they share a secret key that the attacker also knows.</div></div>
+    <div class="term-card" data-cat="proto"><div class="term-name">Nonce</div><div class="term-meaning">A "random number used once", such as a timestamp, counter or random value, used to ensure freshness and prevent masquerade and replay.</div></div>
+    <div class="term-card" data-cat="proto"><div class="term-name">Needham-Schroeder protocol</div><div class="term-meaning">The classic five-step protocol that builds a Key Distribution Centre: an authentication server issues a session key and a ticket, and a nonce challenge proves freshness.</div></div>
+    <div class="term-card" data-cat="proto"><div class="term-name">Kerberos</div><div class="term-meaning">A widely deployed authentication and access-control protocol built on Needham-Schroeder. It uses tickets with a timestamp-based lifetime and can federate several administrative domains.</div></div>
+    <div class="term-card" data-cat="proto"><div class="term-name">Ticket Granting Server (TGS)</div><div class="term-meaning">The Kerberos component that issues service-granting tickets. The client first obtains a ticket-granting ticket from the Authentication Server, then presents it (with an authenticator) to the TGS.</div></div>
+    <div class="term-card" data-cat="proto"><div class="term-name">Challenge-response</div><div class="term-meaning">An authentication technique in which one party sends a fresh challenge (a nonce) and the other must transform and return it, proving they participated in the current exchange rather than replaying an old one.</div></div>
+  </div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+  <article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">State the key distribution problem in your own words, then explain the bootstrapping problem using all three primitives (Diffie-Hellman, hybrid cryptography, MACs/AES).</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The key distribution problem is how to securely establish shared secret keys or authentic public keys between parties without relying on a pre-existing secure channel. The bootstrapping problem is that each primitive still needs something it does not yet have: Diffie-Hellman and hybrid cryptography both need to reliably know the other party's public key, while MACs and AES need a pre-shared symmetric key. Whichever primitive you choose, the same circular dependency remains.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Describe the Dolev-Yao attacker. What can it do, and what is its one fundamental limitation?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Dolev-Yao has full control of the network — "the attacker carries the message". It can eavesdrop on any message, delay, delete, modify, replay and inject messages, and impersonate any legitimate party. Its limitation is cryptography: it cannot modify an integrity-protected message without the receiver noticing, and it cannot decrypt a message encrypted with a key it does not hold.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">State Boyd's theorem and explain why Diffie-Hellman key exchange alone is not enough under Dolev-Yao.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Boyd's theorem: assuming the absence of a secure channel, two entities cannot establish an authenticated session without an entity that can mediate between them and which both parties trust and have a secure channel with. Diffie-Hellman is secure only against a passive attacker; an active attacker can substitute its own values. Protecting it requires origin authentication, but a MAC needs a prior symmetric key and a signature needs a known public key with a correct entity-to-key mapping — so we are back to needing a trusted third party.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">Explain the two-level key hierarchy used by a KDC. Why is each level distributed differently and used for different things?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Level one is the master key, shared between the KDC and each end system or user and distributed non-cryptographically (physical delivery or bundled with managed software). It is long-lived and used only to protect session keys. Level two is the session key, used for the actual communication, obtained from the KDC encrypted under the master key, short-lived and one per logical connection. This limits exposure: frequent session-key changes reduce how much data is compromised if a key leaks, while the precious master key is rarely exposed.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">Walk through the Needham-Schroeder key distribution scenario. Which steps distribute the key, and which authenticate?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) A → KDC: IDA, IDB, N1 (nonce). (2) KDC → A: encrypted under Ka, containing Ks and the original request with N1 for freshness, plus Ks and IDA encrypted under Kb for B. (3) A → B: E(Kb, [Ks || IDA]) — the ticket. (4) B → A: E(Ks, N2). (5) A → B: E(Ks, f(N2)). The actual key distribution happens in steps 1–3; steps 3–5 (the nonce challenge) perform authentication and prove the message was not a replay.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">Describe the person-in-the-middle attack against naive public-key distribution and explain how the authenticated scheme with nonces fixes it.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> A sends PUa to B; D intercepts and substitutes its own PUd; B encrypts a secret Ks under PUd; D decrypts it with PRd and re-encrypts it under PUa for A. Both A and B know Ks, but so does D, who can now eavesdrop passively. The fix is to protect against active and passive attacks with nonces: A sends IDA and N1 under PUb; B returns N1 plus a fresh N2 under PUa (proving B decrypted message 1); A returns N2 under PUb (proving A is the correspondent); then A sends M = E(PUb, E(PRa, Ks)) so only B can read it and only A could have sent it, and B recovers Ks via D(PUa, D(PRb, M)).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">List the four schemes for public-key distribution and give the weakness of each (or note why one wins).</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) Public announcement — anyone can forge a public announcement. (2) Publicly available directory — if the directory authority's private key is compromised, the adversary can pass out counterfeit keys, impersonate anyone and eavesdrop; records can also be tampered with. (3) Public-key authority — based on Needham-Schroeder, but the authority becomes a bottleneck for every contact, and the directory is still tamper-vulnerable. (4) Public-key certificate — the best option and what we use today, because participants can exchange keys without contacting an authority yet with the same reliability.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">What exactly does a certificate contain, how is it created and verified, and what is the role of the timestamp?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> A certificate contains a public key PU, an identifier ID of the owner, and the whole block signed by a trusted third party (the CA). It is created as CA = E(PRauth, [T || IDA || PUa]) and verified as D(PUauth, CA) = (T || IDA || PUa). Because only the authority's public key can read it, a successful decryption proves it came from the CA. The timestamp T acts as an expiry date: if a private key is compromised and the owner gets a new certificate, an attacker replaying the old certificate can only do so until the old one is considered expired, much like a cancelled credit card.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">Explain the chain of trust and the trust gap. How is the trust gap solved, and what are intermediate certificates for?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Trust is transitive: if I1 signs I2 and I2 signs X, then I1 vouches for I2 vouches for X, and a verifier follows the chain from X back to a source they already trust (certificate chaining). The Root CA sits at the top and signs its own certificate, creating a trust gap: it cannot be verified through a chain because there is no higher authority. The gap is solved by pre-installing root certificates in the browser or OS. Intermediate certificates bridge root and end-entity: they let a root delegate signing authority to sub-CAs, and they let the root's private key stay offline in an air-gapped safe while daily signing is done by the intermediate — so if an intermediate is compromised it can be revoked without replacing the root everywhere.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">Why must certificates be revocable, and compare CRLs with OCSP and OCSP stapling.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> A certificate is only a signed statement that a binding was valid at issuance, so it must be invalidated early if the trust foundation collapses — private key compromise, identity fraud or change, or CA compromise. A CRL is a time-stamped, signed list of revoked certificates (by serial number) maintained by every CA, but downloading and checking it on every connection is too slow, so it is no longer done in practice. OCSP is a live query-response check: the client asks the CA's responder with a serial number and gets a signed status (Good, Revoked, Unknown), but this adds latency and leaks browsing history to the CA. OCSP stapling fixes both: the server periodically fetches the signed response and staples it to the certificate during the handshake, giving zero extra latency and total privacy.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">Define authentication as Menezes et al. do, name its three elements, and evaluate the three corroborative-evidence factors with one weakness each.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Authentication is the process whereby one party is assured, through corroborative evidence, of the identity of a second party involved in a protocol, and that the second has actually participated. Its three elements are corroborative evidence, a process between at least two parties, and the involvement and participation of the second party. Factors: possession (something you have — weakness: loss of the device, and SMS rerouting via SS7 vulnerabilities); inherence (something you are — weakness: biometrics cannot be changed and can be captured, forged by recordings, generative AI or 3D printing); knowledge (something you know — weakness: cracked-password databases exist and security questions have predictable answers that social networks help attackers guess).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">Explain challenge-response with nonces, and how signed Diffie-Hellman with ephemeral keys delivers forward secrecy.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> In challenge-response, {m} is an encrypted and integrity-protected message and a nonce is a random number used once. A sends NA; B replies {NA, NB}; A replies {NA, NB + 1}. Because A could read the challenge NB and increment it, B knows A participated in this exact exchange, not a replay. Nonces can be replaced by timestamps in some cases. For forward secrecy, Alice and Bob run Diffie-Hellman and sign their values (X, SigA(X) and Y, SigB(Y)) with long-term private keys, protecting against an active attacker. Using fresh ephemeral a and b every session, and deleting the old ones, means that even if the long-term signing keys leak, past session-key-protected messages stay secure; learning one pair (ai, bi) does not expose messages protected with any other pair.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+</section>
+
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist">
+    <label class="check-item"><input type="checkbox"> I can state the key distribution problem and the bootstrapping problem, and name both families of solutions.</label>
+    <label class="check-item"><input type="checkbox"> I can describe the Dolev-Yao attacker and its cryptographic limitations.</label>
+    <label class="check-item"><input type="checkbox"> I can state Boyd's theorem and explain why Diffie-Hellman needs origin authentication.</label>
+    <label class="check-item"><input type="checkbox"> I can draw the KDC two-level key hierarchy and write the five-step key distribution scenario.</label>
+    <label class="check-item"><input type="checkbox"> I can explain the person-in-the-middle attack and the nonce-based fix.</label>
+    <label class="check-item"><input type="checkbox"> I can compare the four public-key distribution schemes and explain why certificates won.</label>
+    <label class="check-item"><input type="checkbox"> I can describe X.509, certificate creation/verification, and the role of the timestamp.</label>
+    <label class="check-item"><input type="checkbox"> I can explain chains of trust, self-signed roots, root stores and intermediate certificates.</label>
+    <label class="check-item"><input type="checkbox"> I can compare CRLs, OCSP and OCSP stapling, and define PKIX/RFC 5280.</label>
+    <label class="check-item"><input type="checkbox"> I can define authentication and evaluate possession, inherence and knowledge.</label>
+    <label class="check-item"><input type="checkbox"> I can explain MFA, its limits, OTP types, challenge-response and forward secrecy.</label>
+    <label class="check-item"><input type="checkbox"> I can outline the Kerberos exchanges and the roles of the AS and the TGS.</label>
+  </div>
+</section>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">&#8962; All guides</a>
+    <span class="spacer"></span>
+    <a href="../week_6/INFO3616_week6_study_guide.html">&#8592; Week 6</a>
+    <a href="../week_8/INFO3616_week8_study_guide.html">Week 8 &#8594;</a>
+  </div>
+  <p>INFO3616 Security Engineering &#183; Week 7 &#183; Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Theme ---------- */
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('info3616-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('info3616-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
+  }
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
+
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
+
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
+  function onScroll(){
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
+      });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
+  }
+
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'info3616-7-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
+  });
+
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
+      var shown = 0;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
+      });
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
+    });
+  });
+
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
+  function runSearch(){
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
+      });
+    }
+    suggest.classList.add('open');
+  }
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
+  }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'info3616-7-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
+})();
+</script>
+</body>
+</html>

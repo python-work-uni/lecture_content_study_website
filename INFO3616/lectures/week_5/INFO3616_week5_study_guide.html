@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Public-key cryptography explained: RSA key generation and attacks, padding and hybrid encryption, Diffie-Hellman, elliptic curves, and post-quantum risks.">
+<title>INFO3616 Week 5 — Asymmetric Cryptography</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     INFO3616 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
+<header class="topbar">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">INFO3616</span>
+    <span class="brand-week">Week 5</span>
+  </a>
+  <div class="topbar-tools">
+    <div class="search">
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
+    </div>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Table of contents">
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+
+  <main class="content" id="content">
+<section class="hero" id="top">
+  <span class="hero-eyebrow">INFO3616 · Week 5 · Asymmetric Cryptography</span>
+  <h1 class="hero-title">Two Keys, One Secret: How Asymmetric Cryptography Works</h1>
+  <p class="hero-sub">This week we leave shared-secret cryptography behind and meet a new paradigm: every user owns a <strong>public key</strong> that anyone can see and a <strong>private key</strong> only they know. We build RSA out of prime numbers, use it to protect messages and prove who sent them, exchange keys with Diffie-Hellman, then finish with elliptic curves and the quantum threat on the horizon.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> Hold one mental model — <em>asymmetric cryptography is a trapdoor.</em> Going one way through the door is easy for everyone; coming back the other way is impossible unless you know the secret latch (the private key). RSA, Diffie-Hellman and elliptic curves are three different "doors", but they all rest on a maths problem that is easy to compute forwards and believed to be infeasible to reverse.</div>
+  <div class="hero-meta">
+    <span class="meta-chip"><span class="dot"></span>~32 min read</span>
+    <span class="meta-chip">16 teaching sections</span>
+    <span class="meta-chip">14 practice questions</span>
+    <span class="meta-chip">32 key terms</span>
+  </div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list">
+      <li>Explain how public-key cryptography differs from symmetric cryptography, and why it is also called asymmetric cryptography.</li>
+      <li>Describe confidentiality, origin authentication and digital signatures, and state which algorithms provide encryption, signatures and key exchange.</li>
+      <li>Define a trapdoor one-way function and state the requirements for public-key cryptography.</li>
+      <li>Recap coprimes, the set &#8484;*<sub>n</sub> and Euler's totient function, including ɸ(n) = (p − 1)(q − 1).</li>
+      <li>Carry out RSA key generation, encryption and decryption on small numbers, and explain why RSA works over &#8484;/n&#8484;.</li>
+      <li>Explain the security of RSA, its five attack families, and why padding (OAEP) is essential.</li>
+      <li>Explain hybrid encryption and why almost all public-key encryption uses it.</li>
+      <li>Walk through Diffie-Hellman key exchange, show both sides get the same key, and explain the person-in-the-middle attack.</li>
+      <li>Outline elliptic curve cryptography, ECDH, EC ElGamal, and the threat posed by Shor's and Grover's algorithms.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="guide-section" id="why-asymmetric" data-title="Why Asymmetric Cryptography?">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Why Asymmetric Cryptography?</h2>
+  </div>
+  <p class="section-kicker">One shared key becomes two linked keys — a public one anyone may use and a private one only you hold.</p>
+  <p>So far in this unit, cryptography has been <strong>symmetric</strong>: Alice and Bob share <em>one</em> secret key and use the same key to encrypt and decrypt. Symmetric ciphers achieve their security through <strong>confusion</strong> (substitution) and <strong>diffusion</strong> (permutation). That model works well, but it has a famous weakness — how do two people who have never met agree on the shared key in the first place?</p>
+  <p><strong>Public-key cryptography</strong> answers that question by changing the paradigm in two important ways.</p>
+  <ol class="steps">
+    <li><strong>Each participant has a key pair.</strong> A <strong>public key</strong> that is distributed openly, and a <strong>private key</strong> that is kept secret.</li>
+    <li><strong>Encryption and decryption use different keys.</strong> Anyone may use the receiver's public key to encrypt a message, but only the receiver — the owner of the private key — can decrypt it.</li>
+  </ol>
+  <p>Because the two keys are different, this is also called <strong>asymmetric cryptography</strong> ("a-symmetric" = not symmetric).</p>
+  <div class="def-card"><span class="dc-term">Asymmetric (public-key) cryptography</span> — a form of cryptography that uses two distinct but mathematically related keys: a public key for one direction and a private key for the other. It relies on mathematical functions with special properties, beyond simple substitution and permutation.</div>
+  <div class="compare">
+    <div class="compare-col a">
+      <h3>Symmetric cryptography</h3>
+      <ul>
+        <li>One shared key for both encryption and decryption.</li>
+        <li>Security from substitution (confusion) and permutation (diffusion).</li>
+        <li>Fast, but key distribution is a problem.</li>
+      </ul>
+    </div>
+    <div class="compare-col b">
+      <h3>Asymmetric cryptography</h3>
+      <ul>
+        <li>Two keys: a public key and a private key.</li>
+        <li>Security from mathematical problems with special properties.</li>
+        <li>Slower, but solves key distribution.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why this matters:</strong> public-key cryptography is built on mathematical problems that are believed to have the right properties. A number of such problems are thought to work, <strong>but there is no proof yet</strong> that they are truly hard. Security here is a well-tested belief, not a theorem.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If anyone can use your public key to encrypt a message to you, why can't an eavesdropper simply use the same public key to decrypt it? (Hold that thought — the answer is the trapdoor in the next few sections.)</div></div>
+</section>
+
+<section class="guide-section" id="two-directions" data-title="Confidentiality vs Origin Authentication">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Two Directions of Trust</h2>
+  </div>
+  <p class="section-kicker">Swap which key does the locking and you get a completely different security service.</p>
+  <p>Because there are two keys, there are two useful ways to combine them. Think of the key you use to <em>lock</em> (encrypt) as separate from the key you use to <em>unlock</em> (decrypt).</p>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3 class="card-title">🔒 Confidentiality</h3>
+      <p><strong>Encrypt with the public key, decrypt with the private key.</strong> Anyone can encrypt a message for the receiver, but only the receiver can decrypt it, because only they hold the private key. This keeps the message secret.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">✍️ Origin Authentication</h3>
+      <p><strong>Encrypt with the private key, decrypt with the public key.</strong> Anyone can decrypt, but only the true owner could have encrypted it, because only they hold the private key. This proves who sent the message.</p>
+    </div>
+  </div>
+  <p>Origin authentication is the idea behind <strong>digital signatures</strong>, a key application of public-key cryptography. With a signature, not only the intended recipient but <em>anyone</em> with access to the sender's public key can verify the origin of the message.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Conceptual, not literal:</strong> the confidentiality and origin-authentication descriptions show the <em>concept</em> of key usage. In practice we do <strong>not</strong> use the same key pair simultaneously for both purposes — real systems use separate keys for encryption and for signing.</div></div>
+  <h3 class="sub-title">What each algorithm can do</h3>
+  <p>Overall, all participants can see each other's public keys, while each keeps their private key confidential. Different public-key algorithms offer different services:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Algorithm</th><th>Encryption/Decryption</th><th>Digital Signature</th><th>Key Exchange</th></tr></thead>
+      <tbody>
+        <tr><td><strong>RSA</strong></td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+        <tr><td><strong>Elliptic Curve</strong></td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
+        <tr><td><strong>Diffie-Hellman</strong></td><td>No</td><td>No</td><td>Yes</td></tr>
+        <tr><td><strong>DSS</strong> (Digital Signature Standard)</td><td>No</td><td>Yes</td><td>No</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>Diffie-Hellman</strong> is the specialist — it only does key exchange. <strong>DSS</strong> is the specialist that only signs. <strong>RSA</strong> and <strong>Elliptic Curve</strong> are the all-rounders that can do all three.</div></div>
+</section>
+
+<section class="guide-section" id="trapdoor" data-title="Trapdoor Functions">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Trapdoor One-Way Functions</h2>
+  </div>
+  <p class="section-kicker">Easy to compute forwards, infeasible to reverse — unless you hold the secret information that springs the trap.</p>
+  <p>To build a public-key system, we need a very particular kind of function. It must be:</p>
+  <ul>
+    <li><strong>Computationally fast</strong> to compute the function value <strong>f(x) = y</strong>.</li>
+    <li><strong>Computationally infeasible</strong> to compute the inverse <strong>f<sup>−1</sup>(y) = x</strong>.</li>
+    <li><strong>Unless</strong> you possess a piece of information that lets you reverse it dramatically faster.</li>
+  </ul>
+  <p>That secret piece of information is the <strong>trapdoor</strong>, and the function is called a <strong>trapdoor function</strong>.</p>
+  <div class="formula">
+    <div class="formula-label">Trapdoor one-way function</div>
+    <div class="math">Y = f<sub>k</sub>(X) &nbsp;→&nbsp; easy when k and X are known<br>X = f<sub>k</sub><sup>−1</sup>(Y) &nbsp;→&nbsp; easy when k and Y are known<br>X = f<sub>k</sub><sup>−1</sup>(Y) &nbsp;→&nbsp; infeasible when k is unknown</div>
+  </div>
+  <div class="def-card"><span class="dc-term">One-way function</span> — a function that maps a domain into a range such that every value has a unique inverse, where computing the function is easy but computing the inverse is infeasible.</div>
+  <div class="def-card"><span class="dc-term">Trapdoor one-way function</span> — a function that is easy to compute in one direction but hard to invert <em>without</em> additional information called the "trapdoor".</div>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Corollary (and the whole point):</strong> it must be <strong>computationally infeasible to compute the private key from the public key</strong> without the trapdoor information. That is what lets you publish your public key to the whole world safely.</div></div>
+  <h3 class="sub-title">Requirements for public-key cryptography</h3>
+  <p>Any algorithm used for public-key cryptography should satisfy these conditions. Here B is the key owner and A is a sender.</p>
+  <ol class="steps">
+    <li>It is computationally <strong>easy for B to generate a key pair</strong> (public key PU<sub>b</sub>, private key PR<sub>b</sub>).</li>
+    <li>It is computationally <strong>easy for a sender A</strong>, knowing the public key and the message M, to generate the ciphertext: <strong>C = E(PU<sub>b</sub>, M)</strong>.</li>
+    <li>It is computationally <strong>easy for the receiver B to decrypt</strong> using the private key: <strong>M = D(PR<sub>b</sub>, C) = D[PR<sub>b</sub>, E(PU<sub>b</sub>, M)]</strong>.</li>
+    <li>It is computationally <strong>infeasible for an adversary who knows PU<sub>b</sub></strong> to determine the private key PR<sub>b</sub>.</li>
+    <li>It is computationally <strong>infeasible for an adversary who knows PU<sub>b</sub> and a ciphertext C</strong> to recover the original message M without knowing PR<sub>b</sub>.</li>
+    <li><strong>(Optional, sixth requirement)</strong> The two keys can be applied in <strong>either order</strong> — which is what enables signatures as well as confidentiality.</li>
+  </ol>
+  <p>All of these requirements can be summarised as the requirement of a <strong>trapdoor one-way function</strong>.</p>
+  <h3 class="sub-title">Classic trapdoor candidate problems</h3>
+  <p>Two mathematical problems are believed to have the desired trapdoor properties.</p>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3 class="card-title">📐 Discrete Logarithms in Modular Arithmetic</h3>
+      <p>It is computationally infeasible to compute the discrete logarithm modulo p, for certain primes p. (Diffie and Hellman, 1976)</p>
+      <p><strong>DLP:</strong> Given <strong>y, p, g</strong> satisfying <strong>y = g<sup>x</sup> mod p</strong> — where p is prime and g is a primitive root of p — how do you find <strong>x</strong>?</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">🔑 The RSA Problem</h3>
+      <p>It is computationally infeasible to compute the e<sup>th</sup> root of an integer modulo n, for certain n.</p>
+      <p><strong>RSA problem:</strong> When <strong>c = m<sup>e</sup> mod n</strong> and <strong>c, e</strong> and <strong>n</strong> are known, can you find <strong>m</strong>?</p>
+    </div>
+  </div>
+  <p>Both the discrete logarithm problem and the RSA problem have the property "computationally infeasible". However, they become <strong>easy to compute with additional information</strong> — namely the private key.</p>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> be ready to write both problems out symbolically and state exactly which values are given and which are unknown. The DLP gives you y, p and g and asks for x; the RSA problem gives you c, e and n and asks for m.</div></div>
+</section>
+
+<section class="guide-section" id="number-theory" data-title="Number Theory Toolkit">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Number Theory Toolkit</h2>
+  </div>
+  <p class="section-kicker">Three small ideas — coprimes, the set &#8484;*<sub>n</sub>, and Euler's phi function — unlock all of RSA.</p>
+  <h3 class="sub-title">Coprime numbers</h3>
+  <p>Two numbers are <strong>coprime</strong> (or relatively prime) if they share only one divisor, and that divisor is 1.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Example:</strong> 8 and 27 are coprime. Factorising, 8 = 2 · 2 · 2 and 27 = 3 · 3 · 3. They have no prime factor in common, so their only common divisor is 1.</div></div>
+  <h3 class="sub-title">The set &#8484;*<sub>n</sub> and Euler's totient</h3>
+  <p>We define <strong>&#8484;*<sub>n</sub></strong> as all the non-negative integers less than n that are <strong>coprime to n</strong>.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Example:</strong> let n = 12. The numbers less than 12 and coprime to 12 are 1, 5, 7 and 11 — so &#8484;*<sub>12</sub> = {1, 5, 7, 11}. The set is useful because it forms an <strong>Abelian group under multiplication</strong>.</div></div>
+  <p><strong>Euler's Phi function</strong> (also called the <strong>totient function</strong>, written ɸ) counts how many elements are in &#8484;*<sub>n</sub>. For example, ɸ(12) = 4.</p>
+  <div class="formula">
+    <div class="formula-label">When n is a product of two distinct primes</div>
+    <div class="math">If n = p · q, where p and q are prime and p ≠ q, then<br>ɸ(n) = (p − 1)(q − 1)</div>
+  </div>
+  <p>This shortcut is the engine room of RSA: because n is the product of two primes, ɸ(n) is trivial to compute <em>if you know p and q</em> — but effectively impossible if you only know n.</p>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If p = 7 and q = 11, what is n, and what is ɸ(n)? (You will use both numbers in the RSA toy example in two sections' time.)</div></div>
+</section>
+
+<section class="guide-section" id="rsa-keygen" data-title="RSA Key Generation">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">RSA Key Generation</h2>
+  </div>
+  <p class="section-kicker">Pick two primes, multiply them, then choose an exponent and its modular inverse. That inverse is your private key.</p>
+  <p><strong>RSA</strong> (Rivest–Shamir–Adleman) was developed in 1977 by Ron Rivest, Adi Shamir and Len Adleman at MIT. It is the most widely accepted and implemented general-purpose approach to public-key encryption, and it encrypts plaintext in <strong>blocks</strong>, each block having a binary value less than n.</p>
+  <p>Here is the full key-generation recipe. The steps are numbered so you can follow the worked examples.</p>
+  <ol class="steps">
+    <li>Let <strong>p</strong> and <strong>q</strong>, with p ≠ q, be <strong>prime</strong>. In practice these are <strong>very</strong> large numbers.</li>
+    <li>Define <strong>n = p · q</strong>. We call n the <strong>modulus</strong>.</li>
+    <li>Use Euler's totient function: <strong>ɸ(n) = (p − 1)(q − 1)</strong>.</li>
+    <li>Choose <strong>e</strong> such that <strong>1 &lt; e &lt; ɸ(n)</strong> and <strong>gcd(e, ɸ(n)) = 1</strong> — that is, e is coprime with ɸ(n). One way is to choose e &gt; max(p, q) and prime; testing whether an integer is prime is fast.</li>
+    <li>Calculate <strong>d</strong> such that <strong>d ≡ e<sup>−1</sup> mod ɸ(n)</strong>. In words, d is the <strong>modular inverse of e</strong> modulo ɸ(n).</li>
+    <li>Now we have the keys:
+      <ul>
+        <li><strong>(e, n)</strong> is the <strong>public key</strong>.</li>
+        <li><strong>(d, n)</strong> is the <strong>private key</strong>.</li>
+      </ul>
+    </li>
+  </ol>
+  <p>At this point we <strong>delete p, q and ɸ(n) permanently</strong>. Anyone who knew p and q could compute d, so they must never be stored or shared.</p>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why delete p and q?</strong> The whole security of RSA rests on n being hard to factor. If p and q leaked, an attacker would compute ɸ(n) = (p − 1)(q − 1), then invert e to find d, and every message would be readable.</div></div>
+  <h3 class="sub-title">Worked example: key generation with p = 7, q = 11</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Step</th><th>Working</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Choose primes p = 7, q = 11</td><td>p ≠ q ✓</td></tr>
+        <tr><td>2</td><td>n = p · q = 7 × 11</td><td>n = 77</td></tr>
+        <tr><td>3</td><td>ɸ(n) = (7 − 1)(11 − 1) = 6 × 10</td><td>ɸ(n) = 60</td></tr>
+        <tr><td>4</td><td>Choose e = 13 (less than 60 and coprime with 60)</td><td>e = 13</td></tr>
+        <tr><td>5</td><td>Find d such that 13d mod 60 = 1</td><td>d = 37</td></tr>
+        <tr><td>6</td><td>Public key (e, n); private key (d, n)</td><td>(13, 77) and (37, 77)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Check your d:</strong> verify the modular inverse by multiplying back. Here 13 × 37 = 481 = (8 × 60) + 1, so 13 × 37 ≡ 1 mod 60. If your d does not give remainder 1, it is wrong.</div></div>
+</section>
+
+<section class="guide-section" id="rsa-encrypt" data-title="RSA Encryption &amp; Decryption">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">RSA Encryption and Decryption</h2>
+  </div>
+  <p class="section-kicker">Encryption raises the message to the power e; decryption raises the ciphertext to the power d. The maths cancels perfectly.</p>
+  <p>Once the keys exist, using them is beautifully simple. Let <strong>m</strong> be the plaintext and <strong>c</strong> the ciphertext.</p>
+  <div class="formula">
+    <div class="formula-label">RSA encryption and decryption</div>
+    <div class="math">Encryption: c = m<sup>e</sup> mod n<br>Decryption: m = c<sup>d</sup> mod n</div>
+  </div>
+  <h3 class="sub-title">Worked example: encrypting 3 with (13, 77)</h3>
+  <ol class="steps">
+    <li>Plaintext <strong>m = 3</strong>; public key (e, n) = (13, 77).</li>
+    <li>Encrypt: <strong>c = 3<sup>13</sup> mod 77 = 38</strong>.</li>
+    <li>Decrypt with the private key (d, n) = (37, 77): <strong>m = 38<sup>37</sup> mod 77 = 3</strong>.</li>
+  </ol>
+  <p>The message comes back exactly. In practice, of course, p and q are <strong>very</strong> large, so n, e and d are enormous.</p>
+  <h3 class="sub-title">Worked example from the notes: p = 17, q = 11</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Stage</th><th>Working</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Modulus</td><td>n = p · q = 17 × 11</td><td>n = 187</td></tr>
+        <tr><td>Totient</td><td>ɸ(n) = (17 − 1)(11 − 1) = 16 × 10</td><td>ɸ(n) = 160</td></tr>
+        <tr><td>Public exponent</td><td>Choose e = 7 (coprime to 160 and less than it)</td><td>e = 7</td></tr>
+        <tr><td>Private exponent</td><td>d × 7 ≡ 1 mod 160; note 23 × 7 = 161 = (1 × 160) + 1</td><td>d = 23</td></tr>
+        <tr><td>Keys</td><td>PU = {7, 187}, PR = {23, 187}</td><td>—</td></tr>
+        <tr><td>Encrypt M = 88</td><td>C = 88<sup>7</sup> mod 187</td><td>C = 11</td></tr>
+        <tr><td>Decrypt C = 11</td><td>M = 11<sup>23</sup> mod 187</td><td>M = 88</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3 class="sub-title">Why RSA works over &#8484;/n&#8484;</h3>
+  <p>RSA encryption is defined as a function from <strong>&#8484;/n&#8484; to &#8484;/n&#8484;</strong>:</p>
+  <div class="formula">
+    <div class="formula-label">RSA as a function</div>
+    <div class="math">RSA : &#8484;/n&#8484; → &#8484;/n&#8484;</div>
+  </div>
+  <p>Recall that &#8484;/n&#8484; is a <strong>commutative ring</strong>, and note that n is <em>not</em> prime but the product of two primes. There was a very good reason to work here:</p>
+  <ul>
+    <li><strong>Exponentiation in &#8484;/n&#8484; is fast to compute</strong> (using exponentiation by squaring). In other words, computing c = m<sup>e</sup> mod n is very efficient.</li>
+    <li>But getting the <strong>e<sup>th</sup> root</strong> of c to recover the original m is believed to be <strong>infeasible</strong> without d.</li>
+  </ul>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Important limitation:</strong> RSA cannot uniquely encrypt values greater than n. Such values are reduced modulo n, so decryption returns a value less than n, <em>not</em> the original input. This is why plaintext is split into blocks smaller than n.</div></div>
+  <p>Because of its mathematical nature, <strong>RSA can encrypt only numbers</strong> — more specifically, only numbers in &#8484;/n&#8484;. So sender and receiver must use a <strong>mapping from characters to numbers</strong> to make it useful: for example a ⇒ 1, b ⇒ 2, and so on.</p>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>e</strong> for <em>encrypt</em> (public), <strong>d</strong> for <em>decrypt</em> (private), <strong>n</strong> for the <em>modulus</em> shared by both keys. Encryption is public knowledge; decryption needs the secret.</div></div>
+</section>
+
+<section class="guide-section" id="rsa-security" data-title="Security of RSA">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Security of RSA</h2>
+  </div>
+  <p class="section-kicker">RSA is only as strong as two hard problems — taking e-th roots and factoring n — plus a long list of practical cautions.</p>
+  <p>The security of RSA rests on two beliefs:</p>
+  <ul>
+    <li>Obtaining the <strong>e<sup>th</sup> root</strong> of a number in &#8484;/n&#8484; is computationally infeasible <strong>unless you know d</strong>.</li>
+    <li><strong>Factoring n = p · q</strong>, for very large p and q, is computationally infeasible. If you could factor n, you could easily calculate d.</li>
+  </ul>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> the defence against brute-forcing d is to use a <strong>large key space</strong>. The more bits in d, the more secure the system — but the slower it becomes, because key generation, encryption and decryption all involve more complex calculations.</div></div>
+  <h3 class="sub-title">Practical rules for choosing p and q</h3>
+  <ul>
+    <li><strong>p and q (with p ≠ q) must be very large.</strong> Encoding n needs thousands of bits — typical RSA key lengths are <strong>2048 bits and more</strong>.</li>
+    <li><strong>p and q must not be too close together</strong>, because that allows forms of fast factoring.</li>
+    <li>In practice there are <strong>many more limiting factors</strong> — not every key is a good key.</li>
+    <li><strong>Never implement RSA yourself</strong> and use it in production. Use well-tested libraries.</li>
+  </ul>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Quantum risks later:</strong> RSA is secure "for now". Quantum computers running Shor's algorithm would break it, and <strong>Australia plans to get rid of RSA by 2030</strong>. We return to this in the final section.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If an attacker somehow learned p and q, which one line of working would hand them your private key d? (Answer: they would compute ɸ(n) = (p − 1)(q − 1), then find d = e<sup>−1</sup> mod ɸ(n).)</div></div>
+</section>
+
+<section class="guide-section" id="rsa-attacks" data-title="Attacks on RSA">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Five Ways to Attack RSA</h2>
+  </div>
+  <p class="section-kicker">Brute force, mathematics, timing, hardware faults and chosen ciphertext — know the family tree.</p>
+  <p>There are five possible approaches to attacking RSA. Notice that only one is purely mathematical; the rest exploit how RSA is <em>implemented</em>.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Attack</th><th>How it works</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Brute force</strong></td><td>Try all possible private keys — feasible only against smaller keys.</td></tr>
+        <tr><td><strong>Mathematical attacks</strong></td><td>Several approaches, all equivalent in effort to <strong>factoring the product of two primes</strong>.</td></tr>
+        <tr><td><strong>Timing attacks</strong></td><td>Depend on the <strong>running time</strong> of the decryption algorithm.</td></tr>
+        <tr><td><strong>Hardware fault-based attack</strong></td><td>Induce hardware faults in the processor that is generating digital signatures.</td></tr>
+        <tr><td><strong>Chosen ciphertext attacks</strong></td><td>Exploit properties of the RSA algorithm itself — for example <strong>malleability</strong>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="mnemonic">
+    <div class="mnemonic-letters">B · M · T · H · C</div>
+    <div class="mnemonic-phrase">"Brute, Maths, Timing, Hardware, Chosen"</div>
+    <div class="mnemonic-expand"><strong>B</strong>rute force · <strong>M</strong>athematical (≈ factoring) · <strong>T</strong>iming · <strong>H</strong>ardware fault-based · <strong>C</strong>hosen ciphertext.</div>
+  </div>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> if asked to list attacks on RSA, give all five with one line each. If asked which are "side-channel" style, that is timing and hardware fault-based — they leak information through how the machine behaves, not through the maths.</div></div>
+</section>
+
+<section class="guide-section" id="rsa-padding" data-title="RSA Padding &amp; Malleability">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Never Use RSA Without Padding</h2>
+  </div>
+  <p class="section-kicker">Vanilla RSA preserves structure, so an attacker can tamper with a ciphertext and predictably bend the plaintext. Randomness is the fix.</p>
+  <p>Plain ("vanilla", or "textbook") RSA is <strong>not secure on its own</strong>. Two related problems show why.</p>
+  <h3 class="sub-title">Problem 1: Malleability (a chosen ciphertext attack)</h3>
+  <div class="def-card"><span class="dc-term">Malleability</span> — in RSA, the property that an attacker can modify a ciphertext in a predictable way so that the decrypted plaintext also changes in a related, predictable way, <em>without knowing the private key</em>.</div>
+  <p>Here is the attack. Eve intercepts a ciphertext c and computes a modified ciphertext c′ by multiplying by a value raised to e:</p>
+  <div class="formula">
+    <div class="formula-label">The malleability trick</div>
+    <div class="math">c′ ≡ c · 2<sup>e</sup> mod n<br>(c′)<sup>d</sup> mod n ≡ (c · 2<sup>e</sup> mod n)<sup>d</sup> mod n ≡ 2m</div>
+  </div>
+  <ol class="steps">
+    <li>Eve intercepts the ciphertext <strong>c</strong>.</li>
+    <li>She computes the modified ciphertext <strong>c′ ≡ c · 2<sup>e</sup> mod n</strong> and sends it to the receiver.</li>
+    <li>The receiver decrypts c′ and obtains <strong>2m</strong> — a valid-looking result, not random garbage.</li>
+    <li>Because the result is valid-looking, the <strong>receiver cannot detect that the message was altered</strong>.</li>
+    <li>Eve recovers the original plaintext by dividing by 2 (or more generally by the value she used).</li>
+  </ol>
+  <p><strong>Key idea:</strong> vanilla RSA preserves structure, so tampering yields a predictable, manipulated plaintext rather than garbage. This is a generic result — the scalar multiplication can be <em>any</em> number, not just 2. Because the attacker gets a chosen ciphertext decrypted, this is a <strong>Chosen Ciphertext Attack (CCA)</strong>.</p>
+  <h3 class="sub-title">Problem 2: No semantic security (a chosen plaintext attack)</h3>
+  <ul>
+    <li>An attacker can <strong>forward-compute likely messages</strong> and see whether any matches a given ciphertext.</li>
+    <li>RSA is <strong>deterministic</strong>: the same plaintext encrypted with the same public key always produces the same ciphertext. There is <strong>no randomness</strong>.</li>
+    <li>Because encryption is deterministic and the public key is out in the open, RSA is vulnerable to <strong>Chosen Plaintext Attacks (CPA)</strong>.</li>
+  </ul>
+  <div class="def-card"><span class="dc-term">Semantic security</span> — a cryptosystem is semantically secure when only a small amount of information about the plaintext can be extracted from the ciphertext. Textbook RSA has none, because it lacks randomness.</div>
+  <h3 class="sub-title">The solution: padding</h3>
+  <p>Modern RSA implementations add <strong>sophisticated padding</strong>, which adds randomness on encryption and removes it on decryption. This ensures that the same plaintext encrypted multiple times produces <em>different</em> ciphertexts. Padding is crucial, but non-trivial: today we use <strong>OAEP</strong> (Optimal Asymmetric Encryption Padding).</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Never use RSA without padding.</strong> Unpadded RSA is malleable (vulnerable to CCA) and deterministic (vulnerable to CPA). Padding with OAEP is what makes RSA semantically secure.</div></div>
+</section>
+
+<section class="guide-section" id="hybrid" data-title="Hybrid Encryption">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Hybrid Encryption</h2>
+  </div>
+  <p class="section-kicker">Use slow public-key crypto once, to share a fast symmetric key. Then switch to the fast lane.</p>
+  <p>RSA has two key problems in practice.</p>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3 class="card-title">🐌 Problem 1: Public-key crypto is slow</h3>
+      <p>Long keys make it slow. RSA is <strong>100–1000 times slower than AES</strong>.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">🔢 Problem 2: It needs a character-to-number mapping</h3>
+      <p>RSA encrypts numbers, so a mapping from characters to numbers is needed to make it useful for real messages.</p>
+    </div>
+  </div>
+  <p>The solution is <strong>hybrid encryption</strong>. In general we do <em>not</em> use RSA continuously. Instead, we use RSA briefly to <strong>establish a symmetric key</strong>, then secure the actual conversation with fast symmetric encryption. <strong>Almost all public-key encryption uses hybrid encryption in practice.</strong></p>
+  <div class="flow">
+    <span class="flow-step">Generate random symmetric key k</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Encrypt message: c<sub>m</sub> = Enc<sub>k</sub>(m)</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Encrypt k: c<sub>k</sub> = Enc<sub>PK</sub>(k)</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Send (c<sub>k</sub>, c<sub>m</sub>)</span>
+  </div>
+  <ol class="steps">
+    <li><strong>Generate a random symmetric key k.</strong></li>
+    <li><strong>Encrypt the actual message</strong> as c<sub>m</sub> = Enc<sub>k</sub>(m) using the symmetric key.</li>
+    <li><strong>Encrypt k</strong> as c<sub>k</sub> = Enc<sub>PK</sub>(k) using the receiver's public key.</li>
+    <li><strong>Send (c<sub>k</sub>, c<sub>m</sub>)</strong> — the encrypted key and the encrypted message.</li>
+  </ol>
+  <p>The receiver decrypts c<sub>k</sub> with their private key to recover k, then uses k to decrypt c<sub>m</sub>. The heavy lifting is done by the fast symmetric cipher; the public-key cipher only ever handles the small session key.</p>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> public-key crypto is the <em>courier who delivers the key</em>; symmetric crypto is the <em>fast car that carries the cargo</em>. You would not send the courier for every parcel.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> In hybrid encryption, why is it safe to send c<sub>k</sub> and c<sub>m</sub> together over an insecure channel? (Because k is encrypted under the receiver's public key, so only the receiver can unwrap it.)</div></div>
+</section>
+
+<section class="guide-section" id="dh" data-title="Diffie-Hellman Key Exchange">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Diffie-Hellman Key Exchange</h2>
+  </div>
+  <p class="section-kicker">Two strangers publicly swap numbers and quietly arrive at the same secret — without ever sending it.</p>
+  <p>There are many public-key cryptosystems besides RSA. One of the best known is <strong>not used for encryption</strong>, but for <strong>key exchange</strong>. The question it solves is: <em>can Alice and Bob establish a shared symmetric key without a purely listening attacker being able to obtain it?</em> Finite fields come to our aid.</p>
+  <p><strong>Diffie-Hellman</strong> is the first published algorithm that implemented the public-key (trapdoor) principle. It became the basis for:</p>
+  <ul>
+    <li><strong>Diffie-Hellman Key Exchange</strong></li>
+    <li><strong>ElGamal</strong> encryption/decryption</li>
+    <li>The <strong>Digital Signature Standard (DSA/DSS)</strong></li>
+  </ul>
+  <h3 class="sub-title">The Discrete Logarithm Problem</h3>
+  <p>Just as with factorisation and the e<sup>th</sup> root before, there is another trapdoor problem. It is computationally infeasible to compute a logarithm over a finite field, if the prime number used to construct the field is large enough.</p>
+  <div class="formula">
+    <div class="formula-label">Discrete Logarithm Problem (DLP)</div>
+    <div class="math">Given y, p, g with y = g<sup>x</sup> mod p,<br>where p is prime and g is a primitive root of p,<br>find x.</div>
+  </div>
+  <p>But if you have one extra piece of information (the "private key"), it suddenly becomes easy. How do we make use of that?</p>
+  <h3 class="sub-title">Finite fields revisited: primitive roots</h3>
+  <p>Let p be prime. We know &#8484;/p&#8484; is a finite field, with elements {0, 1, ..., p − 1}. We can define a new group over the non-zero numbers, &#8484;<sub>p</sub>* = {1, ..., p − 1}, under multiplication.</p>
+  <p>It can be shown that there is a special element <strong>g ∈ &#8484;<sub>p</sub></strong> such that <strong>every</strong> number a ∈ &#8484;<sub>p</sub>* is a power of g. So:</p>
+  <div class="formula">
+    <div class="formula-label">The group generated by g</div>
+    <div class="math">&#8484;<sub>p</sub>* = {g<sup>0</sup> = 1, g<sup>1</sup>, ..., g<sup>p−2</sup>}</div>
+  </div>
+  <p>The element g is called a <strong>primitive root</strong> (or <strong>generator</strong>) of &#8484;<sub>p</sub>.</p>
+  <h3 class="sub-title">The algorithm</h3>
+  <p>Let p be prime and g a generator for &#8484;<sub>p</sub>*. Both values are publicly known.</p>
+  <div class="flow">
+    <span class="flow-step">Alice picks a &lt; p</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Computes X = g<sup>a</sup> mod p</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Sends X to Bob</span>
+  </div>
+  <div class="flow">
+    <span class="flow-step">Bob picks b &lt; p</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Computes Y = g<sup>b</sup> mod p</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Sends Y to Alice</span>
+  </div>
+  <ol class="steps">
+    <li>Alice chooses a random private value <strong>a &lt; p</strong> and computes <strong>X = g<sup>a</sup> mod p</strong>, then sends X to Bob.</li>
+    <li>Bob chooses a random private value <strong>b &lt; p</strong> and computes <strong>Y = g<sup>b</sup> mod p</strong>, then sends Y to Alice.</li>
+    <li>Alice computes <strong>k = Y<sup>a</sup> mod p</strong>.</li>
+    <li>Bob computes <strong>k = X<sup>b</sup> mod p</strong>.</li>
+  </ol>
+  <p>Both sides get the <em>same</em> k, because the exponents commute:</p>
+  <div class="formula">
+    <div class="formula-label">Why both keys match</div>
+    <div class="math">Y<sup>a</sup> mod p = (g<sup>b</sup>)<sup>a</sup> = g<sup>ab</sup> = (g<sup>a</sup>)<sup>b</sup> = X<sup>b</sup> mod p</div>
+  </div>
+  <p>Here a and b are the private keys; X and Y are the public keys. An adversary who only passively observes the exchange knows p, g, X and Y, and is forced to solve a discrete logarithm (find b such that Y = g<sup>b</sup> mod p) to get the key. For large primes this is computationally infeasible. So DH allows key establishment over an insecure channel — <strong>under a passive attacker</strong>.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Why the shared k is secret:</strong> the eavesdropper sees g, p, g<sup>a</sup> and g<sup>b</sup>, but recovering g<sup>ab</sup> from those values is exactly the hard problem. This is sometimes called the computational Diffie-Hellman assumption.</div></div>
+</section>
+
+<section class="guide-section" id="dh-mitm" data-title="Person-in-the-Middle">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Person-in-the-Middle Attack</h2>
+  </div>
+  <p class="section-kicker">DH has no idea who it is talking to. An active attacker can sit in the middle and hold two separate keys.</p>
+  <p>When the attacker is <strong>active</strong>, standard DH key exchange is not secure. The attacker, Mallory, does not just listen — she <strong>intercepts and replaces</strong> messages, running two independent key exchanges at once.</p>
+  <div class="flow">
+    <span class="flow-step">Alice → X</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Mallory intercepts</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Bob sees X′</span>
+  </div>
+  <div class="flow">
+    <span class="flow-step">Bob → Y</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Mallory intercepts</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Alice sees Y′</span>
+  </div>
+  <ol class="steps">
+    <li>Mallory chooses random private values <strong>c &lt; p</strong> and <strong>d &lt; p</strong>, and computes public values <strong>X′ = g<sup>c</sup> mod p</strong> and <strong>Y′ = g<sup>d</sup> mod p</strong>.</li>
+    <li>When Alice sends X, Mallory keeps it and sends <strong>X′</strong> to Bob instead.</li>
+    <li>When Bob sends Y, Mallory keeps it and sends <strong>Y′</strong> to Alice instead.</li>
+    <li>Alice computes <strong>k<sub>1</sub> = (Y′)<sup>a</sup> mod p</strong>; Bob computes <strong>k<sub>2</sub> = (X′)<sup>b</sup> mod p</strong>.</li>
+    <li>Mallory computes <strong>k<sub>1</sub> = X<sup>c</sup> mod p</strong> (shared with Alice) and <strong>k<sub>2</sub> = Y<sup>d</sup> mod p</strong> (shared with Bob).</li>
+  </ol>
+  <p>Now Alice and Bob each think they share a key with the other, but in reality Alice shares k<sub>1</sub> with Mallory and Bob shares k<sub>2</sub> with Mallory. Mallory can decrypt, read, modify and re-encrypt every future message — a person-in-the-middle attack.</p>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Root cause:</strong> the protocol does <strong>not authenticate the participants</strong>. DH proves you agreed on a key, not who you agreed with.</div></div>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Solution:</strong> use <strong>digital signatures</strong> and <strong>public-key certificates</strong> — each party signs their public key with their private key, and the other party verifies it with the corresponding public key, ensuring the exchanged keys have not been tampered with. This is the <strong>signed Diffie-Hellman</strong> variant, and we discuss signatures and certificates in the next lecture.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> DH is secure against a passive attacker but not an active one. Why can a signature fix this, when the key exchange maths itself is unchanged? (Because it binds each public key to an authenticated identity.)</div></div>
+</section>
+
+<section class="guide-section" id="ecc-intro" data-title="Elliptic Curves: The Idea">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Elliptic Curve Cryptography: Same Idea, Different Group</h2>
+  </div>
+  <p class="section-kicker">Replace modular multiplication with adding points on a curve and you get the same trapdoor with much shorter keys. This topic is non-examinable — for information only.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Scope note:</strong> the following is a very brief introduction to elliptic curve cryptography (ECC). It is marked <strong>non-examinable (for information only)</strong> in the slides, but it is worth understanding because it is where modern cryptography is heading.</div></div>
+  <p>Our schemes so far are defined for rings and fields built with the help of the mod operation — that is, modular arithmetic. <strong>Elliptic curves</strong> E(a, b) are defined by equations of the form:</p>
+  <div class="formula">
+    <div class="formula-label">An elliptic curve</div>
+    <div class="math">y<sup>2</sup> = x<sup>3</sup> + ax + b</div>
+  </div>
+  <p>When defined over a finite field, an elliptic curve produces a <strong>finite set of points</strong>. A <strong>group</strong> can be defined over these points using <strong>point addition</strong>. This lets us define a <strong>Discrete Logarithm Problem for elliptic curves (ECDLP)</strong>, and ECDLP is <strong>harder per bit</strong> than the classical DLP.</p>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why that matters:</strong> because the problem is harder per bit, ECC achieves the <strong>same security with much shorter keys</strong>. Typical ECC keys are <strong>256 bits</strong> (very common) or <strong>384 bits</strong> (high security) — far smaller than RSA's 2048+ bits.</div></div>
+  <h3 class="sub-title">Key transition: classical DH versus ECC</h3>
+  <div class="compare">
+    <div class="compare-col a">
+      <h3>Diffie-Hellman (classical)</h3>
+      <ul>
+        <li><strong>Group:</strong> &#8484;<sub>p</sub>*</li>
+        <li><strong>Operation:</strong> multiplication mod p</li>
+        <li><strong>Computation:</strong> a<sup>k</sup> mod p (repeated multiplication)</li>
+        <li><strong>Security from:</strong> the Discrete Logarithm Problem</li>
+      </ul>
+    </div>
+    <div class="compare-col b">
+      <h3>Elliptic Curve Cryptography</h3>
+      <ul>
+        <li><strong>Elements:</strong> points on a curve over a finite field &#8484;<sub>p</sub></li>
+        <li><strong>Operation:</strong> point addition, kP = P + P + ⋯ + P</li>
+        <li><strong>Hard problem:</strong> given P and Q = kP, recover k</li>
+        <li><strong>Note:</strong> all arithmetic is done modulo p (implicitly)</li>
+      </ul>
+    </div>
+  </div>
+  <h3 class="sub-title">Geometric intuition</h3>
+  <p>Consider E(1, 1), which is y<sup>2</sup> = x<sup>3</sup> + x + 1. We define <strong>O, the point at infinity</strong>, which acts as the identity element — an imaginary point added to make the maths complete.</p>
+  <p><strong>Point addition</strong> works like this:</p>
+  <ol class="steps">
+    <li>Take two points <strong>P</strong> and <strong>Q</strong> on the curve.</li>
+    <li>Draw the <strong>line through P and Q</strong>.</li>
+    <li>The line intersects the curve at a <strong>third point</strong>.</li>
+    <li><strong>Reflect</strong> that third point across the x-axis. The result is <strong>P + Q</strong>.</li>
+  </ol>
+  <p>Two key properties follow:</p>
+  <ul>
+    <li>The <strong>negative of a point</strong> is −P = (x, −y) — a reflection across the x-axis.</li>
+    <li><strong>Three points on a line sum to zero:</strong> P + Q + R = 0.</li>
+  </ul>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Special case — doubling:</strong> what if P = Q? Then use the <strong>tangent line at P</strong>. The tangent intersects the curve at another point; reflect it across the x-axis and you get <strong>2P</strong>. This is how repeated addition (scalar multiplication) is defined.</div></div>
+</section>
+
+<section class="guide-section" id="ecc-fields" data-title="Elliptic Curves over Fields">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Elliptic Curves over Finite Fields</h2>
+  </div>
+  <p class="section-kicker">Modular arithmetic makes the smooth curve become a scattered set of points — and polynomials can replace numbers entirely.</p>
+  <h3 class="sub-title">Curves over &#8484;<sub>p</sub></h3>
+  <p>We now define elliptic curves over a finite field &#8484;<sub>p</sub>. The curve equation becomes E<sub>p</sub>(a, b):</p>
+  <div class="formula">
+    <div class="formula-label">Elliptic curve over &#8484;<sub>p</sub></div>
+    <div class="math">y<sup>2</sup> = x<sup>3</sup> + ax + b (mod p)</div>
+  </div>
+  <p><strong>Example curve over &#8484;<sub>23</sub>:</strong> consider E<sub>23</sub>(1, 1), that is y<sup>2</sup> = x<sup>3</sup> + x + 1 (mod 23). Check whether the point (x, y) = (9, 7) lies on the curve:</p>
+  <div class="formula">
+    <div class="formula-label">Testing a point</div>
+    <div class="math">7<sup>2</sup> ≡ 9<sup>3</sup> + 1·9 + 1 (mod 23)<br>49 ≡ 739 (mod 23)<br>3 ≡ 3 ✓</div>
+  </div>
+  <p>Since both sides agree, (9, 7) is on the curve. The curve consists of <strong>all pairs (x, y)</strong> satisfying the equation, <strong>plus O</strong>, the point at infinity. This forms a finite set of points.</p>
+  <h3 class="sub-title">Curves over a binary field GF(2<sup>m</sup>)</h3>
+  <p>Previously we used prime fields &#8484;<sub>p</sub>. Now we define curves over <strong>binary fields GF(2<sup>m</sup>)</strong> — we did something similar in AES. Here the elements are <strong>polynomials with coefficients in GF(2)</strong>, i.e. bit strings, and arithmetic is done <strong>modulo an irreducible polynomial</strong>.</p>
+  <div class="formula">
+    <div class="formula-label">Curve equation over GF(2<sup>m</sup>)</div>
+    <div class="math">y<sup>2</sup> + xy = x<sup>3</sup> + ax<sup>2</sup> + b</div>
+  </div>
+  <p>Addition and multiplication happen in GF(2<sup>m</sup>). Let g be a <strong>primitive element (generator)</strong> of GF(2<sup>4</sup>). Every non-zero field element can be expressed as a power of g:</p>
+  <div class="formula">
+    <div class="formula-label">The multiplicative group GF(2<sup>4</sup>)*</div>
+    <div class="math">GF(2<sup>4</sup>)* = {g<sup>0</sup>, g<sup>1</sup>, g<sup>2</sup>, ..., g<sup>14</sup>}</div>
+  </div>
+  <h3 class="sub-title">Example curve and point over GF(2<sup>4</sup>)</h3>
+  <p>Consider the curve y<sup>2</sup> + xy = x<sup>3</sup> + ax<sup>2</sup> + b where a = g<sup>4</sup> and b = 1. Test the point (x, y) = (g<sup>5</sup>, g<sup>3</sup>):</p>
+  <div class="formula">
+    <div class="formula-label">Verification</div>
+    <div class="math">y<sup>2</sup> + xy = x<sup>3</sup> + ax<sup>2</sup> + b<br>(g<sup>3</sup>)<sup>2</sup> + g<sup>5</sup>g<sup>3</sup> = (g<sup>5</sup>)<sup>3</sup> + g<sup>4</sup>(g<sup>5</sup>)<sup>2</sup> + 1<br>g<sup>6</sup> + g<sup>8</sup> = g<sup>15</sup> + g<sup>14</sup> + 1</div>
+  </div>
+  <p>Converting each side to binary and remembering that addition in GF(2) is XOR:</p>
+  <div class="formula">
+    <div class="formula-label">In bits</div>
+    <div class="math">1100 + 0101 = 0001 + 1001 + 001<br>1001 = 1001 ✓</div>
+  </div>
+  <p>Both sides equal 1001, so the point (x, y) = (g<sup>5</sup>, g<sup>3</sup>) is on the curve.</p>
+  <h3 class="sub-title">Properties of GF(2<sup>4</sup>)</h3>
+  <p>We select f(x) = x<sup>4</sup> + x + 1 as the <strong>irreducible polynomial</strong> and g as 0010 (that is, g = x). Now we can develop powers of g. For example, to calculate g<sup>4</sup> which is x<sup>4</sup>: since x<sup>4</sup> is a higher degree than the largest polynomial supported by 4 bits (which is x<sup>3</sup>), we reduce it modulo the irreducible polynomial.</p>
+  <div class="formula">
+    <div class="formula-label">Reducing x<sup>4</sup></div>
+    <div class="math">x<sup>4</sup> = x<sup>4</sup> mod (x<sup>4</sup> + x + 1)<br>= x<sup>4</sup> − (x<sup>4</sup> + x + 1) = x<sup>4</sup> + (x<sup>4</sup> + x + 1) = x + 1<br>so g<sup>4</sup> = 0011</div>
+  </div>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Two GF(2) rules to remember:</strong> (1) in GF(2), addition and subtraction are the same thing — both are <strong>XOR</strong>; (2) adding the same element twice gives zero (a + a = 0). That is why x<sup>4</sup> − (x<sup>4</sup> + x + 1) and x<sup>4</sup> + (x<sup>4</sup> + x + 1) give the same answer, x + 1.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Using g = 0010 and reduction by x<sup>4</sup> + x + 1, what is g<sup>5</sup>? (Multiply g<sup>4</sup> = 0011 by g = 0010: x(x + 1) = x<sup>2</sup> + x = 0110.)</div></div>
+</section>
+
+<section class="guide-section" id="ecc-crypto" data-title="ECC in Practice">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">ECC in Practice: ECDLP, ECDH and EC ElGamal</h2>
+  </div>
+  <p class="section-kicker">The same three tricks — hard problem, key exchange, encryption — now played on a group of curve points.</p>
+  <h3 class="sub-title">The elliptic curve discrete logarithm problem</h3>
+  <p>Consider the equation Q = kP, where Q and P are points in E<sub>p</sub>(a, b) and k &lt; p. It is hard to determine k given P and Q — this is the <strong>discrete logarithm problem for elliptic curves</strong>.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Worked example:</strong> consider the group E<sub>23</sub>(9, 17), defined by y<sup>2</sup> mod 23 = (x<sup>3</sup> + 9x + 17) mod 23. Find the discrete logarithm k of Q = (4, 5) to base P = (16, 5). The only way is brute force:<br>P = (16, 5) ⇒ 2P = (20, 20) ⇒ 3P = (14, 14) ⇒ 4P = (19, 20) ⇒ 5P = (13, 10) ⇒ 6P = (7, 3) ⇒ 7P = (8, 7) ⇒ 8P = (12, 17) ⇒ 9P = (4, 5). Since 9P = Q, <strong>k = 9</strong>.</div></div>
+  <p>In practice k would be very large, so brute force is infeasible. That hardness is the security of ECC.</p>
+  <h3 class="sub-title">Elliptic Curve Diffie-Hellman (ECDH)</h3>
+  <p>Both users A and B — and any attacker — know the system-wide public parameters a, b, q, G and n. Here <strong>G is a base point (generator)</strong> on the curve, and <strong>n is the order of G</strong>, meaning nG = O (usually n is chosen to be a large prime).</p>
+  <ol class="steps">
+    <li>Each user computes a public key by scalar multiplication: <strong>P<sub>A</sub> = n<sub>A</sub> × G</strong> and <strong>P<sub>B</sub> = n<sub>B</sub> × G</strong>. This scalar multiplication is efficient.</li>
+    <li>The private keys <strong>n<sub>A</sub></strong> and <strong>n<sub>B</sub></strong> are kept secret.</li>
+    <li>Even knowing P<sub>A</sub> and G, an attacker cannot compute n<sub>A</sub> — that is the ECDLP.</li>
+    <li>Both parties compute the same shared key:
+      <div class="formula">
+        <div class="formula-label">ECDH shared secret</div>
+        <div class="math">n<sub>A</sub> × P<sub>B</sub> = n<sub>A</sub> × (n<sub>B</sub> × G) = n<sub>B</sub> × (n<sub>A</sub> × G) = n<sub>B</sub> × P<sub>A</sub></div>
+      </div>
+    </li>
+  </ol>
+  <p>Security relies on the hardness of the Elliptic Curve Discrete Logarithm Problem.</p>
+  <h3 class="sub-title">EC ElGamal encryption</h3>
+  <p><strong>Public parameters:</strong> an elliptic curve E<sub>q</sub>(a, b), a generator point G with large order n, and the message encoded as a curve point P<sub>m</sub>.</p>
+  <div class="grid grid-2">
+    <div class="card">
+      <h3 class="card-title">👩 Alice (sender)</h3>
+      <ol class="steps">
+        <li>Select private key n<sub>A</sub> where n<sub>A</sub> &lt; n.</li>
+        <li>Compute public key P<sub>A</sub> = n<sub>A</sub> × G.</li>
+        <li>Choose a random integer k (new for each message).</li>
+        <li>Send ciphertext: <strong>C<sub>m</sub> = {kG, P<sub>m</sub> + kP<sub>B</sub>}</strong>.</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h3 class="card-title">👨 Bob (receiver)</h3>
+      <ol class="steps">
+        <li>Select private key n<sub>B</sub> where n<sub>B</sub> &lt; n.</li>
+        <li>Compute public key P<sub>B</sub> = n<sub>B</sub> × G (shared publicly).</li>
+        <li>Receive C<sub>m</sub> = {kG, P<sub>m</sub> + kP<sub>B</sub>}.</li>
+        <li>Recover: <strong>P<sub>m</sub> = (P<sub>m</sub> + kP<sub>B</sub>) − n<sub>B</sub> × (kG)</strong>.</li>
+      </ol>
+    </div>
+  </div>
+  <p>Here kP<sub>B</sub> acts as a <strong>one-time mask</strong> on P<sub>m</sub> — the embedded ECDH shared secret. It works because n<sub>B</sub> × (kG) = k × (n<sub>B</sub>G) = kP<sub>B</sub>, so the mask cancels out.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Why k must be random and fresh each time:</strong> reusing k for two different messages leaks information. An attacker can XOR the two ciphertexts and eliminate the mask, exposing the relationship between the messages. A fresh k per message prevents this.</div></div>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Worked example:</strong> global parameters E<sub>257</sub>(0, −4): y<sup>2</sup> = x<sup>3</sup> − 4, with G(2, 2). Bob's private key n<sub>B</sub> = 101 gives public key P<sub>B</sub> = 101(2, 2) = (197, 167). Alice wants to send P<sub>m</sub> = (112, 26) and chooses k = 41. She computes kG = 41(2, 2) = (136, 128) and kP<sub>B</sub> = 41(197, 167) = (68, 84), so P<sub>m</sub> + kP<sub>B</sub> = (112, 26) + (68, 84) = (246, 174). She sends C<sub>m</sub> = {(136, 128), (246, 174)}. Bob recovers (246, 174) − 101(136, 128) = (246, 174) − (68, 84) = (112, 26) = P<sub>m</sub>.</div></div>
+  <h3 class="sub-title">Security of ECC and key sizes</h3>
+  <p>The security of ECC depends on how difficult it is to determine k given kP — the elliptic curve logarithm problem. Comparison tables of algorithms show <strong>comparable key sizes in terms of the computational effort needed for cryptanalysis</strong>. The headline point to remember is the <strong>key length difference between RSA and ECC</strong>: to reach the same security level, ECC needs far fewer bits than RSA.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Property</th><th>RSA</th><th>ECC</th></tr></thead>
+      <tbody>
+        <tr><td>Hard problem</td><td>Factoring / e<sup>th</sup> roots</td><td>Elliptic curve discrete log</td></tr>
+        <tr><td>Typical key size</td><td>2048 bits and more</td><td>256 bits (common), 384 bits (high security)</td></tr>
+        <tr><td>Hardness per bit</td><td>Lower</td><td>Higher — ECDLP is harder per bit</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="guide-section" id="pqc" data-title="Post-Quantum Cryptography">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Post-Quantum Cryptography</h2>
+  </div>
+  <p class="section-kicker">Quantum computers break asymmetric crypto outright and merely weaken symmetric crypto — so we halve the damage by doubling key sizes and design new algorithms.</p>
+  <h3 class="sub-title">Breaking asymmetric cryptography</h3>
+  <ul>
+    <li><strong>Shor's algorithm</strong> can efficiently <strong>factor large numbers</strong> and <strong>compute discrete logarithms</strong>.</li>
+    <li>Therefore <strong>RSA, Diffie-Hellman key exchange and ECC will all be vulnerable</strong> once a sufficiently powerful quantum computer exists.</li>
+  </ul>
+  <h3 class="sub-title">Symmetric cryptography is more resilient</h3>
+  <ul>
+    <li><strong>Grover's algorithm</strong> provides only a <strong>quadratic speedup</strong> for brute-forcing the keys of symmetric ciphers.</li>
+    <li>So a symmetric key's effective security level is <strong>halved</strong>: a 256-bit key would offer security comparable to a 128-bit key against a quantum adversary.</li>
+    <li>The solution is <strong>doubling key sizes</strong>.</li>
+  </ul>
+  <div class="compare">
+    <div class="compare-col a">
+      <h3>Asymmetric under quantum attack</h3>
+      <ul>
+        <li>Broken by <strong>Shor's algorithm</strong>.</li>
+        <li>RSA, DH and ECC all vulnerable.</li>
+        <li>No easy fix by enlarging keys.</li>
+      </ul>
+    </div>
+    <div class="compare-col b">
+      <h3>Symmetric under quantum attack</h3>
+      <ul>
+        <li>Weakened (not broken) by <strong>Grover's algorithm</strong>.</li>
+        <li>Effective security is halved.</li>
+        <li>Fix: <strong>double the key length</strong>.</li>
+      </ul>
+    </div>
+  </div>
+  <h3 class="sub-title">Post-quantum cryptography (PQC)</h3>
+  <p>PQC focuses on developing algorithms that remain secure even in the presence of quantum computational power. Key families include:</p>
+  <div class="grid grid-3">
+    <div class="card">
+      <h3 class="card-title">🧱 Lattice-based</h3>
+      <p>Based on the hardness of problems related to <strong>lattice structures in high-dimensional spaces</strong>.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">🧮 Code-based</h3>
+      <p>Relies on the hardness of <strong>decoding random linear codes</strong>.</p>
+    </div>
+    <div class="card">
+      <h3 class="card-title">#️⃣ Hash-based</h3>
+      <p>Leverages the <strong>security properties of hash functions</strong> for cryptographic tasks.</p>
+    </div>
+  </div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>Shor</strong> <em>shatters</em> asymmetric crypto; <strong>Grover</strong> only <em>halves</em> symmetric crypto. "Shor = shatter, Grover = halve."</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A 128-bit symmetric key would have how much effective security against a quantum adversary? (About 64 bits — so you would double it to 256 bits.)</div></div>
+</section>
+
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways">
+    <div class="takeaway"><span class="tk-num">1</span><p><strong>Public-key (asymmetric) cryptography uses two keys:</strong> a public key anyone may use and a private key only the owner holds. It is built on mathematical problems with special properties — but there is <strong>no proof</strong> they are hard.</p></div>
+    <div class="takeaway"><span class="tk-num">2</span><p><strong>Two directions of trust:</strong> encrypt with the public key and decrypt with the private key for <strong>confidentiality</strong>; encrypt with the private key and decrypt with the public key for <strong>origin authentication</strong> and digital signatures.</p></div>
+    <div class="takeaway"><span class="tk-num">3</span><p><strong>RSA and Elliptic Curve do all three jobs</strong> (encryption, signatures, key exchange); <strong>Diffie-Hellman only does key exchange</strong>; <strong>DSS only signs</strong>.</p></div>
+    <div class="takeaway"><span class="tk-num">4</span><p><strong>A trapdoor one-way function</strong> is easy forwards, infeasible to reverse, and easy to reverse with the trapdoor. The classic candidates are the <strong>Discrete Logarithm Problem</strong> and the <strong>RSA problem</strong>.</p></div>
+    <div class="takeaway"><span class="tk-num">5</span><p><strong>Number theory toolkit:</strong> coprimes share only 1; &#8484;*<sub>n</sub> is the set of integers less than n coprime to n; Euler's totient ɸ counts them, and for n = p · q, <strong>ɸ(n) = (p − 1)(q − 1)</strong>.</p></div>
+    <div class="takeaway"><span class="tk-num">6</span><p><strong>RSA key generation:</strong> pick primes p ≠ q; n = p · q; ɸ(n) = (p − 1)(q − 1); choose e coprime to ɸ(n); find d = e<sup>−1</sup> mod ɸ(n). Public key (e, n), private key (d, n), then delete p, q and ɸ(n).</p></div>
+    <div class="takeaway"><span class="tk-num">7</span><p><strong>RSA encryption is c = m<sup>e</sup> mod n and decryption is m = c<sup>d</sup> mod n.</strong> It works over &#8484;/n&#8484; because exponentiation there is fast, while the e<sup>th</sup> root is infeasible. RSA only encrypts numbers, so characters must be mapped to numbers.</p></div>
+    <div class="takeaway"><span class="tk-num">8</span><p><strong>RSA security rests on</strong> the infeasibility of e<sup>th</sup> roots and of factoring n. Use very large, well-separated primes (2048+ bits), never implement RSA yourself, and note that Australia plans to phase it out by 2030.</p></div>
+    <div class="takeaway"><span class="tk-num">9</span><p><strong>Five attacks on RSA:</strong> brute force, mathematical (≈ factoring), timing, hardware fault-based, and chosen ciphertext (malleability).</p></div>
+    <div class="takeaway"><span class="tk-num">10</span><p><strong>Never use RSA without padding.</strong> Vanilla RSA is malleable (a CCA) and deterministic (a CPA, no semantic security). Padding with <strong>OAEP</strong> adds randomness and makes it secure.</p></div>
+    <div class="takeaway"><span class="tk-num">11</span><p><strong>Hybrid encryption</strong> uses RSA to share a fast symmetric key, then encrypts the message symmetrically. Almost all real public-key encryption works this way.</p></div>
+    <div class="takeaway"><span class="tk-num">12</span><p><strong>Diffie-Hellman</strong> lets two parties agree on a shared key using finite fields and the DLP. It is secure against passive attackers but not <strong>person-in-the-middle</strong> attacks; digital signatures and certificates (signed DH) fix that. <strong>ECC</strong> achieves the same security with far shorter keys, and <strong>Shor's algorithm</strong> threatens RSA, DH and ECC alike.</p></div>
+  </div>
+</section>
+
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools">
+    <button class="chip active" type="button" data-cat="all">All</button>
+    <button class="chip" type="button" data-cat="concept">Core concepts</button>
+    <button class="chip" type="button" data-cat="rsa">RSA &amp; attacks</button>
+    <button class="chip" type="button" data-cat="keyexchange">Key exchange</button>
+    <button class="chip" type="button" data-cat="ecc">Elliptic curves &amp; PQC</button>
+  </div>
+  <div class="terms">
+    <div class="term-card" data-cat="concept"><div class="term-name">Symmetric cryptography</div><div class="term-meaning">Cryptography that uses the same shared key for both encryption and decryption, relying on substitution (confusion) and permutation (diffusion) to secure data.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Asymmetric (public-key) cryptography</div><div class="term-meaning">Cryptography that uses two distinct but related keys — a public key and a private key — and relies on mathematical functions with special properties beyond substitution and permutation.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Public key</div><div class="term-meaning">The key that is distributed openly to everyone. Anyone may use it to encrypt a message to its owner, or to verify the owner's signature.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Private key</div><div class="term-meaning">The companion key that is kept secret. Only its owner can use it to decrypt a message encrypted with the public key, or to create a signature.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Confidentiality</div><div class="term-meaning">The security service achieved by encrypting with the receiver's public key and decrypting with their private key. Anyone can encrypt; only the receiver can decrypt.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Origin authentication</div><div class="term-meaning">The security service achieved by encrypting (signing) with the sender's private key and decrypting (verifying) with their public key. Anyone can verify, but only the true owner could have produced it.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Digital signature</div><div class="term-meaning">A key application of public-key cryptography in which a sender signs with their private key so that anyone with the public key can verify the origin of a message.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Trapdoor one-way function</div><div class="term-meaning">A function that is easy to compute in one direction but computationally difficult to invert without additional information called the trapdoor (the private key).</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Coprime</div><div class="term-meaning">Two numbers are coprime if they share only one divisor, and that divisor is 1. For example, 8 and 27.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Euler's totient function (ɸ)</div><div class="term-meaning">Also called the phi function, it counts the number of elements in &#8484;*<sub>n</sub>. When n = p · q with p ≠ q prime, ɸ(n) = (p − 1)(q − 1).</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Discrete Logarithm Problem (DLP)</div><div class="term-meaning">Given y, p and g satisfying y = g<sup>x</sup> mod p, where p is prime and g is a primitive root of p, find x. It is believed infeasible for large p.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">RSA problem</div><div class="term-meaning">Given c = m<sup>e</sup> mod n and the known values c, e and n, find m. It is equivalent in difficulty to taking an e<sup>th</sup> root modulo n.</div></div>
+    <div class="term-card" data-cat="rsa"><div class="term-name">Modulus (n)</div><div class="term-meaning">In RSA, the value n = p · q that both the public and private keys share. Its hardness to factor is what protects the scheme.</div></div>
+    <div class="term-card" data-cat="rsa"><div class="term-name">RSA</div><div class="term-meaning">The Rivest–Shamir–Adleman scheme, developed in 1977 at MIT. It encrypts plaintext in blocks with a binary value less than n, using c = m<sup>e</sup> mod n and m = c<sup>d</sup> mod n.</div></div>
+    <div class="term-card" data-cat="rsa"><div class="term-name">Malleability</div><div class="term-meaning">In RSA, the property that an attacker can modify a ciphertext in a predictable way so the decrypted plaintext changes predictably, without knowing the private key. It enables chosen ciphertext attacks.</div></div>
+    <div class="term-card" data-cat="rsa"><div class="term-name">Semantic security</div><div class="term-meaning">A cryptosystem is semantically secure when only a small amount of information about the plaintext can be extracted from the ciphertext. Textbook RSA lacks it because it has no randomness.</div></div>
+    <div class="term-card" data-cat="rsa"><div class="term-name">Chosen ciphertext attack (CCA)</div><div class="term-meaning">An attack where the adversary can get chosen ciphertexts decrypted. RSA's malleability makes unpadded RSA vulnerable to it.</div></div>
+    <div class="term-card" data-cat="rsa"><div class="term-name">Chosen plaintext attack (CPA)</div><div class="term-meaning">An attack where the adversary can encrypt likely messages and compare the results to a given ciphertext. RSA's determinism makes it vulnerable.</div></div>
+    <div class="term-card" data-cat="rsa"><div class="term-name">OAEP (Optimal Asymmetric Encryption Padding)</div><div class="term-meaning">The modern padding scheme for RSA. It adds randomness on encryption and removes it on decryption, giving semantic security.</div></div>
+    <div class="term-card" data-cat="rsa"><div class="term-name">Hybrid encryption</div><div class="term-meaning">Using public-key encryption to share a fast symmetric key, then encrypting the actual message symmetrically. Almost all public-key encryption in practice works this way.</div></div>
+    <div class="term-card" data-cat="keyexchange"><div class="term-name">Diffie-Hellman key exchange</div><div class="term-meaning">The first published public-key algorithm (1976). It lets two parties agree on a shared secret over an insecure channel using finite fields and the DLP, without ever transmitting the secret.</div></div>
+    <div class="term-card" data-cat="keyexchange"><div class="term-name">Primitive root (generator)</div><div class="term-meaning">An element g of &#8484;<sub>p</sub> such that every non-zero element of the field is a power of g. So &#8484;<sub>p</sub>* = {g<sup>0</sup>, g<sup>1</sup>, ..., g<sup>p−2</sup>}.</div></div>
+    <div class="term-card" data-cat="keyexchange"><div class="term-name">Finite field</div><div class="term-meaning">A field with a finite number of elements, such as &#8484;/p&#8484; for prime p. Diffie-Hellman is based on finite fields.</div></div>
+    <div class="term-card" data-cat="keyexchange"><div class="term-name">Person-in-the-middle attack</div><div class="term-meaning">An active attack on Diffie-Hellman where the adversary intercepts and replaces public values, running two separate key exchanges and establishing separate keys with each party.</div></div>
+    <div class="term-card" data-cat="keyexchange"><div class="term-name">Signed Diffie-Hellman</div><div class="term-meaning">A modified Diffie-Hellman exchange in which each party signs their public key with their private key, so the other party can verify authenticity and resist person-in-the-middle attacks.</div></div>
+    <div class="term-card" data-cat="ecc"><div class="term-name">Elliptic curve</div><div class="term-meaning">A curve defined by y<sup>2</sup> = x<sup>3</sup> + ax + b. Over a finite field it yields a finite set of points on which a group can be defined using point addition.</div></div>
+    <div class="term-card" data-cat="ecc"><div class="term-name">Point at infinity (O)</div><div class="term-meaning">The imaginary identity element of the elliptic curve group, added so that three collinear points sum to zero and the group is complete.</div></div>
+    <div class="term-card" data-cat="ecc"><div class="term-name">Point addition</div><div class="term-meaning">The elliptic curve group operation. To add P and Q, draw the line through them, find the third intersection with the curve, and reflect it across the x-axis. If P = Q, use the tangent at P to get 2P.</div></div>
+    <div class="term-card" data-cat="ecc"><div class="term-name">ECDLP</div><div class="term-meaning">The Elliptic Curve Discrete Logarithm Problem: given points P and Q = kP, recover k. It is harder per bit than the classical DLP, which is why ECC keys are shorter.</div></div>
+    <div class="term-card" data-cat="ecc"><div class="term-name">ECDH</div><div class="term-meaning">Elliptic Curve Diffie-Hellman: the curve-based analogue of DH, where public keys are P<sub>A</sub> = n<sub>A</sub> × G and P<sub>B</sub> = n<sub>B</sub> × G, and both sides compute the same shared secret.</div></div>
+    <div class="term-card" data-cat="ecc"><div class="term-name">EC ElGamal</div><div class="term-meaning">An elliptic curve encryption scheme in which the ciphertext is C<sub>m</sub> = {kG, P<sub>m</sub> + kP<sub>B</sub>}, with kP<sub>B</sub> acting as a one-time mask that Bob can cancel using his private key.</div></div>
+    <div class="term-card" data-cat="ecc"><div class="term-name">Post-quantum cryptography (PQC)</div><div class="term-meaning">Algorithms designed to remain secure against quantum computers. Families include lattice-based, code-based and hash-based cryptography.</div></div>
+  </div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+  <article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">How does public-key cryptography differ from symmetric cryptography, and why is it also called asymmetric cryptography?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Symmetric cryptography uses one shared key for both encryption and decryption, relying on substitution (confusion) and permutation (diffusion). Public-key cryptography uses two distinct but related keys: each participant has a public key (distributed openly) and a private key (kept secret). Anyone may encrypt with the receiver's public key, but only the receiver — who holds the private key — can decrypt. Because the two keys differ, it is also called asymmetric cryptography.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Contrast confidentiality and origin authentication in public-key cryptography. Which key does what in each case?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> For confidentiality, encrypt with the receiver's public key and decrypt with the receiver's private key: anyone can encrypt, but only the receiver can decrypt. For origin authentication, encrypt (sign) with the sender's private key and decrypt (verify) with the sender's public key: anyone can verify, but only the true owner could have created it. In practice we do not use the same key pair for both purposes — separate keys are used.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">Which public-key algorithms can do encryption/decryption, digital signatures and key exchange? Give the table from memory.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> RSA: yes to all three. Elliptic Curve: yes to all three. Diffie-Hellman: key exchange only (no encryption, no signatures). DSS (Digital Signature Standard): digital signature only (no encryption, no key exchange).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">Define a trapdoor one-way function and state the two classic trapdoor candidate problems with their equations.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> A trapdoor one-way function is easy to compute forwards but infeasible to invert without extra information (the trapdoor). Formally, Y = f<sub>k</sub>(X) is easy, X = f<sub>k</sub><sup>−1</sup>(Y) is easy if k is known, and infeasible if k is unknown. The two classic problems are the Discrete Logarithm Problem — given y, p, g with y = g<sup>x</sup> mod p, find x — and the RSA problem — given c = m<sup>e</sup> mod n and known c, e, n, find m. Both become easy with the private key.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">What does &#8484;*<sub>n</sub> mean, what is Euler's totient function, and how do you compute ɸ(n) when n is a product of two distinct primes?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> &#8484;*<sub>n</sub> is the set of all non-negative integers less than n that are coprime to n; it forms an Abelian group under multiplication. Euler's totient function ɸ counts the number of elements in &#8484;*<sub>n</sub>. For example &#8484;*<sub>12</sub> = {1, 5, 7, 11}, so ɸ(12) = 4. When n = p · q with p and q distinct primes, ɸ(n) = (p − 1)(q − 1).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">Generate RSA keys for p = 7 and q = 11 with e = 13. Give n, ɸ(n), d, the public key and the private key.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> n = p · q = 7 × 11 = 77. ɸ(n) = (7 − 1)(11 − 1) = 6 × 10 = 60. Choose e = 13 (less than 60 and coprime with it). Find d such that 13d mod 60 = 1: d = 37 (since 13 × 37 = 481 = 8 × 60 + 1). Public key (e, n) = (13, 77); private key (d, n) = (37, 77). Then delete p, q and ɸ(n).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">Using p = 7, q = 11, e = 13, encrypt the plaintext m = 3 and then decrypt it.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Encryption: c = m<sup>e</sup> mod n = 3<sup>13</sup> mod 77 = 38. Decryption: m = c<sup>d</sup> mod n = 38<sup>37</sup> mod 77 = 3. The plaintext comes back exactly. Note that RSA can only encrypt numbers, so characters must be mapped to numbers first.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">For p = 11, q = 17 and e = 7, find the ciphertext for plaintext M = 88. (From the practice quiz.)</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> n = p · q = 11 × 17 = 187. ɸ(n) = (11 − 1)(17 − 1) = 160 (we do not need it here, since e is given, but note e &lt; ɸ(n)). Encrypt: C = M<sup>e</sup> mod n = 88<sup>7</sup> mod 187 = 11. So the ciphertext is 11.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">In an RSA system the public key is e = 31, n = 3599. What is the private key d? (From the practice quiz.)</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Factor n = 3599 into p = 59 and q = 61 (n = pq). Then ɸ(n) = (59 − 1)(61 − 1) = 58 × 60 = 3480. We need ed ≡ 1 mod ɸ(n), i.e. 31d ≡ 1 mod 3480. Checking the options, 31 × 3031 mod 3480 = 1, so <strong>d = 3031</strong>. (For comparison, 31 × 2412 mod 3480 = 1692, which is not 1.)</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">State the five possible approaches to attacking RSA, and explain why timing and hardware fault attacks are different in kind from the others.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) Brute force — trying all private keys, feasible only for small keys. (2) Mathematical attacks — all equivalent in effort to factoring n. (3) Timing attacks — depend on the running time of the decryption algorithm. (4) Hardware fault-based attacks — induce faults in the processor generating signatures. (5) Chosen ciphertext attacks — exploit properties like malleability. Timing and hardware fault attacks are side-channel attacks: they exploit how the implementation behaves physically, not weaknesses in the underlying mathematics.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">Explain RSA malleability with the c′ = c · 2<sup>e</sup> mod n example, and explain why padding is needed.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Malleability means an attacker can modify a ciphertext so the decrypted plaintext changes predictably. Eve intercepts c, computes c′ ≡ c · 2<sup>e</sup> mod n and gets the receiver to decrypt it, obtaining (c′)<sup>d</sup> ≡ (c · 2<sup>e</sup>)<sup>d</sup> ≡ 2m. Because the result is valid-looking rather than random, the receiver cannot detect the tampering, and Eve recovers m by dividing by 2. This is a chosen ciphertext attack, and the scalar can be any number, not just 2. Padding is needed because vanilla RSA is also deterministic — the same plaintext always gives the same ciphertext — so it has no semantic security and is vulnerable to chosen plaintext attacks. Modern RSA uses OAEP padding, which adds randomness on encryption and removes it on decryption.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">Explain hybrid encryption: why it is used, and the four steps of the process.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Public-key cryptography is slow (RSA is 100–1000 times slower than AES) and needs a character-to-number mapping. Hybrid encryption uses RSA only to establish a fast symmetric key. Steps: (1) generate a random symmetric key k; (2) encrypt the actual message as c<sub>m</sub> = Enc<sub>k</sub>(m); (3) encrypt k as c<sub>k</sub> = Enc<sub>PK</sub>(k) using the receiver's public key; (4) send (c<sub>k</sub>, c<sub>m</sub>). The receiver decrypts c<sub>k</sub> with their private key to recover k, then decrypts c<sub>m</sub>. Almost all public-key encryption uses hybrid encryption in practice.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">Describe Diffie-Hellman key exchange, show that both parties compute the same key, and explain the person-in-the-middle attack and its fix.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> With prime p and generator g public, Alice picks a &lt; p and computes X = g<sup>a</sup> mod p; Bob picks b &lt; p and computes Y = g<sup>b</sup> mod p. They exchange X and Y. Alice computes Y<sup>a</sup> mod p and Bob computes X<sup>b</sup> mod p. These are equal because Y<sup>a</sup> = (g<sup>b</sup>)<sup>a</sup> = g<sup>ab</sup> = (g<sup>a</sup>)<sup>b</sup> = X<sup>b</sup>, so both share k. A passive attacker knows p, g, X, Y and must solve the DLP, which is infeasible for large primes. But an active person-in-the-middle attacker chooses c and d, computes X′ = g<sup>c</sup> and Y′ = g<sup>d</sup>, sends X′ to Bob and Y′ to Alice, and establishes separate keys k<sub>1</sub> with Alice and k<sub>2</sub> with Bob. The protocol is vulnerable because it does not authenticate the participants. The fix is digital signatures and public-key certificates — signed Diffie-Hellman — where each party signs their public key so the other can verify authenticity.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+  <article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">Why do RSA and ECC need different key sizes for the same security, and how do Shor's and Grover's algorithms change the picture?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> RSA's security rests on the difficulty of factoring n and taking e<sup>th</sup> roots, so it needs very large keys (2048 bits and more). ECC rests on the Elliptic Curve Discrete Logarithm Problem, which is harder per bit than the classical DLP, so ECC achieves the same security with much shorter keys — typically 256 bits (very common) or 384 bits (high security). Quantum computing changes the picture: Shor's algorithm can efficiently factor large numbers and compute discrete logarithms, so RSA, Diffie-Hellman and ECC all become vulnerable. Symmetric cryptography is more resilient — Grover's algorithm gives only a quadratic speedup, halving the effective security of a symmetric key, so a 256-bit key is comparable to a 128-bit key and the fix is to double key sizes. Post-quantum cryptography develops lattice-based, code-based and hash-based algorithms that stay secure.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+</section>
+
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist">
+    <label class="check-item"><input type="checkbox"> I can explain how public-key cryptography differs from symmetric cryptography and why it is called asymmetric.</label>
+    <label class="check-item"><input type="checkbox"> I can describe confidentiality and origin authentication, and say which key is used for encryption and decryption in each.</label>
+    <label class="check-item"><input type="checkbox"> I can state which algorithms provide encryption, signatures and key exchange (RSA, Elliptic Curve, Diffie-Hellman, DSS).</label>
+    <label class="check-item"><input type="checkbox"> I can define a trapdoor one-way function and write the DLP and RSA problem equations.</label>
+    <label class="check-item"><input type="checkbox"> I can explain coprimes, &#8484;*<sub>n</sub>, Euler's totient, and why ɸ(n) = (p − 1)(q − 1) for two primes.</label>
+    <label class="check-item"><input type="checkbox"> I can carry out RSA key generation, encryption and decryption on small numbers (e.g. p = 7, q = 11, e = 13).</label>
+    <label class="check-item"><input type="checkbox"> I can explain why RSA works over &#8484;/n&#8484; and why it can only encrypt numbers smaller than n.</label>
+    <label class="check-item"><input type="checkbox"> I can explain the security of RSA and list its five attack families.</label>
+    <label class="check-item"><input type="checkbox"> I can explain malleability, semantic security, and why OAEP padding is essential.</label>
+    <label class="check-item"><input type="checkbox"> I can describe hybrid encryption and its four steps.</label>
+    <label class="check-item"><input type="checkbox"> I can walk through Diffie-Hellman, prove both sides get the same key, and explain the person-in-the-middle attack and its fix.</label>
+    <label class="check-item"><input type="checkbox"> I can outline ECC, ECDH and EC ElGamal, and explain how Shor's and Grover's algorithms affect asymmetric versus symmetric cryptography.</label>
+  </div>
+</section>
+  </main>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">&#8962; All guides</a>
+    <span class="spacer"></span>
+    <a href="../week_4/INFO3616_week4_study_guide.html">&#8592; Week 4</a>
+    <a href="../week_6/INFO3616_week6_study_guide.html">Week 6 &#8594;</a>
+  </div>
+  <p>INFO3616 Security Engineering &#183; Week 5 &#183; Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Theme ---------- */
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('info3616-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('info3616-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
+  }
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
+
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
+
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
+  function onScroll(){
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
+      });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
+  }
+
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'info3616-5-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
+  });
+
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
+      var shown = 0;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
+      });
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
+    });
+  });
+
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
+  function runSearch(){
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
+      });
+    }
+    suggest.classList.add('open');
+  }
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
+  }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'info3616-5-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
+})();
+</script>
+</body>
+</html>
