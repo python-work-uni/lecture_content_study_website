@@ -1,0 +1,565 @@
+================================================
+ELEC3609 Week 5 – Study Guide
+Client-Server Communication & Backend Development · 2025 Session
+================================================
+
+OVERVIEW
+--------
+This lecture has two halves. The first explains how clients and servers exchange data: the MIME type system, the XML and JSON data formats, the HTTP request-response protocol, and the HTTP headers that carry content negotiation, cookies, referrers and client identity. The second half moves to the backend: how to model data with UML entity-relationship diagrams (using the TIL social platform as a running example), how MVC and Django's MVT patterns organise code, and the development environment every backend developer needs — version control, Python packages, virtual environments and IDEs.
+
+--------
+STATS:
+------------------------------------------------
+Lectures|1
+Data Formats|XML, JSON
+HTTP Methods|GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD
+Cookie Flags|HttpOnly, Secure, SameSite
+Practice Questions|12
+
+------------------------------------------------
+SECTION 1: Client-Server Data Formats
+------------------------------------------------
+Client-server communication needs **a format and a way to transmit and receive data**. The lecture lists some general communication mechanisms:
+- **Sockets**
+- **Remote procedure calls (RPC)**
+- **Pipes**
+
+On the web, the format of the payload is identified by a **MIME type** (Multipurpose Internet Mail Extensions type). The MIME type determines the **file format and format contents**, and the standard list of MIME types is maintained by **IANA** (Internet Assigned Numbers Authority). The general shape is `type/subtype`.
+
+**Common MIME types:**
+
+| MIME Type | Meaning |
+| --- | --- |
+| `text/html` | Web page (HTML markup) |
+| `image/png` | Portable Network Graphics image |
+| `application/json` | Structured JSON data |
+| `text/css` | Cascading Style Sheets |
+
+💡 **Why It Matters:** MIME types are how a browser knows whether to render a response as a web page, treat it as an image, or hand it to JavaScript as data. A wrong or missing type causes the browser to misinterpret the response.
+
+------------------------------------------------
+SECTION 2: XML Basics, DOCTYPE & DTD
+------------------------------------------------
+**Extensible Markup Language (XML)** defines a set of rules for encoding documents. It is a **language for describing the rules of other languages** — XML lets us define **schemas** for tag-based languages, and a schema is a **contract for communication between client and server**.
+
+**XML is:**
+- A **markup language, not a programming language**.
+- **Human-readable** and **machine-readable**.
+- Designed to be **self-descriptive**.
+- Designed to **carry and transport data, not to display data**.
+
+### XML Terminology
+- **Markup** — elements that define the structure of the document, usually enclosed by `<` and `>` or by `&` and `;`.
+- **Content** — all the information between markup.
+- **Tag** — a type of markup beginning with `<` and ending with `>`, in three flavours:
+  - **start tag**: `<section>`
+  - **end tag**: `</section>`
+  - **empty-element tag**: `<img src="dog.jpg"/>`
+- **Attribute** — markup on a start tag or empty-element tag that defines key-value pairs about the element, e.g. `<img src="dog.jpg" alt="woof"/>`.
+
+### DOCTYPE and DTD
+To define which fields are allowed in an XML document, and in what structure, a **document type declaration (DOCTYPE)** is provided. The DOCTYPE identifies a **document type definition (DTD)**, which defines the fields and their structure. For the lecture's XML book example:
+
+```
+<!ELEMENT book (title , chapter+)>
+<!ELEMENT chapter (heading , paragraph*)>
+<!ELEMENT heading (#PCDATA)>
+<!ELEMENT paragraph (#PCDATA)>
+<!ATTLIST book
+          language CDATA #REQUIRED
+          author   CDATA #REQUIRED
+>
+```
+
+**DTD symbol quick reference:**
+
+| Symbol | Meaning |
+| --- | --- |
+| `+` | one or more (`chapter+` = at least one chapter) |
+| `*` | zero or more (`paragraph*` = any number of paragraphs) |
+| `?` | zero or one (optional) |
+| `#PCDATA` | parsable character data (raw text) |
+
+The `<!ATTLIST book ...>` line declares two **required** string (`CDATA`) attributes on `book`: `language` and `author`.
+
+⚠️ **Common Trap:** The XML DOCTYPE is not the same as the HTML DOCTYPE. Here it points to a DTD that enforces a strict structure; in HTML it selects the rendering mode.
+
+------------------------------------------------
+SECTION 3: JSON & XML vs JSON
+------------------------------------------------
+**JavaScript Object Notation (JSON)** is an open-standard format for representing data online. As the name suggests, it is **based on the representation of objects in JavaScript**. It is **language-independent** and supported by most programming languages.
+
+**JSON is typically used for:**
+- API requests and responses.
+- Serialization (turning data structures into a storable/transmittable string and back).
+- Configuration files.
+
+### XML vs JSON
+
+| Feature | XML | JSON |
+| --- | --- | --- |
+| Structure | Tag-based tree hierarchy | Key-value pairs and arrays |
+| Verbosity | High (closing tags required) | Low (compact syntax) |
+| Parsing overhead | Higher (requires a DOM/SAX parser) | Native JS object parsing (fast) |
+| Schema support | Strict DTD / XML Schema (XSD) | Optional (JSON Schema) |
+| Primary web use | Legacy systems, enterprise SOAP | Modern RESTful web APIs |
+
+🧠 **Memory Hook:** **XML is a suitcase** (heavy, labelled, formal); **JSON is a backpack** (light, compact, flexible). Both carry data, but JSON is the modern web's default.
+
+------------------------------------------------
+SECTION 4: HTTP Request-Response Model
+------------------------------------------------
+**Hypertext Transfer Protocol (HTTP)** is designed to allow communication between an **HTTP client** and an **HTTP server**. It works as a **request-response protocol**: a client makes a request, and the server responds, generally with a web page. HTTP is **stateless** — each request is independent unless state is added (for example, with cookies).
+
+**A request to `www.elec3609.com/index.html` looks roughly like:**
+
+```
+GET /index.html HTTP/1.1
+Host: www.elec3609.com
+...other headers...
+```
+
+**The server then sends a response:**
+
+```
+HTTP/1.1 200 OK
+Content-Type: text/html
+...other headers...
+
+<html> ... page body ... </html>
+```
+
+The response is then **rendered by a browser** to display the web page.
+
+💡 **Why It Matters:** Almost every web interaction is an HTTP request and response. Understanding the two-part message — headers plus body — is the foundation for working with APIs, cookies and authentication.
+
+------------------------------------------------
+SECTION 5: HTTP Methods & Semantics
+------------------------------------------------
+**HTTP methods** tell the server what the client wants to do. These are the most commonly used methods:
+
+- **GET** — used to request data about a specified resource.
+- **POST** — used to create a resource.
+- **PUT** — create/update a resource.
+- **PATCH** — partial modification of a resource.
+- **DELETE** — deletes the specified resource.
+- **OPTIONS** — returns the supported HTTP methods for this resource.
+- **HEAD** — equivalent to a GET request without the response body.
+
+The lecture stresses a design principle: **"Consistency is key."**
+
+Two properties describe a method's safety:
+
+- **Safe** — the method does not change the resource (a read).
+- **Idempotent** — calling the method multiple times produces the same result as calling it once.
+
+| Method | Description | Safe? | Idempotent? |
+| --- | --- | --- | --- |
+| **GET** | Retrieves resource data | Yes | Yes |
+| **POST** | Submits data / creates a resource | No | No |
+| **PUT** | Creates or replaces a resource | No | Yes |
+| **PATCH** | Performs partial modifications | No | No |
+| **DELETE** | Removes the specified resource | No | Yes |
+| **OPTIONS** | Queries the supported HTTP methods | Yes | Yes |
+| **HEAD** | GET returning no response body | Yes | Yes |
+
+⚠️ **Common Trap:** Repeating a POST can create **duplicate** resources, because POST is neither safe nor idempotent. PUT and DELETE, by contrast, can be repeated safely.
+
+------------------------------------------------
+SECTION 6: Key HTTP Headers
+------------------------------------------------
+Headers carry metadata alongside the request or response body.
+
+### Content Negotiation
+- **Request `Accept`** — indicates to the server which data types the client will accept in the response. A client can define **multiple** types it supports (for example `Accept: application/json`).
+- **Response `Content-Type`** — determines what type of data is contained in the response body. This is an **indication to the browser as to how it should interpret** the response (for example `Content-Type: text/html`).
+
+### Referer
+The **`Referer`** header is sent with requests made by a browser. It indicates to the server **the previous page the user was on**.
+
+Worked example from the lecture:
+- You go to `www.google.com` and search for "elec3609".
+- You click the link to `www.elec3609.com`.
+- The browser's request to `www.elec3609.com` includes a `Referer` header containing your previous address: `https://www.google.com/`.
+
+### User-Agent
+The **`User-Agent`** header tells the server **what type of software the client is using**. It typically includes:
+- Browser
+- Rendering engine
+- Operating system
+
+💡 **Why It Matters:** `Accept` and `Content-Type` are the two sides of content negotiation — the client says what it *can* read, the server says what it *did* send. `Referer` and `User-Agent` give the server context for analytics, security and compatibility decisions.
+
+------------------------------------------------
+SECTION 7: HTTP Cookies & Login Flow
+------------------------------------------------
+A **HTTP cookie** is a small piece of data, set by a website, which is **stored in the user's browser**. Browsers automatically include **all the cookies set by a server with every HTTP request sent to that server**.
+
+Two HTTP headers control cookies:
+- **Requests: `Cookie`**
+  - `Cookie: username=abc123; authToken=4f3e`
+- **Responses: `Set-Cookie`**
+  - `Set-Cookie: username=abc123`
+  - `Set-Cookie: authToken=4f3e`
+
+Cookies are often used for **tracking users and authentication**. A typical login flow:
+
+1. **User visits website for the first time** — no cookie.
+2. **User submits the login form** with username and password — still no cookie.
+3. **Server generates an authentication token (auth-tok)** and responds with `Set-Cookie: token=[auth-tok]`.
+4. **User visits the website again** — the client sends `Cookie: token=[auth-tok]`.
+5. **Server recognises the token** and knows the request came from that user.
+
+💡 **Why It Matters:** HTTP is stateless, so cookies are how the web remembers who you are between requests. Remove cookies and every request would look like a brand-new visitor.
+
+------------------------------------------------
+SECTION 8: Cookie Security Flags
+------------------------------------------------
+Because cookies carry sensitive session data, three flag attributes harden them:
+
+| Flag | Purpose | Protects Against |
+| --- | --- | --- |
+| **HttpOnly** | Blocks client-side JavaScript from reading the cookie | Cross-Site Scripting (XSS) session hijacking |
+| **Secure** | Sends the cookie only over encrypted HTTPS | Eavesdropping on plaintext traffic |
+| **SameSite** | Controls whether the cookie is sent on cross-site requests (`Strict`, `Lax`, `None`) | Cross-Site Request Forgery (CSRF) |
+
+🧠 **Memory Hook:** **H-S-S** = **H**ttpOnly (hide from scripts), **S**ecure (HTTPS only), **S**ameSite (stop cross-site sending). Together they lock down the three classic cookie attacks: XSS, snooping and CSRF.
+
+------------------------------------------------
+SECTION 9: Data Modelling & the TIL Case
+------------------------------------------------
+**Data modelling** is the process of **defining and analysing the data requirements of an information system**. The process involves three steps:
+1. Identifying the detailed system requirements.
+2. Normalising the entities.
+3. Writing the data model.
+
+The lecture uses **UML** to develop a formalised **entity-relationship diagram (ERD)** using **Crow's foot notation**.
+
+### Running Example: TIL ("Today I Learned")
+TIL is a social "Today I learned" platform. Its rough requirements:
+- A user can sign up with a **username and password**.
+- Users can make **posts**, consisting of:
+  - Subject
+  - Content
+  - Post date
+- Posts can be:
+  - **public** (visible to all users) or **private** (visible only to the creator).
+  - associated with **zero, one or more tags**.
+- Tags are **free-form text labels**, created dynamically when first used.
+
+💡 **Why It Matters:** The ERD is the bridge between a fuzzy product idea and a real database schema. Every table, key and relationship in the finished app traces back to this model.
+
+------------------------------------------------
+SECTION 10: Keys & Relationship Types
+------------------------------------------------
+### Models and Attributes
+A **model** describes the fields that hold information about a particular entity. Each attribute of a model has a designated **type**, such as:
+- String
+- Numeric
+- Boolean
+- Date/Time
+
+An **entity is represented by a single table** in a database. Each table should have an **`id` field** that uniquely identifies each row — the **primary key**. Each entity in an ERD can be considered a model.
+
+### Foreign Keys (One-to-Many)
+Models rarely exist in isolation; they have relationships with other models. A relationship to another model is expressed through a **foreign key (FK)**. A foreign key specifies a **one-to-many** relationship.
+
+**TIL example:** a Post can be associated with one User, so Posts contain a foreign key to their associated User.
+
+**Analogy:** a mother may have many children, but a child has only one mother — a classic one-to-many relationship.
+
+### Many-to-Many Relationships
+To achieve a **many-to-many** relationship, we typically use **intermediate tables** to express the relationship.
+
+**TIL example:** a Post can be associated with many Tags, and a Tag can be applied to many Posts.
+
+**Analogy:** an Author can write several Books, and a Book can be written by several Authors.
+
+**The TIL data model shape:**
+
+```
+USER (id PK, username, password)
+   |
+   | 1 : N
+   v
+POST (id PK, subject, content, post_date, user_id FK)
+   |
+   | M : N via intermediate table
+   v
+POST_TAG (post_id FK, tag_id FK)
+   ^
+   | M : N
+   |
+TAG (id PK, name)
+```
+
+✅ **Exam Tip:** One-to-many is expressed with a **foreign key on the "many" side**. Many-to-many **cannot** be expressed by a single key — it always needs an intermediate (junction) table holding foreign keys to both models.
+
+------------------------------------------------
+SECTION 11: MVC vs MVT Architecture
+------------------------------------------------
+A common way to structure web application code is the **Model-View-Controller (MVC)** architecture, which separates functionality into three responsibilities:
+- **Model** — handles the data.
+- **View** — renders data into views (usually HTML).
+- **Controller** — interprets requests and encapsulates business logic.
+
+Django uses a closely related pattern, **Model-View-Template (MVT)**:
+- **Model** — like MVC, handles the data and logic, and maintains a connection with the database.
+- **View** — works differently from the MVC view: here the view **accepts the requests and sends out the response**.
+- **Template** — the presentation layer, commonly coded in **HTML** or **DTL (Django Template Language)**.
+
+The naming can be confusing, so map the roles:
+
+| Responsibility | MVC name | Django MVT name |
+| --- | --- | --- |
+| Data and database | Model | Model |
+| Request handling / logic | Controller | **View** |
+| Presentation output | View | **Template** |
+
+⚠️ **Common Trap:** In Django MVT, the **View is the controller** and the **Template is the view**. If you read "view" in a Django context and assume MVC semantics, you will swap the request-handling and presentation roles.
+
+------------------------------------------------
+SECTION 12: Version Control Systems
+------------------------------------------------
+A **version control system (VCS)** helps keep track of changes to a file or files. It prevents the classic file-naming mess:
+
+```
+Report_draft.doc
+Report_draft_final.doc
+Report_draft_finalv2.doc
+Report_draft_final - Copy.doc
+Report_fixed.doc
+Report_SUBMITTED.doc
+```
+
+**Other benefits of a VCS:**
+- Improved ability to collaborate.
+- Compare changes made to a file over time.
+- Revert to a previous version of a file.
+
+**Common version control software:**
+- **Git** — the industry standard tool, and the one used in this course. Git integration is supported by **GitHub** and **BitBucket**, two leading online repository hosting providers.
+- **SVN (Apache Subversion)** — an older VCS that is fading in popularity.
+- **Hg (Mercurial)** — an alternative VCS written in Python.
+
+The lecture's advice is blunt: **practise Git**. It is used extensively in this course and in your career, and the sooner you master it the easier your life will be.
+
+💡 **Why It Matters:** Version control is not just backup. It lets a team work in parallel without overwriting each other, and it makes an audit trail of every change.
+
+------------------------------------------------
+SECTION 13: Python Packages & Virtual Envs
+------------------------------------------------
+**Python** is the prescribed backend language for this course. It is an **interpreted high-level programming language**. The lecture points to tutorials (W3Schools, learnpython.org, INFO1110, ELEC1005) and to the official Python documentation and installation guide.
+
+### Package Managers
+A **package manager** is software for managing **dependencies** — libraries or extensions that add functionality to a language. Common package managers:
+
+| Language | Package Manager |
+| --- | --- |
+| Python | `pip` |
+| Node | `NPM` |
+| PHP | `Composer` |
+| Ruby | `RubyGems` |
+
+**`pip`** is the standard Python package manager. It easily installs Python packages, for example:
+
+```
+pip install django
+```
+
+This fetches and installs the Django package **and its dependencies**.
+
+### The Dependency Conflict Problem
+Python only allows us to install **one version of a package at a time**. This creates a problem when two projects need incompatible versions:
+- Awesome Website requires `simplejson == 3.16` and `django == 3.1`.
+- Better Website requires `simplejson <= 3.17` and `django >= 3.2`.
+
+It is **not possible to find a set of requirements that satisfies both** projects in one global installation.
+
+### Solution: Virtual Environments
+**Python virtual environments** allow multiple, **isolated** installations of Python. Each virtual environment can have its own dependencies without conflicting with the others.
+- A virtual environment must be **activated** before it can be used.
+- **Do not commit your virtual environment into your repository.**
+
+Python 3 support is built in: the **`venv` module** has shipped since **Python 3.3**. Each venv has its own **`site-packages`** and its own **Python executable**, isolated from the system install. Create one with:
+
+```
+python3 -m venv myenvname
+```
+
+✅ **Exam Tip:** Remember the three-way rule: isolated install → must activate → never commit. The command `python3 -m venv <name>` creates it, and the folder is added to `.gitignore`.
+
+------------------------------------------------
+SECTION 14: Dev Environment & IDEs
+------------------------------------------------
+An **Integrated Development Environment (IDE)** makes writing code easier by combining a text editor with additional features:
+- **Debugger**
+- **Syntax highlighting**
+- **Version control**
+- **Refactoring**
+- **Search**
+
+Some commonly used IDEs:
+- **Visual Studio Code**
+- **PyCharm**
+- **Eclipse**
+
+🧠 **Memory Hook:** An IDE = editor **plus** the tools you'd otherwise run separately: **debug, highlight, version, refactor, search**.
+
+💡 **Why It Matters:** A good IDE turns the development environment from a set of disconnected commands into one place where you write, run, debug and version your code — which is especially valuable once a project grows beyond a single file.
+
+================================================
+KEY TAKEAWAYS
+================================================
+1. **Client-server communication needs a format and a transport** — sockets, RPC and pipes are mechanisms; MIME types label the payload.
+2. **MIME types are maintained by IANA** and follow `type/subtype`, such as `text/html` and `application/json`.
+3. **XML describes the rules of other languages** — it is a self-descriptive markup language for carrying data, not a programming language.
+4. **DTD symbols are regular-expression-like**: `+` = one or more, `*` = zero or more, `?` = zero or one, `#PCDATA` = parsed text.
+5. **JSON is the modern API format** — lightweight, language-independent, based on JavaScript object syntax, used for APIs, serialization and config.
+6. **HTTP is a stateless request-response protocol** — the client requests, the server responds, and the browser renders the result.
+7. **Method semantics matter** — GET and HEAD are safe; GET, PUT, DELETE, OPTIONS and HEAD are idempotent; POST and PATCH are neither.
+8. **Cookies add state to stateless HTTP** — the server sends `Set-Cookie`, and the browser returns `Cookie` automatically.
+9. **Harden cookies with three flags** — `HttpOnly` (XSS), `Secure` (HTTPS only) and `SameSite` (CSRF).
+10. **Data modelling has three steps** — identify requirements, normalise entities, then write the ERD (UML with Crow's foot notation).
+11. **Every table needs a primary key** (usually `id`); relationships use foreign keys.
+12. **One-to-many uses a foreign key; many-to-many needs an intermediate table** linking the two sides.
+13. **MVC vs MVT** — MVC separates data, presentation and request logic; Django's MVT renames the roles, with View as controller and Template as view.
+14. **Version control prevents file chaos** — Git is the industry standard, with GitHub and BitBucket as hosts.
+15. **Virtual environments solve dependency conflicts** — create with `python3 -m venv`, activate before use, and never commit them.
+
+================================================
+TERMS TO KNOW
+================================================
+**Client-server communication**: The exchange of data between a client and a server using an agreed format and transport.
+**Socket**: A general low-level mechanism for two programs to exchange data.
+**Remote procedure call (RPC)**: A mechanism that lets a program call a procedure on another machine.
+**Pipe**: A communication mechanism that passes a stream of data between processes.
+**MIME type**: Standard label (maintained by IANA) identifying a payload's file format, e.g. `application/json`.
+**IANA**: Internet Assigned Numbers Authority — maintains the MIME type registry.
+**XML**: Extensible Markup Language — a self-descriptive markup language for encoding and transporting data.
+**Schema**: A contract describing the allowed structure of a document, used for client-server communication.
+**Markup**: Elements such as tags that define the structure of a document.
+**Tag**: Markup beginning with `<` and ending with `>`; can be start, end, or empty-element.
+**Attribute (XML)**: Key-value metadata written inside a start or empty-element tag.
+**DOCTYPE (XML)**: Document type declaration that identifies the DTD defining the document's fields.
+**DTD**: Document Type Definition — the schema for an XML document's allowed fields and structure.
+**#PCDATA**: Parsed character data — raw text content inside an XML element.
+**CDATA**: Character data type used for unparsed attribute values in a DTD.
+**JSON**: JavaScript Object Notation — compact, language-independent data format based on JS objects.
+**Serialization**: Converting data structures into a transferable/storable format such as JSON.
+**HTTP**: Hypertext Transfer Protocol — stateless request-response protocol between client and server.
+**Stateless**: Each request is independent; the protocol does not remember previous requests.
+**GET**: HTTP method that requests data about a resource; safe and idempotent.
+**POST**: HTTP method that submits data/creates a resource; neither safe nor idempotent.
+**PUT**: HTTP method that creates or replaces a resource; idempotent.
+**PATCH**: HTTP method for partial modification of a resource; not idempotent.
+**DELETE**: HTTP method that removes a resource; idempotent.
+**OPTIONS**: HTTP method returning the supported methods for a resource.
+**HEAD**: HTTP method equivalent to GET without a response body.
+**Safe method**: A method that does not change the resource.
+**Idempotent method**: A method that produces the same result when repeated.
+**Accept header**: Request header listing the MIME types the client will accept.
+**Content-Type header**: Response header telling the browser how to interpret the body.
+**Referer header**: Request header giving the URL of the page that linked to the current request.
+**User-Agent header**: Request header identifying the client software, browser, engine and OS.
+**Cookie**: Small piece of data stored in the browser and sent automatically with requests to its server.
+**Set-Cookie**: Response header the server uses to store a cookie in the browser.
+**HttpOnly**: Cookie flag preventing JavaScript access; protects against XSS.
+**Secure**: Cookie flag sending the cookie only over HTTPS.
+**SameSite**: Cookie flag controlling cross-site sending; protects against CSRF.
+**XSS**: Cross-Site Scripting — injection attack mitigated by HttpOnly cookies.
+**CSRF**: Cross-Site Request Forgery — attack mitigated by SameSite cookies.
+**Data modelling**: Defining and analysing the data requirements of an information system.
+**ERD**: Entity-Relationship Diagram — a visual model of entities and their relationships.
+**Crow's foot notation**: UML notation used to draw relationships on an ERD.
+**Model (data)**: Description of the fields that hold information about an entity.
+**Primary key (PK)**: The unique `id` field identifying each row of a table.
+**Foreign key (FK)**: A field referencing another model's primary key to create a relationship.
+**One-to-many (1 to N)**: Relationship expressed by a foreign key on the many side.
+**Many-to-many (M to N)**: Relationship requiring an intermediate table with foreign keys to both models.
+**Intermediate table**: Junction table linking two models in a many-to-many relationship.
+**MVC**: Model-View-Controller architecture separating data, presentation and request logic.
+**MVT**: Model-View-Template — Django's pattern where View handles requests and Template presents.
+**DTL**: Django Template Language — templating syntax used for Django presentation.
+**Version control system (VCS)**: Software that tracks changes to files over time.
+**Git**: The industry-standard distributed version control system used in this course.
+**GitHub**: Online hosting provider for Git repositories.
+**BitBucket**: Online hosting provider for Git repositories.
+**SVN (Subversion)**: Older centralised version control system that is fading.
+**Mercurial (Hg)**: Alternative version control system written in Python.
+**Package manager**: Software that installs and manages a language's dependencies.
+**pip**: The standard Python package manager.
+**NPM**: The Node.js package manager.
+**Composer**: The PHP package manager.
+**RubyGems**: The Ruby package manager.
+**Dependency conflict**: Situation where two projects require incompatible versions of one package.
+**Virtual environment**: Isolated Python installation with its own packages, created by `venv`.
+**venv**: Python 3 module (since 3.3) for creating virtual environments.
+**site-packages**: Directory inside a virtual environment holding its isolated installed packages.
+**IDE**: Integrated Development Environment combining an editor with debugging, highlighting and tooling.
+
+================================================
+MNEMONICS & QUICK RECALL
+================================================
+**HTTP Methods & Safety**: **Get-Head = safe** — "GET and HEAD only read, so they are the safe methods."
+**Idempotent Methods**: **G-P-D-O-H** — "Get, Put, Delete, Options, Head" — repeat them and the result is the same.
+**Cookie Security Flags**: **H-S-S** — "HttpOnly, Secure, SameSite" — blocks XSS, snooping and CSRF.
+**DTD Symbols**: **+ star ? #** — "Plus = one or more, star = zero or more, question = optional, PCDATA = text."
+**Data Modelling Steps**: **I-N-W** — "Identify, Normalise, Write" — the three steps to build a data model.
+**MVT Role Swap**: **V = Controller, T = View** — in Django's MVT the View handles requests and the Template presents.
+
+================================================
+WORKED EXAMPLES
+================================================
+### Example 1: Reading a login cookie exchange
+A user logs in for the first time.
+1. First visit: request carries no `Cookie` header.
+2. Login form submitted: still no cookie, credentials sent in the request.
+3. Server verifies and generates a token; responds with `Set-Cookie: token=abc123`.
+4. Next visit: the browser automatically sends `Cookie: token=abc123`.
+5. Server recognises the token and treats the request as that logged-in user. Adding `HttpOnly`, `Secure` and `SameSite` to the cookie hardens each of these steps.
+
+### Example 2: Choosing the right HTTP method for a to-do API
+- **List the tasks** → `GET /tasks` (safe, idempotent).
+- **Create a task** → `POST /tasks` (not idempotent — repeating creates duplicates).
+- **Rename a whole task** → `PUT /tasks/7` (idempotent — repeated calls leave the same result).
+- **Mark just the title** → `PATCH /tasks/7` (partial, not idempotent).
+- **Delete the task** → `DELETE /tasks/7` (idempotent).
+- **Discover allowed methods** → `OPTIONS /tasks`.
+
+### Example 3: Resolving a Python dependency conflict
+Two projects share one global Python install.
+- Awesome Website: `simplejson == 3.16`, `django == 3.1`.
+- Better Website: `simplejson <= 3.17`, `django >= 3.2`. Because only one version of each package can exist globally, no single install satisfies both. Fix: create one virtual environment per project with `python3 -m venv`, activate it, then install that project's exact requirements in isolation. Never commit the environment folder.
+
+### Example 4: Modelling TIL with keys and relationships
+- **USER** table: `id` (PK), `username`, `password`.
+- **POST** table: `id` (PK), `subject`, `content`, `post_date`, `user_id` (FK to USER) — this single foreign key gives the one-to-many relationship "one user has many posts".
+- **TAG** table: `id` (PK), `name`.
+- **POST_TAG** intermediate table: `post_id` (FK to POST), `tag_id` (FK to TAG) — this gives the many-to-many relationship "posts have many tags and tags apply to many posts".
+
+### Example 5: Tracing a Referer header
+1. You search on `www.google.com` for "elec3609".
+2. You click the link to `www.elec3609.com`.
+3. The browser's request to the destination includes `Referer: https://www.google.com/`.
+4. The server now knows where the visit came from, which is useful for analytics and link validation.
+
+================================================
+EXAM FOCUS
+================================================
+1. What is a MIME type and why does it matter? → Answer: A MIME type is a standard label (maintained by IANA) that determines a file's format and contents, such as `text/html` or `application/json`; it tells the browser how to interpret the data.
+2. Describe XML and list its defining properties. → Answer: XML is a self-descriptive markup language for encoding and transporting data — not a programming language and not for displaying data. It is human-readable, machine-readable, and used to define schemas that act as contracts between client and server.
+3. Explain the role of a DOCTYPE and DTD in XML. → Answer: The DOCTYPE identifies a DTD, and the DTD defines which fields are allowed and their structure; together they form the schema for the document.
+4. What do the DTD symbols `+`, `*`, `?` and `#PCDATA` mean? → Answer: `+` = one or more, `*` = zero or more, `?` = zero or one (optional), and `#PCDATA` = parsed character data (raw text).
+5. Compare XML and JSON for web APIs. → Answer: XML is tag-based, verbose, needs a DOM/SAX parser and supports strict schemas; JSON uses key-value pairs and arrays, is compact, parses natively in JavaScript and suits modern REST APIs. XML remains common in legacy/enterprise SOAP systems.
+6. What is HTTP and what kind of protocol is it? → Answer: HTTP (Hypertext Transfer Protocol) enables communication between an HTTP client and server as a stateless request-response protocol: the client requests and the server responds, usually with a web page.
+7. For each common HTTP method, state whether it is safe and idempotent. → Answer: GET (safe, idempotent), POST (neither), PUT (idempotent, not safe), PATCH (neither), DELETE (idempotent, not safe), OPTIONS (safe, idempotent), HEAD (safe, idempotent).
+8. Why can repeating a POST be dangerous? → Answer: POST is neither safe nor idempotent, so repeating it can create duplicate resources — for example, charging a customer twice.
+9. What is the difference between the `Accept` and `Content-Type` headers? → Answer: `Accept` is a request header listing the MIME types the client can accept; `Content-Type` is a response header telling the browser what type of data the body contains and how to interpret it.
+10. What does each of `Referer` and `User-Agent` tell the server? → Answer: `Referer` gives the previous page that linked to the current request; `User-Agent` identifies the client software, including browser, rendering engine and operating system.
+11. Describe how cookies are used in authentication. → Answer: The server sends `Set-Cookie` with an authentication token; the browser stores it and automatically sends it back in the `Cookie` header on later requests, letting the stateless server recognise the user.
+12. What do the cookie flags `HttpOnly`, `Secure` and `SameSite` protect against? → Answer: `HttpOnly` blocks JavaScript access and protects against XSS session hijacking; `Secure` forces HTTPS and protects against interception; `SameSite` limits cross-site sending and protects against CSRF.
+13. List the three steps of data modelling and the notation used. → Answer: Identify the detailed system requirements, normalise the entities, then write the data model. The model is drawn as a UML entity-relationship diagram using Crow's foot notation.
+14. How are one-to-many and many-to-many relationships represented? → Answer: One-to-many is expressed by a foreign key on the many side. Many-to-many cannot be expressed by a single key and requires an intermediate/junction table containing foreign keys to both models.
+15. Compare MVC and Django's MVT. → Answer: Both separate data, logic and presentation. In MVC the Controller handles requests and the View renders output; in MVT the Model manages data, the View accepts requests and returns responses (the controller role), and the Template (HTML/DTL) presents output (the view role).
+16. What is a virtual environment and why is it needed? → Answer: It is an isolated Python installation with its own packages, created with `python3 -m venv`. It is needed because Python only allows one version of a package system-wide, so isolation prevents dependency conflicts between projects. It must be activated before use and must not be committed to version control.

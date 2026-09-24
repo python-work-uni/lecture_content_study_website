@@ -1,0 +1,544 @@
+================================================
+ELEC3609 Week 6 – Study Guide
+Pre-packaged Software, Docker & System Monitoring · 2025 Session
+================================================
+
+OVERVIEW
+--------
+This lecture is about deploying software you did not write. It starts with pre-packaged applications — ready-made products such as WordPress and MediaWiki — and the security questions you must ask about their code, configuration, database and dependency supply chain. It then shows how to put a controlling layer (a reverse proxy with authentication and a Web Application Firewall) in front of them, and how Docker containers package an application with its dependencies and make deployment reproducible. The lecture closes with system monitoring (Prometheus, Grafana, the ELK stack, Nagios and Sentry) and web analytics with ETL and MapReduce.
+
+--------
+STATS:
+------------------------------------------------
+Lectures|1
+Container Concepts|Image, Container, Volume, Network
+Monitoring Tools|Prometheus, Grafana, ELK, Nagios, Sentry
+Analytics Concepts|GA, KISSmetrics, ETL, MapReduce
+Practice Questions|12
+
+------------------------------------------------
+SECTION 1: Pre-packaged Software & Examples
+------------------------------------------------
+**Pre-packaged web software** is commonly used to get something up and running quickly — instead of writing an application from scratch, you install software someone else built.
+
+**Examples from the lecture:**
+
+| Package | What It Is |
+| --- | --- |
+| **WordPress** | Content Management System (CMS) |
+| **vBulletin** | Internet forum software |
+| **MediaWiki** | Open-source wiki platform |
+| **Phabricator** | Project management tool |
+| **Memcached** | Distributed memory object caching system |
+
+The lecture's framing is "deploying from the shoulders of giants" — you get a mature product for free, but you also inherit its problems.
+
+💡 **Why It Matters:** Pre-packaged software can save months of work, but you become responsible for securing and operating someone else's code. Most of this lecture is about managing that responsibility.
+
+------------------------------------------------
+SECTION 2: Packages: Code, Config & Database
+------------------------------------------------
+Just like any other website, a pre-packaged product typically consists of:
+- **Application code**
+- **Configuration files**
+- **Database**
+
+The crucial division of responsibility is:
+
+| Component | Who Provides / Owns It |
+| --- | --- |
+| **Application code** | Provided by the package's authors. |
+| **Configuration** | You (the deployer) must review, harden and set it. |
+| **Database & infrastructure** | You (the deployer) must provision, permission and secure it. |
+
+In other words, the prepacked software provides the application code, but it is **up to the deployer to configure the application and infrastructure**.
+
+⚠️ **Common Trap:** Assuming the package "just works securely out of the box." The vendor shipped the code; the security posture of the running system is your job.
+
+------------------------------------------------
+SECTION 3: Dependency Risks & Code Evaluation
+------------------------------------------------
+### The Supply Chain You Inherit
+By deploying third-party software you inherit not just the main application code, but **all of its dependencies**:
+- Libraries and frameworks
+- Plugins / extensions
+- Container images
+- System packages
+
+**Supply-chain security threats to consider:**
+- **Supply Chain Attacks** — attackers compromise an upstream repository or build pipeline.
+- **Outdated Dependencies** — known, unpatched vulnerabilities in libraries.
+- **Plugin/Extension Ecosystem** — unvetted third-party add-ons.
+- **Trust in Docker Hub Images** — malicious or outdated public base images.
+
+### Questions to Ask About Application Code
+It can be dangerous to blindly run other people's code, especially when it is old and complex:
+- What is it written in?
+- Is the code-base mature?
+- How active is development on the project?
+- Does the software have a history of security vulnerabilities?
+
+**Practical checks:**
+- **Identify other users** — if large companies have adopted the software, they have likely reviewed it.
+- **Identify potential support avenues** — does the supplier provide direct support, and how much does it cost?
+- **Check the frequency of commits** — for open-source projects, more frequent and recent commits mean active development.
+- **Scan for vulnerabilities** — use a static source-code vulnerability scanner appropriate to the language.
+- **Search for known vulnerabilities** — check disclosure sites such as `cvedetails.com`.
+
+### Automated Vulnerability Scanning Tools
+
+| Tool | Target |
+| --- | --- |
+| **npm audit** | Node.js/npm dependencies |
+| **pip-audit** | Python packages/environments |
+| **OWASP Dependency-Check** | Multi-language project dependencies |
+| **Snyk Vulnerability DB** | Vulnerability database and scanner |
+
+🧠 **Memory Hook:** **A-C-S-V** — **A**doption, **C**ommits, **S**upport, **V**ulnerability history. Check all four before trusting a package.
+
+------------------------------------------------
+SECTION 4: Configuration & Database Hardening
+------------------------------------------------
+### Configuration
+While it is good practice to release software that is **secure-by-default**, many software packages ship with **insecure configuration**. It is critical to **review all configuration options before deployment**. Ask:
+- What configuration options are available?
+- Are the default values for these options secure?
+- Are there any features enabled that you're not using?
+- Can you disable these features?
+
+**How to do it:**
+- **Identify all configuration options** — read the documentation and view example configurations.
+- **Search the Internet for example configurations** — they are readily available, but **do not blindly trust** them; evaluate them.
+- **Identify all features and components** — general-purpose software often includes features you don't need.
+- **Disable unwanted features** — this reduces complexity and the surface area for possible attacks.
+
+### Database
+It is usually the **deployer's responsibility** to configure the database required by pre-packaged software, and care must be taken. Ask:
+- Does the package need its own database or can/will it share?
+- What DB permissions are required?
+- If the application is vulnerable, will DB compromise lead to system compromise?
+
+**Practical guidance:**
+- **Identify database requirements** — does the software create a single database for all its tables, or multiple databases?
+- **Evaluate database permissions** — give the **minimum set of permissions** to an application; start with minimal access and extend only when necessary (the principle of least privilege).
+- **Evaluate the scope of DB compromise** — if a malicious user finds an SQL injection, they may be able to run arbitrary commands on the database. It is important to keep the database updated as well.
+
+⚠️ **Common Trap:** Granting the application broad database rights "to make it work." If an SQL injection occurs, those rights become the attacker's rights.
+
+------------------------------------------------
+SECTION 5: Deployment & Reverse Proxies
+------------------------------------------------
+Software packages can come with a **web/HTTP interface**. You do **not** want this interface directly exposed to the Internet — you want your own layer, which you control, in between.
+
+A **reverse proxy** (such as Nginx or Apache) or a **load balancer** lets you control which requests can reach the application. This is especially important if the application exposes an **admin or control interface without authentication**.
+
+**Architecture:**
+
+```
+Public Client (Internet)
+        |
+        v
+Reverse Proxy / Load Balancer  (Nginx / Apache)
+        |
+   +----+----+
+   |         |
+   v         v
+App 1      App 2      (internal backend instances)
+   |         |
+   +----+----+
+        |
+        v
+Central Database      (shared state, still the bottleneck)
+```
+
+### Benefits of a Reverse Proxy
+1. **Scaling** — use the reverse proxy as a **load balancer** to increase concurrent connections. Run many instances of the application and **scale horizontally**. The **database is still a bottleneck** because state must be shared.
+2. **Request authentication** — for an internal service, perform basic authentication so anonymous web users cannot access it. A malicious user cannot reach the application if the reverse proxy blocks them.
+3. **Web Application Firewall (WAF)** — a WAF can inspect incoming requests and **reject** those that appear to be attack vectors.
+
+💡 **Why It Matters:** The reverse proxy is a single, controlled choke point. Authentication, filtering, load balancing and TLS can all live there instead of being scattered across application instances.
+
+------------------------------------------------
+SECTION 6: HTTP Basic Auth & the WAF
+------------------------------------------------
+### HTTP Basic Authentication
+**HTTP Basic Authentication** requires HTTP requests to include a **username and password** to be considered authorised. If a request arrives without valid credentials, a **401 Unauthorized** response is served.
+
+**Server side:**
+1. The server responds to the initial request with **401 Unauthorized**, containing the header:
+
+```
+WWW-Authenticate: Basic realm="User Visible Realm"
+```
+
+**Client side:**
+1. The client prompts the user for a username/password.
+2. It combines the username and password with a **single colon**, e.g. `Aladdin:OpenSesame`.
+3. It encodes the string in the **RFC2045-MIME variant of base64**.
+4. It sets the request's `Authorization` header to the base64-encoded credentials:
+
+```
+Authorization: Basic QWxhZGRpbjpPcGVuU2VzYW1l
+```
+
+⚠️ **Common Trap:** Basic Auth credentials are only **base64-encoded, not encrypted**. Without HTTPS, anyone on the network can decode them, so Basic Auth must always run over TLS.
+
+### Web Application Firewall (WAF)
+- A WAF applies **rules and/or filters to incoming HTTP requests**, trying to identify requests that appear to contain **exploitation code** and rejecting them.
+- All requests should go through the WAF, so it usually sits at the **edge/web layer in front of your application**.
+- A WAF is **only as good as the rules it evaluates** — keep the rule/filter sets up to date.
+
+🧠 **Memory Hook:** Basic Auth = **"challenge, encode, authorise"**: the server challenges with 401 and `WWW-Authenticate`, the client encodes `user:pass` in base64, and the server authorises via the `Authorization` header.
+
+------------------------------------------------
+SECTION 7: VMs vs Linux Containers
+------------------------------------------------
+A **hypervisor** enables the execution of **virtual machines** inside a host operating system. Each VM needs its own full **guest operating system**, which is heavy.
+
+**Linux containers** remove the need to install a guest operating system, allowing **multiple isolated Linux systems to run on a single host operating system**. They share the host's kernel, so they are much lighter.
+
+| | Virtual Machines | Linux Containers |
+| --- | --- | --- |
+| Guest OS | One full guest OS per VM | No guest OS |
+| Isolation | Hypervisor-level | Isolated user-space processes |
+| Weight | Heavy | Lightweight and fast |
+| Host requirement | Hypervisor | Shared host Linux kernel |
+
+💡 **Why It Matters:** Containers give you most of the isolation of a VM at a fraction of the resource cost, which is why they dominate modern deployment.
+
+------------------------------------------------
+SECTION 8: Docker: Containers & Images
+------------------------------------------------
+**Docker** is an **open-source project to automate the deployment of applications inside Linux containers**. It allows easy deployment of packaged applications, **including any necessary dependencies**. Multiple services/containers can be combined using the tool **Docker Compose**.
+
+### Containers
+- Instead of running virtual machines, Docker lets us run **containers**.
+- A Docker container can be thought of as a **minimalistic Linux host**.
+- You can install any application into the container, and the container itself can be **(almost) any distribution of Linux**.
+- A container is created **based off a Docker image**. An image file describes the **base operating system** and any **modifications that need to be made, such as dependencies**.
+
+### Anatomy of a Dockerfile
+A sample Docker image that specifies its base, build steps, files and entry point:
+
+```
+FROM ubuntu:18.04
+RUN make /app
+COPY . /app
+CMD python /app/app.py
+```
+
+What each line does:
+- `FROM ubuntu:18.04` — use Ubuntu 18.04 as the base image.
+- `RUN make /app` — run `make` in the `/app` directory during the build.
+- `COPY . /app` — copy all files from the build context into `/app`.
+- `CMD python /app/app.py` — the command run when the container starts, invoking the application.
+
+🧠 **Memory Hook:** **Image = recipe, container = cake.** The image is the read-only blueprint; a container is a running instance created from it.
+
+------------------------------------------------
+SECTION 9: Docker Volumes & Networking
+------------------------------------------------
+### Volumes (Persistence)
+Docker containers are good for **running** applications, but they are **not good for storing data** — containers **do not maintain state**. To persist data, we **mount volumes** into containers:
+- If you containerise a database such as MySQL, the application's **data directory should be stored in an attached volume**.
+- The mounted volume is a **folder on the host machine that exists outside the container**.
+- You can therefore **destroy the container without losing any data**.
+
+### Networking
+Docker containers can be **linked to each other**, and **nominated ports can be forwarded from the host OS to the container**.
+- For a web application such as WordPress, you can run one container for the application and a **separate container for the MySQL database**.
+- By linking the containers, the WordPress application can talk to the MySQL container directly.
+- **No other containers or systems are allowed to communicate with the database** unless specified directly via Docker.
+- This **segmentation significantly improves security and ease of deployment**.
+
+⚠️ **Common Trap:** Storing database files inside the container's own filesystem. When the container is destroyed, those files disappear — always mount a volume for stateful data.
+
+------------------------------------------------
+SECTION 10: Docker Hub & Orchestration
+------------------------------------------------
+### Docker Hub
+Why re-create the wheel? The Docker project has a service called **Docker Hub**, which contains **pre-built Docker images** that can be used as a **starting point for building services**.
+- Many large software companies and projects have released Docker Hub images for their software.
+- **Security is a factor to consider here** — a public image is third-party code, so evaluate it before trusting it.
+
+### Cloud Container Orchestration
+When running containers in production, it is common to have **container fleets of 10s–1000s**. Managing them by hand does not scale, so orchestrators are used:
+- **Kubernetes / Google Kubernetes Engine (GKE)** — an **open-source cluster management system** for deploying and managing containerised applications on Google Cloud. Kubernetes can also be used outside Google Cloud.
+- **AWS Elastic Container Service (ECS)** — deploys Linux containers within the AWS ecosystem.
+
+💡 **Why It Matters:** Orchestration is the difference between running a demo container and running a production service that scales, self-heals and updates without downtime.
+
+------------------------------------------------
+SECTION 11: Monitoring Facets & Prometheus
+------------------------------------------------
+When running a large-scale website, it is essential to **monitor everything**. Four facets to consider:
+
+| Facet | Question It Answers |
+| --- | --- |
+| **User interaction** | Who clicks on what? |
+| **User analytics** | What local time do users usually come online? |
+| **HTTP error rate** | What pages are throwing 500s and impacting users? |
+| **Infrastructure metrics** | How is our infrastructure performing? Can we handle 2x load? 10x? |
+
+The lecture surveys five tools: **Prometheus** (metrics), **Grafana** (graphing and dashboards), **Elasticsearch, Logstash, Kibana / ELK** (logging), **Nagios** (infrastructure monitoring) and **Sentry** (error detection).
+
+### Prometheus
+- An **open-source system for storing and graphing highly dimensional data and metrics**.
+- Efficiently stores metrics in a **custom format** and scales through **functional sharding and federation**.
+- Data is **scraped from monitored services over HTTP**, rather than applications publishing metrics to Prometheus (a **pull** model).
+- Originally developed at **SoundCloud**; now a member of the **Cloud Native Computing Foundation (CNCF)**.
+
+⚠️ **Common Trap:** Assuming services push their metrics to Prometheus. The direction is reversed: Prometheus **scrapes** HTTP endpoints on a schedule.
+
+------------------------------------------------
+SECTION 12: Grafana, ELK, Nagios & Sentry
+------------------------------------------------
+### Grafana (Dashboards)
+Grafana allows us to **visualise, query and alert on key metrics, regardless of where they are stored**. It can have **multiple backend metrics systems**.
+
+| System Metrics | Application Metrics |
+| --- | --- |
+| CPU usage | Response times |
+| Memory usage | Throughput |
+| Disk space and I/O | Error rates |
+| Network traffic and bandwidth | Requests per second |
+| Load averages | Latency |
+| System uptime | User activity metrics |
+
+### ELK Stack (Logging)
+Once a website reaches a certain size, **manually looking at logs on each host is not feasible**, because of the number of services to monitor. The **ELK stack (Elasticsearch, Logstash, Kibana)** is a commonly used industry pattern for ingesting and querying large volumes of logs (application, web access/error) in a **centralised location**.
+- **Kibana** is an open-source data-visualisation plugin for Elasticsearch.
+- It offers a simple interface for querying **Elasticsearch**, the service that stores your logs.
+
+### Nagios (Infrastructure Monitoring)
+- Nagios is an open-source **"industry standard"** for monitoring infrastructure.
+- Many **custom metrics** can be configured, including network transfer rates, server performance and application metrics.
+- It has integrations that let it **send email, integrate with chat programs and trigger alerts** if metrics are exceeded.
+
+### Sentry (Error Detection)
+- Sentry **collects errors from your website, both front-end and back-end**.
+- It **consolidates and aggregates** them into a **single feed of events**.
+- It allows **real-time monitoring of errors** experienced while using the site, and is a critical piece of infrastructure for large-scale websites.
+
+🧠 **Memory Hook:** **P-G-E-N-S** = **P**rometheus (metrics), **G**rafana (graphs), **E**LK (logs), **N**agios (infrastructure), **S**entry (errors).
+
+------------------------------------------------
+SECTION 13: Web Analytics & Custom Tracking
+------------------------------------------------
+### Google Analytics (GA)
+- A tool for **tracking and reporting on website traffic**.
+- It is a **JavaScript library** that can be included on any web page.
+- It is essential for determining **who has visited your website, what browser they are using, and what page they came from**.
+- It is a great tool for **identifying your audience and prioritising browser/feature support**.
+
+### KISSmetrics
+- A **customer intelligence platform** that performs a **subset of the features of Google Analytics** but provides **much deeper insights**.
+- It enables an administrator or marketing manager to gain **detailed visibility of user interaction, across devices**.
+- It offers a **much wider variety of tools and analytics** than Google Analytics, but it **costs substantially more**.
+
+| Aspect | Google Analytics | KISSmetrics |
+| --- | --- | --- |
+| Focus | Traffic, browsers, referrers | Deep user-interaction insight |
+| Cost | Lower (free tier typical) | Substantially more expensive |
+| Best for | Audiences and feature prioritisation | Marketing/administrator insight across devices |
+
+### Custom Tracking / Analytics
+Sometimes available tracking systems are **too heavy (performance)** or **do not meet your needs**. In those cases you may need to build the beginnings of a **data warehouse solution**.
+- Database schemas are generally **optimised for user performance, not for analytics**.
+- Calculating a *single* user's balance by summing their deposits is relatively straightforward.
+- Calculating the balance for **all** users is **less bounded** and can hammer the database.
+- The most common fixes are to **transform the database into a format better optimised for queries**, or to **import the data into another service**.
+
+💡 **Why It Matters:** Operational and analytical workloads pull in opposite directions. Keeping them on the same database makes the live site slow, so analytics data is moved elsewhere.
+
+------------------------------------------------
+SECTION 14: ETL & MapReduce
+------------------------------------------------
+### The ETL Pipeline
+When building a custom tracking system, a common approach is **Extract, Transform, Load (ETL)**:
+- **Extract** — extract the data from various sources (user clicks from JavaScript, web access logs, database changes).
+- **Transform** — transform the data into a **consistent format or structure**.
+- **Load** — load the transformed data into a **final application** (such as a data warehouse).
+
+```
+Sources (JS clicks, access logs, DB changes)  -->  EXTRACT  -->  TRANSFORM  -->  LOAD  -->  Analytics Store
+```
+
+### MapReduce
+If you need to perform **very computationally intensive analytics tasks across a large data set**, a useful technique is **MapReduce**. The approach performs the analytics in a **distributed** sense, splitting the work into two steps:
+- **Map** — performs filtering and sorting.
+- **Reduce** — consolidates data into a **summary format**.
+
+```
+Raw large dataset  -->  [ MAP: filter & sort ]  -->  Intermediate pairs  -->  [ REDUCE: consolidate ]  -->  Summary result
+```
+
+🧠 **Memory Hook:** **E-T-L** = "get it, fix it, store it". And **Map = divide, Reduce = summarise**.
+
+================================================
+KEY TAKEAWAYS
+================================================
+1. **Pre-packaged software gets you running fast** — WordPress, vBulletin, MediaWiki and Phabricator are ready-made products.
+2. **The vendor supplies code; you own configuration and the database** — hardening the running system is the deployer's job.
+3. **You inherit the whole dependency supply chain** — libraries, plugins, container images and system packages all carry risk.
+4. **Evaluate code before deploying it** — check adoption, commit activity, support and vulnerability history, and scan with tools such as npm audit, pip-audit, OWASP Dependency-Check and Snyk.
+5. **Defaults are often insecure** — review every configuration option, don't blindly copy online configs, and disable unused features to shrink the attack surface.
+6. **Apply least privilege to the database** — grant the minimum permissions so an SQL injection cannot escalate to full system compromise.
+7. **Never expose a package's web interface directly** — put a reverse proxy or load balancer in front of it for control, auth and filtering.
+8. **Reverse proxies enable scaling, authentication and WAF** — the database remains the bottleneck because state must be shared.
+9. **HTTP Basic Auth is a 401 challenge** — the server sends `WWW-Authenticate`, the client returns base64 `user:pass` in `Authorization`; always pair it with TLS.
+10. **A WAF is only as good as its rules** — it filters likely exploitation requests at the edge and must be kept up to date.
+11. **Containers share the host kernel; VMs need a guest OS** — containers are lighter and faster than virtual machines.
+12. **Docker automates deployment in Linux containers** — an image is the blueprint and a container is a running instance; Docker Compose combines services.
+13. **Containers are stateless; use volumes for persistence** — databases must store data on host-mounted volumes so destruction does not lose it.
+14. **Docker networking segments services** — linked containers talk directly, and the database stays closed to everything else.
+15. **Monitor everything** — Prometheus scrapes metrics, Grafana visualises, ELK centralises logs, Nagios alerts on infrastructure, and Sentry aggregates errors.
+16. **Separate analytics from operations** — use Google Analytics or KISSmetrics out of the box, or build an ETL data warehouse; MapReduce handles massive distributed computation.
+
+================================================
+TERMS TO KNOW
+================================================
+**Pre-packaged software**: Ready-made application software deployed instead of built from scratch.
+**Content Management System (CMS)**: Software for managing website content, e.g. WordPress.
+**vBulletin**: Internet forum software.
+**MediaWiki**: Open-source wiki platform.
+**Phabricator**: Project management tool.
+**Memcached**: Distributed memory object caching system.
+**Supply chain attack**: Compromise of an upstream repository or build pipeline to inject malicious code.
+**Outdated dependency**: A library containing known, unpatched vulnerabilities.
+**Plugin/extension ecosystem**: Third-party add-ons that may be unvetted and risky.
+**npm audit**: Vulnerability scanner for Node.js/npm dependencies.
+**pip-audit**: Scanner for known vulnerabilities in Python packages.
+**OWASP Dependency-Check**: Multi-language software composition analysis tool.
+**Snyk Vulnerability DB**: Vulnerability database and scanner.
+**cvedetails.com**: Site listing publicly disclosed vulnerabilities.
+**Secure-by-default**: Software that ships with safe configuration out of the box.
+**Attack surface**: The set of ways an attacker can try to break into a system.
+**Principle of least privilege**: Granting only the minimum permissions necessary.
+**SQL injection (SQLi)**: Attack that injects SQL through unsafe input.
+**Reverse proxy**: Intermediary server (Nginx, Apache) that receives requests and forwards them to backend applications.
+**Load balancer**: Distributes incoming requests across multiple application instances.
+**Horizontal scaling**: Adding more instances of a service rather than making one bigger.
+**Web Application Firewall (WAF)**: Filter that inspects incoming HTTP requests and rejects attack vectors.
+**HTTP Basic Authentication**: Simple auth scheme using a username and password in the `Authorization` header.
+**401 Unauthorized**: Response returned when credentials are missing or invalid.
+**WWW-Authenticate**: Response header that issues the Basic Auth challenge and realm.
+**Authorization**: Request header carrying the base64-encoded Basic Auth credentials.
+**Base64**: Encoding used (RFC2045-MIME variant) for Basic Auth credentials; encoding, not encryption.
+**Hypervisor**: Software layer that runs virtual machines inside a host OS.
+**Virtual machine (VM)**: Full emulated computer with its own guest operating system.
+**Linux container**: Isolated user-space Linux environment sharing the host kernel.
+**Docker**: Open-source tool that automates deploying applications in Linux containers.
+**Docker image**: Read-only blueprint describing a base OS and modifications/dependencies.
+**Docker container**: Runnable isolated instance created from a Docker image.
+**Dockerfile**: File of instructions used to build a Docker image.
+**Docker Compose**: Tool for defining and running multi-container applications.
+**Docker volume**: Host directory mounted into a container to persist data.
+**Container linking**: Connecting containers so they can communicate directly.
+**Port forwarding**: Mapping a host port to a container port.
+**Docker Hub**: Public registry of pre-built Docker images.
+**Container orchestration**: Managing fleets of containers (scheduling, scaling, health).
+**Kubernetes (GKE)**: Open-source cluster management system for containerised applications.
+**AWS Elastic Container Service (ECS)**: AWS service for deploying Linux containers.
+**Prometheus**: Open-source metrics system that scrapes HTTP endpoints and stores time-series data.
+**Functional sharding**: Splitting Prometheus workloads for scalability.
+**Federation**: Combining metrics from multiple Prometheus servers.
+**Cloud Native Computing Foundation (CNCF)**: Foundation that hosts projects such as Prometheus.
+**Grafana**: Visualisation and dashboarding tool supporting multiple metric backends.
+**ELK stack**: Elasticsearch, Logstash and Kibana — centralised log ingestion and querying.
+**Kibana**: Open-source visualisation plugin for Elasticsearch.
+**Elasticsearch**: Service that stores logs for querying.
+**Nagios**: Open-source infrastructure monitoring standard with alerting.
+**Sentry**: Error-tracking service that aggregates front-end and back-end errors.
+**Google Analytics (GA)**: JavaScript traffic-tracking and reporting tool.
+**KISSmetrics**: Customer-intelligence platform with deeper user insight than GA.
+**Data warehouse**: Store optimised for analytical queries rather than live user operations.
+**OLTP vs OLAP**: Transactional (user operations) versus analytical (aggregate) workloads.
+**ETL**: Extract, Transform, Load — a data pipeline into an analytics store.
+**MapReduce**: Distributed processing with a Map (filter/sort) step and a Reduce (summarise) step.
+
+================================================
+MNEMONICS & QUICK RECALL
+================================================
+**Package Evaluation Checklist**: **A-C-S-V** — "Adoption, Commits, Support, Vulnerability history" — audit before you trust.
+**Supply-Chain Risks**: **S-O-P-D** — "Supply-chain attacks, Outdated deps, Plugin ecosystem, Docker Hub trust."
+**Reverse Proxy Benefits**: **S-A-W** — "Scaling, Authentication, WAF" — three reasons to put a proxy in front.
+**Container vs VM**: **Share kernel = container** — "Containers share the host kernel; VMs need a guest OS."
+**Monitoring Stack**: **P-G-E-N-S** — "Prometheus, Grafana, ELK, Nagios, Sentry" — metrics, graphs, logs, infrastructure, errors.
+**ETL Steps**: **E-T-L** — "Extract, Transform, Load" — get it, fix it, store it.
+**MapReduce Steps**: **M-R** — "Map = filter and sort; Reduce = summarise the result."
+
+================================================
+WORKED EXAMPLES
+================================================
+### Example 1: Hardening a WordPress deployment
+1. **Code** — confirm WordPress is mature, actively maintained, widely adopted and has no unpatched critical CVEs.
+2. **Configuration** — disable unused features and plugins, change insecure defaults, and review every option before going live.
+3. **Database** — create a dedicated database and give the WordPress user only the permissions it needs (no administrative rights).
+4. **Network** — place an Nginx reverse proxy in front, protect the admin interface with authentication, and add WAF rules.
+5. **Secrets** — never trust online configuration snippets blindly; evaluate each setting.
+
+### Example 2: Reading an HTTP Basic Auth exchange
+1. Client sends a normal request to the protected service.
+2. Server replies **401 Unauthorized** with `WWW-Authenticate: Basic realm="User Visible Realm"`.
+3. The browser prompts for a username and password.
+4. It forms `Aladdin:OpenSesame`, base64-encodes it to `QWxhZGRpbjpPcGVuU2VzYW1l`.
+5. It retries with `Authorization: Basic QWxhZGRpbjpPcGVuU2VzYW1l`.
+6. The server validates the credentials and returns the resource. Because base64 is reversible, the whole exchange must run over HTTPS.
+
+### Example 3: Why a container loses its data
+A developer puts MySQL inside a plain container without a volume.
+1. The container starts, MySQL writes its data files inside the container's writable layer.
+2. The developer rebuilds or recreates the container to apply an update.
+3. The old container is destroyed — and its filesystem, including the database, is gone. Fix: mount a Docker volume so MySQL's data directory lives on the host, outside the container. The container can then be destroyed and recreated freely.
+
+### Example 4: Debugging with the monitoring stack
+A page intermittently fails for users.
+- **Sentry** shows a spike of front-end and back-end exceptions aggregated into one feed.
+- **Prometheus** reveals a matching spike in request latency and error rate on that endpoint.
+- **Grafana** displays both on a dashboard alongside CPU and memory usage.
+- **Nagios** fires a threshold alert by email/chat.
+- **ELK** provides the raw centralised log lines to find the exact cause. Each tool answers a different question, and together they locate the fault.
+
+### Example 5: Moving analytics off the production database
+A site needs "total balance across all users" for a dashboard.
+1. Running `SUM` over every row on the production OLTP database is slow and locks it, harming live users.
+2. An **ETL** job **extracts** data from JavaScript click events, access logs and database changes.
+3. It **transforms** the data into a consistent analytical schema.
+4. It **loads** it into a data warehouse.
+5. If the workload is enormous, **MapReduce** filters and sorts (Map) then consolidates (Reduce) the data into the summary the dashboard needs.
+
+### Example 6: Scaling a web application behind a proxy
+1. The application is slow under load, so a second and third instance are started.
+2. A reverse proxy/load balancer distributes incoming requests across all instances — horizontal scaling.
+3. Anonymous access to the internal service is blocked with Basic Authentication at the proxy.
+4. WAF rules filter likely attack traffic before it reaches any instance.
+5. The shared database remains the bottleneck, because all instances must share state.
+
+================================================
+EXAM FOCUS
+================================================
+1. Why should pre-packaged software be treated as a security risk? → Answer: You inherit the entire dependency supply chain (libraries, plugins, container images, system packages) and the responsibility for configuring and hardening the application, which often ships with insecure defaults.
+2. What are the three components of a typical pre-packaged web application and who owns each? → Answer: Application code (provided by the authors), configuration files (reviewed and hardened by the deployer) and the database (provisioned and secured by the deployer).
+3. List the four main supply-chain threats mentioned in the lecture. → Answer: Supply chain attacks, outdated dependencies, plugin/extension ecosystem risks, and untrusted Docker Hub images.
+4. What questions should you ask before trusting an application's code? → Answer: What is it written in? Is the codebase mature? How active is development? Does it have a history of security vulnerabilities? You should also identify other users, support avenues, commit frequency, and search known vulnerability databases such as cvedetails.com.
+5. Name automated dependency-vulnerability tools and their ecosystems. → Answer: npm audit (Node.js/npm), pip-audit (Python), OWASP Dependency-Check (multi-language) and the Snyk Vulnerability DB.
+6. Why is reviewing default configuration important? → Answer: Many packages ship with insecure defaults for ease of setup; reviewing options, disabling unused features and not blindly copying online configs reduces complexity and attack surface.
+7. How should database permissions be granted to applications? → Answer: Apply the principle of least privilege — start with the minimum set (for example SELECT, INSERT, UPDATE) and extend only when necessary, avoiding administrative rights.
+8. Why should you never expose an application's web interface directly to the Internet? → Answer: The package may expose an admin or control interface without authentication; a reverse proxy or load balancer in between gives you control over which requests reach the application.
+9. What benefits does a reverse proxy provide? → Answer: Scaling (acting as a load balancer for horizontal scaling), request authentication (blocking anonymous access) and Web Application Firewall filtering of attack vectors. The database remains the bottleneck.
+10. Explain the full HTTP Basic Authentication flow. → Answer: The server responds with 401 Unauthorized and `WWW-Authenticate: Basic realm="..."`; the client prompts for credentials, combines them as `username:password`, base64-encodes them and resends with `Authorization: Basic <encoded>`. The server validates and returns the resource.
+11. Why must Basic Auth run over HTTPS? → Answer: Credentials are only base64-encoded, not encrypted, so they can be decoded in transit unless protected by TLS.
+12. What is a WAF and what are its limitations? → Answer: A Web Application Firewall applies rules/filters to incoming HTTP requests to reject likely exploitation code; it sits at the edge/web layer, and it is only as good as its rules, so those rules must be kept up to date.
+13. How do Linux containers differ from virtual machines? → Answer: VMs require a full guest operating system and a hypervisor; containers remove the guest OS and share the host Linux kernel, allowing multiple isolated Linux systems on a single host with much lower overhead.
+14. Distinguish a Docker image from a Docker container. → Answer: An image is a read-only blueprint describing the base OS and modifications/dependencies; a container is a runnable, isolated instance created from that image.
+15. How is data persisted in Docker, and why is it needed? → Answer: Containers are stateless and do not maintain data, so host directories called volumes are mounted into containers; storing a database's data directory in a volume lets you destroy the container without losing data.
+16. What does Docker networking isolate? → Answer: Linked containers can communicate directly (for example WordPress to MySQL) and nominated ports are forwarded from the host, while other containers or systems cannot reach a service unless specified via Docker, improving security.
+17. What is Docker Hub and what risk comes with it? → Answer: Docker Hub is a public registry of pre-built Docker images used as a starting point; because images are third-party code, security must be evaluated before trusting them.
+18. When is container orchestration needed and what tools are named? → Answer: It is needed when running production container fleets of tens to thousands; the lecture names Kubernetes/Google Kubernetes Engine (GKE) and AWS Elastic Container Service (ECS).
+19. What facets of a website should be monitored? → Answer: User interaction (who clicks what), user analytics (when users come online), HTTP error rate (which pages throw 500s) and infrastructure metrics (performance under 2x or 10x load).
+20. Match each monitoring tool to its job. → Answer: Prometheus stores and graphs time-series metrics (pull/scrape model); Grafana visualises, queries and alerts across backends; ELK (Elasticsearch, Logstash, Kibana) centralises log ingestion and querying; Nagios monitors infrastructure and triggers threshold alerts; Sentry aggregates front-end and back-end errors in real time.
+21. How does Prometheus collect data, and why does that surprise people? → Answer: It uses a pull model, scraping HTTP endpoints from monitored services, rather than having applications push metrics to it.
+22. Compare Google Analytics and KISSmetrics. → Answer: GA is a JavaScript traffic-tracking and reporting tool useful for audience and browser prioritisation; KISSmetrics is a paid customer-intelligence platform with a subset of GA's features but deeper, cross-device user insight and a wider analytics toolkit.
+23. Why shouldn't heavy analytics run on the operational database? → Answer: Operational schemas are optimised for user performance (OLTP), not aggregate queries; scanning all rows for analytics is slow and can degrade service, so data is moved to a data warehouse.
+24. Describe the ETL pipeline and MapReduce. → Answer: ETL extracts data from various sources (JS clicks, access logs, database changes), transforms it into a consistent structure and loads it into a final application. MapReduce distributes intensive analytics into a Map step (filter and sort) and a Reduce step (consolidate into a summary).

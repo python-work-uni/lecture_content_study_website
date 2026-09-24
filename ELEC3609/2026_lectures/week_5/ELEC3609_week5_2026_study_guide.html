@@ -1,0 +1,2877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ELEC3609 Week 5 Study Guide – Client-Server Communication & Backend Web Development · 2026 Session</title>
+  <meta name="description" content="This lecture covers the two ends of a web application: how the client and server exchange data, and how the backend is designed, modelled and built. The first half explains data formats (XML and JSON)">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for crisp mathematical formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+:root {
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Light Theme (Default) */
+      --bg-primary: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-alt: #e2e8f0;
+      
+      --border-color: #e2e8f0;
+      --border-focus: #6366f1;
+      
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-glow: rgba(79, 70, 229, 0.15);
+      
+      --accent-blue: #0284c7;
+      --accent-blue-bg: #e0f2fe;
+      --accent-emerald: #059669;
+      --accent-emerald-bg: #d1fae5;
+      --accent-amber: #d97706;
+      --accent-amber-bg: #fef3c7;
+      --accent-rose: #e11d48;
+      --accent-rose-bg: #ffe4e6;
+      --accent-purple: #7c3aed;
+      --accent-purple-bg: #ede9fe;
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --nav-width: 280px;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0b0f19;
+      --bg-surface: #131b2e;
+      --bg-subtle: #1e293b;
+      --bg-alt: #334155;
+      
+      --border-color: #1e293b;
+      --border-focus: #818cf8;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-light: #64748b;
+      
+      --primary: #6366f1;
+      --primary-hover: #818cf8;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      
+      --accent-blue: #38bdf8;
+      --accent-blue-bg: rgba(56, 189, 248, 0.15);
+      --accent-emerald: #34d399;
+      --accent-emerald-bg: rgba(52, 211, 153, 0.15);
+      --accent-amber: #fbbf24;
+      --accent-amber-bg: rgba(251, 191, 36, 0.15);
+      --accent-rose: #fb7185;
+      --accent-rose-bg: rgba(251, 113, 133, 0.15);
+      --accent-purple: #a78bfa;
+      --accent-purple-bg: rgba(167, 139, 250, 0.15);
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      --card-shadow-hover: 0 10px 20px -3px rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(19, 27, 46, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Reading Progress Bar */
+    #progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981);
+      width: 0%;
+      z-index: 1000;
+      transition: width 0.1s ease-out;
+    }
+
+    /* Top Sticky Header */
+    header.site-header {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: var(--glass-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.6rem;
+      color: var(--text-main);
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .course-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-box input {
+      padding: 0.45rem 0.75rem 0.45rem 2rem;
+      font-size: 0.85rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      width: 180px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      width: 240px;
+      background: var(--bg-surface);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 0.65rem;
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .btn-icon {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-alt);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      max-width: 1520px;
+      margin: 0 auto;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: var(--nav-width);
+      flex-shrink: 0;
+      position: sticky;
+      top: 57px;
+      height: calc(100vh - 57px);
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-primary);
+    }
+
+    .sidebar-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-light);
+      margin-bottom: 0.75rem;
+      padding-left: 0.5rem;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.65rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      line-height: 1.3;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+      background: var(--bg-subtle);
+    }
+
+    .nav-link.active {
+      color: var(--primary);
+      background: var(--primary-light);
+      font-weight: 600;
+    }
+
+    .nav-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    /* Main Content Area */
+    main.main-content {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      max-width: 1020px;
+      min-width: 0;
+    }
+
+    /* Hero Banner */
+    .hero-card {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-main);
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-overview {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      background: var(--bg-surface);
+      padding: 1.25rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      line-height: 1.7;
+    }
+
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .stat-val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Section Styling */
+    section.guide-section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 80px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .section-number {
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+    }
+
+    h2.section-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    h3.subsection-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.75rem 0;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-main);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--card-shadow);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Callout Boxes */
+    .callout {
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      margin: 1.25rem 0;
+      display: flex;
+      gap: 0.9rem;
+      align-items: flex-start;
+      border-left: 4px solid transparent;
+    }
+
+    .callout-icon {
+      font-size: 1.35rem;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .callout-content {
+      flex: 1;
+      font-size: 0.95rem;
+    }
+
+    .callout-content strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.95rem;
+    }
+
+    .callout-why {
+      background: var(--accent-amber-bg);
+      border-left-color: var(--accent-amber);
+      color: var(--text-main);
+    }
+
+    .callout-memory {
+      background: var(--accent-purple-bg);
+      border-left-color: var(--accent-purple);
+      color: var(--text-main);
+    }
+
+    .callout-tip {
+      background: var(--accent-emerald-bg);
+      border-left-color: var(--accent-emerald);
+      color: var(--text-main);
+    }
+
+    .callout-warning {
+      background: var(--accent-rose-bg);
+      border-left-color: var(--accent-rose);
+      color: var(--text-main);
+    }
+
+    .callout-info {
+      background: var(--accent-blue-bg);
+      border-left-color: var(--accent-blue);
+      color: var(--text-main);
+    }
+
+    /* Formula & Math Block */
+    .formula-block {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin: 1.25rem 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .formula-title {
+      position: absolute;
+      top: -10px;
+      left: 14px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .formula-math {
+      font-size: 1.2rem;
+      margin: 0.5rem 0;
+      color: var(--text-main);
+      overflow-x: auto;
+    }
+
+    /* ELEC3609 local: code / plain-text reference blocks render left-aligned in mono */
+    .formula-block pre.formula-math {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.55;
+      text-align: left;
+      white-space: pre;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      margin: 0;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.25rem 0;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      background: var(--bg-surface);
+    }
+
+    table.study-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    table.study-table th {
+      background: var(--bg-subtle);
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border-color);
+      letter-spacing: 0.02em;
+    }
+
+    table.study-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    table.study-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.study-table tr:hover td {
+      background: var(--bg-subtle);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .badge-recall {
+      background: var(--accent-emerald-bg);
+      color: var(--accent-emerald);
+    }
+
+    .badge-precision {
+      background: var(--accent-blue-bg);
+      color: var(--accent-blue);
+    }
+
+    .badge-f1 {
+      background: var(--accent-purple-bg);
+      color: var(--accent-purple);
+    }
+
+    .badge-danger {
+      background: var(--accent-rose-bg);
+      color: var(--accent-rose);
+    }
+
+    /* Pipeline Diagram */
+    .pipeline-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      box-shadow: var(--card-shadow);
+    }
+
+    .pipeline-flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin: 1rem 0;
+    }
+
+    .pipe-step {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .pipe-step .step-num {
+      font-size: 0.7rem;
+      color: var(--primary);
+      font-family: var(--font-mono);
+    }
+
+    .pipe-step:hover, .pipe-step.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .pipe-arrow {
+      color: var(--text-light);
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    /* Interactive Confusion Matrix Calculator Widget */
+    .calculator-card {
+      background: var(--bg-surface);
+      border: 2px solid var(--primary);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin: 2rem 0;
+      box-shadow: 0 10px 25px -5px var(--primary-glow);
+    }
+
+    .calc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .calc-presets {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .cm-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    .cm-table th, .cm-table td {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem;
+    }
+
+    .cm-table th {
+      background: var(--bg-subtle);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .cm-input-cell {
+      background: var(--bg-surface);
+    }
+
+    .cm-input-cell label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+    }
+
+    .cm-input-cell input {
+      width: 100%;
+      max-width: 90px;
+      padding: 0.4rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .cm-input-cell input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    .calc-results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .metric-card {
+      background: var(--bg-subtle);
+      border-radius: 10px;
+      padding: 0.85rem;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .metric-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--primary);
+      margin: 0.2rem 0;
+    }
+
+    .metric-formula {
+      font-size: 0.7rem;
+      color: var(--text-light);
+      font-family: var(--font-mono);
+    }
+
+    /* Key Takeaways list */
+    .takeaways-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .takeaway-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.9rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .takeaway-num {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.85rem;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    /* Terms & Glossary Section */
+    .glossary-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .filter-chip {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-chip:hover, .filter-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .terms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .term-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.1rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .term-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .term-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--primary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .term-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Exam Questions Section */
+    .exam-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .exam-progress {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .exam-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-secondary {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-alt);
+    }
+
+    .quiz-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--card-shadow);
+      transition: border-color 0.2s ease;
+    }
+
+    .quiz-card.mastered {
+      border-left: 4px solid var(--accent-emerald);
+      opacity: 0.9;
+    }
+
+    .quiz-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      cursor: pointer;
+    }
+
+    .quiz-qnum {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+
+    .quiz-question {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      flex: 1;
+      line-height: 1.5;
+    }
+
+    .quiz-status-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .quiz-answer {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+      color: var(--text-main);
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .quiz-answer.show {
+      display: block;
+    }
+
+    .quiz-toggle-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0;
+    }
+
+    .quiz-toggle-btn:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--border-color);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      background: var(--bg-surface);
+      margin-top: 4rem;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      header.site-header, aside.sidebar, #progress-bar, .calculator-card, .btn-icon, .exam-actions, .filter-chip {
+        display: none !important;
+      }
+      .app-container {
+        display: block;
+        max-width: 100%;
+      }
+      main.main-content {
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .card, .hero-card, .takeaway-item, .quiz-card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .quiz-answer {
+        display: block !important;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      aside.sidebar {
+        position: fixed;
+        left: -100%;
+        top: 57px;
+        z-index: 950;
+        background: var(--bg-surface);
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        transition: left 0.3s ease;
+      }
+      aside.sidebar.open {
+        left: 0;
+      }
+      .menu-toggle {
+        display: block;
+      }
+      main.main-content {
+        padding: 1.5rem;
+      }
+      .grid-2, .calc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="progress-bar"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-left">
+      <button class="menu-toggle" id="menu-btn" aria-label="Toggle navigation menu">&#9776;</button>
+      <span class="course-badge">ELEC3609 • Week 5</span>
+      <span class="header-title">Client-Server Communication & Backend Web Development · 2026 Session</span>
+    </div>
+    <div class="header-controls">
+      <div class="search-box">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" id="site-search" placeholder="Search guide..." aria-label="Search study guide">
+      </div>
+      <button class="btn-icon" id="theme-toggle" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">&#127769;</button>
+      <button class="btn-icon" onclick="window.print()" title="Print Study Guide" aria-label="Print Guide">&#128424;</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">Table of Contents</div>
+      <ul class="nav-list">
+<li><a href="#overview" class="nav-link"><span class="nav-num">00</span> Overview</a></li>
+        <li><a href="#section-1" class="nav-link"><span class="nav-num">01</span> Client-Server Communication</a></li>
+        <li><a href="#section-2" class="nav-link"><span class="nav-num">02</span> XML: A Schema Contract</a></li>
+        <li><a href="#section-3" class="nav-link"><span class="nav-num">03</span> XML Terminology &amp; DTD</a></li>
+        <li><a href="#section-4" class="nav-link"><span class="nav-num">04</span> JSON</a></li>
+        <li><a href="#section-5" class="nav-link"><span class="nav-num">05</span> HTTP Revisited &amp; Status Codes</a></li>
+        <li><a href="#section-6" class="nav-link"><span class="nav-num">06</span> HTTP Methods &amp; Content-Type</a></li>
+        <li><a href="#section-7" class="nav-link"><span class="nav-num">07</span> Cookies &amp; the Login Flow</a></li>
+        <li><a href="#section-8" class="nav-link"><span class="nav-num">08</span> Referer, User-Agent &amp; Origins</a></li>
+        <li><a href="#section-9" class="nav-link"><span class="nav-num">09</span> Data Modelling &amp; the TIL ERD</a></li>
+        <li><a href="#section-10" class="nav-link"><span class="nav-num">10</span> Models, Keys &amp; Relationships</a></li>
+        <li><a href="#section-11" class="nav-link"><span class="nav-num">11</span> MVC &amp; MVT (Django)</a></li>
+        <li><a href="#section-12" class="nav-link"><span class="nav-num">12</span> Version Control with Git</a></li>
+        <li><a href="#section-13" class="nav-link"><span class="nav-num">13</span> Python, Packages &amp; Virtual Environments</a></li>
+        <li><a href="#section-14" class="nav-link"><span class="nav-num">14</span> IDEs &amp; Development Environment</a></li>
+        <li><a href="#key-takeaways" class="nav-link"><span class="nav-num">15</span> 20 Key Takeaways</a></li>
+        <li><a href="#terms-to-know" class="nav-link"><span class="nav-num">16</span> Terms to Know (Glossary)</a></li>
+        <li><a href="#mnemonics" class="nav-link"><span class="nav-num">17</span> Mnemonics &amp; Quick Recall</a></li>
+        <li><a href="#worked-examples" class="nav-link"><span class="nav-num">18</span> Worked Scenarios &amp; Calculations</a></li>
+        <li><a href="#exam-focus" class="nav-link"><span class="nav-num">19</span> Potential Exam Focus &amp; Practice</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+<section id="overview" class="hero-card">
+  <div class="hero-tagline">📖 Official Course Notes • Week 5</div>
+  <h1 class="hero-title">Client-Server Communication &amp; Backend Web Development · 2026 Session</h1>
+  <p class="hero-subtitle">This lecture covers the two ends of a web application: how the client and server exchange data, and how the backend is designed, modelled…</p>
+  <div class='hero-overview'><strong>Lecture Overview:</strong> This lecture covers the two ends of a web application: how the client and server exchange data, and how the backend is designed, modelled and built. The first half explains data formats (XML and JSON), the HTTP request/response protocol in detail, and the headers that carry real meaning — Content-Type, cookies, Referer and User-Agent. The second half turns to backend work: data modelling with entity-relationship diagrams (using the "TIL" platform as a running example), the Model-View-Controller and Model-View-Template patterns, and the development environment every backend developer needs — version control, Python, package managers, virtual environments and IDEs.</div>
+  <div class="quick-stats">
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">⚙️</div>
+  <div>
+    <div class="stat-label">Data Formats</div>
+    <div class="stat-val">2 (XML, JSON)</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-blue-bg); color: var(--accent-blue);">📊</div>
+  <div>
+    <div class="stat-label">HTTP Methods</div>
+    <div class="stat-val">7</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-emerald-bg); color: var(--accent-emerald);">🎯</div>
+  <div>
+    <div class="stat-label">TIL Entities</div>
+    <div class="stat-val">3 (User, Post, Tag)</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-amber-bg); color: var(--accent-amber);">📝</div>
+  <div>
+    <div class="stat-label">Package Managers Listed</div>
+    <div class="stat-val">4</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-purple-bg); color: var(--accent-purple);">🧠</div>
+  <div>
+    <div class="stat-label">IDE Examples</div>
+    <div class="stat-val">3</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="section-1" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">01</span>
+    <h2 class="section-title">Client-Server Communication</h2>
+  </div>
+  <p>Client-server communication needs both a <strong>format</strong> and a <strong>way to transmit and receive data</strong>.</p>
+
+<h3 class="subsection-title">General Mechanisms</h3>
+
+<p>Some general client-server communication mechanisms:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Sockets</strong></li><li><strong>Remote procedure calls</strong></li><li><strong>Pipes</strong></li></ul>
+
+<h3 class="subsection-title">MIME Types</h3>
+
+<p><strong>MIME (Multipurpose Internet Mail Extensions) type determines the file format and format contents.</strong> MIME types are standardised by the <strong>IANA</strong>. Common examples:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code>text/html</code></li><li><code>image/png</code></li><li><code>application/json</code></li><li><code>text/css</code></li></ul>
+
+<h3 class="subsection-title">Human vs Machine</h3>
+
+<p>The lecture contrasts human-facing and machine-facing exchange: the same information can be shown to a person (a rendered page) or handed to a program (structured data). This distinction motivates the two data formats that follow.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    The MIME type is how a client knows <em>how to interpret</em> the bytes it receives. Send HTML where JSON was expected and nothing useful happens.
+  </div>
+</div>
+</section>
+
+<section id="section-2" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">02</span>
+    <h2 class="section-title">XML: A Schema Contract</h2>
+  </div>
+  <p><strong>Extensible Markup Language (XML) defines a set of rules for encoding documents.</strong> It is:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>A language <strong>for describing the rules of other languages</strong>.</li><li>A way to define <strong>schemas for tag-based languages</strong>.</li></ul>
+
+<p><strong>A schema is a contract for communication between client and server.</strong> XML is also:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>A <strong>markup language, not a programming language.</strong></li><li><strong>Human-readable.</strong></li><li><strong>Machine-readable.</strong></li><li>Designed to be <strong>self-descriptive</strong>.</li><li>Designed to <strong>carry and transport data, not to display data.</strong></li></ul>
+
+<div class="callout callout-info">
+  <div class="callout-icon">📌</div>
+  <div class="callout-content">
+    <strong>Info::</strong>
+    Because a schema is <em>agreed in advance</em>, both sides know which fields to expect — that is what makes XML a communication contract rather than just a file format.
+  </div>
+</div>
+</section>
+
+<section id="section-3" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">03</span>
+    <h2 class="section-title">XML Terminology &amp; DTD</h2>
+  </div>
+  <h3 class="subsection-title">Core Terminology</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Markup</strong> — elements that define the structure of the document. Usually enclosed by:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code>&lt;</code> and <code>&gt;</code></li><li><code>&amp;</code> and <code>;</code></li></ul></li><li><strong>Content</strong> — all the information between markup.</li><li><strong>Tag</strong> — a type of markup that begins with <code>&lt;</code> and ends with <code>&gt;</code>, in three flavours:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>start tag</strong> — <code>&lt;section&gt;</code></li><li><strong>end tag</strong> — <code>&lt;/section&gt;</code></li><li><strong>empty-element tag</strong> — <code>&lt;img src="dog.jpg"/&gt;</code></li></ul></li><li><strong>Attribute</strong> — markup on a start tag or empty-element tag that defines <strong>key-value pairs</strong> about that element:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code>&lt;img src="dog.jpg" alt="woof"/&gt;</code></li></ul></li></ul>
+
+<h3 class="subsection-title">XML Document Type</h3>
+
+<p>To define what types of fields are allowed in an XML document, and in what structure, a <strong>document type declaration (DOCTYPE)</strong> is provided.</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The DOCTYPE identifies a <strong>document type definition (DTD)</strong>, which defines the fields and their structure.</li></ul>
+
+<p>For the lecture's XML book document example, the DTD is:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">&lt;!ELEMENT book (title , chapter+)&gt;
+&lt;!ELEMENT chapter (heading , paragraph*)&gt;
+&lt;!ELEMENT heading (#PCDATA)&gt;
+&lt;!ELEMENT paragraph (#PCDATA)&gt;
+&lt;!ATTLIST book
+  language CDATA #REQUIRED
+  author CDATA #REQUIRED
+&gt;</pre></div>
+</div>
+
+<p>Reading this DTD: a <code>book</code> contains one <code>title</code> followed by one or more <code>chapter</code>s (<code>+</code>); a <code>chapter</code> contains one <code>heading</code> and zero or more <code>paragraph</code>s (<code>*</code>); <code>heading</code> and <code>paragraph</code> hold parsed character data (<code>#PCDATA</code>); and a <code>book</code> must have <code>language</code> and <code>author</code> attributes (<code>#REQUIRED</code>).</p>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>DOCTYPE declares, DTD defines</strong> — the declaration points at the definition that lists fields and structure.
+  </div>
+</div>
+</section>
+
+<section id="section-4" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">04</span>
+    <h2 class="section-title">JSON</h2>
+  </div>
+  <p><strong>JavaScript Object Notation (JSON) is an open-standard format for representing data online.</strong> As the name suggests, it is based on the <strong>representation of objects in JavaScript</strong>.</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>It is <strong>language-independent</strong> and <strong>supported by most programming languages</strong>.</li><li>It is typically used for:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>API requests/responses</strong></li><li><strong>Serialization</strong></li><li><strong>Configuration files</strong></li></ul></li></ul>
+
+<p>Compared with XML, JSON is lighter-weight and maps naturally onto program objects, which is why it dominates modern APIs.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    JSON is the default payload of the modern web API — you will read and write it constantly on the backend.
+  </div>
+</div>
+</section>
+
+<section id="section-5" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">05</span>
+    <h2 class="section-title">HTTP Revisited &amp; Status Codes</h2>
+  </div>
+  <p><strong>Hypertext Transfer Protocol (HTTP) is designed to allow communication between an HTTP client and HTTP server.</strong> It works as a <strong>request-response protocol</strong>: a client makes a request and the server responds, generally with a web page. A response is then rendered by a browser to display a web page. Once you have an open TCP connection to the web server, you send the HTTP request through that connection.</p>
+
+<h3 class="subsection-title">HTTP Status Codes</h3>
+
+<p>The response can specify an <strong>HTTP status code</strong> which indicates what happened:</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>HTTP code category</th><th>Definition</th><th>Example</th></tr></thead>
+<tbody><tr><td><strong>1xx</strong></td><td>Informational</td><td>100: Continue; 101: Switching Protocols</td></tr><tr><td><strong>2xx</strong></td><td>Success</td><td>200: OK — the standard response</td></tr><tr><td><strong>3xx</strong></td><td>Redirection</td><td>301: Moved Permanently; 302: Found/Moved Temporarily (similar to 303 &amp; 307); 304: Not Modified</td></tr><tr><td><strong>4xx</strong></td><td>Client</td><td>404: Not found</td></tr><tr><td><strong>5xx</strong></td><td>Server</td><td>502: Bad gateway</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>1 info, 2 OK, 3 go elsewhere, 4 you broke it, 5 we broke it.</strong>
+  </div>
+</div>
+</section>
+
+<section id="section-6" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">06</span>
+    <h2 class="section-title">HTTP Methods &amp; Content-Type</h2>
+  </div>
+  <h3 class="subsection-title">HTTP Structure</h3>
+
+<p>A HTTP request or response consists of:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Header</strong> — contains metadata such as cookie and connection information.</li><li><strong>Body</strong> — contains the data to be sent with the transmission (optional).</li></ul>
+
+<h3 class="subsection-title">Types of Web Requests</h3>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Method</th><th>Behaviour</th></tr></thead>
+<tbody><tr><td><strong>GET</strong></td><td>A simple request; header only</td></tr><tr><td><strong>POST</strong></td><td>A request containing data in the body, e.g. form data, file upload, etc.</td></tr><tr><td><strong>HEAD</strong></td><td>The same as GET, except the server omits the body in the response (only sends the header)</td></tr><tr><td><strong>PUT</strong></td><td>Replace a target resource on the server</td></tr><tr><td><strong>PATCH</strong></td><td>Partially modify</td></tr><tr><td><strong>DELETE</strong></td><td>Delete a target resource on the server</td></tr><tr><td><strong>OPTIONS</strong></td><td>Ask the server which request types are allowed against a particular resource</td></tr></tbody>
+  </table>
+</div>
+
+<h3 class="subsection-title">HTTP Content Type</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Generally, an HTTP <strong>request</strong> uses the <strong>Accept</strong> header to indicate to the server <strong>which data types it will accept</strong> in the response. A client can define <strong>multiple</strong> data types that it supports.</li><li>An HTTP <strong>response</strong> defines the <strong>Content-Type</strong> header, which determines <strong>what type of data is contained in the body</strong> of the response. This is an indication to the browser as to how it should interpret the response.</li><li><strong>Content-Type applies to both request and response bodies.</strong></li></ul>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    <code>Accept</code> (what the client wants) and <code>Content-Type</code> (what the body actually is) point in opposite directions. Don't confuse them.
+  </div>
+</div>
+</section>
+
+<section id="section-7" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">07</span>
+    <h2 class="section-title">Cookies &amp; the Login Flow</h2>
+  </div>
+  <h3 class="subsection-title">HTTP Cookies</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>A <strong>HTTP cookie</strong> is a <strong>small piece of data, set by a website, which is stored in the user's browser</strong>.</li><li><strong>Browsers automatically include all the cookies set by a server with every HTTP request sent to that server.</strong></li><li>Two HTTP headers control cookies on the web:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Requests:</strong> <code>Cookie</code><ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code>Cookie: username=abc123; authToken=4f3e</code></li></ul></li><li><strong>Responses:</strong> <code>Set-Cookie</code><ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code>Set-Cookie: username=abc123</code></li><li><code>Set-Cookie: authToken=4f3e</code></li></ul></li></ul></li></ul>
+
+<p>Cookies are often used for <strong>tracking users and authentication</strong>. A typical login flow:</p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>User visits website for first time</strong> — no cookie.</li><li><strong>User submits login form</strong> to the server with username + password — still no cookie.</li><li><strong>Server generates an authentication token (auth-tok)</strong> — the server responds with <code>Set-Cookie: token=[auth-tok]</code>.</li><li><strong>User visits the website again</strong> — the client sends <code>Cookie: token=[auth-tok]</code>.</li><li><strong>Server recognises (auth-tok)</strong> and knows the request came from that User.</li></ol>
+
+<p>The lecture also flags three cookie attributes worth knowing: <strong>HttpOnly, Secure, SameSite</strong>.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Cookies are how stateless HTTP remembers who you are. The same mechanism that keeps you logged in is why cookie security attributes matter.
+  </div>
+</div>
+</section>
+
+<section id="section-8" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">08</span>
+    <h2 class="section-title">Referer, User-Agent &amp; Origins</h2>
+  </div>
+  <h3 class="subsection-title">HTTP Referer</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The HTTP <strong>Referer</strong> header is sent with requests made by a browser. It indicates to the server <strong>the previous page that the user was on</strong>.</li><li>Example:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>I go to <code>www.google.com</code> and search for "elec3609".</li><li>I click the link to the <code>www.elec3609.com</code> website.</li><li>The browser's request to <code>www.elec3609.com</code> includes a <strong>Referer</strong> header containing our previous address: <code>https://www.google.com/</code>.</li></ul></li></ul>
+
+<h3 class="subsection-title">HTTP User-Agent</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The HTTP <strong>User-Agent</strong> header tells the server <strong>what type of software the client is using</strong>.</li><li>Typically it includes information like:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Browser</strong></li><li><strong>Rendering Engine</strong></li><li><strong>Operating System</strong></li></ul></li></ul>
+
+<h3 class="subsection-title">When Frontend and Backend Run on Different Origins/Ports</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Two URLs have the same origin if the protocol, port (if specified), and host are the same for both.</strong></li><li>The lecture works through an example such as <code>http://store.company.com/dir/page.html</code> to show which URLs match that origin and which do not.</li></ul>
+
+<div class="callout callout-info">
+  <div class="callout-icon">📌</div>
+  <div class="callout-content">
+    <strong>Info::</strong>
+    Origin matters because a browser treats requests between different origins more cautiously — this is the web's core security boundary.
+  </div>
+</div>
+</section>
+
+<section id="section-9" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">09</span>
+    <h2 class="section-title">Data Modelling &amp; the TIL ERD</h2>
+  </div>
+  <h3 class="subsection-title">What Data Modelling Is</h3>
+
+<p><strong>Data modelling is the process of defining and analysing data requirements of an information system.</strong> The process of data modelling involves:</p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Identifying the detailed system requirements</strong></li><li><strong>Normalising the entities</strong></li><li><strong>Writing the data model</strong></li></ol>
+
+<p>We use <strong>UML</strong> to develop a formalised <strong>entity-relationship diagram (ERD), using Crow's foot notation</strong>.</p>
+
+<h3 class="subsection-title">The TIL Example Platform</h3>
+
+<p>The running example is <strong>TIL</strong> — a social <strong>"Today I learned"</strong> platform. <strong>TIL rough requirements:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>A user can <strong>sign up with a username and password</strong>.</li><li>Users can make <strong>posts</strong>, consisting of:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Subject</strong></li><li><strong>Content</strong></li><li><strong>Post date</strong></li></ul></li><li>Posts can be:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>public</strong> (visible to all users) or <strong>private</strong> (visible only to the creator)</li><li>associated with <strong>zero, one or more tags</strong></li></ul></li><li><strong>Tags are free-form text labels</strong> that are <strong>dynamically created when first used</strong>.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    The ERD is where business rules (public/private, many tags) become a concrete database structure. Get the diagram right and the database follows.
+  </div>
+</div>
+</section>
+
+<section id="section-10" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">10</span>
+    <h2 class="section-title">Models, Keys &amp; Relationships</h2>
+  </div>
+  <h3 class="subsection-title">Models</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>A <strong>model</strong> describes the <strong>fields which hold information about a particular entity</strong>.</li><li>Each attribute of a model has a <strong>designated type</strong>, such as:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>String</strong></li><li><strong>Numeric</strong></li><li><strong>Boolean</strong></li><li><strong>Date/Time</strong></li></ul></li><li>An <strong>entity is represented by a single table</strong> in a database.</li><li>Each table should have an <strong><code>id</code> field</strong>, which <strong>uniquely identifies each row</strong>, as the <strong>primary key</strong>.</li><li>Each of the entities in an ERD can be considered a <strong>model</strong>.</li></ul>
+
+<h3 class="subsection-title">Foreign Keys</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Models rarely exist in isolation; they have <strong>relationships</strong> with other models.</li><li>A relationship to another model is expressed through a <strong>Foreign Key (FK)</strong>.</li><li>Foreign keys specify a <strong>"one-to-many"</strong> relationship.</li><li><strong>"one-to-many"</strong>: <em>A mother may have many children, but a child has only one mother.</em></li><li><strong>TIL example:</strong> A <strong>Post</strong> can be associated with <strong>one User</strong>. Posts contain a foreign key to their associated User.</li></ul>
+
+<h3 class="subsection-title">Many-to-Many Relationships</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>"many-to-many"</strong>: <em>An Author can write several Books, and a Book can be written by several Authors.</em></li><li>To achieve a many-to-many relationship, we typically use <strong>intermediate tables</strong> to express the relationship.</li><li><strong>TIL example:</strong> A <strong>Post</strong> can be associated with <strong>many Tags</strong>, and a <strong>Tag</strong> can be applied to <strong>many Posts</strong>.</li></ul>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Relationship</th><th>How it is stored</th><th>TIL example</th></tr></thead>
+<tbody><tr><td><strong>One-to-many</strong></td><td>Foreign key on the "many" side</td><td>Post → User</td></tr><tr><td><strong>Many-to-many</strong></td><td>Intermediate (join) table</td><td>Post ↔ Tag</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>One-to-many</strong> needs a foreign key; <strong>many-to-many</strong> needs an extra table in the middle.
+  </div>
+</div>
+</section>
+
+<section id="section-11" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">11</span>
+    <h2 class="section-title">MVC &amp; MVT (Django)</h2>
+  </div>
+  <h3 class="subsection-title">Model-View-Controller Architecture</h3>
+
+<p>A common way to structure the code of a web application is using the <strong>model-view-controller (MVC) architecture</strong>. In this pattern, code functionality is separated into three responsibilities:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Model</strong> — handles the <strong>data</strong>.</li><li><strong>View</strong> — <strong>renders data into views</strong> (usually HTML).</li><li><strong>Controller</strong> — <strong>interprets requests and encapsulates business logic</strong>.</li></ul>
+
+<h3 class="subsection-title">Model-View-Template Architecture</h3>
+
+<p>Django uses a closely related pattern with different names:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Model</strong> — similar to MVC; handles the data and logic part and maintains a <strong>connection with the database</strong>.</li><li><strong>View</strong> — works <strong>differently</strong> than the View layer of MVC: here the view <strong>accepts the requests and sends out the response</strong>.</li><li><strong>Template</strong> — the <strong>presentation layer</strong>, commonly coded in <strong>HTML or DTL (Django Template Language)</strong>.</li></ul>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    In Django, the responsibilities of MVC's Controller live in the <strong>View</strong>, and MVC's View is the <strong>Template</strong>. The names map across, but not one-to-one.
+  </div>
+</div>
+
+<h3 class="subsection-title">Django</h3>
+
+<p>Django is the concrete framework used to apply the MVT pattern to the TIL example and beyond.</p>
+</section>
+
+<section id="section-12" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">12</span>
+    <h2 class="section-title">Version Control with Git</h2>
+  </div>
+  <h3 class="subsection-title">What Version Control Solves</h3>
+
+<p>A <strong>version control system (VCS)</strong> helps to <strong>keep track of the changes to a file or files</strong>. It helps avoid a situation like this pile of file names:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code>Report_draft.doc</code></li><li><code>Report_draft_final.doc</code></li><li><code>Report_draft_finalv2.doc</code></li><li><code>Report_draft_final - Copy.doc</code></li><li><code>Report_fixed.doc</code></li><li><code>Report_SUBMITTED.doc</code></li></ul>
+
+<p>Other benefits:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Improved ability to collaborate</strong></li><li><strong>Compare changes made to a file over time</strong></li><li><strong>Revert to a previous version of a file</strong></li></ul>
+
+<h3 class="subsection-title">Common Version Control Software</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Git</strong> — the industry standard, and what we will use in this course. <strong>Git integration is supported by GitHub and BitBucket</strong>, two leading online repository hosting providers.</li><li><strong>SVN (Apache Subversion)</strong> — an older VCS that is fading in popularity.</li><li><strong>Hg (Mercurial)</strong> — an alternative VCS written in Python.</li></ul>
+
+<p><strong>Practise Git!</strong> Git is used extensively in this course and in your career; the sooner you master it, the easier your life will be. If you are unfamiliar, the lecture points to a Simple Git Guide, GitHub's interactive introduction, and the Git Book — Basics.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Version control is the safety net for every other development activity — branches, review, and rollback all depend on it.
+  </div>
+</div>
+</section>
+
+<section id="section-13" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">13</span>
+    <h2 class="section-title">Python, Packages &amp; Virtual Environments</h2>
+  </div>
+  <h3 class="subsection-title">Python</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Python is the prescribed backend language for this course.</strong></li><li>It is an <strong>interpreted high-level programming language</strong>.</li><li>The lecture points to tutorials (W3Schools, learnpython.org, and the unit's own INFO1110 and ELEC1005), the Python documentation, and an installation guide.</li></ul>
+
+<h3 class="subsection-title">Package Managers</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>A <strong>package manager</strong> is software for managing <strong>dependencies</strong> — libraries or extensions that add functionality or features to the language.</li><li>Common package managers:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Python: pip</strong></li><li><strong>Node: NPM</strong></li><li><strong>PHP: Composer</strong></li><li><strong>Ruby: RubyGems</strong></li></ul></li></ul>
+
+<h3 class="subsection-title">Python's pip</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>pip is the standard Python package manager</strong>, letting you easily install packages.</li><li><code>pip install django</code> will <strong>fetch and install the Django package and its dependencies</strong>.</li></ul>
+
+<h3 class="subsection-title">Conflicting Project Dependencies</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Python only allows us to install one version of a package at a time.</strong></li><li>This creates conflicts. Example requirements:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Awesome Website:</strong> <code>simplejson == 3.16</code>, <code>django == 3.1</code></li><li><strong>Better Website:</strong> <code>simplejson &lt;= 3.17</code>, <code>django &gt;= 3.2</code></li></ul></li><li>It is <strong>not possible to find a set of requirements that satisfies the desired versions</strong> — leading to workarounds such as symbolic links (symbolic links?) and <strong>venv</strong>.</li></ul>
+
+<h3 class="subsection-title">Virtual Environments</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>To solve this, we use <strong>Python Virtual Environments</strong>.</li><li>They allow <strong>multiple, isolated installations of Python</strong>; each environment has <strong>its own dependencies</strong> without conflicting with others.</li><li>A virtual environment <strong>must be activated before it can be used</strong>.</li><li><strong>Do not commit your virtual environment into your repository.</strong></li></ul>
+
+<p><strong>Virtual environments in Python 3:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The <strong>venv module has shipped since Python 3.3</strong>, so support is <strong>built-in</strong>.</li><li>Each venv has its <strong>own site-packages and Python executable</strong>, isolated from the system install.</li><li>Create one with:</li></ul>
+
+<div class="formula-block">
+  <div class="formula-title">Create venv</div>
+  <div class="formula-math"><pre class="formula-math">python3 -m venv myenvname</pre></div>
+</div>
+
+<div class="callout callout-tip">
+  <div class="callout-icon">✅</div>
+  <div class="callout-content">
+    <strong>Exam Tip::</strong>
+    Know the conflict story end to end: one version at a time → unsatisfiable requirements → isolated virtual environments, activated before use, never committed.
+  </div>
+</div>
+</section>
+
+<section id="section-14" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">14</span>
+    <h2 class="section-title">IDEs &amp; Development Environment</h2>
+  </div>
+  <p>An <strong>Integrated Development Environment (IDE)</strong> makes writing code easier by <strong>combining a text editor with additional features</strong>:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Debugger</strong></li><li><strong>Syntax highlighting</strong></li><li><strong>Version control</strong></li><li><strong>Refactoring</strong></li><li><strong>Search</strong></li></ul>
+
+<p>Some commonly used IDEs:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Visual Studio Code</strong></li><li><strong>PyCharm</strong></li><li><strong>Eclipse</strong></li></ul>
+
+<p>Pulling the whole lecture together, the backend development environment is: <strong>version control</strong> (Git) + a <strong>Python environment</strong> (pip and virtualenv) + a <strong>package manager</strong> + an <strong>IDE</strong>.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    A consistent, isolated development environment prevents "it works on my machine" failures and makes collaboration predictable.
+  </div>
+</div>
+</section>
+
+<section id="key-takeaways" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">15</span>
+    <h2 class="section-title">20 Key Takeaways</h2>
+  </div>
+  <div class="takeaways-list">
+<div class="takeaway-item">
+  <span class="takeaway-num">1</span>
+  <div><strong><strong>Client-server communication needs a format and a transport</strong>; general mechanisms include sockets</strong>, remote procedure calls and pipes.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">2</span>
+  <div><strong><strong>MIME types determine file format and contents</strong>, standardised by IANA</strong> — e.g. text/html, image/png, application/json, text/css.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">3</span>
+  <div><strong>XML defines rules for encoding documents and describes the rules of other languages</strong>; a schema is a contract between client and server.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">4</span>
+  <div><strong><strong>XML is a markup language, not a programming language</strong></strong> — human- and machine-readable, self-descriptive, and designed to carry data, not display it.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">5</span>
+  <div><strong><strong>XML terms</strong>: markup (structure)</strong>, content (between markup), tags (start, end, empty-element) and attributes (key-value pairs).</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">6</span>
+  <div><strong><strong>A DOCTYPE identifies a DTD</strong></strong>, which defines the allowed fields and their structure.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">7</span>
+  <div><strong>JSON is an open-standard</strong>, language-independent data format used for API requests/responses, serialization and configuration files.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">8</span>
+  <div><strong><strong>HTTP is a request-response protocol</strong>; status codes run 1xx informational</strong>, 2xx success, 3xx redirect, 4xx client, 5xx server.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">9</span>
+  <div><strong><strong>Seven HTTP methods matter</strong>: GET, POST, HEAD, PUT, PATCH, DELETE, OPTIONS</strong> — and <strong>PATCH partially modifies</strong> where PUT replaces.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">10</span>
+  <div><strong><strong>Accept is what the client will accept; Content-Type is what the body actually is</strong></strong>, and Content-Type applies to both request and response bodies.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">11</span>
+  <div><strong>Cookies are small pieces of data stored in the browser and sent automatically</strong> with every request to the server that set them; headers are <code>Cookie</code> (request) and <code>Set-Cookie</code> (response).</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">12</span>
+  <div><strong>Cookies enable tracking and authentication</strong>; a login flow ends when the server recognises the auth token on later requests.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">13</span>
+  <div><strong>Referer tells the server the previous page; User-Agent tells it the browser</strong>, rendering engine and OS.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">14</span>
+  <div><strong>Two URLs share an origin when protocol</strong>, port and host all match.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">15</span>
+  <div><strong><strong>Data modelling defines and analyses data requirements</strong> through requirements, normalisation and writing the model</strong> — expressed as an ERD in Crow's foot notation.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">16</span>
+  <div><strong><strong>Models describe entity fields with types; every table needs a primary key <code>id</code></strong></strong>, and relationships use foreign keys (one-to-many) or intermediate tables (many-to-many).</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">17</span>
+  <div><strong>MVC separates Model (data)</strong>, View (rendering) and Controller (requests and logic); Django's MVT calls the request handler a View and the presentation layer a Template.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">18</span>
+  <div><strong>Version control tracks changes and enables collaboration</strong>, comparison and rollback; Git is the industry standard, with GitHub and BitBucket hosting.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">19</span>
+  <div><strong><strong>pip installs one version of a package at a time</strong></strong>, so conflicts are resolved with isolated virtual environments (<code>python3 -m venv myenvname</code>), activated before use and never committed.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">20</span>
+  <div><strong><strong>An IDE combines an editor with debugging, syntax highlighting, version control, refactoring and search</strong></strong> — e.g. VS Code, PyCharm, Eclipse.</div>
+</div>
+</div>
+</section>
+
+<section id="terms-to-know" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">16</span>
+    <h2 class="section-title">Terms to Know (Glossary)</h2>
+  </div>
+  <div class="glossary-controls">
+  <button class="filter-chip active" onclick="filterTerms('all', this)">All (56)</button>
+  <button class="filter-chip" onclick="filterTerms('models', this)">Core Concepts</button>
+  <button class="filter-chip" onclick="filterTerms('pipeline', this)">Architecture & Data</button>
+</div>
+<div class="terms-grid" id="terms-container">
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Accept header</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Request header listing which response data types the client will accept.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Attribute (XML)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Key-value markup on a start or empty-element tag.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>BitBucket</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Online repository hosting provider with Git integration.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Composer</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">PHP's package manager.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Content (XML)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">All the information between markup.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Content-Type header</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Response header determining the data type of the body; applies to request bodies too.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Cookie</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A small piece of data set by a website and stored in the browser, sent automatically on subsequent requests.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Crow's foot notation</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">UML notation used to draw entity-relationship diagrams.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>CVC / VCS</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Version control system — tracks changes to files.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>DELETE</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">HTTP method that deletes a target resource.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>DOCTYPE</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Document type declaration identifying a DTD for an XML document.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>DTD</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Document type definition — defines the fields and structure allowed in an XML document.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>DTL</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Django Template Language, used to write Django templates.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Eclipse</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A commonly used IDE.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>ERD</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Entity-Relationship Diagram — a UML model of entities and their relationships.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Foreign Key (FK)</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">A field that expresses a relationship (one-to-many) to another model.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>GET</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">HTTP method that retrieves a resource; header only.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Git</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Industry-standard version control system used in this course; integrated with GitHub and BitBucket.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>GitHub</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Leading online repository hosting provider.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>HEAD</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Like GET, but the server omits the response body.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Hg (Mercurial)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">An alternative VCS written in Python.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>HttpOnly</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A cookie attribute (with Secure and SameSite) relevant to cookie security.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>IANA</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Organisation that standardises MIME types.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>IDE</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Integrated Development Environment — editor plus debugger, syntax highlighting, version control, refactoring and search.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>JSON</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">JavaScript Object Notation — open-standard, language-independent data format.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Markup (XML)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Elements that define document structure, enclosed by <code>&lt;</code>, <code>&gt;</code>, <code>&amp;</code>, <code>;</code>.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>MIME type</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Determines the file format and contents of data, e.g. text/html, application/json.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>MVC</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Model-View-Controller — separation of data, rendering, and request handling.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>MVT</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Model-View-Template — Django's variant of MVC.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Many-to-many</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A relationship where each side relates to many of the other, stored via an intermediate table.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Model</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Describes the fields holding information about an entity; each ERD entity becomes a model/table.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>NPM</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Node's package manager.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Normalising</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Part of data modelling — organising entities to reduce redundancy.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>One-to-many</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A relationship expressed by a foreign key.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>OPTIONS</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">HTTP method that asks which request types a resource allows.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>PATCH</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">HTTP method that partially modifies a resource.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Pip</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The standard Python package manager; <code>pip install django</code> fetches Django and its dependencies.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>POST</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">HTTP method carrying data in the body.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Primary key</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The <code>id</code> field that uniquely identifies each row of a table.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>PUT</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">HTTP method that replaces a target resource.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Referer</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Request header indicating the previous page the user was on.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Remote procedure call</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A general client-server communication mechanism.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>RubyGems</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Ruby's package manager.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>SameSite</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A cookie attribute controlling cross-site sending.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Secure</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A cookie attribute restricting cookies to secure connections.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Serialization</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Converting data structures into a transportable format such as JSON.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Set-Cookie</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Response header that creates a cookie in the browser.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Socket</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A general bidirectional communication mechanism between processes.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>SVN (Apache Subversion)</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">An older version control system, fading in popularity.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>TIL</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">"Today I learned" — the lecture's example social platform.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>UML</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Unified Modelling Language — used here to draw ERDs.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>User-Agent</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Request header telling the server the client's browser, rendering engine and OS.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>venv</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Python's built-in module for virtual environments (since Python 3.3).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Virtual environment</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">An isolated Python installation with its own dependencies; must be activated and never committed.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Visual Studio Code</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A commonly used IDE.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>XML</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Extensible Markup Language — rules for encoding documents and defining schemas.</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="mnemonics" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">17</span>
+    <h2 class="section-title">Mnemonics &amp; Quick Recall</h2>
+  </div>
+  <div class="grid-2">
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Client-Server Prereqs</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Format + Transport</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">— you need both a data format and a way to send it.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 HTTP Methods</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">G-P-H-P-P-D-O</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">— GET, POST, HEAD, PUT, PATCH, DELETE, OPTIONS.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Status Codes</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">1 info, 2 OK, 3 go elsewhere, 4 you broke it, 5 we broke it.</div>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Headers Direction</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Accept = I want; Content-Type = this is what I sent.</div>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Cookie Headers</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Request = Cookie, Response = Set-Cookie.</div>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Referer vs User-Agent</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Referer = where I came from; User-Agent = what I am.</div>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 XML Document Chain</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">DOCTYPE declares → DTD defines.</div>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">📊 Data Modelling Steps</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">I-N-W</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">— Identify requirements, Normalise entities, Write the model.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 MVC vs MVT</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">MVC = Model/View/Controller; Django MVT = Model/View/Template (View handles requests).</div>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Relationship Storage</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">One-to-many = foreign key; many-to-many = intermediate table.</div>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 MVC Responsibilities</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Model = data, View = render, Controller = logic.</div>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">📊 Data Modelling Framework</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">UML + Crow&#x27;s foot = ERD.</div>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Package Managers</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">pip (Python), NPM (Node), Composer (PHP), RubyGems (Ruby).</div>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Virtual Env Rule</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Create, Activate, Don&#x27;t Commit.</div>
+</div>
+</div>
+</section>
+
+<section id="worked-examples" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">18</span>
+    <h2 class="section-title">Worked Scenarios &amp; Calculations</h2>
+  </div>
+  <div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 1 &bull; A Login Cookie Flow</div>
+  <h3 class="subsection-title" style="margin-top:0;">A Login Cookie Flow</h3>
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The user visits the site for the first time — no cookie is sent.</li><li>They submit the login form with username and password — still no cookie.</li><li>The server verifies and generates an authentication token, responding <code>Set-Cookie: token=[auth-tok]</code>.</li><li>On the next visit the browser automatically sends <code>Cookie: token=[auth-tok]</code>.</li><li>The server recognises the token and knows the request came from that user.</li></ol>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 2 &bull; Mapping the TIL Platform to an ERD</div>
+  <h3 class="subsection-title" style="margin-top:0;">Mapping the TIL Platform to an ERD</h3>
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>From the requirements, the entities are <strong>User</strong>, <strong>Post</strong> and <strong>Tag</strong>.</li><li><strong>Post → User</strong> is <strong>one-to-many</strong> (a Post has one User), so Post carries a foreign key to User.</li><li><strong>Post ↔ Tag</strong> is <strong>many-to-many</strong> (a Post has many Tags; a Tag applies to many Posts), so an intermediate table expresses it.</li><li>Each table gets an <code>id</code> primary key; each attribute gets a type (Subject: String, Content: String, Post date: Date/Time, public/private: Boolean).</li><li><code>tags</code> are created dynamically on first use, so the data model must allow new Tag rows at runtime.</li></ol>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 3 &bull; Reading HTTP Headers on a Request</div>
+  <h3 class="subsection-title" style="margin-top:0;">Reading HTTP Headers on a Request</h3>
+<p>A browser navigates from a Google search result to <code>www.elec3609.com</code>:</p>
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Referer</strong>: <code>https://www.google.com/</code> — tells the server the previous page.</li><li><strong>User-Agent</strong>: identifies the browser, rendering engine and operating system.</li><li><strong>Accept</strong>: lists the data types the browser will accept (it can list several).</li><li><strong>Cookie</strong>: includes every cookie previously set by <code>www.elec3609.com</code>. The server answers with a response whose <strong>Content-Type</strong> tells the browser how to interpret the body.</li></ul>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 4 &bull; Resolving Conflicting Python</div>
+  <h3 class="subsection-title" style="margin-top:0;">Resolving Conflicting Python Dependencies</h3>
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Awesome Website wants <code>simplejson == 3.16</code> and <code>django == 3.1</code>.</li><li>Better Website wants <code>simplejson &lt;= 3.17</code> and <code>django &gt;= 3.2</code>.</li><li>Because Python allows only <strong>one version of a package at a time</strong>, no single set of installed versions satisfies both.</li><li>The fix: create isolated <strong>virtual environments</strong> — <code>python3 -m venv myenvname</code> — one per project, each with its own site-packages, activated before use and never committed.</li></ul>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 5 &bull; The Same URL, Different Origins</div>
+  <h3 class="subsection-title" style="margin-top:0;">The Same URL, Different Origins</h3>
+<p>Using <code>http://store.company.com/dir/page.html</code> as the reference:</p>
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The origin is the combination of <strong>protocol (<code>http</code>), host (<code>store.company.com</code>) and port</strong>.</li><li>A URL with the same protocol and host is the same origin; change the protocol (e.g. to <code>https</code>) or the port, and it is a <strong>different origin</strong>. This is why a frontend and backend served from different ports are treated as separate origins by the browser.</li></ul>
+</div>
+</section>
+
+<section id="exam-focus" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">19</span>
+    <h2 class="section-title">Potential Exam Focus &amp; Practice</h2>
+  </div>
+  <div class="exam-toolbar">
+  <div class="exam-progress" id="exam-progress-tracker">Progress: 0 / 23 Mastered</div>
+  <div class="exam-actions">
+    <button class="btn-secondary" onclick="toggleAllAnswers(true)">Reveal All</button>
+    <button class="btn-secondary" onclick="toggleAllAnswers(false)">Hide All</button>
+    <button class="btn-secondary" onclick="resetExamProgress()">Reset Progress</button>
+  </div>
+</div><div class="quiz-card" id="q1">
+  <div class="quiz-header" onclick="toggleAnswer('ans-1')">
+    <span class="quiz-qnum">Q1</span>
+    <div class="quiz-question">What is needed for client-server communication, and what general mechanisms exist?</div>
+  </div>
+  <div class='quiz-answer' id='ans-1'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A format and a way to transmit/receive data. General mechanisms include sockets, remote procedure calls and pipes.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-1')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q1', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q2">
+  <div class="quiz-header" onclick="toggleAnswer('ans-2')">
+    <span class="quiz-qnum">Q2</span>
+    <div class="quiz-question">What is a MIME type and give examples?</div>
+  </div>
+  <div class='quiz-answer' id='ans-2'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A MIME (Multipurpose Internet Mail Extensions) type determines the file format and contents; standardised by IANA. Examples: text/html, image/png, application/json, text/css.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-2')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q2', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q3">
+  <div class="quiz-header" onclick="toggleAnswer('ans-3')">
+    <span class="quiz-qnum">Q3</span>
+    <div class="quiz-question">Why is a schema important for XML?</div>
+  </div>
+  <div class='quiz-answer' id='ans-3'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A schema is a contract for communication between client and server — XML lets you define schemas for tag-based languages so both sides agree on fields and structure.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-3')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q3', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q4">
+  <div class="quiz-header" onclick="toggleAnswer('ans-4')">
+    <span class="quiz-qnum">Q4</span>
+    <div class="quiz-question">List the properties of XML.</div>
+  </div>
+  <div class='quiz-answer' id='ans-4'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>It is a markup language (not a programming language), human-readable, machine-readable, self-descriptive, and designed to carry and transport data rather than display it.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-4')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q4', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q5">
+  <div class="quiz-header" onclick="toggleAnswer('ans-5')">
+    <span class="quiz-qnum">Q5</span>
+    <div class="quiz-question">Define markup, content, tag and attribute in XML.</div>
+  </div>
+  <div class='quiz-answer' id='ans-5'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Markup defines document structure, enclosed by <code>&lt;</code>/<code>&gt;</code> and <code>&amp;</code>/<code>;</code>. Content is the information between markup. A tag begins with <code>&lt;</code> and ends with <code>&gt;</code> and comes as start, end or empty-element. An attribute is key-value markup on a start or empty-element tag.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-5')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q5', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q6">
+  <div class="quiz-header" onclick="toggleAnswer('ans-6')">
+    <span class="quiz-qnum">Q6</span>
+    <div class="quiz-question">What is the relationship between DOCTYPE and DTD?</div>
+  </div>
+  <div class='quiz-answer' id='ans-6'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A document type declaration (DOCTYPE) identifies a document type definition (DTD), which defines what fields are allowed and their structure.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-6')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q6', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q7">
+  <div class="quiz-header" onclick="toggleAnswer('ans-7')">
+    <span class="quiz-qnum">Q7</span>
+    <div class="quiz-question">What is JSON, and what is it typically used for?</div>
+  </div>
+  <div class='quiz-answer' id='ans-7'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>JavaScript Object Notation — an open-standard, language-independent format for representing data online, supported by most languages. It is typically used for API requests/responses, serialization and configuration files.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-7')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q7', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q8">
+  <div class="quiz-header" onclick="toggleAnswer('ans-8')">
+    <span class="quiz-qnum">Q8</span>
+    <div class="quiz-question">Describe HTTP as a protocol and list the status code categories.</div>
+  </div>
+  <div class='quiz-answer' id='ans-8'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>HTTP allows communication between an HTTP client and server as a request-response protocol; the server generally responds with a web page. Categories: 1xx informational, 2xx success, 3xx redirection, 4xx client, 5xx server.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-8')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q8', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q9">
+  <div class="quiz-header" onclick="toggleAnswer('ans-9')">
+    <span class="quiz-qnum">Q9</span>
+    <div class="quiz-question">List the HTTP methods and describe the less obvious ones.</div>
+  </div>
+  <div class='quiz-answer' id='ans-9'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>GET (header only), POST (data in body), HEAD (GET without response body), PUT (replace a resource), PATCH (partially modify), DELETE (remove a resource), OPTIONS (ask allowed methods).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-9')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q9', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q10">
+  <div class="quiz-header" onclick="toggleAnswer('ans-10')">
+    <span class="quiz-qnum">Q10</span>
+    <div class="quiz-question">Distinguish Accept and Content-Type.</div>
+  </div>
+  <div class='quiz-answer' id='ans-10'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>The request's Accept header tells the server which data types the client will accept (and can list several). The response's Content-Type header determines the type of data in the body and tells the browser how to interpret it. Content-Type applies to both request and response bodies.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-10')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q10', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q11">
+  <div class="quiz-header" onclick="toggleAnswer('ans-11')">
+    <span class="quiz-qnum">Q11</span>
+    <div class="quiz-question">What is a cookie and how does the browser treat it?</div>
+  </div>
+  <div class='quiz-answer' id='ans-11'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A small piece of data set by a website and stored in the browser. Browsers automatically include all cookies set by a server with every HTTP request sent to that server.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-11')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q11', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q12">
+  <div class="quiz-header" onclick="toggleAnswer('ans-12')">
+    <span class="quiz-qnum">Q12</span>
+    <div class="quiz-question">Which headers set and send cookies?</div>
+  </div>
+  <div class='quiz-answer' id='ans-12'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Responses use Set-Cookie; requests use Cookie (e.g. <code>Cookie: username=abc123; authToken=4f3e</code>).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-12')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q12', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q13">
+  <div class="quiz-header" onclick="toggleAnswer('ans-13')">
+    <span class="quiz-qnum">Q13</span>
+    <div class="quiz-question">Walk through a typical login flow using cookies.</div>
+  </div>
+  <div class='quiz-answer' id='ans-13'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>(1) First visit, no cookie. (2) Login form submitted with username/password, still no cookie. (3) Server generates an auth token and responds <code>Set-Cookie: token=[auth-tok]</code>. (4) On a later visit the client sends <code>Cookie: token=[auth-tok]</code>. (5) The server recognises the token and knows who the user is.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-13')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q13', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q14">
+  <div class="quiz-header" onclick="toggleAnswer('ans-14')">
+    <span class="quiz-qnum">Q14</span>
+    <div class="quiz-question">What do the Referer and User-Agent headers tell the server?</div>
+  </div>
+  <div class='quiz-answer' id='ans-14'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Referer indicates the previous page the user was on; User-Agent tells the server what software the client uses — typically browser, rendering engine and operating system.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-14')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q14', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q15">
+  <div class="quiz-header" onclick="toggleAnswer('ans-15')">
+    <span class="quiz-qnum">Q15</span>
+    <div class="quiz-question">When do two URLs share the same origin?</div>
+  </div>
+  <div class='quiz-answer' id='ans-15'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>When the protocol, port (if specified) and host are the same for both.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-15')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q15', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q16">
+  <div class="quiz-header" onclick="toggleAnswer('ans-16')">
+    <span class="quiz-qnum">Q16</span>
+    <div class="quiz-question">What is data modelling and what are its steps?</div>
+  </div>
+  <div class='quiz-answer' id='ans-16'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>The process of defining and analysing the data requirements of an information system. Steps: identify the detailed system requirements, normalise the entities, and write the data model. We use UML to develop a formalised ERD using Crow's foot notation.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-16')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q16', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q17">
+  <div class="quiz-header" onclick="toggleAnswer('ans-17')">
+    <span class="quiz-qnum">Q17</span>
+    <div class="quiz-question">What are the TIL platform's requirements?</div>
+  </div>
+  <div class='quiz-answer' id='ans-17'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Users sign up with username and password. Users make posts consisting of subject, content and post date. Posts can be public or private and associated with zero, one or more tags. Tags are free-form labels created dynamically when first used.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-17')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q17', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q18">
+  <div class="quiz-header" onclick="toggleAnswer('ans-18')">
+    <span class="quiz-qnum">Q18</span>
+    <div class="quiz-question">What does a model describe, and what does every table need?</div>
+  </div>
+  <div class='quiz-answer' id='ans-18'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A model describes the fields holding information about an entity, each with a designated type (String, Numeric, Boolean, Date/Time). An entity is a single table, and each table should have an <code>id</code> field as primary key.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-18')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q18', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q19">
+  <div class="quiz-header" onclick="toggleAnswer('ans-19')">
+    <span class="quiz-qnum">Q19</span>
+    <div class="quiz-question">Contrast one-to-many and many-to-many relationships, with TIL examples.</div>
+  </div>
+  <div class='quiz-answer' id='ans-19'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>One-to-many uses a foreign key — a Post relates to one User, so Post holds a foreign key to User (like a mother with many children). Many-to-many uses an intermediate table — a Post has many Tags and a Tag applies to many Posts (like Authors and Books).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-19')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q19', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q20">
+  <div class="quiz-header" onclick="toggleAnswer('ans-20')">
+    <span class="quiz-qnum">Q20</span>
+    <div class="quiz-question">Describe MVC and how Django's MVT differs.</div>
+  </div>
+  <div class='quiz-answer' id='ans-20'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>MVC separates Model (data), View (renders data into views, usually HTML) and Controller (interprets requests and encapsulates business logic). In Django's MVT, the Model handles data/logic and the database connection, the View accepts requests and sends responses, and the Template is the presentation layer written in HTML or DTL.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-20')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q20', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q21">
+  <div class="quiz-header" onclick="toggleAnswer('ans-21')">
+    <span class="quiz-qnum">Q21</span>
+    <div class="quiz-question">Why use version control, and what are the common tools?</div>
+  </div>
+  <div class='quiz-answer' id='ans-21'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A VCS tracks changes to files, avoiding piles of draft/final/v2 copies, and enables collaboration, comparing changes over time, and reverting to previous versions. Common tools: Git (industry standard; GitHub and BitBucket integrate), SVN (older, fading) and Hg/Mercurial (written in Python).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-21')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q21', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q22">
+  <div class="quiz-header" onclick="toggleAnswer('ans-22')">
+    <span class="quiz-qnum">Q22</span>
+    <div class="quiz-question">What problem do virtual environments solve?</div>
+  </div>
+  <div class='quiz-answer' id='ans-22'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Python only allows one version of a package at a time, so conflicting requirements between projects can be unsatisfiable. Virtual environments provide multiple isolated Python installations, each with its own dependencies, activated before use and never committed. The venv module has been built in since Python 3.3 and is created with <code>python3 -m venv myenvname</code>.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-22')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q22', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q23">
+  <div class="quiz-header" onclick="toggleAnswer('ans-23')">
+    <span class="quiz-qnum">Q23</span>
+    <div class="quiz-question">What is an IDE and which are common?</div>
+  </div>
+  <div class='quiz-answer' id='ans-23'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>An Integrated Development Environment combines a text editor with a debugger, syntax highlighting, version control, refactoring and search. Common examples: Visual Studio Code, PyCharm, Eclipse.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-23')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q23', this)"> Mastered
+    </label>
+  </div>
+</div>
+</section>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+<p><strong>ELEC3609 Engineering Study Guide</strong> &bull; Week 5: Client-Server Communication &amp; Backend Web Development · 2026 Session</p>
+    <p style="font-size: 0.75rem; margin-top: 0.4rem;">Generated for self-paced revision and exam preparation.</p>
+  </footer>
+
+  <!-- Interactive JavaScript -->
+  <script>
+// Theme Toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let currentTheme = localStorage.getItem('study_theme') || (prefersDark ? 'dark' : 'light');
+
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeBtn.textContent = '☀️';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        themeBtn.textContent = '🌙';
+      }
+      localStorage.setItem('study_theme', theme);
+    }
+    applyTheme(currentTheme);
+
+    themeBtn.addEventListener('click', () => {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(currentTheme);
+    });
+
+    // Mobile Menu Toggle
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    menuBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+
+    // Close sidebar when clicking links on mobile
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 1024) {
+          sidebar.classList.remove('open');
+        }
+      });
+    });
+
+    // Reading Progress & Active Nav Link Highlight
+    window.addEventListener('scroll', () => {
+      const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById('progress-bar').style.width = scrolled + '%';
+
+      // Active Section Highlighting
+      const sections = document.querySelectorAll('section.guide-section, section.hero-card');
+      let currentSecId = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 120;
+        if (winScroll >= top) {
+          currentSecId = sec.getAttribute('id');
+        }
+      });
+
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentSecId) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Interactive Confusion Matrix Calculator Logic
+    function calculateMetrics() {
+      const tp = parseFloat(document.getElementById('inp-tp').value) || 0;
+      const fn = parseFloat(document.getElementById('inp-fn').value) || 0;
+      const fp = parseFloat(document.getElementById('inp-fp').value) || 0;
+      const tn = parseFloat(document.getElementById('inp-tn').value) || 0;
+
+      const total = tp + fn + fp + tn;
+      const acc = total > 0 ? ((tp + tn) / total) * 100 : 0;
+      const prec = (tp + fp) > 0 ? (tp / (tp + fp)) * 100 : 0;
+      const rec = (tp + fn) > 0 ? (tp / (tp + fn)) * 100 : 0;
+      const f1 = (prec + rec) > 0 ? 2 * (prec * rec) / (prec + rec) / 100 : 0;
+
+      document.getElementById('res-acc').textContent = acc.toFixed(1) + '%';
+      document.getElementById('res-prec').textContent = (tp + fp) > 0 ? prec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-rec').textContent = (tp + fn) > 0 ? rec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-f1').textContent = (prec + rec) > 0 ? f1.toFixed(3) : '0.000';
+    }
+
+    function setPreset(tp, fp, tn, fn) {
+      document.getElementById('inp-tp').value = tp;
+      document.getElementById('inp-fp').value = fp;
+      document.getElementById('inp-tn').value = tn;
+      document.getElementById('inp-fn').value = fn;
+      calculateMetrics();
+    }
+
+    // Glossary Filter Logic
+    function filterTerms(category, btn) {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+
+      const cards = document.querySelectorAll('.term-card');
+      cards.forEach(card => {
+        if (category === 'all' || card.getAttribute('data-cat') === category) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // Global Search Logic
+    const searchInput = document.getElementById('site-search');
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      const termCards = document.querySelectorAll('.term-card');
+      const quizCards = document.querySelectorAll('.quiz-card');
+
+      if (!query) {
+        termCards.forEach(c => c.style.display = 'flex');
+        quizCards.forEach(c => c.style.display = 'block');
+        return;
+      }
+
+      termCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+
+      quizCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'block' : 'none';
+      });
+    });
+
+    // Exam Questions Show/Hide & Progress Tracker
+    function toggleAnswer(id) {
+      const ans = document.getElementById(id);
+      ans.classList.toggle('show');
+    }
+
+    function toggleAllAnswers(show) {
+      document.querySelectorAll('.quiz-answer').forEach(ans => {
+        if (show) ans.classList.add('show');
+        else ans.classList.remove('show');
+      });
+    }
+
+    let masteredMap = JSON.parse(localStorage.getItem('engg2112_w3_mastered') || '{}');
+
+    function updateProgressUI() {
+      const total = document.querySelectorAll('.quiz-card').length;
+      const count = Object.values(masteredMap).filter(Boolean).length;
+      document.getElementById('exam-progress-tracker').textContent = `Progress: ${count} / ${total} Mastered`;
+
+      for (let i = 1; i <= total; i++) {
+        const card = document.getElementById('q' + i);
+        const checkbox = card ? card.querySelector('input[type="checkbox"]') : null;
+        if (card && checkbox) {
+          if (masteredMap['q' + i]) {
+            card.classList.add('mastered');
+            checkbox.checked = true;
+          } else {
+            card.classList.remove('mastered');
+            checkbox.checked = false;
+          }
+        }
+      }
+    }
+
+    function toggleMastered(qid, checkbox) {
+      masteredMap[qid] = checkbox.checked;
+      localStorage.setItem('engg2112_w3_mastered', JSON.stringify(masteredMap));
+      updateProgressUI();
+    }
+
+    function resetExamProgress() {
+      if (confirm('Reset all exam progress checkboxes?')) {
+        masteredMap = {};
+        localStorage.removeItem('engg2112_w3_mastered');
+        updateProgressUI();
+      }
+    }
+
+    // Initialize state on load
+    window.addEventListener('DOMContentLoaded', () => {
+      calculateMetrics();
+      updateProgressUI();
+    });
+  </script>
+</body>
+</html>

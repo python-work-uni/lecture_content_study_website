@@ -1,0 +1,2928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ELEC3609 Week 6 Study Guide – Pre-packaged Software, Docker & System Monitoring · 2025 Session</title>
+  <meta name="description" content="This lecture is about deploying software you did not write. It starts with pre-packaged applications — ready-made products such as WordPress and MediaWiki — and the security questions you must ask abo">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for crisp mathematical formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+:root {
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Light Theme (Default) */
+      --bg-primary: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-alt: #e2e8f0;
+      
+      --border-color: #e2e8f0;
+      --border-focus: #6366f1;
+      
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-glow: rgba(79, 70, 229, 0.15);
+      
+      --accent-blue: #0284c7;
+      --accent-blue-bg: #e0f2fe;
+      --accent-emerald: #059669;
+      --accent-emerald-bg: #d1fae5;
+      --accent-amber: #d97706;
+      --accent-amber-bg: #fef3c7;
+      --accent-rose: #e11d48;
+      --accent-rose-bg: #ffe4e6;
+      --accent-purple: #7c3aed;
+      --accent-purple-bg: #ede9fe;
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --nav-width: 280px;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0b0f19;
+      --bg-surface: #131b2e;
+      --bg-subtle: #1e293b;
+      --bg-alt: #334155;
+      
+      --border-color: #1e293b;
+      --border-focus: #818cf8;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-light: #64748b;
+      
+      --primary: #6366f1;
+      --primary-hover: #818cf8;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      
+      --accent-blue: #38bdf8;
+      --accent-blue-bg: rgba(56, 189, 248, 0.15);
+      --accent-emerald: #34d399;
+      --accent-emerald-bg: rgba(52, 211, 153, 0.15);
+      --accent-amber: #fbbf24;
+      --accent-amber-bg: rgba(251, 191, 36, 0.15);
+      --accent-rose: #fb7185;
+      --accent-rose-bg: rgba(251, 113, 133, 0.15);
+      --accent-purple: #a78bfa;
+      --accent-purple-bg: rgba(167, 139, 250, 0.15);
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      --card-shadow-hover: 0 10px 20px -3px rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(19, 27, 46, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Reading Progress Bar */
+    #progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981);
+      width: 0%;
+      z-index: 1000;
+      transition: width 0.1s ease-out;
+    }
+
+    /* Top Sticky Header */
+    header.site-header {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: var(--glass-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.6rem;
+      color: var(--text-main);
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .course-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-box input {
+      padding: 0.45rem 0.75rem 0.45rem 2rem;
+      font-size: 0.85rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      width: 180px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      width: 240px;
+      background: var(--bg-surface);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 0.65rem;
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .btn-icon {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-alt);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      max-width: 1520px;
+      margin: 0 auto;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: var(--nav-width);
+      flex-shrink: 0;
+      position: sticky;
+      top: 57px;
+      height: calc(100vh - 57px);
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-primary);
+    }
+
+    .sidebar-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-light);
+      margin-bottom: 0.75rem;
+      padding-left: 0.5rem;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.65rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      line-height: 1.3;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+      background: var(--bg-subtle);
+    }
+
+    .nav-link.active {
+      color: var(--primary);
+      background: var(--primary-light);
+      font-weight: 600;
+    }
+
+    .nav-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    /* Main Content Area */
+    main.main-content {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      max-width: 1020px;
+      min-width: 0;
+    }
+
+    /* Hero Banner */
+    .hero-card {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-main);
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-overview {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      background: var(--bg-surface);
+      padding: 1.25rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      line-height: 1.7;
+    }
+
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .stat-val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Section Styling */
+    section.guide-section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 80px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .section-number {
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+    }
+
+    h2.section-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    h3.subsection-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.75rem 0;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-main);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--card-shadow);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Callout Boxes */
+    .callout {
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      margin: 1.25rem 0;
+      display: flex;
+      gap: 0.9rem;
+      align-items: flex-start;
+      border-left: 4px solid transparent;
+    }
+
+    .callout-icon {
+      font-size: 1.35rem;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .callout-content {
+      flex: 1;
+      font-size: 0.95rem;
+    }
+
+    .callout-content strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.95rem;
+    }
+
+    .callout-why {
+      background: var(--accent-amber-bg);
+      border-left-color: var(--accent-amber);
+      color: var(--text-main);
+    }
+
+    .callout-memory {
+      background: var(--accent-purple-bg);
+      border-left-color: var(--accent-purple);
+      color: var(--text-main);
+    }
+
+    .callout-tip {
+      background: var(--accent-emerald-bg);
+      border-left-color: var(--accent-emerald);
+      color: var(--text-main);
+    }
+
+    .callout-warning {
+      background: var(--accent-rose-bg);
+      border-left-color: var(--accent-rose);
+      color: var(--text-main);
+    }
+
+    .callout-info {
+      background: var(--accent-blue-bg);
+      border-left-color: var(--accent-blue);
+      color: var(--text-main);
+    }
+
+    /* Formula & Math Block */
+    .formula-block {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin: 1.25rem 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .formula-title {
+      position: absolute;
+      top: -10px;
+      left: 14px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .formula-math {
+      font-size: 1.2rem;
+      margin: 0.5rem 0;
+      color: var(--text-main);
+      overflow-x: auto;
+    }
+
+    /* ELEC3609 local: code / plain-text reference blocks render left-aligned in mono */
+    .formula-block pre.formula-math {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.55;
+      text-align: left;
+      white-space: pre;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      margin: 0;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.25rem 0;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      background: var(--bg-surface);
+    }
+
+    table.study-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    table.study-table th {
+      background: var(--bg-subtle);
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border-color);
+      letter-spacing: 0.02em;
+    }
+
+    table.study-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    table.study-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.study-table tr:hover td {
+      background: var(--bg-subtle);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .badge-recall {
+      background: var(--accent-emerald-bg);
+      color: var(--accent-emerald);
+    }
+
+    .badge-precision {
+      background: var(--accent-blue-bg);
+      color: var(--accent-blue);
+    }
+
+    .badge-f1 {
+      background: var(--accent-purple-bg);
+      color: var(--accent-purple);
+    }
+
+    .badge-danger {
+      background: var(--accent-rose-bg);
+      color: var(--accent-rose);
+    }
+
+    /* Pipeline Diagram */
+    .pipeline-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      box-shadow: var(--card-shadow);
+    }
+
+    .pipeline-flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin: 1rem 0;
+    }
+
+    .pipe-step {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .pipe-step .step-num {
+      font-size: 0.7rem;
+      color: var(--primary);
+      font-family: var(--font-mono);
+    }
+
+    .pipe-step:hover, .pipe-step.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .pipe-arrow {
+      color: var(--text-light);
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    /* Interactive Confusion Matrix Calculator Widget */
+    .calculator-card {
+      background: var(--bg-surface);
+      border: 2px solid var(--primary);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin: 2rem 0;
+      box-shadow: 0 10px 25px -5px var(--primary-glow);
+    }
+
+    .calc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .calc-presets {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .cm-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    .cm-table th, .cm-table td {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem;
+    }
+
+    .cm-table th {
+      background: var(--bg-subtle);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .cm-input-cell {
+      background: var(--bg-surface);
+    }
+
+    .cm-input-cell label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+    }
+
+    .cm-input-cell input {
+      width: 100%;
+      max-width: 90px;
+      padding: 0.4rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .cm-input-cell input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    .calc-results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .metric-card {
+      background: var(--bg-subtle);
+      border-radius: 10px;
+      padding: 0.85rem;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .metric-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--primary);
+      margin: 0.2rem 0;
+    }
+
+    .metric-formula {
+      font-size: 0.7rem;
+      color: var(--text-light);
+      font-family: var(--font-mono);
+    }
+
+    /* Key Takeaways list */
+    .takeaways-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .takeaway-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.9rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .takeaway-num {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.85rem;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    /* Terms & Glossary Section */
+    .glossary-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .filter-chip {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-chip:hover, .filter-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .terms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .term-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.1rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .term-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .term-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--primary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .term-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Exam Questions Section */
+    .exam-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .exam-progress {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .exam-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-secondary {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-alt);
+    }
+
+    .quiz-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--card-shadow);
+      transition: border-color 0.2s ease;
+    }
+
+    .quiz-card.mastered {
+      border-left: 4px solid var(--accent-emerald);
+      opacity: 0.9;
+    }
+
+    .quiz-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      cursor: pointer;
+    }
+
+    .quiz-qnum {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+
+    .quiz-question {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      flex: 1;
+      line-height: 1.5;
+    }
+
+    .quiz-status-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .quiz-answer {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+      color: var(--text-main);
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .quiz-answer.show {
+      display: block;
+    }
+
+    .quiz-toggle-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0;
+    }
+
+    .quiz-toggle-btn:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--border-color);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      background: var(--bg-surface);
+      margin-top: 4rem;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      header.site-header, aside.sidebar, #progress-bar, .calculator-card, .btn-icon, .exam-actions, .filter-chip {
+        display: none !important;
+      }
+      .app-container {
+        display: block;
+        max-width: 100%;
+      }
+      main.main-content {
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .card, .hero-card, .takeaway-item, .quiz-card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .quiz-answer {
+        display: block !important;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      aside.sidebar {
+        position: fixed;
+        left: -100%;
+        top: 57px;
+        z-index: 950;
+        background: var(--bg-surface);
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        transition: left 0.3s ease;
+      }
+      aside.sidebar.open {
+        left: 0;
+      }
+      .menu-toggle {
+        display: block;
+      }
+      main.main-content {
+        padding: 1.5rem;
+      }
+      .grid-2, .calc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="progress-bar"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-left">
+      <button class="menu-toggle" id="menu-btn" aria-label="Toggle navigation menu">&#9776;</button>
+      <span class="course-badge">ELEC3609 • Week 6</span>
+      <span class="header-title">Pre-packaged Software, Docker & System Monitoring · 2025 Session</span>
+    </div>
+    <div class="header-controls">
+      <div class="search-box">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" id="site-search" placeholder="Search guide..." aria-label="Search study guide">
+      </div>
+      <button class="btn-icon" id="theme-toggle" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">&#127769;</button>
+      <button class="btn-icon" onclick="window.print()" title="Print Study Guide" aria-label="Print Guide">&#128424;</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">Table of Contents</div>
+      <ul class="nav-list">
+<li><a href="#overview" class="nav-link"><span class="nav-num">00</span> Overview</a></li>
+        <li><a href="#section-1" class="nav-link"><span class="nav-num">01</span> Pre-packaged Software &amp; Examples</a></li>
+        <li><a href="#section-2" class="nav-link"><span class="nav-num">02</span> Packages: Code, Config &amp; Database</a></li>
+        <li><a href="#section-3" class="nav-link"><span class="nav-num">03</span> Dependency Risks &amp; Code Evaluation</a></li>
+        <li><a href="#section-4" class="nav-link"><span class="nav-num">04</span> Configuration &amp; Database Hardening</a></li>
+        <li><a href="#section-5" class="nav-link"><span class="nav-num">05</span> Deployment &amp; Reverse Proxies</a></li>
+        <li><a href="#section-6" class="nav-link"><span class="nav-num">06</span> HTTP Basic Auth &amp; the WAF</a></li>
+        <li><a href="#section-7" class="nav-link"><span class="nav-num">07</span> VMs vs Linux Containers</a></li>
+        <li><a href="#section-8" class="nav-link"><span class="nav-num">08</span> Docker: Containers &amp; Images</a></li>
+        <li><a href="#section-9" class="nav-link"><span class="nav-num">09</span> Docker Volumes &amp; Networking</a></li>
+        <li><a href="#section-10" class="nav-link"><span class="nav-num">10</span> Docker Hub &amp; Orchestration</a></li>
+        <li><a href="#section-11" class="nav-link"><span class="nav-num">11</span> Monitoring Facets &amp; Prometheus</a></li>
+        <li><a href="#section-12" class="nav-link"><span class="nav-num">12</span> Grafana, ELK, Nagios &amp; Sentry</a></li>
+        <li><a href="#section-13" class="nav-link"><span class="nav-num">13</span> Web Analytics &amp; Custom Tracking</a></li>
+        <li><a href="#section-14" class="nav-link"><span class="nav-num">14</span> ETL &amp; MapReduce</a></li>
+        <li><a href="#key-takeaways" class="nav-link"><span class="nav-num">15</span> 16 Key Takeaways</a></li>
+        <li><a href="#terms-to-know" class="nav-link"><span class="nav-num">16</span> Terms to Know (Glossary)</a></li>
+        <li><a href="#mnemonics" class="nav-link"><span class="nav-num">17</span> Mnemonics &amp; Quick Recall</a></li>
+        <li><a href="#worked-examples" class="nav-link"><span class="nav-num">18</span> Worked Scenarios &amp; Calculations</a></li>
+        <li><a href="#exam-focus" class="nav-link"><span class="nav-num">19</span> Potential Exam Focus &amp; Practice</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+<section id="overview" class="hero-card">
+  <div class="hero-tagline">📖 Official Course Notes • Week 6</div>
+  <h1 class="hero-title">Pre-packaged Software, Docker &amp; System Monitoring · 2025 Session</h1>
+  <p class="hero-subtitle">This lecture is about deploying software you did not write. It starts with pre-packaged applications — ready-made products such as…</p>
+  <div class='hero-overview'><strong>Lecture Overview:</strong> This lecture is about deploying software you did not write. It starts with pre-packaged applications — ready-made products such as WordPress and MediaWiki — and the security questions you must ask about their code, configuration, database and dependency supply chain. It then shows how to put a controlling layer (a reverse proxy with authentication and a Web Application Firewall) in front of them, and how Docker containers package an application with its dependencies and make deployment reproducible. The lecture closes with system monitoring (Prometheus, Grafana, the ELK stack, Nagios and Sentry) and web analytics with ETL and MapReduce.</div>
+  <div class="quick-stats">
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">⚙️</div>
+  <div>
+    <div class="stat-label">Lectures</div>
+    <div class="stat-val">1</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-blue-bg); color: var(--accent-blue);">📊</div>
+  <div>
+    <div class="stat-label">Container Concepts</div>
+    <div class="stat-val">Image, Container, Volume, Network</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-emerald-bg); color: var(--accent-emerald);">🎯</div>
+  <div>
+    <div class="stat-label">Monitoring Tools</div>
+    <div class="stat-val">Prometheus, Grafana, ELK, Nagios, Sentry</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-amber-bg); color: var(--accent-amber);">📝</div>
+  <div>
+    <div class="stat-label">Analytics Concepts</div>
+    <div class="stat-val">GA, KISSmetrics, ETL, MapReduce</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-purple-bg); color: var(--accent-purple);">🧠</div>
+  <div>
+    <div class="stat-label">Practice Questions</div>
+    <div class="stat-val">12</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="section-1" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">01</span>
+    <h2 class="section-title">Pre-packaged Software &amp; Examples</h2>
+  </div>
+  <p><strong>Pre-packaged web software</strong> is commonly used to get something up and running quickly — instead of writing an application from scratch, you install software someone else built. <strong>Examples from the lecture:</strong></p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Package</th><th>What It Is</th></tr></thead>
+<tbody><tr><td><strong>WordPress</strong></td><td>Content Management System (CMS)</td></tr><tr><td><strong>vBulletin</strong></td><td>Internet forum software</td></tr><tr><td><strong>MediaWiki</strong></td><td>Open-source wiki platform</td></tr><tr><td><strong>Phabricator</strong></td><td>Project management tool</td></tr><tr><td><strong>Memcached</strong></td><td>Distributed memory object caching system</td></tr></tbody>
+  </table>
+</div>
+
+<p>The lecture's framing is "deploying from the shoulders of giants" — you get a mature product for free, but you also inherit its problems.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Pre-packaged software can save months of work, but you become responsible for securing and operating someone else's code. Most of this lecture is about managing that responsibility.
+  </div>
+</div>
+</section>
+
+<section id="section-2" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">02</span>
+    <h2 class="section-title">Packages: Code, Config &amp; Database</h2>
+  </div>
+  <p>Just like any other website, a pre-packaged product typically consists of:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Application code</strong></li><li><strong>Configuration files</strong></li><li><strong>Database</strong></li></ul>
+
+<p>The crucial division of responsibility is:</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Component</th><th>Who Provides / Owns It</th></tr></thead>
+<tbody><tr><td><strong>Application code</strong></td><td>Provided by the package's authors.</td></tr><tr><td><strong>Configuration</strong></td><td>You (the deployer) must review, harden and set it.</td></tr><tr><td><strong>Database &amp; infrastructure</strong></td><td>You (the deployer) must provision, permission and secure it.</td></tr></tbody>
+  </table>
+</div>
+
+<p>In other words, the prepacked software provides the application code, but it is <strong>up to the deployer to configure the application and infrastructure</strong>.</p>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Assuming the package "just works securely out of the box." The vendor shipped the code; the security posture of the running system is your job.
+  </div>
+</div>
+</section>
+
+<section id="section-3" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">03</span>
+    <h2 class="section-title">Dependency Risks &amp; Code Evaluation</h2>
+  </div>
+  <h3 class="subsection-title">The Supply Chain You Inherit</h3>
+
+<p>By deploying third-party software you inherit not just the main application code, but <strong>all of its dependencies</strong>:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Libraries and frameworks</li><li>Plugins / extensions</li><li>Container images</li><li>System packages</li></ul>
+
+<p><strong>Supply-chain security threats to consider:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Supply Chain Attacks</strong> — attackers compromise an upstream repository or build pipeline.</li><li><strong>Outdated Dependencies</strong> — known, unpatched vulnerabilities in libraries.</li><li><strong>Plugin/Extension Ecosystem</strong> — unvetted third-party add-ons.</li><li><strong>Trust in Docker Hub Images</strong> — malicious or outdated public base images.</li></ul>
+
+<h3 class="subsection-title">Questions to Ask About Application Code</h3>
+
+<p>It can be dangerous to blindly run other people's code, especially when it is old and complex:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>What is it written in?</li><li>Is the code-base mature?</li><li>How active is development on the project?</li><li>Does the software have a history of security vulnerabilities?</li></ul>
+
+<p><strong>Practical checks:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Identify other users</strong> — if large companies have adopted the software, they have likely reviewed it.</li><li><strong>Identify potential support avenues</strong> — does the supplier provide direct support, and how much does it cost?</li><li><strong>Check the frequency of commits</strong> — for open-source projects, more frequent and recent commits mean active development.</li><li><strong>Scan for vulnerabilities</strong> — use a static source-code vulnerability scanner appropriate to the language.</li><li><strong>Search for known vulnerabilities</strong> — check disclosure sites such as <code>cvedetails.com</code>.</li></ul>
+
+<h3 class="subsection-title">Automated Vulnerability Scanning Tools</h3>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Tool</th><th>Target</th></tr></thead>
+<tbody><tr><td><strong>npm audit</strong></td><td>Node.js/npm dependencies</td></tr><tr><td><strong>pip-audit</strong></td><td>Python packages/environments</td></tr><tr><td><strong>OWASP Dependency-Check</strong></td><td>Multi-language project dependencies</td></tr><tr><td><strong>Snyk Vulnerability DB</strong></td><td>Vulnerability database and scanner</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>A-C-S-V</strong> — <strong>A</strong>doption, <strong>C</strong>ommits, <strong>S</strong>upport, <strong>V</strong>ulnerability history. Check all four before trusting a package.
+  </div>
+</div>
+</section>
+
+<section id="section-4" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">04</span>
+    <h2 class="section-title">Configuration &amp; Database Hardening</h2>
+  </div>
+  <h3 class="subsection-title">Configuration</h3>
+
+<p>While it is good practice to release software that is <strong>secure-by-default</strong>, many software packages ship with <strong>insecure configuration</strong>. It is critical to <strong>review all configuration options before deployment</strong>. Ask:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>What configuration options are available?</li><li>Are the default values for these options secure?</li><li>Are there any features enabled that you're not using?</li><li>Can you disable these features?</li></ul>
+
+<p><strong>How to do it:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Identify all configuration options</strong> — read the documentation and view example configurations.</li><li><strong>Search the Internet for example configurations</strong> — they are readily available, but <strong>do not blindly trust</strong> them; evaluate them.</li><li><strong>Identify all features and components</strong> — general-purpose software often includes features you don't need.</li><li><strong>Disable unwanted features</strong> — this reduces complexity and the surface area for possible attacks.</li></ul>
+
+<h3 class="subsection-title">Database</h3>
+
+<p>It is usually the <strong>deployer's responsibility</strong> to configure the database required by pre-packaged software, and care must be taken. Ask:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Does the package need its own database or can/will it share?</li><li>What DB permissions are required?</li><li>If the application is vulnerable, will DB compromise lead to system compromise?</li></ul>
+
+<p><strong>Practical guidance:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Identify database requirements</strong> — does the software create a single database for all its tables, or multiple databases?</li><li><strong>Evaluate database permissions</strong> — give the <strong>minimum set of permissions</strong> to an application; start with minimal access and extend only when necessary (the principle of least privilege).</li><li><strong>Evaluate the scope of DB compromise</strong> — if a malicious user finds an SQL injection, they may be able to run arbitrary commands on the database. It is important to keep the database updated as well.</li></ul>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Granting the application broad database rights "to make it work." If an SQL injection occurs, those rights become the attacker's rights.
+  </div>
+</div>
+</section>
+
+<section id="section-5" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">05</span>
+    <h2 class="section-title">Deployment &amp; Reverse Proxies</h2>
+  </div>
+  <p>Software packages can come with a <strong>web/HTTP interface</strong>. You do <strong>not</strong> want this interface directly exposed to the Internet — you want your own layer, which you control, in between. A <strong>reverse proxy</strong> (such as Nginx or Apache) or a <strong>load balancer</strong> lets you control which requests can reach the application. This is especially important if the application exposes an <strong>admin or control interface without authentication</strong>. <strong>Architecture:</strong></p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">Public Client (Internet)
+        |
+        v
+Reverse Proxy / Load Balancer  (Nginx / Apache)
+        |
+   +----+----+
+   |         |
+   v         v
+App 1      App 2      (internal backend instances)
+   |         |
+   +----+----+
+        |
+        v
+Central Database      (shared state, still the bottleneck)</pre></div>
+</div>
+
+<h3 class="subsection-title">Benefits of a Reverse Proxy</h3>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Scaling</strong> — use the reverse proxy as a <strong>load balancer</strong> to increase concurrent connections. Run many instances of the application and <strong>scale horizontally</strong>. The <strong>database is still a bottleneck</strong> because state must be shared.</li><li><strong>Request authentication</strong> — for an internal service, perform basic authentication so anonymous web users cannot access it. A malicious user cannot reach the application if the reverse proxy blocks them.</li><li><strong>Web Application Firewall (WAF)</strong> — a WAF can inspect incoming requests and <strong>reject</strong> those that appear to be attack vectors.</li></ol>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    The reverse proxy is a single, controlled choke point. Authentication, filtering, load balancing and TLS can all live there instead of being scattered across application instances.
+  </div>
+</div>
+</section>
+
+<section id="section-6" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">06</span>
+    <h2 class="section-title">HTTP Basic Auth &amp; the WAF</h2>
+  </div>
+  <h3 class="subsection-title">HTTP Basic Authentication</h3>
+
+<p><strong>HTTP Basic Authentication</strong> requires HTTP requests to include a <strong>username and password</strong> to be considered authorised. If a request arrives without valid credentials, a <strong>401 Unauthorized</strong> response is served. <strong>Server side:</strong></p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The server responds to the initial request with <strong>401 Unauthorized</strong>, containing the header:</li></ol>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math">$$WWW-Authenticate: Basic realm="User Visible Realm"$$</div>
+</div>
+
+<p><strong>Client side:</strong></p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The client prompts the user for a username/password.</li><li>It combines the username and password with a <strong>single colon</strong>, e.g. <code>Aladdin:OpenSesame</code>.</li><li>It encodes the string in the <strong>RFC2045-MIME variant of base64</strong>.</li><li>It sets the request's <code>Authorization</code> header to the base64-encoded credentials:</li></ol>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">Authorization: Basic QWxhZGRpbjpPcGVuU2VzYW1l</pre></div>
+</div>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Basic Auth credentials are only <strong>base64-encoded, not encrypted</strong>. Without HTTPS, anyone on the network can decode them, so Basic Auth must always run over TLS.
+  </div>
+</div>
+
+<h3 class="subsection-title">Web Application Firewall (WAF)</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>A WAF applies <strong>rules and/or filters to incoming HTTP requests</strong>, trying to identify requests that appear to contain <strong>exploitation code</strong> and rejecting them.</li><li>All requests should go through the WAF, so it usually sits at the <strong>edge/web layer in front of your application</strong>.</li><li>A WAF is <strong>only as good as the rules it evaluates</strong> — keep the rule/filter sets up to date.</li></ul>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    Basic Auth = <strong>"challenge, encode, authorise"</strong>: the server challenges with 401 and <code>WWW-Authenticate</code>, the client encodes <code>user:pass</code> in base64, and the server authorises via the <code>Authorization</code> header.
+  </div>
+</div>
+</section>
+
+<section id="section-7" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">07</span>
+    <h2 class="section-title">VMs vs Linux Containers</h2>
+  </div>
+  <p>A <strong>hypervisor</strong> enables the execution of <strong>virtual machines</strong> inside a host operating system. Each VM needs its own full <strong>guest operating system</strong>, which is heavy. <strong>Linux containers</strong> remove the need to install a guest operating system, allowing <strong>multiple isolated Linux systems to run on a single host operating system</strong>. They share the host's kernel, so they are much lighter.</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th></th><th>Virtual Machines</th><th>Linux Containers</th></tr></thead>
+<tbody><tr><td>Guest OS</td><td>One full guest OS per VM</td><td>No guest OS</td></tr><tr><td>Isolation</td><td>Hypervisor-level</td><td>Isolated user-space processes</td></tr><tr><td>Weight</td><td>Heavy</td><td>Lightweight and fast</td></tr><tr><td>Host requirement</td><td>Hypervisor</td><td>Shared host Linux kernel</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Containers give you most of the isolation of a VM at a fraction of the resource cost, which is why they dominate modern deployment.
+  </div>
+</div>
+</section>
+
+<section id="section-8" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">08</span>
+    <h2 class="section-title">Docker: Containers &amp; Images</h2>
+  </div>
+  <p><strong>Docker</strong> is an <strong>open-source project to automate the deployment of applications inside Linux containers</strong>. It allows easy deployment of packaged applications, <strong>including any necessary dependencies</strong>. Multiple services/containers can be combined using the tool <strong>Docker Compose</strong>.</p>
+
+<h3 class="subsection-title">Containers</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Instead of running virtual machines, Docker lets us run <strong>containers</strong>.</li><li>A Docker container can be thought of as a <strong>minimalistic Linux host</strong>.</li><li>You can install any application into the container, and the container itself can be <strong>(almost) any distribution of Linux</strong>.</li><li>A container is created <strong>based off a Docker image</strong>. An image file describes the <strong>base operating system</strong> and any <strong>modifications that need to be made, such as dependencies</strong>.</li></ul>
+
+<h3 class="subsection-title">Anatomy of a Dockerfile</h3>
+
+<p>A sample Docker image that specifies its base, build steps, files and entry point:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">FROM ubuntu:18.04
+RUN make /app
+COPY . /app
+CMD python /app/app.py</pre></div>
+</div>
+
+<p>What each line does:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code>FROM ubuntu:18.04</code> — use Ubuntu 18.04 as the base image.</li><li><code>RUN make /app</code> — run <code>make</code> in the <code>/app</code> directory during the build.</li><li><code>COPY . /app</code> — copy all files from the build context into <code>/app</code>.</li><li><code>CMD python /app/app.py</code> — the command run when the container starts, invoking the application.</li></ul>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>Image = recipe, container = cake.</strong> The image is the read-only blueprint; a container is a running instance created from it.
+  </div>
+</div>
+</section>
+
+<section id="section-9" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">09</span>
+    <h2 class="section-title">Docker Volumes &amp; Networking</h2>
+  </div>
+  <h3 class="subsection-title">Volumes (Persistence)</h3>
+
+<p>Docker containers are good for <strong>running</strong> applications, but they are <strong>not good for storing data</strong> — containers <strong>do not maintain state</strong>. To persist data, we <strong>mount volumes</strong> into containers:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>If you containerise a database such as MySQL, the application's <strong>data directory should be stored in an attached volume</strong>.</li><li>The mounted volume is a <strong>folder on the host machine that exists outside the container</strong>.</li><li>You can therefore <strong>destroy the container without losing any data</strong>.</li></ul>
+
+<h3 class="subsection-title">Networking</h3>
+
+<p>Docker containers can be <strong>linked to each other</strong>, and <strong>nominated ports can be forwarded from the host OS to the container</strong>.</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>For a web application such as WordPress, you can run one container for the application and a <strong>separate container for the MySQL database</strong>.</li><li>By linking the containers, the WordPress application can talk to the MySQL container directly.</li><li><strong>No other containers or systems are allowed to communicate with the database</strong> unless specified directly via Docker.</li><li>This <strong>segmentation significantly improves security and ease of deployment</strong>.</li></ul>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Storing database files inside the container's own filesystem. When the container is destroyed, those files disappear — always mount a volume for stateful data.
+  </div>
+</div>
+</section>
+
+<section id="section-10" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">10</span>
+    <h2 class="section-title">Docker Hub &amp; Orchestration</h2>
+  </div>
+  <h3 class="subsection-title">Docker Hub</h3>
+
+<p>Why re-create the wheel? The Docker project has a service called <strong>Docker Hub</strong>, which contains <strong>pre-built Docker images</strong> that can be used as a <strong>starting point for building services</strong>.</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Many large software companies and projects have released Docker Hub images for their software.</li><li><strong>Security is a factor to consider here</strong> — a public image is third-party code, so evaluate it before trusting it.</li></ul>
+
+<h3 class="subsection-title">Cloud Container Orchestration</h3>
+
+<p>When running containers in production, it is common to have <strong>container fleets of 10s–1000s</strong>. Managing them by hand does not scale, so orchestrators are used:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Kubernetes / Google Kubernetes Engine (GKE)</strong> — an <strong>open-source cluster management system</strong> for deploying and managing containerised applications on Google Cloud. Kubernetes can also be used outside Google Cloud.</li><li><strong>AWS Elastic Container Service (ECS)</strong> — deploys Linux containers within the AWS ecosystem.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Orchestration is the difference between running a demo container and running a production service that scales, self-heals and updates without downtime.
+  </div>
+</div>
+</section>
+
+<section id="section-11" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">11</span>
+    <h2 class="section-title">Monitoring Facets &amp; Prometheus</h2>
+  </div>
+  <p>When running a large-scale website, it is essential to <strong>monitor everything</strong>. Four facets to consider:</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Facet</th><th>Question It Answers</th></tr></thead>
+<tbody><tr><td><strong>User interaction</strong></td><td>Who clicks on what?</td></tr><tr><td><strong>User analytics</strong></td><td>What local time do users usually come online?</td></tr><tr><td><strong>HTTP error rate</strong></td><td>What pages are throwing 500s and impacting users?</td></tr><tr><td><strong>Infrastructure metrics</strong></td><td>How is our infrastructure performing? Can we handle 2x load? 10x?</td></tr></tbody>
+  </table>
+</div>
+
+<p>The lecture surveys five tools: <strong>Prometheus</strong> (metrics), <strong>Grafana</strong> (graphing and dashboards), <strong>Elasticsearch, Logstash, Kibana / ELK</strong> (logging), <strong>Nagios</strong> (infrastructure monitoring) and <strong>Sentry</strong> (error detection).</p>
+
+<h3 class="subsection-title">Prometheus</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>An <strong>open-source system for storing and graphing highly dimensional data and metrics</strong>.</li><li>Efficiently stores metrics in a <strong>custom format</strong> and scales through <strong>functional sharding and federation</strong>.</li><li>Data is <strong>scraped from monitored services over HTTP</strong>, rather than applications publishing metrics to Prometheus (a <strong>pull</strong> model).</li><li>Originally developed at <strong>SoundCloud</strong>; now a member of the <strong>Cloud Native Computing Foundation (CNCF)</strong>.</li></ul>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Assuming services push their metrics to Prometheus. The direction is reversed: Prometheus <strong>scrapes</strong> HTTP endpoints on a schedule.
+  </div>
+</div>
+</section>
+
+<section id="section-12" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">12</span>
+    <h2 class="section-title">Grafana, ELK, Nagios &amp; Sentry</h2>
+  </div>
+  <h3 class="subsection-title">Grafana (Dashboards)</h3>
+
+<p>Grafana allows us to <strong>visualise, query and alert on key metrics, regardless of where they are stored</strong>. It can have <strong>multiple backend metrics systems</strong>.</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>System Metrics</th><th>Application Metrics</th></tr></thead>
+<tbody><tr><td>CPU usage</td><td>Response times</td></tr><tr><td>Memory usage</td><td>Throughput</td></tr><tr><td>Disk space and I/O</td><td>Error rates</td></tr><tr><td>Network traffic and bandwidth</td><td>Requests per second</td></tr><tr><td>Load averages</td><td>Latency</td></tr><tr><td>System uptime</td><td>User activity metrics</td></tr></tbody>
+  </table>
+</div>
+
+<h3 class="subsection-title">ELK Stack (Logging)</h3>
+
+<p>Once a website reaches a certain size, <strong>manually looking at logs on each host is not feasible</strong>, because of the number of services to monitor. The <strong>ELK stack (Elasticsearch, Logstash, Kibana)</strong> is a commonly used industry pattern for ingesting and querying large volumes of logs (application, web access/error) in a <strong>centralised location</strong>.</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Kibana</strong> is an open-source data-visualisation plugin for Elasticsearch.</li><li>It offers a simple interface for querying <strong>Elasticsearch</strong>, the service that stores your logs.</li></ul>
+
+<h3 class="subsection-title">Nagios (Infrastructure Monitoring)</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Nagios is an open-source <strong>"industry standard"</strong> for monitoring infrastructure.</li><li>Many <strong>custom metrics</strong> can be configured, including network transfer rates, server performance and application metrics.</li><li>It has integrations that let it <strong>send email, integrate with chat programs and trigger alerts</strong> if metrics are exceeded.</li></ul>
+
+<h3 class="subsection-title">Sentry (Error Detection)</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Sentry <strong>collects errors from your website, both front-end and back-end</strong>.</li><li>It <strong>consolidates and aggregates</strong> them into a <strong>single feed of events</strong>.</li><li>It allows <strong>real-time monitoring of errors</strong> experienced while using the site, and is a critical piece of infrastructure for large-scale websites.</li></ul>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>P-G-E-N-S</strong> = <strong>P</strong>rometheus (metrics), <strong>G</strong>rafana (graphs), <strong>E</strong>LK (logs), <strong>N</strong>agios (infrastructure), <strong>S</strong>entry (errors).
+  </div>
+</div>
+</section>
+
+<section id="section-13" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">13</span>
+    <h2 class="section-title">Web Analytics &amp; Custom Tracking</h2>
+  </div>
+  <h3 class="subsection-title">Google Analytics (GA)</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>A tool for <strong>tracking and reporting on website traffic</strong>.</li><li>It is a <strong>JavaScript library</strong> that can be included on any web page.</li><li>It is essential for determining <strong>who has visited your website, what browser they are using, and what page they came from</strong>.</li><li>It is a great tool for <strong>identifying your audience and prioritising browser/feature support</strong>.</li></ul>
+
+<h3 class="subsection-title">KISSmetrics</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>A <strong>customer intelligence platform</strong> that performs a <strong>subset of the features of Google Analytics</strong> but provides <strong>much deeper insights</strong>.</li><li>It enables an administrator or marketing manager to gain <strong>detailed visibility of user interaction, across devices</strong>.</li><li>It offers a <strong>much wider variety of tools and analytics</strong> than Google Analytics, but it <strong>costs substantially more</strong>.</li></ul>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Aspect</th><th>Google Analytics</th><th>KISSmetrics</th></tr></thead>
+<tbody><tr><td>Focus</td><td>Traffic, browsers, referrers</td><td>Deep user-interaction insight</td></tr><tr><td>Cost</td><td>Lower (free tier typical)</td><td>Substantially more expensive</td></tr><tr><td>Best for</td><td>Audiences and feature prioritisation</td><td>Marketing/administrator insight across devices</td></tr></tbody>
+  </table>
+</div>
+
+<h3 class="subsection-title">Custom Tracking / Analytics</h3>
+
+<p>Sometimes available tracking systems are <strong>too heavy (performance)</strong> or <strong>do not meet your needs</strong>. In those cases you may need to build the beginnings of a <strong>data warehouse solution</strong>.</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Database schemas are generally <strong>optimised for user performance, not for analytics</strong>.</li><li>Calculating a <em>single</em> user's balance by summing their deposits is relatively straightforward.</li><li>Calculating the balance for <strong>all</strong> users is <strong>less bounded</strong> and can hammer the database.</li><li>The most common fixes are to <strong>transform the database into a format better optimised for queries</strong>, or to <strong>import the data into another service</strong>.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Operational and analytical workloads pull in opposite directions. Keeping them on the same database makes the live site slow, so analytics data is moved elsewhere.
+  </div>
+</div>
+</section>
+
+<section id="section-14" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">14</span>
+    <h2 class="section-title">ETL &amp; MapReduce</h2>
+  </div>
+  <h3 class="subsection-title">The ETL Pipeline</h3>
+
+<p>When building a custom tracking system, a common approach is <strong>Extract, Transform, Load (ETL)</strong>:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Extract</strong> — extract the data from various sources (user clicks from JavaScript, web access logs, database changes).</li><li><strong>Transform</strong> — transform the data into a <strong>consistent format or structure</strong>.</li><li><strong>Load</strong> — load the transformed data into a <strong>final application</strong> (such as a data warehouse).</li></ul>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">Sources (JS clicks, access logs, DB changes)  --&gt;  EXTRACT  --&gt;  TRANSFORM  --&gt;  LOAD  --&gt;  Analytics Store</pre></div>
+</div>
+
+<h3 class="subsection-title">MapReduce</h3>
+
+<p>If you need to perform <strong>very computationally intensive analytics tasks across a large data set</strong>, a useful technique is <strong>MapReduce</strong>. The approach performs the analytics in a <strong>distributed</strong> sense, splitting the work into two steps:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Map</strong> — performs filtering and sorting.</li><li><strong>Reduce</strong> — consolidates data into a <strong>summary format</strong>.</li></ul>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">Raw large dataset  --&gt;  [ MAP: filter &amp; sort ]  --&gt;  Intermediate pairs  --&gt;  [ REDUCE: consolidate ]  --&gt;  Summary result</pre></div>
+</div>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>E-T-L</strong> = "get it, fix it, store it". And <strong>Map = divide, Reduce = summarise</strong>.
+  </div>
+</div>
+</section>
+
+<section id="key-takeaways" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">15</span>
+    <h2 class="section-title">16 Key Takeaways</h2>
+  </div>
+  <div class="takeaways-list">
+<div class="takeaway-item">
+  <span class="takeaway-num">1</span>
+  <div><strong><strong>Pre-packaged software gets you running fast</strong></strong> — WordPress, vBulletin, MediaWiki and Phabricator are ready-made products.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">2</span>
+  <div><strong><strong>The vendor supplies code; you own configuration and the database</strong></strong> — hardening the running system is the deployer's job.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">3</span>
+  <div><strong><strong>You inherit the whole dependency supply chain</strong></strong> — libraries, plugins, container images and system packages all carry risk.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">4</span>
+  <div><strong><strong>Evaluate code before deploying it</strong></strong> — check adoption, commit activity, support and vulnerability history, and scan with tools such as npm audit, pip-audit, OWASP Dependency-Check and Snyk.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">5</span>
+  <div><strong><strong>Defaults are often insecure</strong></strong> — review every configuration option, don't blindly copy online configs, and disable unused features to shrink the attack surface.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">6</span>
+  <div><strong><strong>Apply least privilege to the database</strong></strong> — grant the minimum permissions so an SQL injection cannot escalate to full system compromise.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">7</span>
+  <div><strong><strong>Never expose a package's web interface directly</strong></strong> — put a reverse proxy or load balancer in front of it for control, auth and filtering.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">8</span>
+  <div><strong><strong>Reverse proxies enable scaling, authentication and WAF</strong></strong> — the database remains the bottleneck because state must be shared.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">9</span>
+  <div><strong><strong>HTTP Basic Auth is a 401 challenge</strong></strong> — the server sends <code>WWW-Authenticate</code>, the client returns base64 <code>user:pass</code> in <code>Authorization</code>; always pair it with TLS.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">10</span>
+  <div><strong><strong>A WAF is only as good as its rules</strong></strong> — it filters likely exploitation requests at the edge and must be kept up to date.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">11</span>
+  <div><strong><strong>Containers share the host kernel; VMs need a guest OS</strong></strong> — containers are lighter and faster than virtual machines.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">12</span>
+  <div><strong><strong>Docker automates deployment in Linux containers</strong></strong> — an image is the blueprint and a container is a running instance; Docker Compose combines services.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">13</span>
+  <div><strong><strong>Containers are stateless; use volumes for persistence</strong></strong> — databases must store data on host-mounted volumes so destruction does not lose it.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">14</span>
+  <div><strong><strong>Docker networking segments services</strong></strong> — linked containers talk directly, and the database stays closed to everything else.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">15</span>
+  <div><strong><strong>Monitor everything</strong></strong> — Prometheus scrapes metrics, Grafana visualises, ELK centralises logs, Nagios alerts on infrastructure, and Sentry aggregates errors.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">16</span>
+  <div><strong><strong>Separate analytics from operations</strong></strong> — use Google Analytics or KISSmetrics out of the box, or build an ETL data warehouse; MapReduce handles massive distributed computation.</div>
+</div>
+</div>
+</section>
+
+<section id="terms-to-know" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">16</span>
+    <h2 class="section-title">Terms to Know (Glossary)</h2>
+  </div>
+  <div class="glossary-controls">
+  <button class="filter-chip active" onclick="filterTerms('all', this)">All (58)</button>
+  <button class="filter-chip" onclick="filterTerms('models', this)">Core Concepts</button>
+  <button class="filter-chip" onclick="filterTerms('pipeline', this)">Architecture & Data</button>
+</div>
+<div class="terms-grid" id="terms-container">
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Pre-packaged software</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">Ready-made application software deployed instead of built from scratch.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Content Management System (CMS)</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Software for managing website content, e.g. WordPress.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>vBulletin</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Internet forum software.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>MediaWiki</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Open-source wiki platform.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Phabricator</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Project management tool.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Memcached</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Distributed memory object caching system.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Supply chain attack</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Compromise of an upstream repository or build pipeline to inject malicious code.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Outdated dependency</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A library containing known, unpatched vulnerabilities.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Plugin/extension ecosystem</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Third-party add-ons that may be unvetted and risky.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>npm audit</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Vulnerability scanner for Node.js/npm dependencies.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>pip-audit</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Scanner for known vulnerabilities in Python packages.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>OWASP Dependency-Check</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Multi-language software composition analysis tool.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Snyk Vulnerability DB</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Vulnerability database and scanner.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>cvedetails.com</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Site listing publicly disclosed vulnerabilities.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Secure-by-default</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Software that ships with safe configuration out of the box.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Attack surface</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">The set of ways an attacker can try to break into a system.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Principle of least privilege</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Granting only the minimum permissions necessary.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>SQL injection (SQLi)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Attack that injects SQL through unsafe input.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Reverse proxy</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Intermediary server (Nginx, Apache) that receives requests and forwards them to backend applications.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Load balancer</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Distributes incoming requests across multiple application instances.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Horizontal scaling</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Adding more instances of a service rather than making one bigger.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Web Application Firewall (WAF)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Filter that inspects incoming HTTP requests and rejects attack vectors.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>HTTP Basic Authentication</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Simple auth scheme using a username and password in the <code>Authorization</code> header.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>401 Unauthorized</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Response returned when credentials are missing or invalid.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>WWW-Authenticate</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Response header that issues the Basic Auth challenge and realm.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Authorization</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Request header carrying the base64-encoded Basic Auth credentials.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Base64</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Encoding used (RFC2045-MIME variant) for Basic Auth credentials; encoding, not encryption.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Hypervisor</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Software layer that runs virtual machines inside a host OS.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Virtual machine (VM)</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Full emulated computer with its own guest operating system.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Linux container</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Isolated user-space Linux environment sharing the host kernel.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Docker</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">Open-source tool that automates deploying applications in Linux containers.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Docker image</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Read-only blueprint describing a base OS and modifications/dependencies.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Docker container</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Runnable isolated instance created from a Docker image.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Dockerfile</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">File of instructions used to build a Docker image.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Docker Compose</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Tool for defining and running multi-container applications.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Docker volume</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Host directory mounted into a container to persist data.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Container linking</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Connecting containers so they can communicate directly.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Port forwarding</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Mapping a host port to a container port.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Docker Hub</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Public registry of pre-built Docker images.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Container orchestration</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Managing fleets of containers (scheduling, scaling, health).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Kubernetes (GKE)</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Open-source cluster management system for containerised applications.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>AWS Elastic Container Service (ECS)</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">AWS service for deploying Linux containers.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Prometheus</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Open-source metrics system that scrapes HTTP endpoints and stores time-series data.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Functional sharding</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Splitting Prometheus workloads for scalability.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Federation</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Combining metrics from multiple Prometheus servers.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Cloud Native Computing Foundation (CNCF)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Foundation that hosts projects such as Prometheus.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Grafana</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Visualisation and dashboarding tool supporting multiple metric backends.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ELK stack</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Elasticsearch, Logstash and Kibana — centralised log ingestion and querying.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Kibana</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Open-source visualisation plugin for Elasticsearch.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Elasticsearch</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Service that stores logs for querying.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Nagios</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">Open-source infrastructure monitoring standard with alerting.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Sentry</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Error-tracking service that aggregates front-end and back-end errors.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Google Analytics (GA)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">JavaScript traffic-tracking and reporting tool.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>KISSmetrics</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Customer-intelligence platform with deeper user insight than GA.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Data warehouse</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Store optimised for analytical queries rather than live user operations.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>OLTP vs OLAP</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Transactional (user operations) versus analytical (aggregate) workloads.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ETL</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Extract, Transform, Load — a data pipeline into an analytics store.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>MapReduce</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Distributed processing with a Map (filter/sort) step and a Reduce (summarise) step.</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="mnemonics" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">17</span>
+    <h2 class="section-title">Mnemonics &amp; Quick Recall</h2>
+  </div>
+  <div class="grid-2">
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">📊 Package Evaluation Checklist</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">A-C-S-V</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Adoption, Commits, Support, Vulnerability history&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—  — audit before you trust.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Supply-Chain Risks</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">S-O-P-D</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Supply-chain attacks, Outdated deps, Plugin ecosystem, Docker Hub trust.&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Reverse Proxy Benefits</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">S-A-W</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Scaling, Authentication, WAF&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—  — three reasons to put a proxy in front.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Container vs VM</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Share kernel = container</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Containers share the host kernel; VMs need a guest OS.&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Monitoring Stack</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">P-G-E-N-S</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Prometheus, Grafana, ELK, Nagios, Sentry&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—  — metrics, graphs, logs, infrastructure, errors.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 ETL Steps</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">E-T-L</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Extract, Transform, Load&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—  — get it, fix it, store it.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 MapReduce Steps</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">M-R</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Map = filter and sort; Reduce = summarise the result.&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+</div>
+</section>
+
+<section id="worked-examples" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">18</span>
+    <h2 class="section-title">Worked Scenarios &amp; Calculations</h2>
+  </div>
+  <div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 1 &bull; Hardening a WordPress deployment</div>
+  <h3 class="subsection-title" style="margin-top:0;">Hardening a WordPress deployment</h3>
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Code</strong> — confirm WordPress is mature, actively maintained, widely adopted and has no unpatched critical CVEs.</li><li><strong>Configuration</strong> — disable unused features and plugins, change insecure defaults, and review every option before going live.</li><li><strong>Database</strong> — create a dedicated database and give the WordPress user only the permissions it needs (no administrative rights).</li><li><strong>Network</strong> — place an Nginx reverse proxy in front, protect the admin interface with authentication, and add WAF rules.</li><li><strong>Secrets</strong> — never trust online configuration snippets blindly; evaluate each setting.</li></ol>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 2 &bull; Reading an HTTP</div>
+  <h3 class="subsection-title" style="margin-top:0;">Reading an HTTP Basic Auth exchange</h3>
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Client sends a normal request to the protected service.</li><li>Server replies <strong>401 Unauthorized</strong> with <code>WWW-Authenticate: Basic realm="User Visible Realm"</code>.</li><li>The browser prompts for a username and password.</li><li>It forms <code>Aladdin:OpenSesame</code>, base64-encodes it to <code>QWxhZGRpbjpPcGVuU2VzYW1l</code>.</li><li>It retries with <code>Authorization: Basic QWxhZGRpbjpPcGVuU2VzYW1l</code>.</li><li>The server validates the credentials and returns the resource. Because base64 is reversible, the whole exchange must run over HTTPS.</li></ol>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 3 &bull; Why a container loses its data</div>
+  <h3 class="subsection-title" style="margin-top:0;">Why a container loses its data</h3>
+<p>A developer puts MySQL inside a plain container without a volume.</p>
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The container starts, MySQL writes its data files inside the container's writable layer.</li><li>The developer rebuilds or recreates the container to apply an update.</li><li>The old container is destroyed — and its filesystem, including the database, is gone. Fix: mount a Docker volume so MySQL's data directory lives on the host, outside the container. The container can then be destroyed and recreated freely.</li></ol>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 4 &bull; Debugging with the</div>
+  <h3 class="subsection-title" style="margin-top:0;">Debugging with the monitoring stack</h3>
+<p>A page intermittently fails for users.</p>
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Sentry</strong> shows a spike of front-end and back-end exceptions aggregated into one feed.</li><li><strong>Prometheus</strong> reveals a matching spike in request latency and error rate on that endpoint.</li><li><strong>Grafana</strong> displays both on a dashboard alongside CPU and memory usage.</li><li><strong>Nagios</strong> fires a threshold alert by email/chat.</li><li><strong>ELK</strong> provides the raw centralised log lines to find the exact cause. Each tool answers a different question, and together they locate the fault.</li></ul>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 5 &bull; Moving analytics off</div>
+  <h3 class="subsection-title" style="margin-top:0;">Moving analytics off the production database</h3>
+<p>A site needs "total balance across all users" for a dashboard.</p>
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Running <code>SUM</code> over every row on the production OLTP database is slow and locks it, harming live users.</li><li>An <strong>ETL</strong> job <strong>extracts</strong> data from JavaScript click events, access logs and database changes.</li><li>It <strong>transforms</strong> the data into a consistent analytical schema.</li><li>It <strong>loads</strong> it into a data warehouse.</li><li>If the workload is enormous, <strong>MapReduce</strong> filters and sorts (Map) then consolidates (Reduce) the data into the summary the dashboard needs.</li></ol>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 6 &bull; Scaling a web</div>
+  <h3 class="subsection-title" style="margin-top:0;">Scaling a web application behind a proxy</h3>
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The application is slow under load, so a second and third instance are started.</li><li>A reverse proxy/load balancer distributes incoming requests across all instances — horizontal scaling.</li><li>Anonymous access to the internal service is blocked with Basic Authentication at the proxy.</li><li>WAF rules filter likely attack traffic before it reaches any instance.</li><li>The shared database remains the bottleneck, because all instances must share state.</li></ol>
+</div>
+</section>
+
+<section id="exam-focus" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">19</span>
+    <h2 class="section-title">Potential Exam Focus &amp; Practice</h2>
+  </div>
+  <div class="exam-toolbar">
+  <div class="exam-progress" id="exam-progress-tracker">Progress: 0 / 24 Mastered</div>
+  <div class="exam-actions">
+    <button class="btn-secondary" onclick="toggleAllAnswers(true)">Reveal All</button>
+    <button class="btn-secondary" onclick="toggleAllAnswers(false)">Hide All</button>
+    <button class="btn-secondary" onclick="resetExamProgress()">Reset Progress</button>
+  </div>
+</div><div class="quiz-card" id="q1">
+  <div class="quiz-header" onclick="toggleAnswer('ans-1')">
+    <span class="quiz-qnum">Q1</span>
+    <div class="quiz-question">Why should pre-packaged software be treated as a security risk?</div>
+  </div>
+  <div class='quiz-answer' id='ans-1'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>You inherit the entire dependency supply chain (libraries, plugins, container images, system packages) and the responsibility for configuring and hardening the application, which often ships with insecure defaults.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-1')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q1', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q2">
+  <div class="quiz-header" onclick="toggleAnswer('ans-2')">
+    <span class="quiz-qnum">Q2</span>
+    <div class="quiz-question">What are the three components of a typical pre-packaged web application and who owns each?</div>
+  </div>
+  <div class='quiz-answer' id='ans-2'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Application code (provided by the authors), configuration files (reviewed and hardened by the deployer) and the database (provisioned and secured by the deployer).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-2')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q2', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q3">
+  <div class="quiz-header" onclick="toggleAnswer('ans-3')">
+    <span class="quiz-qnum">Q3</span>
+    <div class="quiz-question">List the four main supply-chain threats mentioned in the lecture.</div>
+  </div>
+  <div class='quiz-answer' id='ans-3'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Supply chain attacks, outdated dependencies, plugin/extension ecosystem risks, and untrusted Docker Hub images.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-3')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q3', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q4">
+  <div class="quiz-header" onclick="toggleAnswer('ans-4')">
+    <span class="quiz-qnum">Q4</span>
+    <div class="quiz-question">What questions should you ask before trusting an application's code?</div>
+  </div>
+  <div class='quiz-answer' id='ans-4'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>What is it written in? Is the codebase mature? How active is development? Does it have a history of security vulnerabilities? You should also identify other users, support avenues, commit frequency, and search known vulnerability databases such as cvedetails.com.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-4')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q4', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q5">
+  <div class="quiz-header" onclick="toggleAnswer('ans-5')">
+    <span class="quiz-qnum">Q5</span>
+    <div class="quiz-question">Name automated dependency-vulnerability tools and their ecosystems.</div>
+  </div>
+  <div class='quiz-answer' id='ans-5'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>npm audit (Node.js/npm), pip-audit (Python), OWASP Dependency-Check (multi-language) and the Snyk Vulnerability DB.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-5')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q5', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q6">
+  <div class="quiz-header" onclick="toggleAnswer('ans-6')">
+    <span class="quiz-qnum">Q6</span>
+    <div class="quiz-question">Why is reviewing default configuration important?</div>
+  </div>
+  <div class='quiz-answer' id='ans-6'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Many packages ship with insecure defaults for ease of setup; reviewing options, disabling unused features and not blindly copying online configs reduces complexity and attack surface.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-6')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q6', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q7">
+  <div class="quiz-header" onclick="toggleAnswer('ans-7')">
+    <span class="quiz-qnum">Q7</span>
+    <div class="quiz-question">How should database permissions be granted to applications?</div>
+  </div>
+  <div class='quiz-answer' id='ans-7'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Apply the principle of least privilege — start with the minimum set (for example SELECT, INSERT, UPDATE) and extend only when necessary, avoiding administrative rights.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-7')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q7', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q8">
+  <div class="quiz-header" onclick="toggleAnswer('ans-8')">
+    <span class="quiz-qnum">Q8</span>
+    <div class="quiz-question">Why should you never expose an application's web interface directly to the Internet?</div>
+  </div>
+  <div class='quiz-answer' id='ans-8'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>The package may expose an admin or control interface without authentication; a reverse proxy or load balancer in between gives you control over which requests reach the application.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-8')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q8', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q9">
+  <div class="quiz-header" onclick="toggleAnswer('ans-9')">
+    <span class="quiz-qnum">Q9</span>
+    <div class="quiz-question">What benefits does a reverse proxy provide?</div>
+  </div>
+  <div class='quiz-answer' id='ans-9'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Scaling (acting as a load balancer for horizontal scaling), request authentication (blocking anonymous access) and Web Application Firewall filtering of attack vectors. The database remains the bottleneck.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-9')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q9', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q10">
+  <div class="quiz-header" onclick="toggleAnswer('ans-10')">
+    <span class="quiz-qnum">Q10</span>
+    <div class="quiz-question">Explain the full HTTP Basic Authentication flow.</div>
+  </div>
+  <div class='quiz-answer' id='ans-10'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>The server responds with 401 Unauthorized and <code>WWW-Authenticate: Basic realm="..."</code>; the client prompts for credentials, combines them as <code>username:password</code>, base64-encodes them and resends with <code>Authorization: Basic &lt;encoded&gt;</code>. The server validates and returns the resource.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-10')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q10', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q11">
+  <div class="quiz-header" onclick="toggleAnswer('ans-11')">
+    <span class="quiz-qnum">Q11</span>
+    <div class="quiz-question">Why must Basic Auth run over HTTPS?</div>
+  </div>
+  <div class='quiz-answer' id='ans-11'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Credentials are only base64-encoded, not encrypted, so they can be decoded in transit unless protected by TLS.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-11')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q11', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q12">
+  <div class="quiz-header" onclick="toggleAnswer('ans-12')">
+    <span class="quiz-qnum">Q12</span>
+    <div class="quiz-question">What is a WAF and what are its limitations?</div>
+  </div>
+  <div class='quiz-answer' id='ans-12'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A Web Application Firewall applies rules/filters to incoming HTTP requests to reject likely exploitation code; it sits at the edge/web layer, and it is only as good as its rules, so those rules must be kept up to date.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-12')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q12', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q13">
+  <div class="quiz-header" onclick="toggleAnswer('ans-13')">
+    <span class="quiz-qnum">Q13</span>
+    <div class="quiz-question">How do Linux containers differ from virtual machines?</div>
+  </div>
+  <div class='quiz-answer' id='ans-13'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>VMs require a full guest operating system and a hypervisor; containers remove the guest OS and share the host Linux kernel, allowing multiple isolated Linux systems on a single host with much lower overhead.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-13')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q13', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q14">
+  <div class="quiz-header" onclick="toggleAnswer('ans-14')">
+    <span class="quiz-qnum">Q14</span>
+    <div class="quiz-question">Distinguish a Docker image from a Docker container.</div>
+  </div>
+  <div class='quiz-answer' id='ans-14'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>An image is a read-only blueprint describing the base OS and modifications/dependencies; a container is a runnable, isolated instance created from that image.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-14')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q14', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q15">
+  <div class="quiz-header" onclick="toggleAnswer('ans-15')">
+    <span class="quiz-qnum">Q15</span>
+    <div class="quiz-question">How is data persisted in Docker, and why is it needed?</div>
+  </div>
+  <div class='quiz-answer' id='ans-15'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Containers are stateless and do not maintain data, so host directories called volumes are mounted into containers; storing a database's data directory in a volume lets you destroy the container without losing data.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-15')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q15', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q16">
+  <div class="quiz-header" onclick="toggleAnswer('ans-16')">
+    <span class="quiz-qnum">Q16</span>
+    <div class="quiz-question">What does Docker networking isolate?</div>
+  </div>
+  <div class='quiz-answer' id='ans-16'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Linked containers can communicate directly (for example WordPress to MySQL) and nominated ports are forwarded from the host, while other containers or systems cannot reach a service unless specified via Docker, improving security.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-16')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q16', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q17">
+  <div class="quiz-header" onclick="toggleAnswer('ans-17')">
+    <span class="quiz-qnum">Q17</span>
+    <div class="quiz-question">What is Docker Hub and what risk comes with it?</div>
+  </div>
+  <div class='quiz-answer' id='ans-17'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Docker Hub is a public registry of pre-built Docker images used as a starting point; because images are third-party code, security must be evaluated before trusting them.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-17')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q17', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q18">
+  <div class="quiz-header" onclick="toggleAnswer('ans-18')">
+    <span class="quiz-qnum">Q18</span>
+    <div class="quiz-question">When is container orchestration needed and what tools are named?</div>
+  </div>
+  <div class='quiz-answer' id='ans-18'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>It is needed when running production container fleets of tens to thousands; the lecture names Kubernetes/Google Kubernetes Engine (GKE) and AWS Elastic Container Service (ECS).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-18')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q18', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q19">
+  <div class="quiz-header" onclick="toggleAnswer('ans-19')">
+    <span class="quiz-qnum">Q19</span>
+    <div class="quiz-question">What facets of a website should be monitored?</div>
+  </div>
+  <div class='quiz-answer' id='ans-19'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>User interaction (who clicks what), user analytics (when users come online), HTTP error rate (which pages throw 500s) and infrastructure metrics (performance under 2x or 10x load).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-19')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q19', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q20">
+  <div class="quiz-header" onclick="toggleAnswer('ans-20')">
+    <span class="quiz-qnum">Q20</span>
+    <div class="quiz-question">Match each monitoring tool to its job.</div>
+  </div>
+  <div class='quiz-answer' id='ans-20'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Prometheus stores and graphs time-series metrics (pull/scrape model); Grafana visualises, queries and alerts across backends; ELK (Elasticsearch, Logstash, Kibana) centralises log ingestion and querying; Nagios monitors infrastructure and triggers threshold alerts; Sentry aggregates front-end and back-end errors in real time.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-20')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q20', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q21">
+  <div class="quiz-header" onclick="toggleAnswer('ans-21')">
+    <span class="quiz-qnum">Q21</span>
+    <div class="quiz-question">How does Prometheus collect data, and why does that surprise people?</div>
+  </div>
+  <div class='quiz-answer' id='ans-21'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>It uses a pull model, scraping HTTP endpoints from monitored services, rather than having applications push metrics to it.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-21')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q21', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q22">
+  <div class="quiz-header" onclick="toggleAnswer('ans-22')">
+    <span class="quiz-qnum">Q22</span>
+    <div class="quiz-question">Compare Google Analytics and KISSmetrics.</div>
+  </div>
+  <div class='quiz-answer' id='ans-22'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>GA is a JavaScript traffic-tracking and reporting tool useful for audience and browser prioritisation; KISSmetrics is a paid customer-intelligence platform with a subset of GA's features but deeper, cross-device user insight and a wider analytics toolkit.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-22')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q22', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q23">
+  <div class="quiz-header" onclick="toggleAnswer('ans-23')">
+    <span class="quiz-qnum">Q23</span>
+    <div class="quiz-question">Why shouldn't heavy analytics run on the operational database?</div>
+  </div>
+  <div class='quiz-answer' id='ans-23'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Operational schemas are optimised for user performance (OLTP), not aggregate queries; scanning all rows for analytics is slow and can degrade service, so data is moved to a data warehouse.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-23')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q23', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q24">
+  <div class="quiz-header" onclick="toggleAnswer('ans-24')">
+    <span class="quiz-qnum">Q24</span>
+    <div class="quiz-question">Describe the ETL pipeline and MapReduce.</div>
+  </div>
+  <div class='quiz-answer' id='ans-24'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>ETL extracts data from various sources (JS clicks, access logs, database changes), transforms it into a consistent structure and loads it into a final application. MapReduce distributes intensive analytics into a Map step (filter and sort) and a Reduce step (consolidate into a summary).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-24')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q24', this)"> Mastered
+    </label>
+  </div>
+</div>
+</section>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+<p><strong>ELEC3609 Engineering Study Guide</strong> &bull; Week 6: Pre-packaged Software, Docker &amp; System Monitoring · 2025 Session</p>
+    <p style="font-size: 0.75rem; margin-top: 0.4rem;">Generated for self-paced revision and exam preparation.</p>
+  </footer>
+
+  <!-- Interactive JavaScript -->
+  <script>
+// Theme Toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let currentTheme = localStorage.getItem('study_theme') || (prefersDark ? 'dark' : 'light');
+
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeBtn.textContent = '☀️';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        themeBtn.textContent = '🌙';
+      }
+      localStorage.setItem('study_theme', theme);
+    }
+    applyTheme(currentTheme);
+
+    themeBtn.addEventListener('click', () => {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(currentTheme);
+    });
+
+    // Mobile Menu Toggle
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    menuBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+
+    // Close sidebar when clicking links on mobile
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 1024) {
+          sidebar.classList.remove('open');
+        }
+      });
+    });
+
+    // Reading Progress & Active Nav Link Highlight
+    window.addEventListener('scroll', () => {
+      const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById('progress-bar').style.width = scrolled + '%';
+
+      // Active Section Highlighting
+      const sections = document.querySelectorAll('section.guide-section, section.hero-card');
+      let currentSecId = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 120;
+        if (winScroll >= top) {
+          currentSecId = sec.getAttribute('id');
+        }
+      });
+
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentSecId) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Interactive Confusion Matrix Calculator Logic
+    function calculateMetrics() {
+      const tp = parseFloat(document.getElementById('inp-tp').value) || 0;
+      const fn = parseFloat(document.getElementById('inp-fn').value) || 0;
+      const fp = parseFloat(document.getElementById('inp-fp').value) || 0;
+      const tn = parseFloat(document.getElementById('inp-tn').value) || 0;
+
+      const total = tp + fn + fp + tn;
+      const acc = total > 0 ? ((tp + tn) / total) * 100 : 0;
+      const prec = (tp + fp) > 0 ? (tp / (tp + fp)) * 100 : 0;
+      const rec = (tp + fn) > 0 ? (tp / (tp + fn)) * 100 : 0;
+      const f1 = (prec + rec) > 0 ? 2 * (prec * rec) / (prec + rec) / 100 : 0;
+
+      document.getElementById('res-acc').textContent = acc.toFixed(1) + '%';
+      document.getElementById('res-prec').textContent = (tp + fp) > 0 ? prec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-rec').textContent = (tp + fn) > 0 ? rec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-f1').textContent = (prec + rec) > 0 ? f1.toFixed(3) : '0.000';
+    }
+
+    function setPreset(tp, fp, tn, fn) {
+      document.getElementById('inp-tp').value = tp;
+      document.getElementById('inp-fp').value = fp;
+      document.getElementById('inp-tn').value = tn;
+      document.getElementById('inp-fn').value = fn;
+      calculateMetrics();
+    }
+
+    // Glossary Filter Logic
+    function filterTerms(category, btn) {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+
+      const cards = document.querySelectorAll('.term-card');
+      cards.forEach(card => {
+        if (category === 'all' || card.getAttribute('data-cat') === category) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // Global Search Logic
+    const searchInput = document.getElementById('site-search');
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      const termCards = document.querySelectorAll('.term-card');
+      const quizCards = document.querySelectorAll('.quiz-card');
+
+      if (!query) {
+        termCards.forEach(c => c.style.display = 'flex');
+        quizCards.forEach(c => c.style.display = 'block');
+        return;
+      }
+
+      termCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+
+      quizCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'block' : 'none';
+      });
+    });
+
+    // Exam Questions Show/Hide & Progress Tracker
+    function toggleAnswer(id) {
+      const ans = document.getElementById(id);
+      ans.classList.toggle('show');
+    }
+
+    function toggleAllAnswers(show) {
+      document.querySelectorAll('.quiz-answer').forEach(ans => {
+        if (show) ans.classList.add('show');
+        else ans.classList.remove('show');
+      });
+    }
+
+    let masteredMap = JSON.parse(localStorage.getItem('engg2112_w3_mastered') || '{}');
+
+    function updateProgressUI() {
+      const total = document.querySelectorAll('.quiz-card').length;
+      const count = Object.values(masteredMap).filter(Boolean).length;
+      document.getElementById('exam-progress-tracker').textContent = `Progress: ${count} / ${total} Mastered`;
+
+      for (let i = 1; i <= total; i++) {
+        const card = document.getElementById('q' + i);
+        const checkbox = card ? card.querySelector('input[type="checkbox"]') : null;
+        if (card && checkbox) {
+          if (masteredMap['q' + i]) {
+            card.classList.add('mastered');
+            checkbox.checked = true;
+          } else {
+            card.classList.remove('mastered');
+            checkbox.checked = false;
+          }
+        }
+      }
+    }
+
+    function toggleMastered(qid, checkbox) {
+      masteredMap[qid] = checkbox.checked;
+      localStorage.setItem('engg2112_w3_mastered', JSON.stringify(masteredMap));
+      updateProgressUI();
+    }
+
+    function resetExamProgress() {
+      if (confirm('Reset all exam progress checkboxes?')) {
+        masteredMap = {};
+        localStorage.removeItem('engg2112_w3_mastered');
+        updateProgressUI();
+      }
+    }
+
+    // Initialize state on load
+    window.addEventListener('DOMContentLoaded', () => {
+      calculateMetrics();
+      updateProgressUI();
+    });
+  </script>
+</body>
+</html>

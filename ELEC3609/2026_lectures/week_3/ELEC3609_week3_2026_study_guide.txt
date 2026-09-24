@@ -1,0 +1,552 @@
+================================================
+ELEC3609 Week 3 – Study Guide
+Web Servers & Application Architecture · 2026 Session
+================================================
+
+OVERVIEW
+--------
+This lecture moves from the single-machine prototype to the architecture real websites run on. It begins with the classic three-layer split — web server, application server, and database — then shows how each layer is chosen and scaled: web servers (IIS, Apache, Nginx), language frameworks (with Django in detail), storage media, and the two great families of databases, SQL and NoSQL. The final third covers production best practice: decoupling, statelessness, redundancy, and the scaling patterns (separate DB server, load balancers, HTTP accelerators, and master-slave replication) that take a system from an MVP to something that survives traffic.
+
+------------------------------------------------
+STATS:
+------------------------------------------------
+Lecture Themes|4
+Stack Variants|2 (LAMP, LEMP)
+Named NoSQL Stores|4
+Production Principles|3
+Standard HTTP Ports|80, 443
+
+------------------------------------------------
+SECTION 1: Web Architecture & Three Layers
+------------------------------------------------
+Modern web architecture is built from **independently deployable components** connected through general interfaces. The lecture points to a 2002 paper, *Principled Design of the Modern Web Architecture*, which lists the goals of that design:
+
+- Scalability of component interactions
+- Generality of interfaces
+- Independent deployment of components
+- Intermediary components to reduce interaction latency
+- Enforcement of security
+- Encapsulation of legacy systems
+
+### Refreshing the Three Layers
+The familiar three-layer architecture separates responsibilities:
+
+- **Web Server** — takes HTTP(S) traffic only, on **HTTP (port 80)** or **HTTPS (port 443)** if encrypted.
+- **Application Server** — runs the business logic; it may run on HTTP (80) or HTTPS (443) if encrypted, or on any designated TCP ports.
+- **Database** — stores persistent data.
+
+### Application Server vs Web Server (a Key Term)
+- A **web server** exclusively handles **HTTP requests**.
+- An **application server** serves **business logic to application programs through any number of protocols**, possibly including HTTP.
+
+💡 **Why It Matters:** The term "server" hides two different jobs. Keeping them distinct is the first step toward a decoupled, scalable system.
+
+### Example Website Setup
+To set up a development web server and a sample website:
+- Always develop on a **similar system to what you intend to deploy on**. For this unit, that means **Linux**.
+- **Vagrant** is software that creates and configures **virtual development environments** — a way to get a Linux-like environment on any machine.
+
+------------------------------------------------
+SECTION 2: LAMP & LEMP Stacks
+------------------------------------------------
+**LAMP / LEMP stacks are the most ubiquitous stacks used for developing and deploying web applications.** Because of their **modular nature**, the components can easily be swapped out.
+
+| Stack | Components |
+| --- | --- |
+| **LAMP** | Linux, Apache, MySQL, PHP |
+| **LEMP** | Linux, Nginx, MySQL, PHP |
+
+Notice that the only difference is the web server: **Apache in LAMP, Nginx in LEMP** ("E" stands for the *engine-x* pronunciation of Nginx). Everything else — Linux, MySQL, PHP — stays the same.
+
+🧠 **Memory Hook:** LAMP and LEMP share **L-M-P** (Linux, MySQL, PHP); only the second letter changes — **A**pache or **nginx**.
+
+📌 **Info:** Once you have an **Ubuntu Server** environment, a **LEMP stack** can be set up on it (the lecture's example website).
+
+------------------------------------------------
+SECTION 3: Single Server MVP Architecture
+------------------------------------------------
+The first iteration of almost every project runs everything on a **single server** — a **minimal viable product (MVP)**. The lecture weighs the trade-offs explicitly.
+
+### Pros
+- **Simple for debugging** — everything is in one place.
+- **Good for demo or technical validation purposes.**
+
+### Cons
+- **Not production ready** — the real configuration would be very different when things run on multiple layers and different compute nodes.
+- **Architecturally not decoupled.**
+- **Tough for troubleshooting.**
+- **Not ready for horizontal scaling.**
+
+In a single-server MVP, the web server talks to the application server over **localhost:8080** — both live on the same machine, so they can address each other by the loopback name.
+
+⚠️ **Common Trap:** An MVP that "works" on one server can hide coupling that will hurt later. The moment you split components, hard-coded addresses and shared state become problems.
+
+------------------------------------------------
+SECTION 4: Case Study: Decoupling the App Server
+------------------------------------------------
+### Case Study 1 — Moving the App Server to Another Host
+Your app server has moved off the single box. How does the web server find it?
+
+**Option A — Hard-code the IP address.**
+- The configuration file stores something like `10.100.0.2:8080`.
+- Problem: if the server dies, the replacement is assigned a **new IP address** — but the address is **hardcoded in a configuration file**, so every client breaks until someone edits it.
+
+**Option B — Use DNS (an A record).**
+- Create an A record: `application.mysite.com.au` points to `10.100.0.2`.
+- The web server's configuration simply says `application.mysite.com.au`.
+- If the app server dies and a new one is assigned `10.100.0.4` by DHCP, you **change the DNS record** (this can be automated with scripts) to point at the new IP.
+- The web server needs **no configuration changes**.
+
+💡 **Why It Matters:** Indirection (DNS instead of a raw IP) turns a painful redeploy into a one-line record change.
+
+### Case Study 2 — The App Server Gets Slammed
+Traffic grows and one app server is overloaded. Two options:
+- **Option 1: A bigger instance** — more CPUs (or a more powerful CPU) and more memory.
+- **Option 2: More instances** — run several app servers, e.g. `10.100.0.2` and `10.100.0.4`.
+
+Option 2 creates a new problem: there is only **one representative DNS record** for the application server (`application.mysite.com.au`), but now two machines exist. The solution is an **internal load balancer**:
+- `application.mysite.com.au` points to the **load balancer**.
+- The load balancer routes traffic to one of the web servers.
+
+🧠 **Memory Hook:** Scale **up** = one bigger box. Scale **out** = more boxes plus a load balancer to spread the traffic.
+
+------------------------------------------------
+SECTION 5: Web Servers: IIS, Apache, Nginx
+------------------------------------------------
+### IIS (Internet Information Services)
+- Microsoft's web server, **released 1996**.
+- Has a **long history of security vulnerabilities** and **should be avoided if possible**.
+- Use it when running an **ASP or ASP.NET** application (still consider Apache) or to make use of Windows-specific features such as **AD-integration** (Active Directory).
+
+### Apache
+- **Apache HTTP Server** is an open-source project developed by the **Apache Software Foundation**.
+- **Released 1995**, very commonly used.
+- Has a **dynamically loadable module** system.
+- **Can scale but can be tricky to set up.**
+- Typically spawns threads to handle requests (**mpm_prefork**); other options exist.
+
+### Nginx
+- **Released 2004** — designed from the beginning to **scale easily**.
+- Adoption has grown quickly.
+- Spawns **worker processes**.
+- **Memory and CPU usage are typically relatively consistent, even under load.**
+
+| Server | Released | Model | Notes |
+| --- | --- | --- | --- |
+| IIS | 1996 | Windows service | Security history; use only for ASP/.NET or AD integration |
+| Apache | 1995 | Threads/processes (mpm_prefork) | Open source, modular, scalable but trickier to configure |
+| Nginx | 2004 | Worker processes | Built to scale; stable resource usage |
+
+💡 **Why It Matters:** The choice of web server shapes how easily your site scales. Nginx was designed for it; Apache can do it with more effort; IIS carries security baggage.
+
+------------------------------------------------
+SECTION 6: Languages & Frameworks: HTML & ASP
+------------------------------------------------
+Working inside a **framework** is the theme of this part. Before frameworks, though, the markup and the older server-side technologies matter.
+
+### HTML
+**HyperText Markup Language (HTML)** is the standard markup language used to create web pages. The **World Wide Web Consortium (W3C)** develops the HTML standards.
+
+### ASP and ASP.NET
+- **Active Server Pages (ASP)** was released in **1996** and is now known as **Classic ASP or ASP Classic**. It was **Microsoft's first server-side script engine** for dynamically generated web pages.
+- **ASP.NET** (released **2002**) **supersedes ASP**.
+- ASP.NET uses a **Common Language Runtime (CLR)** to allow most **.NET languages** to be supported.
+
+📌 **Info:** HTML is the *content* language of the web; ASP/ASP.NET are server-side *generation* technologies — the ancestors of today's Python, PHP and Ruby frameworks.
+
+------------------------------------------------
+SECTION 7: Python, Django & PHP
+------------------------------------------------
+### Python
+- **Use a framework.**
+- Python plans its language evolution using **PEPs** (Python Enhancement Proposals), so "you know what you get in the next few years."
+- Common frameworks: **Flask** and **Django**.
+- These typically come with a **built-in development server** (a lightweight web server).
+- For production, Python is set up with **Apache & Nginx using the WSGI (Web Server Gateway Interface) specification**.
+
+### Django
+Django follows a software pattern. The lecture describes it two ways.
+
+**First, the classic roles:**
+- **Models** — represent how data is organised in the database.
+- **Views** — what you see when you visit a site.
+- **Controllers** — control the flow of information.
+
+**Second, Django's own Model-View-Template (MVT) terminology:**
+- **Model** — similar to MVC's model, handles the data and logic part and maintains a connection with the database.
+- **View** — works **differently** from the View layer of MVC: here the view **accepts the requests and sends out the response**.
+- **Template** — the **presentation layer**, commonly coded in **HTML or DTL (Django Template Language)**.
+
+⚠️ **Common Trap:** In Django, a "View" is not a template — it is the request/response handler. The presentation lives in the **Template**. Mixing these up is a classic exam error.
+
+### PHP
+- **Use a framework.**
+- Without proper planning it becomes a mess — e.g. **spaghetti code**.
+- Common frameworks: **Codeigniter** and **CakePHP**.
+- PHP can be set up with either **Apache or Nginx**.
+
+💡 **Why It Matters:** Frameworks give you a proven structure (MVC/MVT), a built-in dev server, and community conventions — so you spend your time on business logic, not plumbing.
+
+------------------------------------------------
+SECTION 8: Data Storage & Storage Media
+------------------------------------------------
+### Storage Media
+Data can be stored on many kinds of media, grouped by form:
+
+- **Hardware form factor**
+  - **Magnetic (spinning) drive vs Solid State Drive (flash)** — HDD vs SSD.
+  - Interconnected with **Ethernet (iSCSI)** or **Fibre Channel** — **SAN storage**.
+  - **Network Attached Storage (NAS)**.
+  - **In-memory storage**.
+- **Object store** — **AWS S3**, **Google Cloud Storage**.
+- **Block store** — disks.
+- **File store** — **NFS**, **Samba**, **CephFS**, **HDFS (Hadoop)**.
+
+### Disk
+- Serves **static files** (HTML, images, CSS).
+- **SSD vs spinning** matters for speed.
+- You can **leverage OS RAM caching** to avoid touching disk as often.
+
+🧠 **Memory Hook:** Storage comes as **blocks, files, or objects** — block store (disks), file store (NFS/Samba), object store (S3/GCS).
+
+------------------------------------------------
+SECTION 9: Relational Databases & SQL
+------------------------------------------------
+### Relational Databases
+- **Maintain and enforce relationships between data.**
+- Organise data into one or more **tables of columns and rows**.
+- Typically, each **table represents an entity**, such as a customer or product.
+- **Rows** represent **instances** of that entity.
+- **Columns** represent **values attributed to that instance** (such as address or price).
+- **Schema change often results in system downtime and planned maintenance.**
+
+### SQL — Who Needs a Standard?
+- There has been an **ANSI / ISO SQL standard since 1986**.
+- However, **most SQL is not completely portable among RDBMS** (relational database management systems).
+- In practice this typically only affects **more advanced features** — e.g. **Teradata doesn't support pivots**.
+- **Transact-SQL (TSQL) is typically more feature rich.**
+
+⚠️ **Common Trap:** "It's SQL, so it will work on any database" is false for advanced features. Plan for portability limits when migrating engines.
+
+------------------------------------------------
+SECTION 10: Comparing SQL Engines
+------------------------------------------------
+| Engine | Strengths | Weaknesses |
+| --- | --- | --- |
+| **MySQL / MariaDB** | Most popular and commonly used; lots of third-party tools and libraries | Does not implement the full SQL standard (e.g. the concatenation operator is read as OR rather than string concatenation); concurrency can be an issue |
+| **Postgres** | ANSI/ISO SQL standards; complete support for reliable transactions via **ACID** (Atomicity, Consistency, Isolation, Durability); great spatial extension | Replication can be tricky |
+| **Microsoft SQL Server (MSSQL)** | Good for the MS stack; integrates into BI/DW easily (**SSIS, SSAS, SSRS**); generally cheaper than Oracle and Teradata | Consider and plan license costs, even in the cloud; needs **DBAs** |
+
+💡 **Why It Matters:** The engine you pick decides your transaction guarantees, your tooling ecosystem, and your licensing budget. Postgres prizes standards and ACID; MySQL prizes popularity and tooling; MSSQL prizes Microsoft-stack integration.
+
+------------------------------------------------
+SECTION 11: NoSQL Databases
+------------------------------------------------
+**New SQL or No SQL** databases are non-relational: they **store data more like loose pages**, not in the relational manner.
+
+General characteristics:
+- New data structures
+- **More flexible schemas or no schemas**
+- **Better scalability**
+- **Eventually consistent** rather than strictly consistent
+
+Each store has a distinct model and set of trade-offs:
+
+### Redis — Key/Value Based
+- Written in **C** — blazing fast.
+- Protocol: **Telnet-like, binary safe**.
+- **Disk-backed in-memory database**, with **master-slave replication** and **automatic failover**.
+- Simple values or data structures by keys.
+- Supports **INCR & co, bit and bitfield operations, sets, lists, hashes and sorted sets**.
+- **Values can be set to expire** (as in a cache).
+- **Pub/Sub** lets you implement messaging.
+
+### Cassandra — Column Based
+- Written in **Java**.
+- Main point: **store huge datasets in "almost" SQL**.
+- Protocol: **CQL3 & Thrift**.
+- **CQL3 is very similar to SQL** but with limitations that come from scalability — most notably **no JOINs and no aggregate functions**.
+- Querying by key, or key range (secondary indices are also available).
+- Data can have **expiration** (set on INSERT).
+- Map/reduce possible with **Apache Hadoop**.
+
+### MongoDB — Document Based
+- Written in **C++**.
+- Main point: **JSON document store**.
+- **Master/slave replication** (auto failover with **replica sets**).
+- **Sharding built-in**.
+- Queries are **JavaScript expressions**.
+- **Geospatial queries and indexing**.
+- Multiple storage engines with different performance characteristics.
+- **Journaling**.
+- **Text search integrated**.
+- Deployment would require some **heavy-lifting if you want HA** — e.g. voting systems using **ZooKeeper**.
+
+### ElasticSearch — Document Based
+- Written in **Java**.
+- Main point: **advanced search** — stores **JSON documents**.
+- Protocol: **JSON over HTTP** (plugins: Thrift, memcached).
+- Parent and children documents with **versioning & timeouts**.
+- Very versatile and sophisticated querying, **scriptable**.
+- Write consistency: **one, quorum or all**. **Asynchronous replication.**
+- **Sorting by score, geo distance.**
+- **Fuzzy searches** (approximate date, etc).
+- Use cases: **dynamic web search with auto-suggest**; the **ELK stack** for log analysis.
+- **ELK = ElasticSearch, LogStash, Kibana.**
+
+| Store | Model | Language | Signature Feature |
+| --- | --- | --- | --- |
+| Redis | Key/Value | C | In-memory speed, expiry, Pub/Sub |
+| Cassandra | Column | Java | Huge datasets with CQL3 (no JOINs) |
+| MongoDB | Document | C++ | JSON documents, sharding, replica sets |
+| ElasticSearch | Document | Java | Advanced/fuzzy search, ELK logging |
+
+🧠 **Memory Hook:** Match the store to the shape of the data — **Key/Value (Redis), Column (Cassandra), Document (MongoDB, ElasticSearch)**.
+
+------------------------------------------------
+SECTION 12: Cloud Storage & Amazon S3
+------------------------------------------------
+**Cloud storage is a model of data storage in which data is stored in logical pools, the physical storage spans multiple servers (and often locations), and the physical environment is typically owned and managed by a third party.**
+
+Many offerings are on the market, including:
+- **Azure Storage**
+- **Google Cloud Storage**
+- **Amazon S3**
+
+### Amazon S3
+**Amazon Simple Storage Service (S3)** is a cost-effective, simple-to-use service that can be used to **store and retrieve any amount of data, at any time, from anywhere on the web**.
+
+💡 **Why It Matters:** Cloud storage trades ownership of physical hardware for logical pools managed by a third party. That is what lets you scale storage without buying disks.
+
+------------------------------------------------
+SECTION 13: Production Best Practices
+------------------------------------------------
+### Decoupling
+Give different components **dedicated resources** — web servers, app servers, and the database each run separately. Benefits:
+- A well-understood **scope of work** for each component.
+- **Reduced blast radius** when something fails.
+- **Easier troubleshooting and incident response.**
+- Downside: **smaller but more components**, moving towards a **microservices architecture**.
+
+### Scalability
+- **Statelessness is the foundation of all scalability. Stateful applications won't scale.**
+  - Components of the same layer **should not share anything** between them.
+- Refer to the principles of the **12 Factor App** (12factor.net).
+- **Scale out vs scale up:**
+  - **Scale-out** — horizontal scaling; the model supercomputing has been using. **Load balancing is IMPORTANT.**
+  - **Scale-up** — bigger, bigger, and bigger. Often not realistic due to physical laws and economics.
+- Scalability applies not only to **compute and memory**, but also to **IO**:
+  - **IOPS (IO per second)**
+  - **Bandwidth**
+  - **Latency**
+
+### Redundancy
+- **Remove all SPOFs (single points of failure)** — e.g. through **master/slave replication**.
+- Understand four related but distinct terms:
+
+| Term | Question it answers |
+| --- | --- |
+| **Durability** | Is the data stored securely in the event of failures? |
+| **Availability** | System uptime — the percentage of time able to serve requests |
+| **Reliability** | Similar to availability; a system can be available but not functioning correctly |
+| **Resilience** | Ability for the system to recover in the event of failures (self-healing) |
+
+- Some software defects relate to **performance** and cannot be replicated when the load is low.
+- Think about **avalanche or cascading effects** (one failure causing others).
+- Extended reading: **Chaos Monkey**.
+
+✅ **Exam Tip:** Be ready to tell durability, availability, reliability and resilience apart with a one-line example each — this is a favourite short-answer distinction.
+
+------------------------------------------------
+SECTION 14: Scaling Patterns & Combinations
+------------------------------------------------
+Starting from the single-server recap, scaling proceeds in identifiable steps.
+
+### Step 1 — Separate DB Server
+Separate the database from the application server to:
+- **Eliminate resource contention** (the DB and app no longer compete for the same CPU/RAM/IO).
+- **Increase security** by removing the database from the **DMZ or public internet**.
+
+### Step 2 — Load Balancer
+- Load balancers (LB) improve **performance and reliability** by distributing workload across multiple servers.
+- If one load-balanced server fails, the others **handle incoming traffic until the failed server becomes healthy again**.
+- Typical implementations: **HAProxy, Nginx, and Varnish**.
+
+### Step 3 — HTTP Accelerator
+- An **HTTP accelerator**, or **caching HTTP reverse proxy**, reduces the time it takes to serve content through a variety of techniques.
+- Typically the response from a web or application server is **cached for a period of time in memory**.
+- Software capable of HTTP acceleration: **Varnish, Squid, Nginx**.
+
+### Step 4 — Master-Slave Database Replication
+- One way to improve a database that performs **many reads compared to writes**, such as a **CMS (content management system)**, is master-slave replication.
+- Requires a **master and one or more slave nodes**.
+- **All updates are sent to the master node, and reads can be distributed across all nodes.**
+
+### Putting It Together — Combinations
+- It is possible to **load balance the caching servers, in addition to the application servers, and use database replication in a single environment**.
+- Purpose: **reap the benefits of each technique without introducing too many issues or complexity.**
+
+💡 **Why It Matters:** Each pattern solves one bottleneck. Real architectures combine them, but every added component adds operational complexity — the art is knowing when to stop.
+
+================================================
+KEY TAKEAWAYS
+================================================
+1. **The three layers** — web server, application server, database — separate HTTP handling, business logic, and persistence.
+2. **A web server handles HTTP exclusively; an application server serves business logic over any protocol**, possibly including HTTP.
+3. **LAMP and LEMP differ only in the web server** (Apache vs Nginx); both use Linux, MySQL and PHP.
+4. **A single-server MVP is easy to debug and demo but not decoupled, hard to troubleshoot, and not horizontally scalable.**
+5. **Hard-coding an app server IP is fragile; a DNS A record lets you repoint to a new IP without touching web server config.**
+6. **When one app server is overloaded, scale up (bigger instance) or scale out (more instances) — and add an internal load balancer.**
+7. **IIS (1996) has a long security history; Apache (1995) is modular but trickier to scale; Nginx (2004) was built to scale with worker processes.**
+8. **Python frameworks (Flask, Django) ship a lightweight dev server and use WSGI to run under Apache/Nginx.**
+9. **Django's Model-View-Template differs from MVC** — Django's View handles requests/responses, and the Template is the presentation layer (HTML/DTL).
+10. **SQL databases enforce relationships and are schema-driven**, but schema changes often mean downtime and planned maintenance.
+11. **MySQL/MariaDB is the most popular; Postgres fully supports ANSI/ISO SQL and ACID; MSSQL integrates with the Microsoft BI stack.**
+12. **NoSQL databases favour flexible schemas, better scalability, and eventual consistency** — Redis, Cassandra, MongoDB and ElasticSearch each target a different data shape.
+13. **Cloud storage stores data in logical pools across many servers owned by a third party** — e.g. Amazon S3.
+14. **Statelessness is the foundation of scalability**; scale out (horizontal) with load balancing rather than relying only on scale up.
+15. **Remove single points of failure**, and distinguish durability, availability, reliability and resilience.
+16. **Scaling patterns stack**: separate DB server, load balancer, HTTP accelerator, and master-slave replication combine for a resilient system.
+
+================================================
+TERMS TO KNOW
+================================================
+**12 Factor App**: A set of principles for building scalable, stateless applications.
+**ACID**: Atomicity, Consistency, Isolation, Durability — reliable transaction guarantees.
+**Amazon S3**: Amazon Simple Storage Service — object storage to store and retrieve any amount of data from anywhere.
+**Apache**: Open-source web server (1995) with dynamically loadable modules; scales but can be tricky to configure.
+**Application server**: Serves business logic to application programs over any number of protocols, possibly including HTTP.
+**ASP.NET**: Microsoft's server-side technology (2002), superseding Classic ASP, using the Common Language Runtime.
+**Availability**: System uptime — percentage of time the system can serve requests.
+**Block store**: Storage presented as raw disks.
+**CephFS**: A distributed file-store technology.
+**Chaos Monkey**: Extended-reading tool for testing resilience by injecting failures.
+**CLR**: Common Language Runtime — lets ASP.NET support most .NET languages.
+**Cloud storage**: Data stored in logical pools spanning multiple servers/locations, owned and managed by a third party.
+**CMS**: Content Management System — an example workload with many reads compared to writes.
+**Composer**: PHP's package manager.
+**CQL3**: Cassandra's SQL-like query language (no JOINs, no aggregate functions).
+**Cassandra**: Column-based NoSQL store written in Java for huge datasets.
+**DBMS**: Database management system.
+**Decoupling**: Giving components dedicated resources to reduce blast radius and simplify troubleshooting.
+**DHCP**: Dynamic Host Configuration Protocol — assigns IP addresses dynamically.
+**DMZ**: Demilitarised zone — a network segment you keep the database out of for security.
+**DNS A record**: Maps a hostname to an IPv4 address; used to repoint app servers without changing web server config.
+**Durability**: Whether data is stored securely in the event of failures.
+**Django**: Python web framework using Model-View-Template.
+**DTL**: Django Template Language.
+**ElasticSearch**: Document-based NoSQL search engine storing JSON; part of the ELK stack.
+**ELK**: ElasticSearch, LogStash, Kibana — a log-analysis stack.
+**ERD**: Entity-Relationship Diagram (covered in later data-modelling work).
+**Flask**: Lightweight Python web framework.
+**Foreign key**: A column referencing another table's primary key.
+**HAProxy**: A common load balancer implementation.
+**HDFS**: Hadoop Distributed File System — a file store.
+**HTTP accelerator**: Caching HTTP reverse proxy that speeds content delivery (Varnish, Squid, Nginx).
+**IIS**: Internet Information Services — Microsoft's web server (1996), with a long history of vulnerabilities.
+**IOPS**: IO operations per second — a measure of storage performance.
+**iSCSI**: Storage networking over Ethernet.
+**LAMP**: Linux, Apache, MySQL, PHP stack.
+**LEMP**: Linux, Nginx, MySQL, PHP stack.
+**Load balancer**: Distributes workload across servers for performance and reliability.
+**MariaDB**: Open-source fork/compatible variant of MySQL.
+**Master-slave replication**: All writes go to the master; reads can be distributed across master and slaves.
+**MongoDB**: C++ JSON document store with sharding and replica sets.
+**mpm_prefork**: The Apache mode that spawns threads/processes per request.
+**MVC**: Model-View-Controller — separation of data, presentation, and request handling.
+**MVT**: Model-View-Template — Django's variant of MVC.
+**NAS**: Network Attached Storage.
+**NFS**: Network File System — a file-store technology.
+**Nginx**: Web server/reverse proxy (2004) built to scale, using worker processes.
+**NoSQL**: Non-relational databases with flexible or no schemas and eventual consistency.
+**PEP**: Python Enhancement Proposal — how Python's evolution is planned.
+**Postgres**: SQL database with full ANSI/ISO standards support and ACID transactions.
+**Primary key**: A field that uniquely identifies each row (typically `id`).
+**Pub/Sub**: Redis publish/subscribe mechanism for messaging.
+**Redis**: C key/value in-memory database with replication, expiry and Pub/Sub.
+**Relational database**: Stores data in tables of columns and rows, enforcing relationships.
+**Reliability**: Whether the system functions correctly, not merely whether it is up.
+**Replica set**: MongoDB's mechanism for master/slave replication with automatic failover.
+**Resilience**: The ability of a system to recover from failures (self-healing).
+**Samba**: An open-source file-store/service technology.
+**SAN**: Storage Area Network — block storage over Fibre Channel or iSCSI.
+**Scale-out**: Horizontal scaling — adding more machines; relies on load balancing.
+**Scale-up**: Vertical scaling — making a single machine more powerful.
+**Schema**: The defined structure of a database (tables, columns, relationships).
+**Sharding**: Splitting data across multiple machines, built into MongoDB.
+**SPOF**: Single point of failure — a component whose failure takes down the system.
+**Squid**: A caching proxy capable of HTTP acceleration.
+**SSD**: Solid State Drive (flash) — faster than a spinning magnetic disk.
+**SQL**: Structured Query Language — standardised since 1986 (ANSI/ISO), not fully portable.
+**Statelessness**: Components share nothing and hold no session state — the foundation of scalability.
+**TSQL**: Transact-SQL — Microsoft's typically more feature-rich SQL dialect.
+**Vagrant**: Software that creates and configures virtual development environments.
+**Varnish**: HTTP accelerator and load balancer.
+**Web server**: Exclusively handles HTTP requests.
+**WSGI**: Web Server Gateway Interface — the spec for running Python apps under Apache/Nginx.
+**ZooKeeper**: Coordination system used for HA deployments such as MongoDB voting.
+
+================================================
+MNEMONICS & QUICK RECALL
+================================================
+**LAMP vs LEMP**: **L-M-P shared; A vs N** — Linux/MySQL/PHP, with **A**pache or **n**ginx.
+**Three Layers**: **W-A-D** — Web server, Application server, Database.
+**Four R-words of Redundancy**: **D-A-R-R** — Durability, Availability, Reliability, Resilience.
+**Scaling Steps**: **D-L-H-M** — Separate **D**B server, **L**oad balancer, **H**TTP accelerator, **M**aster-slave replication.
+**Scale Out vs Up**: **Out = more boxes (LB important); Up = bigger box (limited by physics/economics).**
+**Web Server History**: **A-1995, I-1996, N-2004** — Apache, IIS, Nginx.
+**NoSQL by Shape**: **Key=Redis, Column=Cassandra, Document=MongoDB/ElasticSearch.**
+**ELK**: **E**lasticSearch, **L**ogStash, **K**ibana.
+**Storage Types**: **Block = disks, File = NFS/Samba, Object = S3/GCS.**
+
+================================================
+WORKED EXAMPLES
+================================================
+### Example 1: Rescuing a Hard-Coded App Server
+A web server's config file points to `http://10.100.0.2:8080`.
+1. The app server crashes and is replaced; DHCP gives the new machine `10.100.0.4`.
+2. Because the old IP is hard-coded, the web server keeps talking to a dead address.
+3. The fix is to introduce a DNS A record: `application.mysite.com.au → 10.100.0.2`.
+4. The web server config now says `application.mysite.com.au`.
+5. Next time the app server moves, update the A record to `10.100.0.4` (scriptable) — the web server config is untouched.
+
+### Example 2: Scaling a Slain App Server
+Traffic doubles; the app server is overwhelmed.
+1. Option 1 — scale up: buy a bigger instance with more CPUs and memory. Simple, but bounded by physical and economic limits.
+2. Option 2 — scale out: add a second app server (`10.100.0.2` and `10.100.0.4`).
+3. One DNS record cannot represent two machines, so an internal load balancer becomes the single DNS target.
+4. `application.mysite.com.au` now points to the load balancer, which routes each request to a healthy app server.
+
+### Example 3: Choosing a Store for the TIL Platform
+A social "Today I learned" platform might combine stores:
+- Use a **relational database** for users, posts and tags, because these have clear relationships and the lecture's later data-modelling section builds an ERD with foreign keys.
+- Use **Redis** as a cache for hot reads, exploiting value expiry and in-memory speed.
+- Use **ElasticSearch** if the platform needs fuzzy, auto-suggest search over post content.
+
+### Example 4: Applying Production Best Practices
+A team's early design runs web server, app server and database on one box. Applying the lecture:
+- **Decouple** — give each component dedicated resources to shrink the blast radius.
+- **Scale out** — make app servers stateless (12 Factor App) and put a load balancer in front.
+- **Redundancy** — replace the single database with master-slave replication to remove that SPOF.
+- **Accelerate** — add a caching reverse proxy (Varnish/Nginx) so repeated requests never reach the app.
+
+================================================
+EXAM FOCUS
+================================================
+1. What are the three layers of a typical web architecture and what port does each use? → Answer: Web Server (HTTP 80 / HTTPS 443, HTTP(S) traffic only), Application Server (HTTP 80/443 or any designated TCP port), and the Database. The web server exclusively handles HTTP requests; the app server serves business logic over any protocol.
+2. Compare a web server and an application server. → Answer: A web server exclusively handles HTTP requests; an application server serves business logic to application programs through any number of protocols, possibly including HTTP.
+3. What is the difference between LAMP and LEMP? → Answer: Both are Linux, MySQL, PHP; LAMP uses Apache while LEMP uses Nginx as the web server.
+4. List the pros and cons of a single-server MVP. → Answer: Pros — simple to debug and good for demo/technical validation. Cons — not production ready, architecturally not decoupled, tough to troubleshoot, not ready for horizontal scaling.
+5. Why is hard-coding an app server's IP address a problem, and how does DNS fix it? → Answer: If the server dies and its replacement gets a new IP, the hard-coded address in the configuration breaks. A DNS A record decouples the name from the IP, so you just update the record (scriptable) and the web server needs no configuration change.
+6. How do you handle two app servers behind a single application hostname? → Answer: Point the hostname at an internal load balancer, which routes traffic to one of the app servers.
+7. Compare IIS, Apache and Nginx. → Answer: IIS is Microsoft's (1996) with a long history of vulnerabilities — avoid if possible, use only for ASP/.NET or AD integration. Apache (1995) is open source and modular, spawns threads via mpm_prefork, scales but can be tricky to set up. Nginx (2004) was designed to scale, uses worker processes, and keeps memory/CPU usage consistent under load.
+8. Describe Django's Model-View-Template architecture. → Answer: Model handles the data and logic and connects to the database; View accepts requests and sends responses (unlike MVC's view); Template is the presentation layer written in HTML or DTL.
+9. How are Python frameworks deployed in production? → Answer: Flask and Django ship lightweight development servers, but production setups run them under Apache or Nginx using the WSGI specification.
+10. What is a relational database and what are its core structural elements? → Answer: It maintains and enforces relationships between data, organising it into tables of columns and rows; each table usually represents an entity, rows are instances, and columns are the values attributed to an instance. Schema changes often cause downtime and planned maintenance.
+11. Compare MySQL, Postgres and MSSQL. → Answer: MySQL/MariaDB is the most popular with lots of tooling but doesn't implement the full SQL standard and concurrency can be an issue. Postgres follows ANSI/ISO SQL, supports full ACID transactions and spatial extensions, but replication can be tricky. MSSQL fits the Microsoft stack and BI/DW tools (SSIS/SSAS/SSRS) and is cheaper than Oracle/Teradata, but license costs and DBAs must be planned.
+12. What characterises NoSQL databases? → Answer: Non-relational storage likened to "loose pages", with new data structures, more flexible or no schemas, better scalability, and eventual rather than strict consistency.
+13. Match Redis, Cassandra, MongoDB and ElasticSearch to their data models. → Answer: Redis is key/value (in-memory, expiry, Pub/Sub); Cassandra is column-based (huge datasets, CQL3, no JOINs); MongoDB is document-based (JSON, sharding, replica sets); ElasticSearch is document-based (advanced/fuzzy search, ELK).
+14. What is cloud storage and give examples. → Answer: A model where data is stored in logical pools, physical storage spans multiple servers/locations, and the environment is owned and managed by a third party — e.g. Azure Storage, Google Cloud Storage, Amazon S3.
+15. Define durability, availability, reliability and resilience. → Answer: Durability — is data stored securely in the event of failures? Availability — system uptime, the percentage of time able to serve requests. Reliability — similar to availability; a system can be up but not functioning correctly. Resilience — the ability to recover from failures (self-healing).
+16. Explain scale-out vs scale-up and why statelessness matters. → Answer: Scale-out is horizontal scaling — adding machines, as supercomputing does, where load balancing is important. Scale-up is making a single machine bigger, often unrealistic due to physical laws and economics. Statelessness is the foundation of scalability because stateful applications won't scale; components of the same layer must not share anything.
+17. Describe the four scaling patterns and how they combine. → Answer: Separate the DB server (removes resource contention and removes it from the DMZ), add a load balancer (performance and reliability), add an HTTP accelerator/caching reverse proxy (Varnish, Squid, Nginx), and use master-slave replication for read-heavy systems. They can be combined to reap each benefit without excessive complexity.

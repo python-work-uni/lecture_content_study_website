@@ -1,0 +1,418 @@
+================================================
+ELEC3609 Lab Week 2 – Study Guide
+RESTful API Design & Collaboration · Lab 2
+================================================
+OVERVIEW
+--------
+This lab has two halves. The first explains how modern web applications talk to each other through RESTful APIs: what REST is, how a request and response are structured, how authentication works, and the architectural constraints behind it. The second half covers how teams collaborate using GitHub — pull requests, protected branches, issues and project tracking. The individual task is Individual Task 2 – Analyse a RESTful API, using the API Contract template.
+------------------------------------------------
+STATS:
+------------------------------------------------
+Lab|Week 2
+Individual Task|Analyse a RESTful API
+Lab Resource|API Contract template
+Core Topics|REST APIs, Authentication, GitHub
+Key Constraint|Stateless, resource-based URLs
+------------------------------------------------
+SECTION 1: From Messy URLs to RESTful APIs
+------------------------------------------------
+In the late 1990s, web URLs often directly exposed server-side scripts and included explicit arguments to indicate actions and data, for example `getdata.php?user=123&action=fetch`. This approach was functional, but it tightly coupled URL structures to specific implementation details, making systems less flexible and harder to maintain. It also posed security risks by exposing methods and parameters directly in the URL.
+
+As web development evolved, the need for more scalable, secure and maintainable solutions led to **RESTful APIs**. RESTful architecture uses standardised HTTP methods and focuses on **stateless communication** and **resource-based URLs** (e.g. `GET /users/123`), which abstract server implementation details from the client.
+
+This shift enhances security (standardised access, modern security practices) and supports better scalability and flexibility, accommodating modern clients such as mobile apps and other web services.
+
+ℹ️ **Background:** A RESTful API is **not** a protocol, library or tool. It is a style/convention — a set of design principles for building web APIs. REST uses HTTP as the underlying protocol, applying standardised methods like GET, POST, PUT and DELETE to interact with resources identified by URLs.
+💡 **Why It Matters:** `getdata.php?action=fetch` tells the world how your server is built; `GET /users/123` describes the resource, not the implementation. That decoupling is what lets frontend and backend teams work independently.
+------------------------------------------------
+SECTION 2: How a RESTful API Works
+------------------------------------------------
+The basic function of a RESTful API is similar to browsing the internet: the client contacts the server by making a request to retrieve or manipulate a resource, and the server responds with the result.
+
+A typical RESTful API call works through these steps:
+1. The client sends an **HTTP request** to the server.
+2. The server **authenticates** the request if needed (e.g. with an API key or token).
+3. The server **processes the logic** (e.g. fetch, create, update, delete data).
+4. The server sends an **HTTP response** containing status and data (e.g. JSON).
+
+💡 **Why It Matters:** A RESTful API separates client and server, allowing independent development and scalability. The client never needs to know how the server is implemented — only the contract.
+------------------------------------------------
+SECTION 3: Anatomy of a Client Request
+------------------------------------------------
+A RESTful API request typically includes several components.
+
+### Unique Resource Identifier
+Each resource is identified by a **URL (Uniform Resource Locator)**, also known as the **request endpoint**. Example: `GET https://api.example.com/posts/22`.
+
+### HTTP Method
+The HTTP method tells the server what action to perform on the resource.
+
+| Method | Description |
+| --- | --- |
+| **GET** | Retrieve data from the server. GET requests can be cached and may include query parameters. |
+| **POST** | Send new data to the server. Repeating a POST may result in multiple records. |
+| **PUT** | Update an existing resource. Repeating a PUT gives the same result each time. |
+| **DELETE** | Remove a resource. May fail if authentication is not valid. |
+
+### HTTP Headers
+Headers provide **metadata** about the request and response format, authentication and caching. Example:
+
+```
+Content-Type: application/json
+Accept: application/json
+Authorization: Bearer <token>
+```
+
+### Request Body (Data)
+For methods like **POST** and **PUT**, the client includes a **data payload** in the request body. Example:
+
+```
+{
+  "title": "New Post",
+  "author": "User123"
+}
+```
+
+### Parameters
+Clients may send extra information through parameters to help the server process the request.
+
+| Parameter Type | Description |
+| --- | --- |
+| **Path Parameters** | Part of the URL to identify specific resources, e.g. `/posts/22`. |
+| **Query Parameters** | Provide filtering or sorting logic, e.g. `/posts?author=Admin`. |
+| **Cookie Parameters** | Sent via cookies, often for session or quick auth purposes. |
+
+### Example curl Command
+```
+curl -X PUT https://api.imgur.com/3/account/ImgurUser/settings \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: multipart/form-data" \
+  -F "bio=Long time lurker..." \
+  -F "public_images=false" \
+  -F "messaging_enabled=true" \
+  -F "accepted_gallery_terms=true" \
+  -F "show_mature=true" \
+  -F "newsletter_subscribed=true"
+```
+
+| Part | Explanation |
+| --- | --- |
+| `-X PUT` | Specifies the HTTP method as PUT, which updates a resource. |
+| `-H` | Adds a custom HTTP header (here, two headers are used). |
+| `Authorization: Bearer ...` | Passes the access token to authenticate the request. |
+| `Content-Type: multipart/form-data` | Informs the server you're sending form fields, possibly in file-like format. |
+| `-F` | Sends a form field as a key-value pair. Multiple `-F` flags send multiple fields in the body. |
+------------------------------------------------
+SECTION 4: HTTP Methods & Their Semantics
+------------------------------------------------
+The four core methods each carry a meaning, and REST depends on using them consistently:
+- **GET** — read a resource; cacheable; can carry query parameters.
+- **POST** — create/send new data; repeating it may create multiple records (not idempotent).
+- **PUT** — update an existing resource; repeating it gives the same result each time (idempotent).
+- **DELETE** — remove a resource; may fail if authentication is not valid.
+
+🧠 **Memory Hook:** **G-P-P-D** = "Get, Post, Put, Delete" — read, create, replace, remove. Only POST creates a *new* record each time it is repeated.
+⚠️ **Common Trap:** Using GET to change data. GET should be safe and cacheable; anything that mutates state belongs in POST, PUT or DELETE.
+------------------------------------------------
+SECTION 5: API Authentication Methods
+------------------------------------------------
+A RESTful web service authenticates requests before sending responses. Authentication verifies the client's identity and ensures only authorised users can access protected resources.
+
+| Method | Description | Security Notes |
+| --- | --- | --- |
+| **Basic Authentication** | Sends a username and password in the HTTP header, encoded using Base64. | Easy to implement but not secure unless used over HTTPS. Susceptible to interception. |
+| **Bearer Authentication** | Sends an access token (a string) in the HTTP header as proof of identity. | More secure than basic auth. Common in OAuth flows. The token should be kept secret. |
+| **API Key** | A unique identifier (string) provided to each client to access resources. Included in headers or query parameters. | Simple to use but less secure. If exposed, anyone can use the key. Often rate-limited. |
+| **OAuth** | A robust framework that uses both a password and a token for access. Supports scopes, refresh tokens and expiration. | Highly secure. Ideal for third-party integrations. Can be complex to implement initially. |
+
+⚠️ **Common Trap:** All authentication methods should be used over **HTTPS** to prevent credentials or tokens from being intercepted. Basic auth over plain HTTP is effectively a plaintext password.
+------------------------------------------------
+SECTION 6: Anatomy of a Server Response
+------------------------------------------------
+When a RESTful API server receives a valid request, it returns a response composed of three key parts: the status line, the message body and the response headers.
+
+### Status Line
+The **status line** includes a 3-digit HTTP status code that tells the client the result of the request.
+
+| Code Range | Meaning | Examples |
+| --- | --- | --- |
+| **2xx Success** | The request was successfully processed. | 200 OK, 201 Created |
+| **3xx Redirection** | Further action is required to complete the request. | 301 Moved Permanently |
+| **4xx Client Error** | The request was incorrect or unauthorised. | 400 Bad Request, 404 Not Found |
+| **5xx Server Error** | The server encountered an error. | 500 Internal Server Error |
+
+### Message Body
+The **message body** contains the data returned by the server, often in JSON format. Example response body (JSON):
+
+```
+{
+  "id": 102,
+  "name": "John",
+  "age": 30,
+  "email": "john@example.com"
+}
+```
+
+ℹ️ **Background:** The format (JSON or XML) is usually negotiated via the request header (e.g. `Accept: application/json`).
+
+### Response Headers
+Response headers provide metadata about the response — not the main data, but useful context.
+
+| Header | Description |
+| --- | --- |
+| Content-Type | Format of the response body (`application/json`). |
+| Content-Length | Size of the body in bytes. |
+| Server | Info about the server software. |
+| Date | Timestamp of the response. |
+| Cache-Control | Whether/how long the response is cached. |
+| Access-Control-Allow-Origin | CORS setting for cross-origin requests. |
+
+### Example Full Response
+```
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 67
+Date: Tue, 22 Jul 2025 06:45:00 GMT
+Server: nginx/1.18.0
+
+{
+  "id": 102,
+  "name": "John",
+  "age": 30,
+  "email": "john@example.com"
+}
+```
+
+🧠 **Memory Hook:** Status families — **2 = OK, 3 = go elsewhere, 4 = you broke it, 5 = we broke it**.
+------------------------------------------------
+SECTION 7: REST as an Architectural Style
+------------------------------------------------
+**REST (Representational State Transfer)** is not a protocol but an architectural style that guides the design of networked applications. It was introduced by **Roy Fielding** in his doctoral dissertation to describe a set of architectural constraints that, when applied, enable scalable, reliable and evolvable systems, especially for web services.
+
+These constraints are not exclusive to HTTP or web APIs. They are a model for designing distributed systems that emphasise clarity, separation of concerns and stateless communication. RESTful APIs are one concrete application of these principles over HTTP.
+
+| Constraint | Description |
+| --- | --- |
+| **Stateless** | Each client request must contain all the information necessary to understand and process it. The server should not store any client context between requests. This improves scalability and reliability. |
+| **Cacheable** | Server responses should explicitly indicate whether they are cacheable. This lets clients and intermediaries reuse responses and reduces redundant requests. |
+| **Uniform Interface** | REST enforces a standardised way to communicate: HTTP methods (GET, POST, PUT, DELETE), predictable URIs, and common data formats like JSON. |
+| **Client–Server Separation** | The client and server operate independently. The client need not know server implementation details, and the server does not manage client state. This allows greater portability and scalability. |
+| **Layered System** | REST allows intermediate layers (load balancers, proxies, security filters) between client and server. These layers should not affect the request or response but can enhance performance, scalability and security. |
+| **Code-on-Demand (optional)** | Servers can temporarily extend client functionality by transferring executable code (e.g. JavaScript). This constraint is optional and less commonly used in RESTful API design. |
+
+💡 **Why It Matters:** Statelessness is what makes REST APIs easy to scale — any server can handle any request because no server holds client context. That is why load balancers can spread requests freely.
+------------------------------------------------
+SECTION 8: RESTful API Design Principles
+------------------------------------------------
+A good RESTful API is not just a CRUD wrapper over HTTP — it is a thoughtful, resource-oriented interface that adheres to REST principles to achieve robustness, scalability and clarity.
+
+### "Non-CRUD" (Resource-Oriented) Actions
+Instead of calling an action, create a resource:
+- Rather than a URL like `/activateAccount`, which directly calls an action, use `/account-activation`, representing it as a resource.
+- Instead of "login", create a "session": instead of `/login`, use `/sessions` to create a new session.
+- Instead of "closing account", create a "closing": manage `/accountclosings`, perhaps by POSTing to it to request an account closure.
+
+### Aligning with HTTP Protocol Semantics
+HTTP is inherently designed to work with resources identified by **URIs (Uniform Resource Identifiers)**. Methods (verbs) like GET, POST, PUT and DELETE perform standard operations on those resources. Using them as the HTTP specification intends makes your API predictable and aligned with web standards, easing understanding and integration.
+
+### Simplifying and Standardising Endpoints
+When APIs focus on resources rather than actions, the number of endpoints typically reduces and their purpose becomes clearer:
+- **Resource-oriented:** an endpoint like `/sessions` handles all session actions — creating a session (logging in) might be `POST /sessions`, and deleting a session (logging out) a `DELETE`.
+- **Action-oriented:** different actions need different endpoints, like `/login` and `/logout`, even though they relate to the same conceptual resource.
+
+✅ **Exam Tip:** This approach reduces cognitive load: developers can often guess endpoint URLs from standard practice and do not need to remember a separate endpoint for every action.
+------------------------------------------------
+SECTION 9: The API Contract
+------------------------------------------------
+An **API contract** is essential because it defines the expectations and agreements between the API providers (backend) and its consumers (frontend). With a clear contract, developers can build and integrate with the API more effectively, reducing the likelihood of misunderstandings and errors. It also serves as a reference point or verification for any updates or changes, ensuring all parties are aligned on how the API should function.
+
+ℹ️ **Background:** See the API Contract **template on Canvas** to understand what an API contract should include. This is the resource used for Individual Task 2.
+💡 **Why It Matters:** The contract lets the frontend and backend teams build in parallel. Each side codes against the agreed endpoints and payloads, so integration is a formality rather than a surprise.
+------------------------------------------------
+SECTION 10: REST APIs in Django & DRF
+------------------------------------------------
+### Traditional Django Views
+- Traditional views return `HttpResponse` objects, often rendering HTML.
+- You can return JSON manually using `JsonResponse` and manually serialising data.
+- However, this method is not scalable or clean for building APIs, and is more suitable for server-rendered web applications.
+- Concerns to consider: business logic separation, scalability, and performance optimisation.
+
+### Need for Django REST Framework (DRF)
+- In modern web applications (e.g. React SPAs, mobile apps), the backend often acts as an **API-only layer**.
+- All frontend–backend communication happens via **JSON APIs**.
+- This is known as a **headless architecture**, where frontend and backend are separated.
+- **Django REST Framework (DRF)** extends Django's capabilities to build web APIs. It is optimised for JSON and other content types and supports:
+  - Serialisation and deserialisation.
+  - Permissions and authentication.
+  - Many features out of the box.
+
+ℹ️ **Background — In assignment:** You may use raw `HttpResponse` and return HTML with Django's built-in view functions to meet the basic requirements. However, your project **must include API endpoints that return data in JSON format**. This can be implemented either with simple `JsonResponse` objects or by creating a separate set of JSON endpoints. Either is acceptable, but DRF is recommended for a cleaner, more scalable API. You will learn to build RESTful APIs with DRF in upcoming labs.
+------------------------------------------------
+SECTION 11: GitHub Collaboration: PRs & Branches
+------------------------------------------------
+Git is a powerful version control system, but its real value and complexity become clear in team-based development. This section introduces practical GitHub collaboration habits — not Git commands — that help you avoid conflicts, stay organised and communicate effectively.
+
+✅ **Exam Tip:** You are not expected to master every Git command now. Build the right habits so your future work becomes easier to manage and scale.
+
+### Getting Started with GitHub Tools
+- **Git-SCM Book** — comprehensive guide to Git.
+- **GitHub Getting Started** — official GitHub beginner guide.
+- **GitHub Desktop** — a GUI client that simplifies version control for beginners, with visualisation tools to manage changes without the command line.
+
+### Work Together with Pull Requests
+- **Protect important branches** — use protected branches (e.g. `main`) to prevent accidental changes, and set conditions like requiring CI tests or code reviews before merging.
+- **Define push rules** — set **rulesets** to control what gets pushed (e.g. file types, sizes). Useful for internal repositories or larger teams with stricter controls.
+- **Resolve merge conflicts before merging** — GitHub blocks merging if there are unresolved conflicts between branches. Always check and resolve these using the file list shown above the merge button.
+
+⚠️ **Common Trap:** GitHub will refuse to merge while conflicts remain. Fixing conflicts is part of the workflow, not an optional extra.
+------------------------------------------------
+SECTION 12: GitHub Issues & Project Tracking
+------------------------------------------------
+Use **GitHub Issues** to:
+- Track bugs, ideas, tasks, or any piece of work.
+- Link issues to pull requests for visibility and context.
+- Collaborate by assigning tasks to team members.
+
+Helpful actions:
+- Link a PR to an issue.
+- Create a branch for an issue.
+- Assign issues and PRs.
+
+✅ **Exam Tip:** Defining a clear **commit message guideline** and a consistent **branch naming convention** helps your team organise the repository and speeds up reviews and debugging. Look at how mature open-source projects manage their GitHub repositories for real-world examples.
+------------------------------------------------
+SECTION 13: Team Conventions & USYD CI/CD
+------------------------------------------------
+Beyond branches and issues, a few conventions keep a team repository healthy:
+- A consistent **branch naming convention** and **commit message guideline**.
+- **Protected branches** and **rulesets** to control what reaches `main`.
+- **Pull requests** with reviews before merging.
+- **Issues** linked to the work they describe.
+
+⚠️ **Common Trap — No GitHub Actions on USYD GitHub Enterprise:** GitHub Actions is **not** enabled on the USYD GitHub Enterprise Server. ICT recommends using external CI/CD tools like **Jenkins** or **AWS CodePipeline/CodeBuild** instead. Do not assume GitHub Actions is available for your assignment pipelines.
+
+**Further readings (REST):** "What is a RESTful API?", "What Is a REST API? Examples, Uses, and Challenges", Richardson/Amundsen/Ruby *RESTful Web APIs* (2013), and Fielding's 2000 doctoral dissertation.
+
+**Further readings (Git):** GitHub Docs, Git Collaborating Workflows, Commit Message Guidelines, and "Naming conventions for Git Branches — a Cheatsheet".
+================================================
+KEY TAKEAWAYS
+================================================
+1. **REST is a style, not a tool** — it is a set of design principles that uses HTTP as its underlying protocol.
+2. **Resource-based URLs beat action URLs** — `GET /users/123` hides implementation details, whereas `getdata.php?action=fetch` leaks them.
+3. **A REST request has five parts** — the URL/endpoint, the HTTP method, headers, an optional body, and parameters (path, query or cookie).
+4. **Methods have meanings** — GET reads (cacheable), POST creates (repeatable → multiple records), PUT updates (idempotent), DELETE removes.
+5. **Authentication verifies identity** — Basic, Bearer, API Key and OAuth, and all must run over HTTPS.
+6. **A response has three parts** — status line (2xx/3xx/4xx/5xx), message body (often JSON) and response headers.
+7. **REST's constraints** — stateless, cacheable, uniform interface, client–server separation, layered system, and optional code-on-demand.
+8. **Frame actions as resources** — use `/sessions` instead of `/login`, `/account-activation` instead of `/activateAccount`.
+9. **The API contract is the agreement** — it aligns backend providers and frontend consumers and anchors change management.
+10. **Django can serve JSON directly** — `JsonResponse` works, but DRF is the cleaner, scalable option for API-only (headless) backends.
+11. **Collaborate with pull requests** — protect branches, define rulesets, and resolve merge conflicts before merging.
+12. **Track work with Issues** — link them to PRs, assign them, and follow clear commit-message and branch-naming conventions.
+13. **No GitHub Actions on USYD Enterprise** — use Jenkins or AWS CodePipeline/CodeBuild for CI/CD instead.
+================================================
+TERMS TO KNOW
+================================================
+**REST**: Representational State Transfer — an architectural style for networked applications, introduced by Roy Fielding.
+**RESTful API**: A web API that applies REST principles over HTTP using standardised methods and resource URLs.
+**Endpoint**: The URL identifying a specific resource that a client requests.
+**Resource**: Any entity the API exposes, identified by a URI (e.g. a post, user or session).
+**Stateless**: Each request carries all needed information; the server stores no client context between requests.
+**HTTP method**: The verb (GET, POST, PUT, DELETE) telling the server what action to take.
+**Idempotent**: An operation that gives the same result when repeated (PUT, DELETE); POST is not idempotent.
+**Request body**: The optional data payload sent with POST/PUT requests.
+**HTTP header**: Metadata about a request or response (format, authentication, caching).
+**Path parameter**: A parameter that is part of the URL path, e.g. `/posts/22`.
+**Query parameter**: A parameter for filtering/sorting, e.g. `/posts?author=Admin`.
+**Cookie parameter**: A parameter sent via cookies, often for sessions or quick auth.
+**Basic Authentication**: Username and password sent Base64-encoded in a header; safe only over HTTPS.
+**Bearer Authentication**: An access token sent in a header as proof of identity; common in OAuth.
+**API Key**: A unique identifier given to each client, sent in a header or query parameter; simple but less secure.
+**OAuth**: A robust auth framework using passwords plus tokens, with scopes, refresh tokens and expiration.
+**Status code**: A 3-digit number reporting the result of a request (2xx success, 3xx redirect, 4xx client error, 5xx server error).
+**CORS**: Cross-Origin Resource Sharing — controlled by the `Access-Control-Allow-Origin` response header.
+**Uniform Interface**: The REST constraint requiring standardised methods, predictable URIs and common data formats.
+**Layered System**: A REST constraint allowing intermediaries (load balancers, proxies) between client and server.
+**Code-on-Demand**: An optional REST constraint where servers send executable code (e.g. JavaScript) to clients.
+**Headless architecture**: A backend that is API-only, with a separate frontend communicating via JSON.
+**DRF**: Django REST Framework — a toolkit for building Web APIs in Django, with serialisation, auth and permissions.
+**JsonResponse**: A Django class for returning JSON directly from a view without a full API framework.
+**API contract**: A document defining the agreed endpoints, payloads and behaviour between API provider and consumer.
+**Pull request (PR)**: A GitHub proposal to merge a branch, enabling review and discussion before merging.
+**Protected branch**: A branch (e.g. `main`) configured to block direct/accidental changes and require checks.
+**Ruleset**: A GitHub rule controlling what may be pushed or merged (e.g. file types, sizes).
+**Merge conflict**: A clash between branches that GitHub blocks merging until resolved.
+**GitHub Issues**: GitHub's tracker for bugs, ideas and tasks, which can be linked to PRs and assigned.
+**GitHub Desktop**: A GUI client for Git/GitHub, useful for beginners avoiding the command line.
+**CI/CD**: Continuous Integration / Continuous Delivery — automated build, test and deploy pipelines.
+================================================
+MNEMONICS & QUICK RECALL
+================================================
+**HTTP Methods**: **G-P-P-D** — "Get, Post, Put, Delete" — read, create, update, remove; only POST is non-idempotent.
+**REST Constraints**: **S-C-U-C-L-C** — "Stateless, Cacheable, Uniform interface, Client–server, Layered, Code-on-demand".
+**Status Families**: **2 = OK, 3 = go elsewhere, 4 = you broke it, 5 = we broke it**.
+**Request Parts**: **U-M-H-B-P** — "URL, Method, Headers, Body, Parameters".
+**Response Parts**: **S-B-H** — "Status line, Body, Headers".
+**Auth Strength**: **Basic < API Key < Bearer < OAuth** — roughly from least to most secure.
+================================================
+WORKED EXAMPLES
+================================================
+### Example 1: A complete REST request/response pair
+```
+REQUEST:
+GET /posts/22 HTTP/1.1
+Host: api.example.com
+Authorization: Bearer YOUR_ACCESS_TOKEN
+Accept: application/json
+
+RESPONSE:
+HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 67
+
+{
+  "id": 22,
+  "title": "New Post",
+  "author": "User123"
+}
+```
+The request identifies the resource by URL, states the method (GET), and carries auth and format headers. The response gives a status code, JSON body and metadata headers.
+
+### Example 2: Framing actions as resources
+Instead of `POST /login`, use `POST /sessions` (create a session). Instead of `POST /logout`, use `DELETE /sessions` (delete the session). Instead of `POST /activateAccount`, use `POST /account-activation`. The endpoint count drops and the URLs become predictable.
+
+### Example 3: Reading a curl command
+```
+curl -X PUT https://api.imgur.com/3/account/ImgurUser/settings \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "Content-Type: multipart/form-data" \
+  -F "public_images=false" \
+  -F "messaging_enabled=true"
+```
+`-X PUT` sets the method; `-H` adds headers (one authenticates, one declares the content type); each `-F` sends one form field in the body. This updates the account settings resource.
+
+### Example 4: Choosing an authentication method
+- A public, low-risk read endpoint → **API Key** (simple, rate-limited).
+- A user-facing login flow → **Bearer token** (secret string in the header).
+- A third-party integration needing scoped access → **OAuth**.
+- A quick internal test → **Basic auth**, but only over HTTPS.
+
+### Example 5: Designing a headless backend
+A React single-page app needs user data. Rather than rendering HTML on the server, Django returns JSON from an endpoint such as `/api/users/42`. Because the API is stateless and resource-based, the same endpoint can also serve a mobile app — no server changes required.
+================================================
+EXAM FOCUS
+================================================
+1. Why did RESTful APIs replace script-style URLs like `getdata.php?user=123&action=fetch`? → Answer: Script URLs coupled URL structure to implementation details, were inflexible and hard to maintain, and exposed methods/parameters (a security risk). REST uses standardised methods and resource-based URLs, is stateless, and abstracts server implementation.
+2. What is REST, and is it a protocol or a tool? → Answer: REST (Representational State Transfer) is an architectural style/design convention introduced by Roy Fielding; it is not a protocol, library or tool. It uses HTTP as its underlying protocol.
+3. List the four steps of a typical RESTful API call. → Answer: Client sends an HTTP request; server authenticates if needed; server processes the logic (fetch/create/update/delete); server sends an HTTP response with status and data.
+4. Describe the components of a RESTful request. → Answer: Unique resource identifier (URL/endpoint), HTTP method, HTTP headers, request body (for POST/PUT), and parameters (path, query, cookie).
+5. Compare GET, POST, PUT and DELETE. → Answer: GET retrieves (cacheable, may include query parameters); POST sends new data and repeating it may create multiple records; PUT updates and repeating gives the same result; DELETE removes and may fail if authentication is invalid.
+6. Name and compare four API authentication methods. → Answer: Basic (Base64 username/password, insecure without HTTPS), Bearer (access token, common in OAuth), API Key (unique per client, simple but less secure, often rate-limited), OAuth (password + token with scopes/refresh/expiration, highly secure but complex).
+7. What are the three parts of a RESTful server response? → Answer: The status line (3-digit status code), the message body (often JSON), and the response headers (metadata such as Content-Type, Content-Length, Cache-Control, CORS).
+8. What do the 2xx, 3xx, 4xx and 5xx status ranges mean? → Answer: 2xx success, 3xx redirection, 4xx client error, 5xx server error.
+9. List and explain the architectural constraints of REST. → Answer: Stateless (requests self-contained, no server client-context), Cacheable (responses declare cacheability), Uniform Interface (standard methods, predictable URIs, JSON), Client–Server Separation (independent operation), Layered System (intermediaries allowed), and optional Code-on-Demand (server sends executable code).
+10. Give three examples of turning an action into a resource. → Answer: `/activateAccount` → `/account-activation`; `/login` → `POST /sessions`; "closing account" → `/accountclosings` (POST to request closure).
+11. Why is resource-oriented endpoint design better than action-oriented? → Answer: It reduces the number of endpoints, makes their purpose clearer, and lets developers guess URLs from standard practice, reducing cognitive load.
+12. What is an API contract and why does it matter? → Answer: It defines the agreed expectations between API providers (backend) and consumers (frontend), reducing misunderstandings and errors, and acting as a reference for updates and changes.
+13. When would you use DRF instead of plain JsonResponse? → Answer: DRF is cleaner and more scalable for API-only/headless backends, offering serialisation/deserialisation, permissions and authentication, and many features out of the box; JsonResponse is a lightweight option for returning JSON directly from a view.
+14. What GitHub practices help teams collaborate? → Answer: Protect important branches, define push rules/rulesets, resolve merge conflicts before merging, use pull requests with reviews, track work with Issues, and follow commit-message and branch-naming conventions.
+15. What should you know about CI/CD on USYD GitHub Enterprise? → Answer: GitHub Actions is not enabled on the USYD GitHub Enterprise Server; ICT recommends external tools such as Jenkins or AWS CodePipeline/CodeBuild.

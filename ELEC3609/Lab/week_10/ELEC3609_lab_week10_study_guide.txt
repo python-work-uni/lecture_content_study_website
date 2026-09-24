@@ -1,0 +1,346 @@
+================================================
+ELEC3609 Lab Week 10 – Study Guide
+Deploy Your Project · Lab 10
+================================================
+
+OVERVIEW
+--------
+In this lab you will learn how to deploy a Django web application to a cloud-based production environment using **AWS EC2, uWSGI and nginx**. The exercise walks through the complete deployment pipeline — from launching an EC2 instance to serving the app through a real web server — while highlighting best practices and common pitfalls. It prepares you for real-world deployment and aligns with the expectations for your **Assignment 3** submission.
+
+------------------------------------------------
+STATS:
+------------------------------------------------
+Lab|Week 10 — 09 Deploy Your Project
+Stack|Ubuntu EC2 + nginx + uWSGI + SQLite
+Open Ports|22 (SSH), 80 (HTTP), 443 (HTTPS)
+AWS Credits|$50
+Guided Steps|18 (Step 0–18)
+------------------------------------------------
+
+------------------------------------------------
+SECTION 1: Deploy Your Project Overview
+------------------------------------------------
+This lab is a hands-on walkthrough of deploying a Django project, and it is your foundation for Assignment 3. By the end you should be able to:
+- Set up and connect to an AWS EC2 instance using SSH and a secure key pair.
+- Install the necessary software packages including Python, pip, Django, uWSGI and nginx.
+- Configure nginx and uWSGI to serve a Django application in a production setting.
+- Modify Django settings for deployment, including `ALLOWED_HOSTS` and `DEBUG` mode.
+- Understand the importance of secure access, file permissions and service orchestration for deployment.
+
+ℹ️ **Info:** Deploying the project is an assessment. The lab contains the **core steps** needed to deploy, but **extra steps are required to satisfy all Assignment 3 requirements**. The guide does not cover every static-file and media-file configuration (for example CSS, JavaScript and uploaded images) — you may need to add extra configuration to the nginx configuration file.
+
+💡 **Why It Matters:** The difference between "it runs on my laptop" and "it runs on a server" is this pipeline. Every step from here — key pair, ports, web server, WSGI handoff — is a checkpoint a marker will ask you to explain.
+
+------------------------------------------------
+SECTION 2: Preparation and EC2 Access
+------------------------------------------------
+**Step 0: Preparation** — Check out the **AWS Academy Learner Lab – Student Guide** and the **AWS Academy Learner Lab – README** before starting.
+
+📝 **Tip:** Ensure you have a stable network connection and be patient while the AWS Academy Lab builds the environment, because it may take some time to complete setup and ensure everything functions correctly.
+
+**Step 1: Access EC2** — In the AWS Console, navigate to the **EC2** section by selecting it from the dashboard. If you do not see EC2 in the list, search for it using the search bar at the top of the console.
+
+💡 **Why It Matters:** The Learner Lab environment must be started and healthy before anything else. Rushing this step is the most common cause of confusing errors later.
+
+------------------------------------------------
+SECTION 3: Launching a New Instance
+------------------------------------------------
+**Step 2: View running instances** — Click **Instance (running)** to view any active instances. This is also where you monitor the status of existing instances. You will need to launch a new one.
+
+**Step 3: Launch a new instance** — Click **Launch instances** to create a new virtual server.
+
+**Step 4: Choose the operating system** — For this deployment, **Ubuntu is recommended**.
+
+------------------------------------------------
+SECTION 4: Choosing the Instance Type
+------------------------------------------------
+**Step 5: Select the instance type** — Choose an instance type that fits your needs. Remember you have **$50 in AWS credits**, so it is important to select an instance that will not exceed your budget. Instances are charged at an **hourly rate**.
+
+Lower-tier instances such as **t2.micro** or **t3.micro** are generally sufficient for a Django project deployment.
+
+⚠️ **Common Trap:** Leaving a large, expensive instance running after testing. Because billing is hourly, unused instances quietly consume your credits.
+
+------------------------------------------------
+SECTION 5: Creating and Securing a Key Pair
+------------------------------------------------
+**Step 6: Create a key pair** — Click **Create new key pair** to generate a `.pem` file, which is essential for accessing your EC2 instance securely via SSH. Download the key pair to your local machine and keep it secure, because it is used for authentication later.
+
+⚠️ **Warning:** You **must** use a key file to connect to your instance. There will be **penalties** if you simply allow all traffic for SSH to your instance.
+
+**Step 7: Configure key pair permissions** — Choose the key pair name you want and keep the other settings as shown. After you click **Create key pair**, the `.pem` file downloads to your computer.
+
+**For Windows users:**
+- Right-click the `.pem` file, select **Properties > Security > Advanced**, and **disable inheritance**.
+- Ensure that only **you, the admin and the system** have access to the file.
+
+**For macOS users:**
+- Restrict access to the key with: `chmod 700 YourFile.pem`
+
+💡 **Why It Matters:** SSH refuses to use a key file that is readable by other users. Fixing permissions is what turns the downloaded `.pem` into a usable identity.
+
+------------------------------------------------
+SECTION 6: Network Settings and Launch
+------------------------------------------------
+**Step 8: Set network settings** — Before launching the instance, configure the network settings to match the recommended settings in the guide. You should allow traffic on:
+- **Port 22** — SSH
+- **Port 80** — HTTP
+- **Port 443** — HTTPS
+
+Double-check the **security group rules** to make sure SSH access is only allowed from **trusted IPs**.
+
+**Step 9: Launch the instance** — After configuring the basic settings, click **Launch instance**. This starts your EC2 instance with the selected operating system and settings. It may take a few minutes for the instance to fully initialise.
+
+⚠️ **Common Trap:** Opening SSH (port 22) to the whole internet (`0.0.0.0/0`). The lab explicitly warns that simplifying access this way carries penalties.
+
+------------------------------------------------
+SECTION 7: Connecting via SSH
+------------------------------------------------
+**Step 10: Connect to your instance** — Once the instance is up, it shows a **"running"** status in the Instances dashboard. Click the newly created instance to view its details, then choose **Connect**.
+
+In the **SSH client** tab you will see a command you can use in your terminal to connect. Ensure the file path to your `.pem` file is correct when you paste the command.
+
+**Example command:** `ssh -i "ELEC3609.pem" ubuntu@ec2-54-165-46-8.compute-1.amazonaws.com`
+
+💡 **Why It Matters:** This is the only doorway into your server. The default username for an Ubuntu AMI is `ubuntu` (not `root`), and the address is your instance's public DNS name.
+
+------------------------------------------------
+SECTION 8: Installing Core Software
+------------------------------------------------
+**Step 11: Update and install necessary software.** After connecting to the instance, run these commands in order:
+
+1. Update the package list: `sudo apt-get update`
+2. Verify the Python version: `python3 --version`
+3. Install pip: `sudo apt-get install python3-pip`
+4. Install Django: `pip3 install django`
+5. Install nginx: `sudo apt-get install nginx`
+6. Check nginx status: `sudo service nginx status`
+7. If nginx is not running, start it: `sudo service nginx start`
+
+**Error: externally-managed-environment** This error occurs when you attempt to install a Python package **globally** on a system where Python is managed by the operating system (for example Ubuntu or Debian). Installing packages globally is not recommended because it can interfere with system-managed dependencies and potentially break built-in tools.
+
+To avoid the issue, create a **virtual environment** and install packages inside it. This keeps project dependencies isolated and prevents system conflicts:
+- `python3 -m venv .venv`
+- `source .venv/bin/activate`
+- `pip install <package_name>`
+
+🧠 **Memory Hook:** Update first, then **Python → pip → Django → nginx**. Verifying the Python version before installing pip prevents version-mismatch confusion.
+
+------------------------------------------------
+SECTION 9: Installing uWSGI
+------------------------------------------------
+**Step 12: Install uWSGI** — To handle application serving, install it with:
+- `pip3 install uwsgi`
+
+You also need the uWSGI Python plugin, installed with:
+- `sudo apt-get install uwsgi-plugin-python3`
+
+ℹ️ **Info:** `uwsgi-plugin-python3` provides the Python 3 plugin for uWSGI, allowing uWSGI to run Python applications. You can check the full list of uWSGI plugins at `/usr/lib/uwsgi/plugins/`.
+
+💡 **Why It Matters:** uWSGI is the application server that actually runs Django. Nginx will forward requests to it, so both the binary and its Python plugin must be present.
+
+------------------------------------------------
+SECTION 10: Cloning and Configuring nginx
+------------------------------------------------
+**Step 13: Clone your project** — Clone your project repository from GitHub into the EC2 instance. Make sure to install any dependencies and libraries required for your project after cloning.
+
+**Step 14: Modify the nginx configuration** — Navigate to `/etc/nginx/nginx.conf` and modify the file to point to the **root** and **static file directories** for your project. Replace the placeholder paths with the actual paths to your project's files. Once the configuration is updated, restart nginx with:
+- `sudo service nginx restart`
+
+**Key directives in the nginx configuration:**
+- Global: `user www-data;`, `worker_processes auto;`, `error_log /var/log/nginx/error.log;`, `pid /run/nginx.pid;`
+- Modules: `include /usr/share/nginx/modules/*.conf;`
+- Events block: `events { worker_connections 1024; }`
+- HTTP block: `log_format main ...`, `access_log /var/log/nginx/access.log main;`, `sendfile on;`, `tcp_nopush on;`, `tcp_nodelay on;`, `keepalive_timeout 65;`, `types_hash_max_size 2048;`, `include /etc/nginx/mime.types;`, `default_type application/octet-stream;`, `include /etc/nginx/conf.d/*.conf;`
+- Server block: `listen 80 default_server;`, `listen [::]:80 default_server;`, `root /var/www/til_project/;`, `include /etc/nginx/default.d/*.conf;`
+- Proxying to the app: `location / { include uwsgi_params; uwsgi_pass 127.0.0.1:8000; }`
+- Static files: `location /static { alias /var/www/til_project/static/; }`
+- Error pages: `error_page 404 /404.html;`, `location = /40x.html {}`, `error_page 500 502 503 504 /50x.html;`, `location = /50x.html {}`
+
+💡 **Why It Matters:** Nginx is the public-facing web server. Its `location /` block forwards requests to uWSGI on `127.0.0.1:8000`, and its `/static` alias serves static files directly — which is why the template notes that CSS, JS and uploaded images often need extra configuration.
+
+------------------------------------------------
+SECTION 11: The uWSGI Configuration File
+------------------------------------------------
+**Step 15: Create a uWSGI configuration file** — Go to your project's folder, create a file called `uwsgi.ini`, and configure it with settings appropriate for your project. This file tells uWSGI how to serve your application. Ensure the `chdir`, `wsgi-file`, `module` and `socket` settings are accurate based on your project's structure.
+
+**The example settings:**
+- Header: `[uwsgi]`
+- `chdir = /var/www/til_project` — the project working directory
+- `wsgi-file = /var/www/til_project/til_project/wsgi.py` — the WSGI entry file
+- `module = til_project.wsgi:application` — the application object to load
+- `socket = 127.0.0.1:8000` — the address uWSGI listens on, matching nginx's `uwsgi_pass`
+- `master = true` — enable the master process
+- `disable-logging = true`
+- `processes = 2` — number of worker processes
+- `threads = 4` — threads per worker
+
+💡 **Why It Matters:** `socket` here must match `uwsgi_pass` in nginx, and `chdir`/`wsgi-file`/`module` must match your actual project layout. Getting any of these wrong gives a 502 Bad Gateway from nginx.
+
+------------------------------------------------
+SECTION 12: Django Production Settings
+------------------------------------------------
+**Step 16: Update Django project settings** — In the `settings.py` file of your Django project:
+- Add your **domain** (the **Public IPv4 DNS** in the AWS instance dashboard) to the `ALLOWED_HOSTS` list.
+- Change the `DEBUG` setting to `False` so the project runs in **production mode**.
+
+**Example:**
+- `# SECURITY WARNING: don't run with debug turned on in production!`
+- `DEBUG = False`
+- `ALLOWED_HOSTS = ['.localhost', '127.0.0.1', '[::1]', 'ec2-54-165-46-8.compute-1.amazonaws.com']`
+
+⚠️ **Common Trap:** Leaving `DEBUG = True` in production. It exposes detailed error pages and internal settings to the public — a serious security problem and a marker's red flag.
+
+💡 **Why It Matters:** `ALLOWED_HOSTS` is Django's protection against HTTP Host-header attacks; requests for a host not on the list are rejected. You must add the exact public DNS name of your instance.
+
+------------------------------------------------
+SECTION 13: Starting uWSGI and Accessing
+------------------------------------------------
+**Step 17: Start uWSGI** — To start serving your Django project through uWSGI, run the command:
+- `uwsgi uwsgi.ini -- plugin python3`
+
+This initialises uWSGI with the configuration defined in your `uwsgi.ini` file.
+
+**Step 18: Access your project** — You should now be able to access your project through your URL.
+
+⚠️ **Danger:** Do **not** run your Django project on the **development server** in your AWS instance — this results in a **zero grade for project deployment**. Although you can bypass some deployment steps by running `python3 manage.py runserver 0.0.0.0:8000`, this starts Django's development server and is **strictly for testing purposes**. It does **not** fulfil the requirements of Assignment 3.
+
+💡 **Why It Matters:** The assessment is about deploying with a real web server (nginx) and application server (uWSGI), not the single-threaded dev server. `runserver` is a convenience for development only.
+
+------------------------------------------------
+SECTION 14: Notes, Pitfalls and Next Steps
+------------------------------------------------
+Please note that this lab only covers the **basic steps** to deploy a Django application. It does **not** include more advanced configurations required for Assignment 3, such as:
+- File permission management
+- Proper static file serving
+- Automatic service setup
+- Security controls
+
+For more information, refer to these readings:
+
+**Web & application server:**
+- Install and configure Nginx
+- HTTP Load Balancing – Nginx
+- Serving Static Content – Nginx
+- Quickstart for Python/WSGI applications
+
+**Django deployment:**
+- Django Deployment checklist
+- How to deploy static files – Django
+- How to manage static files
+
+**Linux management:**
+- Linux file permissions explained – RedHat
+- `chmod`, `chown`, `systemd`
+
+**Terminal tools:**
+- SSH, Vim Cheatsheet, Tmux Cheat Sheet
+
+💡 **Why It Matters:** Assignment 3 expects the advanced items on this list. Treat this lab as the minimum viable deployment and the readings as the checklist for full marks.
+
+================================================
+KEY TAKEAWAYS
+================================================
+1. **The stack is Ubuntu EC2 + nginx + uWSGI + SQLite** — nginx faces the internet, uWSGI runs Django, SQLite stores data.
+2. **Prepare before you build** — read the Learner Lab Student Guide and README, and be patient while the AWS environment initialises.
+3. **Ubuntu EC2 with a t2.micro or t3.micro** is the recommended starting point, charged hourly against your $50 credit.
+4. **A `.pem` key pair is mandatory for SSH**; simplify SSH access at your peril — there are penalties.
+5. **Fix key file permissions** — disable inheritance on Windows, or `chmod 700 YourFile.pem` on macOS.
+6. **Open ports 22, 80 and 443 only**, and restrict SSH to trusted IPs in the security group.
+7. **Connect with** `ssh -i "ELEC3609.pem" ubuntu@<public-dns>`.
+8. **Install in order** — `sudo apt-get update`, verify `python3 --version`, install `python3-pip`, `pip3 install django`, `sudo apt-get install nginx`.
+9. **The externally-managed-environment error is solved with a virtual environment** — `python3 -m venv .venv`, then activate it before installing packages.
+10. **uWSGI needs its Python plugin** — `pip3 install uwsgi` plus `sudo apt-get install uwsgi-plugin-python3`.
+11. **nginx proxies to uWSGI** via `location / { include uwsgi_params; uwsgi_pass 127.0.0.1:8000; }` and serves `/static` directly.
+12. **uwsgi.ini must match your project** — check `chdir`, `wsgi-file`, `module` and `socket`, then start with `uwsgi uwsgi.ini -- plugin python3`.
+13. **Set `DEBUG = False` and add your Public IPv4 DNS to `ALLOWED_HOSTS`** before going live.
+14. **Never use `runserver` for the assessed deployment** — it scores zero; this lab only covers the basics, so add static files, permissions, systemd and security for Assignment 3.
+
+================================================
+TERMS TO KNOW
+================================================
+**EC2**: Elastic Compute Cloud — AWS virtual server that hosts your app.
+**uWSGI**: The application server that runs the Django WSGI application.
+**WSGI**: Web Server Gateway Interface — the standard contract between a Python web app and a server.
+**nginx**: The web server / reverse proxy that accepts client requests and forwards them to uWSGI.
+**AMI**: Amazon Machine Image — the template (OS + software) an EC2 instance is launched from.
+**Ubuntu**: The recommended Linux distribution for the deployment instance.
+**Key pair**: The SSH credential pair whose private half is the `.pem` file.
+**`.pem` file**: The downloaded private key used to authenticate SSH connections.
+**SSH**: Secure Shell — the encrypted protocol used to log in to the instance.
+**Security group**: The set of firewall rules controlling which ports and IPs may reach the instance.
+**Port 22**: The standard SSH port.
+**Port 80**: The standard HTTP port.
+**Port 443**: The standard HTTPS port.
+**Public IPv4 DNS**: The public hostname of your EC2 instance, used to connect and added to `ALLOWED_HOSTS`.
+**pip**: Python's package installer.
+**Virtual environment (venv)**: An isolated Python environment that avoids the externally-managed-environment error.
+**externally-managed-environment**: Error raised when installing Python packages globally on an OS-managed Python; solved with a venv.
+**Django**: The Python web framework being deployed.
+**`settings.py`**: Django's configuration file, where `DEBUG` and `ALLOWED_HOSTS` are set.
+**`DEBUG`**: Django setting that must be `False` in production.
+**`ALLOWED_HOSTS`**: Django list of hostnames permitted to serve the site.
+**`uwsgi.ini`**: The file configuring uWSGI (chdir, wsgi-file, module, socket, processes, threads).
+**`chdir`**: uWSGI setting for the project working directory.
+**`socket`**: uWSGI setting for the address it listens on, matching nginx's `uwsgi_pass`.
+**`uwsgi_params`**: The nginx include that passes WSGI parameters to uWSGI.
+**Reverse proxy**: A server that forwards client requests to a backend (nginx forwarding to uWSGI).
+**Static files**: CSS, JavaScript and images served directly by nginx via the `location /static` alias.
+**`runserver`**: Django's development server — testing only; using it for the assessment scores zero.
+**`chmod`**: Linux command to change file permissions (used as `chmod 700 YourFile.pem`).
+**`chown`**: Linux command to change file ownership.
+**systemd**: Linux service manager used to automate starting services (an A3 requirement not covered in the lab).
+**$50 AWS credits**: The budget for the Learner Lab; instances are billed hourly.
+
+================================================
+MNEMONICS & QUICK RECALL
+================================================
+**Open Ports**: **22-80-443** — "SSH, HTTP, HTTPS."
+**Install Order**: **U-P-P-D-N** — "Update, Python check, Pip, Django, Nginx."
+**uWSGI Setup**: **U-P** — "install uwsgi, install uwsgi-plugin-python3."
+**The nginx → uWSGI Link**: **Pass 8000** — nginx `uwsgi_pass 127.0.0.1:8000` must match uWSGI `socket = 127.0.0.1:8000`.
+**Production Settings**: **D-A** — "DEBUG = False, ALLOWED_HOSTS updated."
+**Start Command**: **"uwsgi uwsgi.ini -- plugin python3."**
+**Never Do This**: **runserver = zero** — the development server fails the assessment.
+
+================================================
+WORKED EXAMPLES
+================================================
+### Example 1: Fixing key file permissions
+A student downloads `ELEC3609.pem` and immediately tries to SSH in, but the connection is refused because the key is "too open." On **macOS** they fix it with `chmod 700 YourFile.pem`. On **Windows** they right-click the file, open **Properties > Security > Advanced**, disable inheritance, and ensure only their user, the admin and the system account can read it. The SSH command then works: `ssh -i "ELEC3609.pem" ubuntu@ec2-54-165-46-8.compute-1.amazonaws.com`.
+
+### Example 2: A complete first-boot sequence
+After connecting by SSH, a student runs the full setup in one pass:
+1. `sudo apt-get update` — refresh the package index.
+2. `python3 --version` — confirm Python is available.
+3. `sudo apt-get install python3-pip` — install pip.
+4. `pip3 install django` — install Django.
+5. `sudo apt-get install nginx` — install the web server.
+6. `sudo service nginx status` — confirm it is running; if not, `sudo service nginx start`.
+7. `pip3 install uwsgi` and `sudo apt-get install uwsgi-plugin-python3` — install the app server and Python plugin.
+
+### Example 3: Wiring nginx to uWSGI
+The nginx server block contains `location / { include uwsgi_params; uwsgi_pass 127.0.0.1:8000; }`, while `uwsgi.ini` contains `socket = 127.0.0.1:8000`. Because the two addresses match, nginx forwards incoming requests over the loopback interface to uWSGI, which loads the application via `module = til_project.wsgi:application`. The static files are served separately by `location /static { alias /var/www/til_project/static/; }`.
+
+### Example 4: Why production settings matter
+A student leaves `DEBUG = True` and `ALLOWED_HOSTS = []`. Visiting the site by its public DNS name either shows a detailed debug traceback (leaking internal paths and settings) or is rejected outright because the host is not allowed. Setting `DEBUG = False` and adding `'ec2-54-165-46-8.compute-1.amazonaws.com'` to `ALLOWED_HOSTS` fixes both problems and matches production behaviour.
+
+### Example 5: The shortcut that fails the assessment
+To save time, a student runs `python3 manage.py runserver 0.0.0.0:8000` on the instance and can reach the app in a browser. This is Django's **development server** and is strictly for testing. The lab states clearly that deploying with `runserver` results in a **zero grade for project deployment**, because it bypasses the required nginx + uWSGI architecture.
+
+================================================
+EXAM FOCUS
+================================================
+1. What is the recommended deployment stack in this lab? → Answer: An Ubuntu EC2 instance running nginx as the web server, uWSGI as the application server, and SQLite as the database (EC2 + nginx + uWSGI + SQLite).
+2. Which ports should be allowed and what are they for? → Answer: 22 (SSH), 80 (HTTP) and 443 (HTTPS); SSH should be restricted to trusted IPs.
+3. How do you secure a downloaded `.pem` key on each OS? → Answer: On Windows disable inheritance under Properties > Security > Advanced so only you, the admin and the system have access; on macOS run `chmod 700 YourFile.pem`.
+4. Write the SSH command pattern used to connect. → Answer: `ssh -i "ELEC3609.pem" ubuntu@<instance-public-dns>` (for example `ubuntu@ec2-54-165-46-8.compute-1.amazonaws.com`).
+5. What sequence installs the core software? → Answer: `sudo apt-get update`, verify `python3 --version`, `sudo apt-get install python3-pip`, `pip3 install django`, `sudo apt-get install nginx`.
+6. What causes the externally-managed-environment error and how do you fix it? → Answer: Installing a Python package globally on an OS-managed Python (Ubuntu/Debian); create and activate a virtual environment (`python3 -m venv .venv`, `source .venv/bin/activate`) and install packages inside it.
+7. What two packages are needed for uWSGI to run a Python app? → Answer: `uwsgi` (via `pip3 install uwsgi`) and `uwsgi-plugin-python3` (via `sudo apt-get install uwsgi-plugin-python3`).
+8. How does nginx pass requests to the application? → Answer: Through `location / { include uwsgi_params; uwsgi_pass 127.0.0.1:8000; }`, which forwards to uWSGI listening on `127.0.0.1:8000`.
+9. What must the uwsgi.ini file specify accurately? → Answer: `chdir`, `wsgi-file`, `module` and `socket` (plus options such as `master`, `processes` and `threads`).
+10. What Django settings must change for production? → Answer: Set `DEBUG = False` and add the instance's Public IPv4 DNS to `ALLOWED_HOSTS`.
+11. How is uWSGI started? → Answer: `uwsgi uwsgi.ini -- plugin python3`.
+12. Why must you avoid `runserver` on the EC2 instance? → Answer: It is Django's development server, strictly for testing, and using it results in a zero grade for project deployment because it does not satisfy Assignment 3 requirements.
+13. What does this lab omit that Assignment 3 requires? → Answer: File permission management, proper static file serving, automatic service setup and security controls (plus DB/API work covered elsewhere).
+14. What budget constraint applies when choosing an instance? → Answer: You have $50 in AWS credits and instances are billed hourly, so lower-tier types like t2.micro or t3.micro are recommended.

@@ -1,0 +1,2416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ELEC3609 Week 10 Study Guide – Deploy Your Project · Lab 10</title>
+  <meta name="description" content="In this lab you will learn how to deploy a Django web application to a cloud-based production environment using AWS EC2, uWSGI and nginx. The exercise walks through the complete deployment pipeline — ">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for crisp mathematical formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+:root {
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Light Theme (Default) */
+      --bg-primary: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-alt: #e2e8f0;
+      
+      --border-color: #e2e8f0;
+      --border-focus: #6366f1;
+      
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-glow: rgba(79, 70, 229, 0.15);
+      
+      --accent-blue: #0284c7;
+      --accent-blue-bg: #e0f2fe;
+      --accent-emerald: #059669;
+      --accent-emerald-bg: #d1fae5;
+      --accent-amber: #d97706;
+      --accent-amber-bg: #fef3c7;
+      --accent-rose: #e11d48;
+      --accent-rose-bg: #ffe4e6;
+      --accent-purple: #7c3aed;
+      --accent-purple-bg: #ede9fe;
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --nav-width: 280px;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0b0f19;
+      --bg-surface: #131b2e;
+      --bg-subtle: #1e293b;
+      --bg-alt: #334155;
+      
+      --border-color: #1e293b;
+      --border-focus: #818cf8;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-light: #64748b;
+      
+      --primary: #6366f1;
+      --primary-hover: #818cf8;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      
+      --accent-blue: #38bdf8;
+      --accent-blue-bg: rgba(56, 189, 248, 0.15);
+      --accent-emerald: #34d399;
+      --accent-emerald-bg: rgba(52, 211, 153, 0.15);
+      --accent-amber: #fbbf24;
+      --accent-amber-bg: rgba(251, 191, 36, 0.15);
+      --accent-rose: #fb7185;
+      --accent-rose-bg: rgba(251, 113, 133, 0.15);
+      --accent-purple: #a78bfa;
+      --accent-purple-bg: rgba(167, 139, 250, 0.15);
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      --card-shadow-hover: 0 10px 20px -3px rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(19, 27, 46, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Reading Progress Bar */
+    #progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981);
+      width: 0%;
+      z-index: 1000;
+      transition: width 0.1s ease-out;
+    }
+
+    /* Top Sticky Header */
+    header.site-header {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: var(--glass-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.6rem;
+      color: var(--text-main);
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .course-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-box input {
+      padding: 0.45rem 0.75rem 0.45rem 2rem;
+      font-size: 0.85rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      width: 180px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      width: 240px;
+      background: var(--bg-surface);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 0.65rem;
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .btn-icon {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-alt);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      max-width: 1520px;
+      margin: 0 auto;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: var(--nav-width);
+      flex-shrink: 0;
+      position: sticky;
+      top: 57px;
+      height: calc(100vh - 57px);
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-primary);
+    }
+
+    .sidebar-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-light);
+      margin-bottom: 0.75rem;
+      padding-left: 0.5rem;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.65rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      line-height: 1.3;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+      background: var(--bg-subtle);
+    }
+
+    .nav-link.active {
+      color: var(--primary);
+      background: var(--primary-light);
+      font-weight: 600;
+    }
+
+    .nav-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    /* Main Content Area */
+    main.main-content {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      max-width: 1020px;
+      min-width: 0;
+    }
+
+    /* Hero Banner */
+    .hero-card {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-main);
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-overview {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      background: var(--bg-surface);
+      padding: 1.25rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      line-height: 1.7;
+    }
+
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .stat-val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Section Styling */
+    section.guide-section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 80px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .section-number {
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+    }
+
+    h2.section-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    h3.subsection-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.75rem 0;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-main);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--card-shadow);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Callout Boxes */
+    .callout {
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      margin: 1.25rem 0;
+      display: flex;
+      gap: 0.9rem;
+      align-items: flex-start;
+      border-left: 4px solid transparent;
+    }
+
+    .callout-icon {
+      font-size: 1.35rem;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .callout-content {
+      flex: 1;
+      font-size: 0.95rem;
+    }
+
+    .callout-content strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.95rem;
+    }
+
+    .callout-why {
+      background: var(--accent-amber-bg);
+      border-left-color: var(--accent-amber);
+      color: var(--text-main);
+    }
+
+    .callout-memory {
+      background: var(--accent-purple-bg);
+      border-left-color: var(--accent-purple);
+      color: var(--text-main);
+    }
+
+    .callout-tip {
+      background: var(--accent-emerald-bg);
+      border-left-color: var(--accent-emerald);
+      color: var(--text-main);
+    }
+
+    .callout-warning {
+      background: var(--accent-rose-bg);
+      border-left-color: var(--accent-rose);
+      color: var(--text-main);
+    }
+
+    .callout-info {
+      background: var(--accent-blue-bg);
+      border-left-color: var(--accent-blue);
+      color: var(--text-main);
+    }
+
+    /* Formula & Math Block */
+    .formula-block {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin: 1.25rem 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .formula-title {
+      position: absolute;
+      top: -10px;
+      left: 14px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .formula-math {
+      font-size: 1.2rem;
+      margin: 0.5rem 0;
+      color: var(--text-main);
+      overflow-x: auto;
+    }
+
+    /* ELEC3609 local: code / plain-text reference blocks render left-aligned in mono */
+    .formula-block pre.formula-math {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.55;
+      text-align: left;
+      white-space: pre;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      margin: 0;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.25rem 0;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      background: var(--bg-surface);
+    }
+
+    table.study-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    table.study-table th {
+      background: var(--bg-subtle);
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border-color);
+      letter-spacing: 0.02em;
+    }
+
+    table.study-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    table.study-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.study-table tr:hover td {
+      background: var(--bg-subtle);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .badge-recall {
+      background: var(--accent-emerald-bg);
+      color: var(--accent-emerald);
+    }
+
+    .badge-precision {
+      background: var(--accent-blue-bg);
+      color: var(--accent-blue);
+    }
+
+    .badge-f1 {
+      background: var(--accent-purple-bg);
+      color: var(--accent-purple);
+    }
+
+    .badge-danger {
+      background: var(--accent-rose-bg);
+      color: var(--accent-rose);
+    }
+
+    /* Pipeline Diagram */
+    .pipeline-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      box-shadow: var(--card-shadow);
+    }
+
+    .pipeline-flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin: 1rem 0;
+    }
+
+    .pipe-step {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .pipe-step .step-num {
+      font-size: 0.7rem;
+      color: var(--primary);
+      font-family: var(--font-mono);
+    }
+
+    .pipe-step:hover, .pipe-step.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .pipe-arrow {
+      color: var(--text-light);
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    /* Interactive Confusion Matrix Calculator Widget */
+    .calculator-card {
+      background: var(--bg-surface);
+      border: 2px solid var(--primary);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin: 2rem 0;
+      box-shadow: 0 10px 25px -5px var(--primary-glow);
+    }
+
+    .calc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .calc-presets {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .cm-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    .cm-table th, .cm-table td {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem;
+    }
+
+    .cm-table th {
+      background: var(--bg-subtle);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .cm-input-cell {
+      background: var(--bg-surface);
+    }
+
+    .cm-input-cell label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+    }
+
+    .cm-input-cell input {
+      width: 100%;
+      max-width: 90px;
+      padding: 0.4rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .cm-input-cell input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    .calc-results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .metric-card {
+      background: var(--bg-subtle);
+      border-radius: 10px;
+      padding: 0.85rem;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .metric-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--primary);
+      margin: 0.2rem 0;
+    }
+
+    .metric-formula {
+      font-size: 0.7rem;
+      color: var(--text-light);
+      font-family: var(--font-mono);
+    }
+
+    /* Key Takeaways list */
+    .takeaways-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .takeaway-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.9rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .takeaway-num {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.85rem;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    /* Terms & Glossary Section */
+    .glossary-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .filter-chip {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-chip:hover, .filter-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .terms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .term-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.1rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .term-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .term-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--primary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .term-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Exam Questions Section */
+    .exam-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .exam-progress {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .exam-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-secondary {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-alt);
+    }
+
+    .quiz-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--card-shadow);
+      transition: border-color 0.2s ease;
+    }
+
+    .quiz-card.mastered {
+      border-left: 4px solid var(--accent-emerald);
+      opacity: 0.9;
+    }
+
+    .quiz-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      cursor: pointer;
+    }
+
+    .quiz-qnum {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+
+    .quiz-question {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      flex: 1;
+      line-height: 1.5;
+    }
+
+    .quiz-status-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .quiz-answer {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+      color: var(--text-main);
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .quiz-answer.show {
+      display: block;
+    }
+
+    .quiz-toggle-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0;
+    }
+
+    .quiz-toggle-btn:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--border-color);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      background: var(--bg-surface);
+      margin-top: 4rem;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      header.site-header, aside.sidebar, #progress-bar, .calculator-card, .btn-icon, .exam-actions, .filter-chip {
+        display: none !important;
+      }
+      .app-container {
+        display: block;
+        max-width: 100%;
+      }
+      main.main-content {
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .card, .hero-card, .takeaway-item, .quiz-card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .quiz-answer {
+        display: block !important;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      aside.sidebar {
+        position: fixed;
+        left: -100%;
+        top: 57px;
+        z-index: 950;
+        background: var(--bg-surface);
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        transition: left 0.3s ease;
+      }
+      aside.sidebar.open {
+        left: 0;
+      }
+      .menu-toggle {
+        display: block;
+      }
+      main.main-content {
+        padding: 1.5rem;
+      }
+      .grid-2, .calc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="progress-bar"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-left">
+      <button class="menu-toggle" id="menu-btn" aria-label="Toggle navigation menu">&#9776;</button>
+      <span class="course-badge">ELEC3609 • Week 10</span>
+      <span class="header-title">Deploy Your Project · Lab 10</span>
+    </div>
+    <div class="header-controls">
+      <div class="search-box">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" id="site-search" placeholder="Search guide..." aria-label="Search study guide">
+      </div>
+      <button class="btn-icon" id="theme-toggle" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">&#127769;</button>
+      <button class="btn-icon" onclick="window.print()" title="Print Study Guide" aria-label="Print Guide">&#128424;</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">Table of Contents</div>
+      <ul class="nav-list">
+<li><a href="#overview" class="nav-link"><span class="nav-num">00</span> Overview</a></li>
+        <li><a href="#section-1" class="nav-link"><span class="nav-num">01</span> Deploy Your Project Overview</a></li>
+        <li><a href="#section-2" class="nav-link"><span class="nav-num">02</span> Preparation and EC2 Access</a></li>
+        <li><a href="#section-3" class="nav-link"><span class="nav-num">03</span> Launching a New Instance</a></li>
+        <li><a href="#section-4" class="nav-link"><span class="nav-num">04</span> Choosing the Instance Type</a></li>
+        <li><a href="#section-5" class="nav-link"><span class="nav-num">05</span> Creating and Securing a Key Pair</a></li>
+        <li><a href="#section-6" class="nav-link"><span class="nav-num">06</span> Network Settings and Launch</a></li>
+        <li><a href="#section-7" class="nav-link"><span class="nav-num">07</span> Connecting via SSH</a></li>
+        <li><a href="#section-8" class="nav-link"><span class="nav-num">08</span> Installing Core Software</a></li>
+        <li><a href="#section-9" class="nav-link"><span class="nav-num">09</span> Installing uWSGI</a></li>
+        <li><a href="#section-10" class="nav-link"><span class="nav-num">10</span> Cloning and Configuring nginx</a></li>
+        <li><a href="#section-11" class="nav-link"><span class="nav-num">11</span> The uWSGI Configuration File</a></li>
+        <li><a href="#section-12" class="nav-link"><span class="nav-num">12</span> Django Production Settings</a></li>
+        <li><a href="#section-13" class="nav-link"><span class="nav-num">13</span> Starting uWSGI and Accessing</a></li>
+        <li><a href="#section-14" class="nav-link"><span class="nav-num">14</span> Notes, Pitfalls and Next Steps</a></li>
+        <li><a href="#key-takeaways" class="nav-link"><span class="nav-num">15</span> 14 Key Takeaways</a></li>
+        <li><a href="#terms-to-know" class="nav-link"><span class="nav-num">16</span> Terms to Know (Glossary)</a></li>
+        <li><a href="#mnemonics" class="nav-link"><span class="nav-num">17</span> Mnemonics &amp; Quick Recall</a></li>
+        <li><a href="#worked-examples" class="nav-link"><span class="nav-num">18</span> Worked Scenarios &amp; Calculations</a></li>
+        <li><a href="#exam-focus" class="nav-link"><span class="nav-num">19</span> Potential Exam Focus &amp; Practice</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+<section id="overview" class="hero-card">
+  <div class="hero-tagline">📖 Official Course Notes • Week 10</div>
+  <h1 class="hero-title">Deploy Your Project · Lab 10</h1>
+  <p class="hero-subtitle">In this lab you will learn how to deploy a Django web application to a cloud-based production environment using AWS EC2, uWSGI and nginx…</p>
+  <div class='hero-overview'><strong>Lecture Overview:</strong> In this lab you will learn how to deploy a Django web application to a cloud-based production environment using <strong>AWS EC2, uWSGI and nginx</strong>. The exercise walks through the complete deployment pipeline — from launching an EC2 instance to serving the app through a real web server — while highlighting best practices and common pitfalls. It prepares you for real-world deployment and aligns with the expectations for your <strong>Assignment 3</strong> submission.</div>
+  <div class="quick-stats">
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">⚙️</div>
+  <div>
+    <div class="stat-label">Lab</div>
+    <div class="stat-val">Week 10 — 09 Deploy Your Project</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-blue-bg); color: var(--accent-blue);">📊</div>
+  <div>
+    <div class="stat-label">Stack</div>
+    <div class="stat-val">Ubuntu EC2 + nginx + uWSGI + SQLite</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-emerald-bg); color: var(--accent-emerald);">🎯</div>
+  <div>
+    <div class="stat-label">Open Ports</div>
+    <div class="stat-val">22 (SSH), 80 (HTTP), 443 (HTTPS)</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-amber-bg); color: var(--accent-amber);">📝</div>
+  <div>
+    <div class="stat-label">AWS Credits</div>
+    <div class="stat-val">$50</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-purple-bg); color: var(--accent-purple);">🧠</div>
+  <div>
+    <div class="stat-label">Guided Steps</div>
+    <div class="stat-val">18 (Step 0–18)</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="section-1" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">01</span>
+    <h2 class="section-title">Deploy Your Project Overview</h2>
+  </div>
+  <p>This lab is a hands-on walkthrough of deploying a Django project, and it is your foundation for Assignment 3. By the end you should be able to:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Set up and connect to an AWS EC2 instance using SSH and a secure key pair.</li><li>Install the necessary software packages including Python, pip, Django, uWSGI and nginx.</li><li>Configure nginx and uWSGI to serve a Django application in a production setting.</li><li>Modify Django settings for deployment, including <code>ALLOWED_HOSTS</code> and <code>DEBUG</code> mode.</li><li>Understand the importance of secure access, file permissions and service orchestration for deployment.</li></ul>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Info::</strong>
+    Deploying the project is an assessment. The lab contains the <strong>core steps</strong> needed to deploy, but <strong>extra steps are required to satisfy all Assignment 3 requirements</strong>. The guide does not cover every static-file and media-file configuration (for example CSS, JavaScript and uploaded images) — you may need to add extra configuration to the nginx configuration file.
+  </div>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    The difference between "it runs on my laptop" and "it runs on a server" is this pipeline. Every step from here — key pair, ports, web server, WSGI handoff — is a checkpoint a marker will ask you to explain.
+  </div>
+</div>
+</section>
+
+<section id="section-2" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">02</span>
+    <h2 class="section-title">Preparation and EC2 Access</h2>
+  </div>
+  <p><strong>Step 0: Preparation</strong> — Check out the <strong>AWS Academy Learner Lab – Student Guide</strong> and the <strong>AWS Academy Learner Lab – README</strong> before starting.</p>
+
+<div class="callout callout-tip">
+  <div class="callout-icon">📝</div>
+  <div class="callout-content">
+    <strong>Tip::</strong>
+    Ensure you have a stable network connection and be patient while the AWS Academy Lab builds the environment, because it may take some time to complete setup and ensure everything functions correctly. <strong>Step 1: Access EC2</strong> — In the AWS Console, navigate to the <strong>EC2</strong> section by selecting it from the dashboard. If you do not see EC2 in the list, search for it using the search bar at the top of the console.
+  </div>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    The Learner Lab environment must be started and healthy before anything else. Rushing this step is the most common cause of confusing errors later.
+  </div>
+</div>
+</section>
+
+<section id="section-3" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">03</span>
+    <h2 class="section-title">Launching a New Instance</h2>
+  </div>
+  <p><strong>Step 2: View running instances</strong> — Click <strong>Instance (running)</strong> to view any active instances. This is also where you monitor the status of existing instances. You will need to launch a new one. <strong>Step 3: Launch a new instance</strong> — Click <strong>Launch instances</strong> to create a new virtual server. <strong>Step 4: Choose the operating system</strong> — For this deployment, <strong>Ubuntu is recommended</strong>.</p>
+</section>
+
+<section id="section-4" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">04</span>
+    <h2 class="section-title">Choosing the Instance Type</h2>
+  </div>
+  <p><strong>Step 5: Select the instance type</strong> — Choose an instance type that fits your needs. Remember you have <strong>$50 in AWS credits</strong>, so it is important to select an instance that will not exceed your budget. Instances are charged at an <strong>hourly rate</strong>. Lower-tier instances such as <strong>t2.micro</strong> or <strong>t3.micro</strong> are generally sufficient for a Django project deployment.</p>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Leaving a large, expensive instance running after testing. Because billing is hourly, unused instances quietly consume your credits.
+  </div>
+</div>
+</section>
+
+<section id="section-5" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">05</span>
+    <h2 class="section-title">Creating and Securing a Key Pair</h2>
+  </div>
+  <p><strong>Step 6: Create a key pair</strong> — Click <strong>Create new key pair</strong> to generate a <code>.pem</code> file, which is essential for accessing your EC2 instance securely via SSH. Download the key pair to your local machine and keep it secure, because it is used for authentication later.</p>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Warning::</strong>
+    You <strong>must</strong> use a key file to connect to your instance. There will be <strong>penalties</strong> if you simply allow all traffic for SSH to your instance. <strong>Step 7: Configure key pair permissions</strong> — Choose the key pair name you want and keep the other settings as shown. After you click <strong>Create key pair</strong>, the <code>.pem</code> file downloads to your computer. <strong>For Windows users:</strong>
+  </div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Right-click the <code>.pem</code> file, select <strong>Properties &gt; Security &gt; Advanced</strong>, and <strong>disable inheritance</strong>.</li><li>Ensure that only <strong>you, the admin and the system</strong> have access to the file.</li></ul>
+
+<p><strong>For macOS users:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Restrict access to the key with: <code>chmod 700 YourFile.pem</code></li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    SSH refuses to use a key file that is readable by other users. Fixing permissions is what turns the downloaded <code>.pem</code> into a usable identity.
+  </div>
+</div>
+</section>
+
+<section id="section-6" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">06</span>
+    <h2 class="section-title">Network Settings and Launch</h2>
+  </div>
+  <p><strong>Step 8: Set network settings</strong> — Before launching the instance, configure the network settings to match the recommended settings in the guide. You should allow traffic on:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Port 22</strong> — SSH</li><li><strong>Port 80</strong> — HTTP</li><li><strong>Port 443</strong> — HTTPS</li></ul>
+
+<p>Double-check the <strong>security group rules</strong> to make sure SSH access is only allowed from <strong>trusted IPs</strong>. <strong>Step 9: Launch the instance</strong> — After configuring the basic settings, click <strong>Launch instance</strong>. This starts your EC2 instance with the selected operating system and settings. It may take a few minutes for the instance to fully initialise.</p>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Opening SSH (port 22) to the whole internet (<code>0.0.0.0/0</code>). The lab explicitly warns that simplifying access this way carries penalties.
+  </div>
+</div>
+</section>
+
+<section id="section-7" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">07</span>
+    <h2 class="section-title">Connecting via SSH</h2>
+  </div>
+  <p><strong>Step 10: Connect to your instance</strong> — Once the instance is up, it shows a <strong>"running"</strong> status in the Instances dashboard. Click the newly created instance to view its details, then choose <strong>Connect</strong>. In the <strong>SSH client</strong> tab you will see a command you can use in your terminal to connect. Ensure the file path to your <code>.pem</code> file is correct when you paste the command. <strong>Example command:</strong> <code>ssh -i "ELEC3609.pem" ubuntu@ec2-54-165-46-8.compute-1.amazonaws.com</code></p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    This is the only doorway into your server. The default username for an Ubuntu AMI is <code>ubuntu</code> (not <code>root</code>), and the address is your instance's public DNS name.
+  </div>
+</div>
+</section>
+
+<section id="section-8" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">08</span>
+    <h2 class="section-title">Installing Core Software</h2>
+  </div>
+  <p><strong>Step 11: Update and install necessary software.</strong> After connecting to the instance, run these commands in order:</p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Update the package list: <code>sudo apt-get update</code></li><li>Verify the Python version: <code>python3 --version</code></li><li>Install pip: <code>sudo apt-get install python3-pip</code></li><li>Install Django: <code>pip3 install django</code></li><li>Install nginx: <code>sudo apt-get install nginx</code></li><li>Check nginx status: <code>sudo service nginx status</code></li><li>If nginx is not running, start it: <code>sudo service nginx start</code></li></ol>
+
+<p><strong>Error: externally-managed-environment</strong> This error occurs when you attempt to install a Python package <strong>globally</strong> on a system where Python is managed by the operating system (for example Ubuntu or Debian). Installing packages globally is not recommended because it can interfere with system-managed dependencies and potentially break built-in tools. To avoid the issue, create a <strong>virtual environment</strong> and install packages inside it. This keeps project dependencies isolated and prevents system conflicts:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code>python3 -m venv .venv</code></li><li><code>source .venv/bin/activate</code></li><li><code>pip install &lt;package_name&gt;</code></li></ul>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    Update first, then <strong>Python → pip → Django → nginx</strong>. Verifying the Python version before installing pip prevents version-mismatch confusion.
+  </div>
+</div>
+</section>
+
+<section id="section-9" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">09</span>
+    <h2 class="section-title">Installing uWSGI</h2>
+  </div>
+  <p><strong>Step 12: Install uWSGI</strong> — To handle application serving, install it with:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code>pip3 install uwsgi</code></li></ul>
+
+<p>You also need the uWSGI Python plugin, installed with:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code>sudo apt-get install uwsgi-plugin-python3</code></li></ul>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Info::</strong>
+    <code>uwsgi-plugin-python3</code> provides the Python 3 plugin for uWSGI, allowing uWSGI to run Python applications. You can check the full list of uWSGI plugins at <code>/usr/lib/uwsgi/plugins/</code>.
+  </div>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    uWSGI is the application server that actually runs Django. Nginx will forward requests to it, so both the binary and its Python plugin must be present.
+  </div>
+</div>
+</section>
+
+<section id="section-10" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">10</span>
+    <h2 class="section-title">Cloning and Configuring nginx</h2>
+  </div>
+  <p><strong>Step 13: Clone your project</strong> — Clone your project repository from GitHub into the EC2 instance. Make sure to install any dependencies and libraries required for your project after cloning. <strong>Step 14: Modify the nginx configuration</strong> — Navigate to <code>/etc/nginx/nginx.conf</code> and modify the file to point to the <strong>root</strong> and <strong>static file directories</strong> for your project. Replace the placeholder paths with the actual paths to your project's files. Once the configuration is updated, restart nginx with:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code>sudo service nginx restart</code></li></ul>
+
+<p><strong>Key directives in the nginx configuration:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Global: <code>user www-data;</code>, <code>worker_processes auto;</code>, <code>error_log /var/log/nginx/error.log;</code>, <code>pid /run/nginx.pid;</code></li><li>Modules: <code>include /usr/share/nginx/modules/*.conf;</code></li><li>Events block: <code>events { worker_connections 1024; }</code></li><li>HTTP block: <code>log_format main ...</code>, <code>access_log /var/log/nginx/access.log main;</code>, <code>sendfile on;</code>, <code>tcp_nopush on;</code>, <code>tcp_nodelay on;</code>, <code>keepalive_timeout 65;</code>, <code>types_hash_max_size 2048;</code>, <code>include /etc/nginx/mime.types;</code>, <code>default_type application/octet-stream;</code>, <code>include /etc/nginx/conf.d/*.conf;</code></li><li>Server block: <code>listen 80 default_server;</code>, <code>listen [::]:80 default_server;</code>, <code>root /var/www/til_project/;</code>, <code>include /etc/nginx/default.d/*.conf;</code></li><li>Proxying to the app: <code>location / { include uwsgi_params; uwsgi_pass 127.0.0.1:8000; }</code></li><li>Static files: <code>location /static { alias /var/www/til_project/static/; }</code></li><li>Error pages: <code>error_page 404 /404.html;</code>, <code>location = /40x.html {}</code>, <code>error_page 500 502 503 504 /50x.html;</code>, <code>location = /50x.html {}</code></li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Nginx is the public-facing web server. Its <code>location /</code> block forwards requests to uWSGI on <code>127.0.0.1:8000</code>, and its <code>/static</code> alias serves static files directly — which is why the template notes that CSS, JS and uploaded images often need extra configuration.
+  </div>
+</div>
+</section>
+
+<section id="section-11" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">11</span>
+    <h2 class="section-title">The uWSGI Configuration File</h2>
+  </div>
+  <p><strong>Step 15: Create a uWSGI configuration file</strong> — Go to your project's folder, create a file called <code>uwsgi.ini</code>, and configure it with settings appropriate for your project. This file tells uWSGI how to serve your application. Ensure the <code>chdir</code>, <code>wsgi-file</code>, <code>module</code> and <code>socket</code> settings are accurate based on your project's structure. <strong>The example settings:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Header: <code>[uwsgi]</code></li><li><code>chdir = /var/www/til_project</code> — the project working directory</li><li><code>wsgi-file = /var/www/til_project/til_project/wsgi.py</code> — the WSGI entry file</li><li><code>module = til_project.wsgi:application</code> — the application object to load</li><li><code>socket = 127.0.0.1:8000</code> — the address uWSGI listens on, matching nginx's <code>uwsgi_pass</code></li><li><code>master = true</code> — enable the master process</li><li><code>disable-logging = true</code></li><li><code>processes = 2</code> — number of worker processes</li><li><code>threads = 4</code> — threads per worker</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    <code>socket</code> here must match <code>uwsgi_pass</code> in nginx, and <code>chdir</code>/<code>wsgi-file</code>/<code>module</code> must match your actual project layout. Getting any of these wrong gives a 502 Bad Gateway from nginx.
+  </div>
+</div>
+</section>
+
+<section id="section-12" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">12</span>
+    <h2 class="section-title">Django Production Settings</h2>
+  </div>
+  <p><strong>Step 16: Update Django project settings</strong> — In the <code>settings.py</code> file of your Django project:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Add your <strong>domain</strong> (the <strong>Public IPv4 DNS</strong> in the AWS instance dashboard) to the <code>ALLOWED_HOSTS</code> list.</li><li>Change the <code>DEBUG</code> setting to <code>False</code> so the project runs in <strong>production mode</strong>.</li></ul>
+
+<p><strong>Example:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code># SECURITY WARNING: don't run with debug turned on in production!</code></li><li><code>DEBUG = False</code></li><li><code>ALLOWED_HOSTS = ['.localhost', '127.0.0.1', '[::1]', 'ec2-54-165-46-8.compute-1.amazonaws.com']</code></li></ul>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Leaving <code>DEBUG = True</code> in production. It exposes detailed error pages and internal settings to the public — a serious security problem and a marker's red flag.
+  </div>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    <code>ALLOWED_HOSTS</code> is Django's protection against HTTP Host-header attacks; requests for a host not on the list are rejected. You must add the exact public DNS name of your instance.
+  </div>
+</div>
+</section>
+
+<section id="section-13" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">13</span>
+    <h2 class="section-title">Starting uWSGI and Accessing</h2>
+  </div>
+  <p><strong>Step 17: Start uWSGI</strong> — To start serving your Django project through uWSGI, run the command:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code>uwsgi uwsgi.ini -- plugin python3</code></li></ul>
+
+<p>This initialises uWSGI with the configuration defined in your <code>uwsgi.ini</code> file. <strong>Step 18: Access your project</strong> — You should now be able to access your project through your URL.</p>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Danger::</strong>
+    Do <strong>not</strong> run your Django project on the <strong>development server</strong> in your AWS instance — this results in a <strong>zero grade for project deployment</strong>. Although you can bypass some deployment steps by running <code>python3 manage.py runserver 0.0.0.0:8000</code>, this starts Django's development server and is <strong>strictly for testing purposes</strong>. It does <strong>not</strong> fulfil the requirements of Assignment 3.
+  </div>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    The assessment is about deploying with a real web server (nginx) and application server (uWSGI), not the single-threaded dev server. <code>runserver</code> is a convenience for development only.
+  </div>
+</div>
+</section>
+
+<section id="section-14" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">14</span>
+    <h2 class="section-title">Notes, Pitfalls and Next Steps</h2>
+  </div>
+  <p>Please note that this lab only covers the <strong>basic steps</strong> to deploy a Django application. It does <strong>not</strong> include more advanced configurations required for Assignment 3, such as:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>File permission management</li><li>Proper static file serving</li><li>Automatic service setup</li><li>Security controls</li></ul>
+
+<p>For more information, refer to these readings: <strong>Web &amp; application server:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Install and configure Nginx</li><li>HTTP Load Balancing – Nginx</li><li>Serving Static Content – Nginx</li><li>Quickstart for Python/WSGI applications</li></ul>
+
+<p><strong>Django deployment:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Django Deployment checklist</li><li>How to deploy static files – Django</li><li>How to manage static files</li></ul>
+
+<p><strong>Linux management:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Linux file permissions explained – RedHat</li><li><code>chmod</code>, <code>chown</code>, <code>systemd</code></li></ul>
+
+<p><strong>Terminal tools:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>SSH, Vim Cheatsheet, Tmux Cheat Sheet</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Assignment 3 expects the advanced items on this list. Treat this lab as the minimum viable deployment and the readings as the checklist for full marks.
+  </div>
+</div>
+</section>
+
+<section id="key-takeaways" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">15</span>
+    <h2 class="section-title">14 Key Takeaways</h2>
+  </div>
+  <div class="takeaways-list">
+<div class="takeaway-item">
+  <span class="takeaway-num">1</span>
+  <div><strong><strong>The stack is Ubuntu EC2 + nginx + uWSGI + SQLite</strong></strong> — nginx faces the internet, uWSGI runs Django, SQLite stores data.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">2</span>
+  <div><strong><strong>Prepare before you build</strong></strong> — read the Learner Lab Student Guide and README, and be patient while the AWS environment initialises.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">3</span>
+  <div><strong><strong>Ubuntu EC2 with a t2.micro or t3.micro</strong> is the recommended starting point</strong>, charged hourly against your $50 credit.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">4</span>
+  <div><strong><strong>A <code>.pem</code> key pair is mandatory for SSH</strong>; simplify SSH access at your peril</strong> — there are penalties.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">5</span>
+  <div><strong><strong>Fix key file permissions</strong></strong> — disable inheritance on Windows, or <code>chmod 700 YourFile.pem</code> on macOS.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">6</span>
+  <div><strong>Open ports 22</strong>, 80 and 443 only, and restrict SSH to trusted IPs in the security group.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">7</span>
+  <div><strong>Connect with</strong> <code>ssh -i "ELEC3609.pem" ubuntu@&lt;public-dns&gt;</code>.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">8</span>
+  <div><strong><strong>Install in order</strong></strong> — <code>sudo apt-get update</code>, verify <code>python3 --version</code>, install <code>python3-pip</code>, <code>pip3 install django</code>, <code>sudo apt-get install nginx</code>.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">9</span>
+  <div><strong><strong>The externally-managed-environment error is solved with a virtual environment</strong></strong> — <code>python3 -m venv .venv</code>, then activate it before installing packages.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">10</span>
+  <div><strong><strong>uWSGI needs its Python plugin</strong></strong> — <code>pip3 install uwsgi</code> plus <code>sudo apt-get install uwsgi-plugin-python3</code>.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">11</span>
+  <div><strong>nginx proxies to uWSGI</strong> via <code>location / { include uwsgi_params; uwsgi_pass 127.0.0.1:8000; }</code> and serves <code>/static</code> directly.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">12</span>
+  <div><strong><strong>uwsgi.ini must match your project</strong></strong> — check <code>chdir</code>, <code>wsgi-file</code>, <code>module</code> and <code>socket</code>, then start with <code>uwsgi uwsgi.ini -- plugin python3</code>.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">13</span>
+  <div><strong>Set <code>DEBUG = False</code> and add your Public IPv4 DNS to <code>ALLOWED_HOSTS</code></strong> before going live.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">14</span>
+  <div><strong><strong>Never use <code>runserver</code> for the assessed deployment</strong></strong> — it scores zero; this lab only covers the basics, so add static files, permissions, systemd and security for Assignment 3.</div>
+</div>
+</div>
+</section>
+
+<section id="terms-to-know" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">16</span>
+    <h2 class="section-title">Terms to Know (Glossary)</h2>
+  </div>
+  <div class="glossary-controls">
+  <button class="filter-chip active" onclick="filterTerms('all', this)">All (32)</button>
+  <button class="filter-chip" onclick="filterTerms('models', this)">Core Concepts</button>
+  <button class="filter-chip" onclick="filterTerms('pipeline', this)">Architecture & Data</button>
+</div>
+<div class="terms-grid" id="terms-container">
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>EC2</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Elastic Compute Cloud — AWS virtual server that hosts your app.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>uWSGI</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The application server that runs the Django WSGI application.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>WSGI</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Web Server Gateway Interface — the standard contract between a Python web app and a server.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>nginx</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The web server / reverse proxy that accepts client requests and forwards them to uWSGI.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>AMI</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Amazon Machine Image — the template (OS + software) an EC2 instance is launched from.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Ubuntu</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">The recommended Linux distribution for the deployment instance.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Key pair</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The SSH credential pair whose private half is the <code>.pem</code> file.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong><code>.pem</code> file</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The downloaded private key used to authenticate SSH connections.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>SSH</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Secure Shell — the encrypted protocol used to log in to the instance.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Security group</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The set of firewall rules controlling which ports and IPs may reach the instance.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Port 22</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The standard SSH port.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Port 80</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The standard HTTP port.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Port 443</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The standard HTTPS port.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Public IPv4 DNS</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The public hostname of your EC2 instance, used to connect and added to <code>ALLOWED_HOSTS</code>.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>pip</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Python's package installer.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Virtual environment (venv)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">An isolated Python environment that avoids the externally-managed-environment error.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>externally-managed-environment</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Error raised when installing Python packages globally on an OS-managed Python; solved with a venv.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Django</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">The Python web framework being deployed.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong><code>settings.py</code></strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Django's configuration file, where <code>DEBUG</code> and <code>ALLOWED_HOSTS</code> are set.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong><code>DEBUG</code></strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Django setting that must be <code>False</code> in production.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong><code>ALLOWED_HOSTS</code></strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Django list of hostnames permitted to serve the site.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong><code>uwsgi.ini</code></strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The file configuring uWSGI (chdir, wsgi-file, module, socket, processes, threads).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong><code>chdir</code></strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">uWSGI setting for the project working directory.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong><code>socket</code></strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">uWSGI setting for the address it listens on, matching nginx's <code>uwsgi_pass</code>.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong><code>uwsgi_params</code></strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">The nginx include that passes WSGI parameters to uWSGI.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Reverse proxy</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A server that forwards client requests to a backend (nginx forwarding to uWSGI).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Static files</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">CSS, JavaScript and images served directly by nginx via the <code>location /static</code> alias.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong><code>runserver</code></strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Django's development server — testing only; using it for the assessment scores zero.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong><code>chmod</code></strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Linux command to change file permissions (used as <code>chmod 700 YourFile.pem</code>).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong><code>chown</code></strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Linux command to change file ownership.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>systemd</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Linux service manager used to automate starting services (an A3 requirement not covered in the lab).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>$50 AWS credits</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The budget for the Learner Lab; instances are billed hourly.</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="mnemonics" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">17</span>
+    <h2 class="section-title">Mnemonics &amp; Quick Recall</h2>
+  </div>
+  <div class="grid-2">
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Open Ports</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">22-80-443</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;SSH, HTTP, HTTPS.&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🔄 Install Order</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">U-P-P-D-N</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Update, Python check, Pip, Django, Nginx.&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 uWSGI Setup</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">U-P</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;install uwsgi, install uwsgi-plugin-python3.&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 The nginx → uWSGI Link</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Pass 8000</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">— nginx <code>uwsgi_pass 127.0.0.1:8000</code> must match uWSGI <code>socket = 127.0.0.1:8000</code>.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Production Settings</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">D-A</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;DEBUG = False, ALLOWED_HOSTS updated.&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Start Command</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">&quot;uwsgi uwsgi.ini -- plugin python3.&quot;</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;uwsgi uwsgi.ini -- plugin python3.&rdquo;</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Never Do This</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">runserver = zero</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">— the development server fails the assessment.</p>
+</div>
+</div>
+</section>
+
+<section id="worked-examples" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">18</span>
+    <h2 class="section-title">Worked Scenarios &amp; Calculations</h2>
+  </div>
+  <div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 1 &bull; Fixing key file permissions</div>
+  <h3 class="subsection-title" style="margin-top:0;">Fixing key file permissions</h3>
+<p>A student downloads <code>ELEC3609.pem</code> and immediately tries to SSH in, but the connection is refused because the key is "too open." On <strong>macOS</strong> they fix it with <code>chmod 700 YourFile.pem</code>. On <strong>Windows</strong> they right-click the file, open <strong>Properties &gt; Security &gt; Advanced</strong>, disable inheritance, and ensure only their user, the admin and the system account can read it. The SSH command then works: <code>ssh -i "ELEC3609.pem" ubuntu@ec2-54-165-46-8.compute-1.amazonaws.com</code>.</p>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 2 &bull; A complete first-boot sequence</div>
+  <h3 class="subsection-title" style="margin-top:0;">A complete first-boot sequence</h3>
+<p>After connecting by SSH, a student runs the full setup in one pass:</p>
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><code>sudo apt-get update</code> — refresh the package index.</li><li><code>python3 --version</code> — confirm Python is available.</li><li><code>sudo apt-get install python3-pip</code> — install pip.</li><li><code>pip3 install django</code> — install Django.</li><li><code>sudo apt-get install nginx</code> — install the web server.</li><li><code>sudo service nginx status</code> — confirm it is running; if not, <code>sudo service nginx start</code>.</li><li><code>pip3 install uwsgi</code> and <code>sudo apt-get install uwsgi-plugin-python3</code> — install the app server and Python plugin.</li></ol>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 3 &bull; Wiring nginx to uWSGI</div>
+  <h3 class="subsection-title" style="margin-top:0;">Wiring nginx to uWSGI</h3>
+<p>The nginx server block contains <code>location / { include uwsgi_params; uwsgi_pass 127.0.0.1:8000; }</code>, while <code>uwsgi.ini</code> contains <code>socket = 127.0.0.1:8000</code>. Because the two addresses match, nginx forwards incoming requests over the loopback interface to uWSGI, which loads the application via <code>module = til_project.wsgi:application</code>. The static files are served separately by <code>location /static { alias /var/www/til_project/static/; }</code>.</p>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 4 &bull; Why production settings matter</div>
+  <h3 class="subsection-title" style="margin-top:0;">Why production settings matter</h3>
+<p>A student leaves <code>DEBUG = True</code> and <code>ALLOWED_HOSTS = []</code>. Visiting the site by its public DNS name either shows a detailed debug traceback (leaking internal paths and settings) or is rejected outright because the host is not allowed. Setting <code>DEBUG = False</code> and adding <code>'ec2-54-165-46-8.compute-1.amazonaws.com'</code> to <code>ALLOWED_HOSTS</code> fixes both problems and matches production behaviour.</p>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 5 &bull; The shortcut that</div>
+  <h3 class="subsection-title" style="margin-top:0;">The shortcut that fails the assessment</h3>
+<p>To save time, a student runs <code>python3 manage.py runserver 0.0.0.0:8000</code> on the instance and can reach the app in a browser. This is Django's <strong>development server</strong> and is strictly for testing. The lab states clearly that deploying with <code>runserver</code> results in a <strong>zero grade for project deployment</strong>, because it bypasses the required nginx + uWSGI architecture.</p>
+</div>
+</section>
+
+<section id="exam-focus" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">19</span>
+    <h2 class="section-title">Potential Exam Focus &amp; Practice</h2>
+  </div>
+  <div class="exam-toolbar">
+  <div class="exam-progress" id="exam-progress-tracker">Progress: 0 / 14 Mastered</div>
+  <div class="exam-actions">
+    <button class="btn-secondary" onclick="toggleAllAnswers(true)">Reveal All</button>
+    <button class="btn-secondary" onclick="toggleAllAnswers(false)">Hide All</button>
+    <button class="btn-secondary" onclick="resetExamProgress()">Reset Progress</button>
+  </div>
+</div><div class="quiz-card" id="q1">
+  <div class="quiz-header" onclick="toggleAnswer('ans-1')">
+    <span class="quiz-qnum">Q1</span>
+    <div class="quiz-question">What is the recommended deployment stack in this lab?</div>
+  </div>
+  <div class='quiz-answer' id='ans-1'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>An Ubuntu EC2 instance running nginx as the web server, uWSGI as the application server, and SQLite as the database (EC2 + nginx + uWSGI + SQLite).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-1')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q1', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q2">
+  <div class="quiz-header" onclick="toggleAnswer('ans-2')">
+    <span class="quiz-qnum">Q2</span>
+    <div class="quiz-question">Which ports should be allowed and what are they for?</div>
+  </div>
+  <div class='quiz-answer' id='ans-2'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>22 (SSH), 80 (HTTP) and 443 (HTTPS); SSH should be restricted to trusted IPs.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-2')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q2', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q3">
+  <div class="quiz-header" onclick="toggleAnswer('ans-3')">
+    <span class="quiz-qnum">Q3</span>
+    <div class="quiz-question">How do you secure a downloaded <code>.pem</code> key on each OS?</div>
+  </div>
+  <div class='quiz-answer' id='ans-3'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>On Windows disable inheritance under Properties &gt; Security &gt; Advanced so only you, the admin and the system have access; on macOS run <code>chmod 700 YourFile.pem</code>.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-3')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q3', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q4">
+  <div class="quiz-header" onclick="toggleAnswer('ans-4')">
+    <span class="quiz-qnum">Q4</span>
+    <div class="quiz-question">Write the SSH command pattern used to connect.</div>
+  </div>
+  <div class='quiz-answer' id='ans-4'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'><code>ssh -i "ELEC3609.pem" ubuntu@&lt;instance-public-dns&gt;</code> (for example <code>ubuntu@ec2-54-165-46-8.compute-1.amazonaws.com</code>).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-4')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q4', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q5">
+  <div class="quiz-header" onclick="toggleAnswer('ans-5')">
+    <span class="quiz-qnum">Q5</span>
+    <div class="quiz-question">What sequence installs the core software?</div>
+  </div>
+  <div class='quiz-answer' id='ans-5'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'><code>sudo apt-get update</code>, verify <code>python3 --version</code>, <code>sudo apt-get install python3-pip</code>, <code>pip3 install django</code>, <code>sudo apt-get install nginx</code>.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-5')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q5', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q6">
+  <div class="quiz-header" onclick="toggleAnswer('ans-6')">
+    <span class="quiz-qnum">Q6</span>
+    <div class="quiz-question">What causes the externally-managed-environment error and how do you fix it?</div>
+  </div>
+  <div class='quiz-answer' id='ans-6'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Installing a Python package globally on an OS-managed Python (Ubuntu/Debian); create and activate a virtual environment (<code>python3 -m venv .venv</code>, <code>source .venv/bin/activate</code>) and install packages inside it.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-6')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q6', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q7">
+  <div class="quiz-header" onclick="toggleAnswer('ans-7')">
+    <span class="quiz-qnum">Q7</span>
+    <div class="quiz-question">What two packages are needed for uWSGI to run a Python app?</div>
+  </div>
+  <div class='quiz-answer' id='ans-7'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'><code>uwsgi</code> (via <code>pip3 install uwsgi</code>) and <code>uwsgi-plugin-python3</code> (via <code>sudo apt-get install uwsgi-plugin-python3</code>).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-7')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q7', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q8">
+  <div class="quiz-header" onclick="toggleAnswer('ans-8')">
+    <span class="quiz-qnum">Q8</span>
+    <div class="quiz-question">How does nginx pass requests to the application?</div>
+  </div>
+  <div class='quiz-answer' id='ans-8'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Through <code>location / { include uwsgi_params; uwsgi_pass 127.0.0.1:8000; }</code>, which forwards to uWSGI listening on <code>127.0.0.1:8000</code>.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-8')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q8', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q9">
+  <div class="quiz-header" onclick="toggleAnswer('ans-9')">
+    <span class="quiz-qnum">Q9</span>
+    <div class="quiz-question">What must the uwsgi.ini file specify accurately?</div>
+  </div>
+  <div class='quiz-answer' id='ans-9'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'><code>chdir</code>, <code>wsgi-file</code>, <code>module</code> and <code>socket</code> (plus options such as <code>master</code>, <code>processes</code> and <code>threads</code>).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-9')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q9', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q10">
+  <div class="quiz-header" onclick="toggleAnswer('ans-10')">
+    <span class="quiz-qnum">Q10</span>
+    <div class="quiz-question">What Django settings must change for production?</div>
+  </div>
+  <div class='quiz-answer' id='ans-10'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Set <code>DEBUG = False</code> and add the instance's Public IPv4 DNS to <code>ALLOWED_HOSTS</code>.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-10')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q10', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q11">
+  <div class="quiz-header" onclick="toggleAnswer('ans-11')">
+    <span class="quiz-qnum">Q11</span>
+    <div class="quiz-question">How is uWSGI started?</div>
+  </div>
+  <div class='quiz-answer' id='ans-11'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'><code>uwsgi uwsgi.ini -- plugin python3</code>.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-11')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q11', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q12">
+  <div class="quiz-header" onclick="toggleAnswer('ans-12')">
+    <span class="quiz-qnum">Q12</span>
+    <div class="quiz-question">Why must you avoid <code>runserver</code> on the EC2 instance?</div>
+  </div>
+  <div class='quiz-answer' id='ans-12'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>It is Django's development server, strictly for testing, and using it results in a zero grade for project deployment because it does not satisfy Assignment 3 requirements.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-12')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q12', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q13">
+  <div class="quiz-header" onclick="toggleAnswer('ans-13')">
+    <span class="quiz-qnum">Q13</span>
+    <div class="quiz-question">What does this lab omit that Assignment 3 requires?</div>
+  </div>
+  <div class='quiz-answer' id='ans-13'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>File permission management, proper static file serving, automatic service setup and security controls (plus DB/API work covered elsewhere).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-13')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q13', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q14">
+  <div class="quiz-header" onclick="toggleAnswer('ans-14')">
+    <span class="quiz-qnum">Q14</span>
+    <div class="quiz-question">What budget constraint applies when choosing an instance?</div>
+  </div>
+  <div class='quiz-answer' id='ans-14'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>You have $50 in AWS credits and instances are billed hourly, so lower-tier types like t2.micro or t3.micro are recommended.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-14')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q14', this)"> Mastered
+    </label>
+  </div>
+</div>
+</section>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+<p><strong>ELEC3609 Engineering Study Guide</strong> &bull; Week 10: Deploy Your Project · Lab 10</p>
+    <p style="font-size: 0.75rem; margin-top: 0.4rem;">Generated for self-paced revision and exam preparation.</p>
+  </footer>
+
+  <!-- Interactive JavaScript -->
+  <script>
+// Theme Toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let currentTheme = localStorage.getItem('study_theme') || (prefersDark ? 'dark' : 'light');
+
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeBtn.textContent = '☀️';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        themeBtn.textContent = '🌙';
+      }
+      localStorage.setItem('study_theme', theme);
+    }
+    applyTheme(currentTheme);
+
+    themeBtn.addEventListener('click', () => {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(currentTheme);
+    });
+
+    // Mobile Menu Toggle
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    menuBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+
+    // Close sidebar when clicking links on mobile
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 1024) {
+          sidebar.classList.remove('open');
+        }
+      });
+    });
+
+    // Reading Progress & Active Nav Link Highlight
+    window.addEventListener('scroll', () => {
+      const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById('progress-bar').style.width = scrolled + '%';
+
+      // Active Section Highlighting
+      const sections = document.querySelectorAll('section.guide-section, section.hero-card');
+      let currentSecId = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 120;
+        if (winScroll >= top) {
+          currentSecId = sec.getAttribute('id');
+        }
+      });
+
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentSecId) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Interactive Confusion Matrix Calculator Logic
+    function calculateMetrics() {
+      const tp = parseFloat(document.getElementById('inp-tp').value) || 0;
+      const fn = parseFloat(document.getElementById('inp-fn').value) || 0;
+      const fp = parseFloat(document.getElementById('inp-fp').value) || 0;
+      const tn = parseFloat(document.getElementById('inp-tn').value) || 0;
+
+      const total = tp + fn + fp + tn;
+      const acc = total > 0 ? ((tp + tn) / total) * 100 : 0;
+      const prec = (tp + fp) > 0 ? (tp / (tp + fp)) * 100 : 0;
+      const rec = (tp + fn) > 0 ? (tp / (tp + fn)) * 100 : 0;
+      const f1 = (prec + rec) > 0 ? 2 * (prec * rec) / (prec + rec) / 100 : 0;
+
+      document.getElementById('res-acc').textContent = acc.toFixed(1) + '%';
+      document.getElementById('res-prec').textContent = (tp + fp) > 0 ? prec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-rec').textContent = (tp + fn) > 0 ? rec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-f1').textContent = (prec + rec) > 0 ? f1.toFixed(3) : '0.000';
+    }
+
+    function setPreset(tp, fp, tn, fn) {
+      document.getElementById('inp-tp').value = tp;
+      document.getElementById('inp-fp').value = fp;
+      document.getElementById('inp-tn').value = tn;
+      document.getElementById('inp-fn').value = fn;
+      calculateMetrics();
+    }
+
+    // Glossary Filter Logic
+    function filterTerms(category, btn) {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+
+      const cards = document.querySelectorAll('.term-card');
+      cards.forEach(card => {
+        if (category === 'all' || card.getAttribute('data-cat') === category) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // Global Search Logic
+    const searchInput = document.getElementById('site-search');
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      const termCards = document.querySelectorAll('.term-card');
+      const quizCards = document.querySelectorAll('.quiz-card');
+
+      if (!query) {
+        termCards.forEach(c => c.style.display = 'flex');
+        quizCards.forEach(c => c.style.display = 'block');
+        return;
+      }
+
+      termCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+
+      quizCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'block' : 'none';
+      });
+    });
+
+    // Exam Questions Show/Hide & Progress Tracker
+    function toggleAnswer(id) {
+      const ans = document.getElementById(id);
+      ans.classList.toggle('show');
+    }
+
+    function toggleAllAnswers(show) {
+      document.querySelectorAll('.quiz-answer').forEach(ans => {
+        if (show) ans.classList.add('show');
+        else ans.classList.remove('show');
+      });
+    }
+
+    let masteredMap = JSON.parse(localStorage.getItem('engg2112_w3_mastered') || '{}');
+
+    function updateProgressUI() {
+      const total = document.querySelectorAll('.quiz-card').length;
+      const count = Object.values(masteredMap).filter(Boolean).length;
+      document.getElementById('exam-progress-tracker').textContent = `Progress: ${count} / ${total} Mastered`;
+
+      for (let i = 1; i <= total; i++) {
+        const card = document.getElementById('q' + i);
+        const checkbox = card ? card.querySelector('input[type="checkbox"]') : null;
+        if (card && checkbox) {
+          if (masteredMap['q' + i]) {
+            card.classList.add('mastered');
+            checkbox.checked = true;
+          } else {
+            card.classList.remove('mastered');
+            checkbox.checked = false;
+          }
+        }
+      }
+    }
+
+    function toggleMastered(qid, checkbox) {
+      masteredMap[qid] = checkbox.checked;
+      localStorage.setItem('engg2112_w3_mastered', JSON.stringify(masteredMap));
+      updateProgressUI();
+    }
+
+    function resetExamProgress() {
+      if (confirm('Reset all exam progress checkboxes?')) {
+        masteredMap = {};
+        localStorage.removeItem('engg2112_w3_mastered');
+        updateProgressUI();
+      }
+    }
+
+    // Initialize state on load
+    window.addEventListener('DOMContentLoaded', () => {
+      calculateMetrics();
+      updateProgressUI();
+    });
+  </script>
+</body>
+</html>

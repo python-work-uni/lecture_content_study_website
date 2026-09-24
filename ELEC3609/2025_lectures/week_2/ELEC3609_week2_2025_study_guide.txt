@@ -1,0 +1,606 @@
+================================================
+ELEC3609 Week 2 – Study Guide
+Web Fundamentals & Project Management · 2025 Session
+================================================
+ 
+OVERVIEW
+--------
+This lecture has two halves. The first half follows a single web request end to end: what the browser and operating system do when you type a URL, how DNS and TCP work, how HTTP requests and responses are structured, and how servers, databases and browsers turn that into a rendered page. The second half covers the project-management side of building software: the tools teams use, how to turn problems into use cases, how to model systems with diagrams, how to write a Software Requirements Specification, and how to manage tasks. Together these give you the technical and process foundations for the group project.
+------------------------------------------------
+STATS:
+------------------------------------------------
+Lectures|1
+Web Request Phases|Client, Server, Client
+Transport Protocols|TCP, UDP
+Architecture Layers|Web, App, Database
+Database Models|SQL, NoSQL
+Document Types|SRS, use cases
+------------------------------------------------
+SECTION 1: The End-to-End Web Request
+------------------------------------------------
+When a user types a URL into a browser and presses Enter, a precise sequence of steps runs across the client, the network and the server.
+
+**Client-side steps (browser and OS):**
+1. **Browser: parse URL** — break the URL into its parts.
+2. **Browser: check cache** — look for a locally stored copy of the resource.
+3. **OS: identify network** — read the local network configuration.
+4. **OS: resolve using DNS** — turn the domain name into an IP address.
+5. **OS: establish a TCP connection** to the web server.
+6. **Browser: submit an HTTP request** to the web server.
+
+**Server-side steps:**
+1. **Load balancer (LB)** establishes the TCP connection and receives the HTTP request.
+2. **LB software parses the HTTP header**, then routes and forwards the request to an application (app) server.
+3. **App server executes back-end website logic**, probably connecting to one or more databases.
+4. **App server renders a response** and returns it via the TCP connection.
+
+**Back on the client:**
+1. **Browser: parse the response.**
+2. **Browser: fetch additional resources** — assets such as CSS, JS and images, establish web socket connections, and load browser plugins.
+3. **Browser: render the page.**
+
+**Full request flow**: `Parse URL → Check cache → Identify network → DNS resolve → TCP connect → HTTP request → LB → App server → Database → HTTP response → Fetch assets → Render page`
+
+💡 **Why It Matters:** This is the complete lifecycle every web application lives inside. If a page is slow or broken, it is failing at one of these named steps — knowing them turns a vague problem into a specific one to fix.
+------------------------------------------------
+SECTION 2: Parsing the URL & Browser Cache
+------------------------------------------------
+### URL Structure
+The general form is `protocol://domain.tld/path/file.ext`. Take the lecture example:
+
+`https://cusp.sydney.edu.au/students/view-unit-page/uos_id/101257`
+
+| Component | Example | Meaning |
+| --- | --- | --- |
+| Protocol | `https` | HyperText Transfer Protocol (Secure) |
+| Subdomain | `cusp` | A division within the main domain |
+| Domain | `sydney` | The organisation's domain name |
+| gTLD | `edu` | Generic top-level domain (education) |
+| ccTLD | `au` | Country-code top-level domain (Australia) |
+| Path | `/students/view-unit-page/uos_id/101257` | The resource path on the server |
+
+A second example is `https://www.sydney.edu.au/units/ELEC3609`.
+
+### Browser Cache
+There are many caching layers on the internet, and one of them is the **browser cache**. It stores copies of assets so they do not have to be downloaded again:
+- JavaScript files
+- CSS files
+- Images
+- Fonts
+
+🧠 **Memory Hook:** Think of the URL as an address with a **s-t-d path**: **scheme, top-level domain, domain, path** — read from the outside in.
+------------------------------------------------
+SECTION 3: Network Layers: DHCP, DNS, TCP/UDP
+------------------------------------------------
+### Identifying the Network with DHCP
+When you connect to a network, your computer is usually configured by the **Dynamic Host Configuration Protocol (DHCP)**, which provides:
+- **IP Address** — identifies your computer on the local network.
+- **Subnet Mask** — defines what "local" means relative to your IP address.
+- **Default Gateway** — a host that can route packets to non-local IP addresses.
+- **Nameservers** — a host used to resolve domain names, i.e. a DNS server.
+
+Checking the network configuration is the **first thing to check if you cannot reach any websites**.
+
+### Resolving a Domain Name with DNS
+We cannot establish a connection using the name `cusp.sydney.edu.au` — we need an IP address. The operating system resolves the name for us, roughly as follows:
+1. Check OS local DNS entries (e.g. `/etc/hosts`).
+2. Identify nameservers (the DNS server) — usually provided by DHCP and specified in `/etc/resolv.conf`.
+3. Submit a **UDP request to a nameserver on port 53**.
+4. Nameservers keep recursively asking their parent nameserver until one knows the IP.
+5. The IP is returned according to a matching **A-record** for the domain.
+
+💡 **Why It Matters:** DNS is the first thing to check when nothing loads. If a single site fails, suspect that site; if every site fails, suspect DNS or the network configuration.
+------------------------------------------------
+SECTION 4: OSI Model & TCP vs UDP
+------------------------------------------------
+### The OSI Model
+The **OSI model** is a way to conceptualise network systems, where each layer is an abstraction from the layer below it. Key reference points from the lecture:
+- **Layer 1** — physical media: copper line, coax, fibre.
+- **Layer 2** — data link: IEEE 802.11a/b/g/n (Wi-Fi).
+- **Layer 4** — transport: TCP and UDP.
+- **Layer 7** — application: HTTPS.
+
+### TCP vs UDP
+Both TCP and UDP live on **layer 4** of the OSI model, but they behave very differently.
+
+| Feature | TCP | UDP |
+| --- | --- | --- |
+| Full name | Transmission Control Protocol | User Datagram Protocol |
+| Data unit | Segments | Datagrams |
+| Delivery | Guarantees in-order delivery to the layers above | "Best effort" — no delivery guarantee |
+| Handshake | Yes | No handshake enforced |
+| Acknowledgements | Yes | None — packets are not acknowledged or re-transmitted unless the application does it |
+| Example ports | SSH on TCP/22; HTTP on TCP/80; HTTPS on TCP/443 | DNS on UDP/53 |
+| Attack pattern | TCP flooding | (UDP is connectionless and easy to spoof) |
+
+**TCP** is responsible for the delivery of packets (not addressing or segregation, which belong to lower layers). TCP segments are assigned to particular **ports**, which define which application they are intended for. Standard defaults are HTTP on port 80 and HTTPS on port 443; web servers can run on non-standard ports, but these are the conventions.
+
+**UDP** is connectionless and best-effort. It also operates on ports, but a TCP port and a UDP port are considered different. **DNS operates on UDP port 53 and does not use TCP.**
+
+⚠️ **Common Trap:** A "port number" is not unique on its own — TCP/53 and UDP/53 are separate ports for separate protocols. DNS specifically uses the UDP one.
+
+💡 **Why It Matters:** DNS is fast and connectionless because speed matters more than perfect delivery for a tiny lookup; HTTP uses TCP because a web page must arrive complete and in order.
+------------------------------------------------
+SECTION 5: HTTP Requests & Methods
+------------------------------------------------
+An HTTP request or response consists of two sections:
+- **Header** — contains metadata such as cookie and connection information.
+- **Body** — contains the data to be sent with the transmission (optional).
+
+There are several types of web request:
+
+| Method | Meaning |
+| --- | --- |
+| **GET** | A simple request, header only — asks for a resource. |
+| **POST** | A request containing data in the body, e.g. form data or a file upload. |
+| **HEAD** | The same as GET, except the server omits the body in the response (sends only the header). |
+| **PUT** | Replace a target resource on the server. |
+| **DELETE** | Delete a target resource on the server. |
+| **OPTIONS** | Ask the server which request types are allowed against a particular resource. |
+
+Once we have an open TCP connection to the web server, we just need to send the HTTP request through that connection.
+
+🧠 **Memory Hook:** **"GET Head, POST Body"** — GET and HEAD send no request body, while POST carries data; PUT and DELETE change the resource, and OPTIONS asks what is allowed.
+------------------------------------------------
+SECTION 6: Server Architecture & Edge Services
+------------------------------------------------
+### Typical Three-Layer Architecture
+Using AWS IaaS services as the example, a typical architecture has three layers:
+- **Elastic Load Balancing (ELB)**
+- **Elastic Cloud Compute (EC2)**
+- **Relational Database Services (RDS)**
+
+The whole path uses **end-to-end encryption in transit**.
+
+**Load balancing** does several jobs:
+- Route traffic based on **performance and health status**.
+- Route traffic based on **contents**.
+- **SSL offloading** for HTTPS.
+- **Port forwarding** (HTTP to HTTPS).
+
+The layers are: **Web Server → App Server → RDS**, with **Master/Slave** database configuration for **high availability (HA)**.
+
+### Internet-Facing Edge Services
+An internet-facing web server can directly receive HTTP requests from clients, but the first recipient of a request is usually **not** the service that produces the response. Instead it is often:
+- A **load balancer (LB)**, which routes requests to appropriate servers for processing. Load balancers let a **pool** of servers handle incoming requests by forwarding each request to an available resource.
+- A **DDoS mitigation service** (e.g. a web application firewall, WAF) which often serves as the first layer on large websites. Its purpose is to ensure incoming requests are not part of a cyber attack: legitimate packets are forwarded (often to the regular LB), and attack packets are dropped. An example is **CloudFlare**.
+- A **Content Delivery Network (CDN)**.
+
+**Secured HTTP is HTTPS, achieved using TLS protocols — SSL is obsolete.**
+
+💡 **Why It Matters:** Offloading SSL/TLS at the load balancer saves backend CPU, and filtering attacks at the edge means your servers only process legitimate traffic.
+------------------------------------------------
+SECTION 7: Servers, Frameworks & Stacks
+------------------------------------------------
+### Application Servers
+App servers do the actual processing of HTTP requests. They contain:
+- Back-end website code
+- Business logic
+- Database interface methods
+- Caching layers
+
+Typical forms of web servers:
+- **Virtual machines (IaaS)** — e.g. EC2, GCE.
+- **Containers** — e.g. Docker.
+- **Serverless** — e.g. Lambda, Google Cloud Function.
+
+This is where the majority of the work lies in a typical web architecture.
+
+### App Server Programming Models
+App servers can be written in many languages. Because there are lots of standard web-server functions, developers choose to work within a **web framework** rather than re-inventing the wheel. Examples:
+- **Python** (used by Instagram) — Flask, Django.
+- **PHP** (used by Facebook) — Codeigniter, CakePHP.
+- **Ruby** (used by GitHub) — Ruby on Rails (RoR).
+- **JavaScript** (used by Groupon) — Express.js (on Node.js).
+
+### Web Server Software
+| Web server | Description |
+| --- | --- |
+| **Apache** | Pretty simple, good for smaller websites. Typically spawns a whole new process to handle each request, which has a lot of overhead. |
+| **Nginx** | Technically a reverse proxy, but one of the most common web servers on the internet. Has a series of worker processes that handle incoming requests, making it far more scalable. |
+| **IIS** | Internet Information Services is Microsoft's web server. It has a long history of security vulnerabilities and should be avoided if possible. |
+
+### Server Operating Systems
+- **Linux or Unix-like OSes** make up over 60% of all server OSes.
+- **Windows Server** makes up less than 40%.
+- All of the top 100 supercomputers use Linux or Unix.
+
+### Common Stacks
+- **LAMP** — Linux, Apache, MySQL, PHP.
+- **MEAN** — MongoDB, Express.js, Angular.js, Node.js.
+- **LYME** — Linux, Yaws, Mnesia or CouchDB, Erlang.
+
+🧠 **Memory Hook:** **LAMP** and **MEAN** are the two stacks to remember: LAMP is the classic Linux/PHP stack; MEAN is the all-JavaScript stack.
+------------------------------------------------
+SECTION 8: Databases: SQL vs NoSQL
+------------------------------------------------
+App servers typically read information from databases. There are many types and flavours, split into two main types:
+
+**SQL — relational databases** maintain and enforce relationships between data:
+- MySQL
+- PostgreSQL
+- SQLite
+- Microsoft SQL Server
+
+**NoSQL — non-relational databases** store data more like loose pages, often with no schemas:
+- MongoDB
+- Redis
+- DynamoDB, Cloud Data Store
+
+Databases can reside on the same host as the app server, or separately (separately is recommended).
+
+| | SQL (Relational) | NoSQL (Non-relational) |
+| --- | --- | --- |
+| Structure | Tables with enforced relationships | Loose, document-like data |
+| Schema | Enforced | Flexible or none |
+| Examples | MySQL, PostgreSQL, SQLite, SQL Server | MongoDB, Redis, DynamoDB |
+
+💡 **Why It Matters:** The choice changes how you design your data model, how you scale, and how strictly your data is guaranteed consistent. Choosing early and deliberately avoids painful migrations later.
+------------------------------------------------
+SECTION 9: Master/Slave Replication & Slave Drift
+------------------------------------------------
+When handling lots of web requests we must read and write to the database frequently. To spread the load, read and write operations are separated across slave and master databases respectively.
+
+- **Master/Primary** — accepts both read and write operations. Because it is difficult to have multiple write locations, there is usually only **one** master database.
+- **Slaves/Replicas** — any updates to the master are quickly replicated to all slaves. Slaves can be used for **read operations only**. Since data is not modified on slaves, there can be **many** replicated slaves, improving the parallelisability of database reads.
+
+### Slave Drift
+Changes applied to the master are also replicated to slaves, but **this does not happen instantaneously**. There is a small but significant time delay between a write to the master and the propagation of the change to all slaves. This is called **slave drift**, or **replication delay**, and it must be managed appropriately by your application.
+
+Reads that lead to important decisions, such as **payments**, should usually be made against the **master** to prevent race conditions or side-effects from reading potentially stale data.
+
+There are replication configurations that avoid this problem, but they come with other trade-offs such as delayed writes and/or reduced fault tolerance.
+
+⚠️ **Common Trap:** Reading a value from a slave immediately after writing it to the master can return the old value. For anything critical — payment confirmation, stock levels, account permissions — read from the master.
+
+💡 **Why It Matters:** Master/slave replication is how real systems scale reads cheaply. Understanding slave drift explains a whole class of bugs that only appear under load.
+------------------------------------------------
+SECTION 10: Responses, Status Codes & Rendering
+------------------------------------------------
+### Generating and Returning a Response
+Once the app server has performed all the business logic to decide how to respond, it must generate the response. Typically this means **inserting data into a template**, which forms the HTTP response. In the application code, variables are inserted between `{{` and `}}`, and code can be specified between `{%` and `%}`.
+
+Like a request, an HTTP response has two sections:
+- **Header** — metadata such as the HTTP status code, content type and length.
+- **Body** — typically the HTML, or the contents of a requested resource (optional).
+
+### HTTP Status Codes
+The response can specify an HTTP status code indicating its status.
+
+| Code category | Definition | Example |
+| --- | --- | --- |
+| **1xx** | Informational | 100: Continue; 101: Switching Protocols |
+| **2xx** | Success | 200: OK — the standard response |
+| **3xx** | Redirection | 301: Moved Permanently; 302: Found/Moved Temporarily (similar to 303 and 307); 304: Not Modified |
+| **4xx** | Client error | 404: Not Found |
+| **5xx** | Server error | 502: Bad Gateway |
+
+**Client rendering** is driven by these codes. A **302** (Found, previously "Moved Temporarily") causes the browser to immediately follow the URL specified in the `Location` field of the response header. A **200 (OK)** response is usually accompanied by a resource in the response body, which the browser renders.
+
+### Parsing HTML into the DOM
+If an HTTP response contains HTML, the browser parses it to build the **Document Object Model (DOM)** — the browser's internal representation of the web page. The relationships between HTML elements (such as `<div>` or `<img>`) are defined in the DOM and can be manipulated through it. It is common for JavaScript libraries such as **jQuery** to manipulate the DOM to modify the layout of web pages. Browser plugins often interact with browsers at this level.
+
+### DOM Resources
+HTML specifies how the page is structured, but other resources define how it behaves:
+- **CSS (Cascading Style Sheets)** specify positional and appearance attributes of DOM elements. CSS can be inside HTML `<style>` tags, or in external files included with `<link>` tags in the `<head>` section, e.g. `<link rel="stylesheet" href="/styles/cusp_style.css" type="text/css" />`.
+- **JavaScript (JS)** can perform arbitrary computation in the browser, often including live manipulation of DOM elements. JS can be inside HTML `<script>` tags, or included from an external file using the `src` attribute, e.g. `<script type="text/javascript" src="/scripts/util/Util.js"> </script>`.
+
+The browser must perform many subsequent HTTP (or other) requests to collect these additional resources. They may be on the same server as the web page or on different servers.
+
+### Browser Plugins
+Plugins can interfere with and/or modify the response. For example, **AdBlock** prevents ads from showing.
+
+### Browser Rendering Engines
+The **rendering engine** (or web browser engine) actually renders the page to the graphical content you see. It is responsible for the look and feel of how a browser shows pages — for example, deciding how check-boxes on forms are displayed. Examples:
+- **Blink** — Google Chrome.
+- **EdgeHTML** — Microsoft Edge.
+- **WebKit** — Apple Safari.
+- **Gecko** — Mozilla Firefox.
+
+🧠 **Memory Hook:** **"Chrome Blinks, Edge has HTML, Safari uses WebKit, Firefox runs Gecko."**
+------------------------------------------------
+SECTION 11: Project & Task Management Tools
+------------------------------------------------
+Project management is about requirements analysis and design. The lecture's overview lists the topics: introduction, use cases, sequence diagrams, state and flow diagrams, wireframes, documentation, and task management.
+
+### Written Documentation Tools
+It is important to use tools that enable collaboration and produce professional-looking documents.
+- **Google Docs** — allows easy collaboration; supports versioning.
+- **LaTeX** — looks professional (with the right template); easy to use with version-control systems such as git; great for formatting and consistency.
+- **Microsoft Word** — feature rich, but difficult to manage version control and difficult to collaborate.
+
+### Graphical Diagramming Tools
+You should be able to easily make sensible and accurate diagrams.
+- **LucidChart** — multiple editors; can be integrated with Google Docs.
+- **Adobe Illustrator** — super flexible, but not as easy for a beginner.
+- **Balsamiq** — wireframing only.
+- **Diagrams.net** (previously Draw.io) — free, SaaS offering.
+- **Microsoft Visio**.
+
+### Management Tools
+Tools for managing workflow and development processes:
+- **GitHub**
+- **Jira** — integrated well with software development life cycles.
+- **Phabricator**
+- **Asana** — light-weight web-based tool.
+- **Microsoft Project** — traditionally used by many big projects and organisations.
+
+### Task Management Software
+Building a website is hard and involves lots of tasks. How do we make sure everyone knows what they are doing and we are not stepping on each other's toes? More software!
+
+- **GitHub** — the primary tool for this course. Features: the most popular source control (software configuration management) tool; integrated task management (tickets/issues/defects); code review and scanning; security and compliance; platform deployment.
+- **Phabricator** — manages the majority of the engineering workflow. Main features: **Maniphest** (ticketing and task management), **Diffusion** (repository hosting), **Differential** (reviewing code).
+- **JIRA** — bug/issue tracking and tasks; service tickets and timesheets; extendible through a marketplace/ecosystem.
+- **Asana** — tasks are visualised and categorised as tiles. Similar tool: **Trello**.
+- **Microsoft Project** — Gantt charts; integration with Microsoft Office. Similar tool: **Smartsheet**.
+
+💡 **Why It Matters:** The tool you choose shapes your process. GitHub Issues integrates directly with the code you are already writing, which is why it is the course standard.
+------------------------------------------------
+SECTION 12: Requirements Analysis & Use Cases
+------------------------------------------------
+Requirements analysis turns a vague idea into testable specifications through two steps.
+
+### Step One: Identify Problems
+Ask what core issues you are trying to solve:
+- Identify reasons why someone would want to use your website/solution.
+- What problem does your website solve for people?
+- Create a series of **problem statements**, for example:
+  - "Buyers have no way of expressing how much they want to pay for an item."
+  - "Sellers have difficulty determining the price to sell at."
+  - "Non-technical people have no way of getting a website built."
+
+### Step Two: Determine Use Cases
+Convert your problem statements into use cases. Use cases are made up of **actions** performed by **actors**.
+- **Action** — a simple, distinct, and easily defined action that can be performed by an actor.
+- **Actor** — a role within the system, **not an individual**.
+
+The process is:
+1. Identify the flow of events.
+2. Extract distinct actions.
+3. Group associated actions into a high-level use case.
+4. Expand use cases into extensions.
+
+A **UML Use Case Diagram** is a common way to show this — for example, the use case model of a restaurant business. UML stands for **Unified Modelling Language**.
+
+### Use Case Documentation — Flow of Events
+Create a big table that lists the use cases, and describe each one using these fields:
+- **Name** — give the use case a short name.
+- **Goal** — the main goal the use case is trying to achieve.
+- **Actors** — the actors which initiate and/or are involved in the use case.
+- **Preconditions** — a list of conditions that must be met before the use case can start.
+- **Main flow** — a full description of the use case.
+- **Subflows** — a list of actions or use cases the use case depends on.
+- **Alternative Flows** — any alternative action flows, e.g. ones that come from error scenarios.
+- **Priority** — an indication of how important the use case is to the functioning of the system, or the MVP.
+
+A detailed example (the Monopoly requirements specification, pages 11–19) is available in Canvas as `UseCaseRequirements.pdf`.
+
+🧠 **Memory Hook:** **"N-G-A-P-M-S-A-P"** = Name, Goal, Actors, Preconditions, Main flow, Subflows, Alternative flows, Priority.
+------------------------------------------------
+SECTION 13: Modelling Diagrams & Wireframes
+------------------------------------------------
+### Sequence Diagrams
+**Sequence diagrams describe how objects interact with each other and in what order.** They are very useful for communicating how several systems interact, or for providing detail about how various actors interact with system components in a multi-step process. The lecture's example is a sequence diagram showing a computer asking a server for emails.
+
+### State Diagrams
+**State diagrams** (also called state machine diagrams) describe the various **states** of system components. They are essential for communicating how abstract concepts such as tickets or user accounts progress through the system. The states themselves are defined, as are the **state transitions**, which constrain how objects are allowed to transition between states.
+
+### Wireframes
+Wireframing allows designers to gain a visual "feel" for the site without focusing on graphical detail. The idea is to create a **"cartoon" version of the website** that enables a preliminary website experience. Wireframes are usually just a series of images, but can sometimes include clicking and linkage between the images in the form of a **storyboard**. The lecture shows a profile-page wireframe as an example.
+
+| Diagram | Question it answers |
+| --- | --- |
+| **Sequence diagram** | How do objects interact, and in what order? |
+| **State diagram** | What states can a component be in, and how may it move between them? |
+| **Wireframe** | What does the page roughly look like and flow like? |
+
+💡 **Why It Matters:** Diagrams catch design mistakes before any code is written. They are also the shared language between technical and non-technical stakeholders.
+------------------------------------------------
+SECTION 14: The Software Requirements Specification
+------------------------------------------------
+A **Software Requirements Specification (SRS)** details exactly what the system **does and does not do**. In essence, it is a **communication tool** between project stakeholders and software designers. It is a very important document that lets you say the project is "finished", and it **mitigates scope creep**. It forms the primary specification document and should capture all information regarding the project.
+
+**Golden rule for diagrams:** any diagrams should **not** introduce new information that is not contained within the SRS. Diagrams should provide additional context or clarification only.
+
+### SRS Structure
+**1. Introduction** — should encapsulate enough information for a business executive to understand what the project is about, including all important considerations, without providing too much depth.
+- Purpose
+- Definitions
+- System Overview
+- References
+
+**2. Overall Description** — discusses the project at a high level but still examines details such as how it is used, how it works, the scope of the system, dependencies and requirements, and constraints.
+- **Product Perspective:** system interfaces, user interfaces, hardware/software/communication interfaces, memory constraints
+- **Design Constraints:** operations, site adaptation requirements
+- **Product functionality**
+- **User characteristics**
+- **Constraints, assumptions and dependencies**
+
+**3. Specific Requirements** — gets down to the nitty-gritty with highly granular requirements, so it is easy to identify whether a system does or does not satisfy them.
+- External interface requirements
+- Functional requirements
+- Performance requirements
+- Logical database requirements
+- **Software system attributes:** reliability, availability, security, maintainability, portability
+
+✅ **Exam Tip:** Remember the SRS's two headline purposes — it defines what the system does and does not do, and it prevents scope creep by giving a clear definition of "finished".
+================================================
+KEY TAKEAWAYS
+================================================
+1. **The web request is a fixed sequence** — parse URL, check cache, identify network, resolve DNS, open TCP, send HTTP; the server routes, processes and responds; the client then parses, fetches assets and renders.
+2. **DHCP gives four things** — IP address, subnet mask, default gateway and nameservers. It is the first thing to check when nothing loads.
+3. **DNS is recursive and runs on UDP port 53**, returning the IP from a matching A-record; nameservers are usually supplied by DHCP and listed in `/etc/resolv.conf`.
+4. **TCP guarantees in-order delivery and uses a handshake** (ports 80/443 for HTTP/HTTPS); UDP is best-effort with no handshake (port 53 for DNS). TCP and UDP ports are separate.
+5. **HTTP messages have a header (metadata) and an optional body**; GET and HEAD are header-only, POST carries data, PUT replaces, DELETE removes, OPTIONS asks what is allowed.
+6. **Three-layer architecture** is Web Server → App Server → Database, with load balancing for health/performance/content routing, SSL offloading and HTTP-to-HTTPS port forwarding.
+7. **Edge services protect and speed up** — WAF/DDoS mitigation (e.g. CloudFlare) drops attack packets, and CDNs cache content; HTTPS uses TLS (SSL is obsolete).
+8. **App servers hold the business logic** and come as VMs, containers or serverless; developers use frameworks (Django, Flask, Rails, Express) rather than rebuilding standard functions.
+9. **SQL enforces relationships; NoSQL is flexible** — MySQL/PostgreSQL/SQLite/SQL Server versus MongoDB/Redis/DynamoDB. Keep the database separate from the app server.
+10. **Master/slave replication scales reads**, but slave drift means replicas can be briefly stale — critical reads such as payments must go to the master.
+11. **Status codes drive behaviour** — 2xx success, 3xx redirect (302 follows the Location header), 4xx client error, 5xx server error.
+12. **The browser builds a DOM**, fetches CSS/JS/images as extra requests, and renders via an engine (Blink, EdgeHTML, WebKit, Gecko).
+13. **Web servers differ architecturally** — Apache spawns a process per request (overhead); Nginx uses worker processes and scales; IIS is Microsoft's and best avoided.
+14. **Requirements analysis = problems then use cases** — actors are roles, actions are discrete steps, and each use case is documented with name, goal, actors, preconditions, main flow, subflows, alternative flows and priority.
+15. **Diagrams clarify, they do not invent** — sequence diagrams show interaction order, state diagrams show allowed transitions, wireframes show rough layout, and none may add requirements absent from the SRS.
+16. **The SRS defines scope** — introduction, overall description and specific (testable) requirements; it is the contract that says when the project is finished.
+17. **Match the task tool to the workflow** — GitHub (course standard), Phabricator, JIRA, Asana/Trello, Microsoft Project.
+================================================
+TERMS TO KNOW
+================================================
+**DHCP**: Dynamic Host Configuration Protocol; automatically provides IP address, subnet mask, default gateway and nameservers.
+**IP Address**: Identifies a computer on the local network.
+**Subnet Mask**: Defines what "local" means relative to an IP address.
+**Default Gateway**: A host that routes packets to non-local IP addresses.
+**Nameserver**: A DNS server used to resolve domain names.
+**DNS**: Domain Name System; resolves domain names to IP addresses, using UDP port 53.
+**A-record**: The DNS record that returns the IP address matching a domain name.
+**Recursive lookup**: Nameservers repeatedly ask parent nameservers until one knows the IP.
+**OSI Model**: A layered way to conceptualise network systems, each layer abstracting the one below.
+**TCP**: Transmission Control Protocol; layer 4, guarantees in-order delivery, uses a handshake and ports.
+**UDP**: User Datagram Protocol; layer 4, best-effort datagrams, no handshake or retransmission.
+**Segment**: The data unit used by TCP.
+**Datagram**: The data unit used by UDP.
+**Port**: A number identifying which application a segment or datagram is intended for (HTTP 80, HTTPS 443, DNS 53, SSH 22).
+**HTTP**: HyperText Transfer Protocol; the request/response protocol of the web.
+**HTTPS**: Secured HTTP, using TLS protocols (SSL is obsolete).
+**Header**: The metadata section of an HTTP message (cookies, connection info, status code, content type).
+**Body**: The optional data section of an HTTP message (form data, HTML, file upload).
+**GET**: An HTTP request with a header only, used to retrieve a resource.
+**POST**: An HTTP request carrying data in the body, such as form data or a file upload.
+**HEAD**: Like GET, but the server omits the response body.
+**PUT**: Replaces a target resource on the server.
+**DELETE**: Deletes a target resource on the server.
+**OPTIONS**: Asks the server which request types are allowed against a resource.
+**Load balancer**: Routes requests to a pool of servers based on health, performance or content; also handles SSL offloading.
+**SSL offloading**: Decrypting HTTPS at the load balancer so backend servers do less work.
+**Port forwarding**: Redirecting traffic from one port to another, e.g. HTTP to HTTPS.
+**ELB**: Elastic Load Balancing, the AWS load-balancing service.
+**EC2**: Elastic Cloud Compute, AWS virtual-machine (IaaS) service.
+**RDS**: Relational Database Services, AWS's managed relational database service.
+**High availability (HA)**: Designing a system so it keeps working when components fail; master/slave databases support this.
+**WAF**: Web Application Firewall; filters malicious requests, often the first layer on large sites.
+**DDoS**: Distributed Denial of Service; a flood of attack traffic that edge services drop.
+**CDN**: Content Delivery Network; caches content to reduce latency.
+**TLS**: Transport Layer Security; the modern protocol behind HTTPS.
+**Application server**: Executes back-end code, business logic, database interface methods and caching.
+**Serverless**: Running app code without managing servers, e.g. AWS Lambda or Google Cloud Function.
+**Container**: A portable packaged runtime for an application, e.g. Docker.
+**Web framework**: A library of standard web-server functions that developers build within (Django, Flask, Rails, Express).
+**Nginx**: A reverse proxy and highly scalable web server using worker processes.
+**Apache**: A simple web server that spawns a new process per request, with higher overhead.
+**IIS**: Internet Information Services, Microsoft's web server with a history of vulnerabilities.
+**LAMP**: Linux, Apache, MySQL, PHP stack.
+**MEAN**: MongoDB, Express.js, Angular.js, Node.js stack.
+**LYME**: Linux, Yaws, Mnesia or CouchDB, Erlang stack.
+**SQL**: Relational database model that maintains and enforces relationships between data.
+**NoSQL**: Non-relational database model storing loose, often schema-less data.
+**Master/Primary database**: Accepts reads and writes; usually only one exists.
+**Slave/Replica database**: Read-only copy of the master; many can exist to scale reads.
+**Slave drift**: The delay between a write on the master and its propagation to slaves (replication delay).
+**Template**: A file into which data is inserted to generate the HTTP response; variables use `{{ }}` and code uses `{% %}`.
+**Status code**: A number in the response header indicating the outcome (1xx–5xx).
+**DOM**: Document Object Model; the browser's internal tree representation of an HTML page.
+**CSS**: Cascading Style Sheets; specify positional and appearance attributes of DOM elements.
+**JavaScript**: The language used for arbitrary computation and live DOM manipulation in the browser.
+**Rendering engine**: The browser component that turns HTML/CSS/JS into the graphical page.
+**Blink**: Rendering engine used by Google Chrome.
+**EdgeHTML**: Rendering engine used by Microsoft Edge.
+**WebKit**: Rendering engine used by Apple Safari.
+**Gecko**: Rendering engine used by Mozilla Firefox.
+**Use case**: A goal-oriented description of how an actor interacts with a system.
+**Actor**: A role within the system, not an individual person.
+**Action**: A simple, distinct, easily defined step performed by an actor.
+**Precondition**: A condition that must be met before a use case can start.
+**Main flow**: The full, normal description of a use case.
+**Alternative flow**: An alternative action flow, e.g. from an error scenario.
+**Priority**: How important a use case is to the system or MVP.
+**Sequence diagram**: Shows how objects interact and in what order.
+**State diagram**: Shows the states of a component and the allowed transitions between them.
+**Wireframe**: A low-fidelity "cartoon" layout of a website used for early design.
+**Storyboard**: A wireframe sequence with clicking and linkage between images.
+**UML**: Unified Modelling Language, used for diagrams such as use case and state diagrams.
+**SRS**: Software Requirements Specification; states exactly what the system does and does not do.
+**Scope creep**: Uncontrolled growth of project requirements; the SRS mitigates it.
+**GitHub**: The course's source control and task-management tool (issues, code review, deployment).
+**Phabricator**: Engineering workflow tool with Maniphest, Diffusion and Differential.
+**JIRA**: Bug/issue tracking with service tickets, timesheets and a marketplace.
+**Asana**: Light-weight task tool where tasks are visualised as tiles (similar to Trello).
+**Gantt chart**: A timeline chart used for project scheduling, e.g. in Microsoft Project.
+**MVP**: Minimum Viable Product; the smallest useful version of a system.
+================================================
+MNEMONICS & QUICK RECALL
+================================================
+**Client Request Steps**: **P-C-I-D-T-H** = Parse URL, Check cache, Identify network, DNS resolve, TCP connect, HTTP request.
+**DHCP Four Gifts**: **"IP, Mask, Gateway, Nameservers"** = the four things DHCP configures.
+**DNS Resolution**: **"hosts, nameservers, UDP/53, recurse, A-record"** = the five-step lookup.
+**HTTP Methods**: **"GET Head, POST Body"** = GET/HEAD are header-only; POST carries a body.
+**Database Split**: **"Master writes, Slaves read"** = write to the master, read from replicas.
+**Status Code Families**: **"1 Info, 2 OK, 3 Go elsewhere, 4 You broke it, 5 We broke it"** = the five status families.
+**Use Case Fields**: **N-G-A-P-M-S-A-P** = Name, Goal, Actors, Preconditions, Main flow, Subflows, Alternative flows, Priority.
+**Stacks**: **LAMP** = Linux/Apache/MySQL/PHP; **MEAN** = MongoDB/Express/Angular/Node.
+================================================
+WORKED EXAMPLES
+================================================
+### Example 1: Tracing a Single Request
+A user types `https://cusp.sydney.edu.au/students/view-unit-page/uos_id/101257`.
+1. Browser parses the URL: protocol `https`, subdomain `cusp`, domain `sydney`, gTLD `edu`, ccTLD `au`, path `/students/...`.
+2. Browser checks its cache for the page and its assets.
+3. OS reads the DHCP-provided network configuration.
+4. OS resolves the domain by asking a nameserver over UDP port 53, recursing until an A-record returns the IP.
+5. OS opens a TCP connection to the web server (port 443 for HTTPS).
+6. Browser sends the HTTP request; the load balancer receives it, parses the header and forwards it to an app server.
+7. The app server runs business logic, queries the database, and renders a response from a template.
+8. Browser parses the status code, fetches CSS/JS/images, builds the DOM and renders the page.
+
+### Example 2: The Slave-Drift Bug
+An application writes a new order to the **master** database, then immediately redirects the user to an "order confirmation" page that reads from a **slave**.
+1. Write goes to the master.
+2. Replication to the slave takes a short but real delay.
+3. The confirmation page reads the slave before replication arrives.
+4. The order appears missing, so the user may submit it again.
+5. The fix is to route that critical read to the **master**, or to design the flow so it does not depend on an immediately-consistent replica.
+
+### Example 3: Choosing a Status Code
+Match each situation to a status family:
+- The page loads normally and shows content → **200 OK** (2xx).
+- The resource has moved permanently to a new address → **301 Moved Permanently** (3xx).
+- The resource is temporarily elsewhere; the browser should follow the `Location` header → **302 Found** (3xx).
+- The user requests a URL that does not exist → **404 Not Found** (4xx).
+- A backend service returns an invalid response → **502 Bad Gateway** (5xx).
+
+### Example 4: From Problem Statement to Use Case
+Problem statement: "Sellers have difficulty determining the price to sell at."
+- **Actor:** Seller (a role, not a specific person).
+- **Action:** List an item; set a price; edit a price.
+- **Use case:** "Manage listing" — grouped actions achieving the seller's goal.
+- **Precondition:** The seller is logged in.
+- **Main flow:** Seller opens the listing form, enters item details and price, submits.
+- **Alternative flow:** Price is missing or invalid → show an error and re-display the form.
+- **Priority:** High, because listing is core to the MVP.
+
+### Example 5: Why the SRS Prevents Scope Creep
+Mid-project, a stakeholder asks for a chat feature that was never specified.
+- The SRS lists exactly what the system does and does not do, so the chat feature is clearly **out of scope**.
+- Adding it would need a formal change to the specification, making the cost visible.
+- This is why the SRS is described as the tool that lets you declare the project "finished".
+================================================
+EXAM FOCUS
+================================================
+1. List the client-side steps of a web request in order. → Answer: Browser parses the URL; browser checks the cache; OS identifies the network; OS resolves the domain using DNS; OS establishes a TCP connection to the web server; browser submits the HTTP request.
+2. What four pieces of information does DHCP provide? → Answer: IP address, subnet mask, default gateway and nameservers (DNS servers).
+3. Describe the DNS resolution process. → Answer: Check OS local DNS entries such as `/etc/hosts`; identify nameservers (usually from DHCP, listed in `/etc/resolv.conf`); submit a UDP request to a nameserver on port 53; nameservers recursively ask parent nameservers until one knows the IP; the IP is returned from the matching A-record.
+4. Compare TCP and UDP. → Answer: Both are layer-4 protocols. TCP guarantees in-order delivery, uses a handshake, uses segments and ports (HTTP 80, HTTPS 443, SSH 22). UDP is best-effort, sends datagrams, has no handshake and no acknowledgements or retransmission, and is used by DNS on port 53. A TCP port and a UDP port are different.
+5. Explain the difference between a GET and a POST request, and name two other methods. → Answer: GET is header-only and retrieves a resource; POST carries data in the body (form data, file uploads). Other methods include HEAD (GET without a response body), PUT (replace a resource), DELETE (remove a resource) and OPTIONS (ask which methods are allowed).
+6. What is a load balancer, and what functions does it perform? → Answer: It distributes incoming requests across a pool of servers, routing based on performance and health status and on content. It also performs SSL offloading for HTTPS and port forwarding (HTTP to HTTPS).
+7. What is the role of a WAF or DDoS mitigation service? → Answer: It is often the first layer on a large website, checking that incoming requests are not part of a cyber attack. Legitimate packets are forwarded (often to the regular load balancer) and attack packets are dropped. CloudFlare is an example.
+8. Name the three layers of a typical web architecture and give an AWS example of each. → Answer: Web server layer (ELB), application server layer (EC2), and database layer (RDS), with master/slave configuration for high availability.
+9. What do application servers contain, and in what forms can they be deployed? → Answer: They contain back-end website code, business logic, database interface methods and caching layers. They can run as virtual machines (IaaS, e.g. EC2/GCE), containers (Docker) or serverless functions (Lambda, Google Cloud Function).
+10. Compare SQL and NoSQL databases with examples. → Answer: SQL (relational) databases maintain and enforce relationships between data — MySQL, PostgreSQL, SQLite, Microsoft SQL Server. NoSQL (non-relational) databases store data more like loose pages, often with no schema — MongoDB, Redis, DynamoDB, Cloud Data Store.
+11. Explain master/slave replication and slave drift, and how to handle it. → Answer: The master accepts reads and writes and is usually unique; slaves are read-only replicas that scale read load. Because replication is not instantaneous, there is a delay called slave drift (replication delay), so replicas can be briefly stale. Critical reads such as payments must go to the master to avoid race conditions.
+12. What are the five HTTP status-code families, with an example each? → Answer: 1xx informational (100 Continue), 2xx success (200 OK), 3xx redirection (301 Moved Permanently, 302 Found, 304 Not Modified), 4xx client error (404 Not Found), 5xx server error (502 Bad Gateway).
+13. How does the browser turn an HTML response into a rendered page? → Answer: It parses the HTML into the DOM, performs additional requests to fetch resources such as CSS and JavaScript (and images), and the rendering engine renders the page. Libraries such as jQuery can manipulate the DOM.
+14. What is the difference between a sequence diagram and a state diagram? → Answer: A sequence diagram describes how objects interact and in what order; a state diagram describes the states a component can be in and the allowed transitions between them.
+15. What is an SRS, and why is it important? → Answer: A Software Requirements Specification details exactly what the system does and does not do. It is a communication tool between stakeholders and designers, it lets you declare the project finished, and it mitigates scope creep. Diagrams must not introduce information absent from the SRS.
+16. What fields document a use case? → Answer: Name, Goal, Actors, Preconditions, Main flow, Subflows, Alternative flows and Priority.
+17. What is the difference between a sequence diagram and a wireframe? → Answer: A sequence diagram models the order of interactions between objects over time; a wireframe is a low-fidelity "cartoon" layout of the user interface used for early design, sometimes linked into a storyboard.
+18. Name the task-management tools discussed and one key feature of each. → Answer: GitHub (source control with integrated issues and code review, the course standard); Phabricator (Maniphest, Diffusion, Differential); JIRA (bug/issue tracking, service tickets, marketplace); Asana (tile-based tasks, similar to Trello); Microsoft Project (Gantt charts, similar to Smartsheet).

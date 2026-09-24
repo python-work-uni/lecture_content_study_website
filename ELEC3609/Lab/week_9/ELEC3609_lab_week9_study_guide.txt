@@ -1,0 +1,252 @@
+================================================
+ELEC3609 Lab Week 9 – Study Guide
+AWS Cloud & GraphQL · Lab 9
+================================================
+
+OVERVIEW
+--------
+This lab introduces cloud-based application development using AWS and modern API technology. You will survey the AWS services used to deploy secure and scalable web applications, understand why managed databases such as Amazon RDS suit collaborative, production-like development, and learn how GraphQL improves on traditional REST by letting clients ask for exactly the data they need. The lab closes with the trade-offs of GraphQL so you can choose the right API style for a project.
+
+------------------------------------------------
+STATS:
+------------------------------------------------
+Lab|Week 9 — 08 AWS Cloud & GraphQL
+Individual Task|Task 8 – Basic Cloud Deployment
+Core AWS Components|EC2, RDS, VPC, AMI, IAM
+GraphQL History|Facebook 2012, public 2015
+Deployment Stack|EC2 + Nginx + uWSGI
+------------------------------------------------
+
+------------------------------------------------
+SECTION 1: AWS Cloud Architecture
+------------------------------------------------
+AWS provides a flexible and scalable cloud platform with a range of services for building secure, reliable and highly available applications. The key components of AWS cloud architecture fall into five broad groups: **compute, storage, networking, security and management services**.
+
+**All students have already been invited to two AWS Cloud courses** — check your mailbox and accept the invitation.
+
+💡 **Why It Matters:** Almost everything later in the unit runs on this platform. Grouping AWS services by their role (compute, storage, networking, security, management) makes a long service list much easier to remember and reason about.
+
+ℹ️ **Background:** This lab is the bridge from building a Django app locally (Weeks 3–8) to running it on real cloud infrastructure (Week 10 and Assignment 3).
+
+------------------------------------------------
+SECTION 2: Core AWS Components
+------------------------------------------------
+1. **Amazon EC2 (Elastic Compute Cloud)** — scalable virtual servers to run applications. Supports various instance types, Auto Scaling and Load Balancing.
+2. **Amazon RDS (Relational Database Service)** — a managed relational database service supporting MySQL, PostgreSQL, Oracle and others. Offers automated backups, scaling and multi-AZ deployments.
+3. **Amazon VPC (Virtual Private Cloud)** — an isolated network environment for AWS resources, with customizable IP ranges, subnets, route tables and gateways.
+4. **Amazon AMI (Amazon Machine Image)** — pre-configured templates for EC2 instances, including the operating system, software and configurations.
+5. **AWS IAM (Identity and Access Management)** — manages user access and permissions for AWS resources using roles, policies and multifactor authentication.
+
+🧠 **Memory Hook:** The five core services spell a rough pattern: **C-R-V-A-I** — Compute (EC2), Relational (RDS), Virtual network (VPC), AMI (images) and Identity (IAM).
+
+------------------------------------------------
+SECTION 3: AWS Security & Networking
+------------------------------------------------
+1. **Internet Gateway** — enables internet access for VPC resources.
+2. **NAT Gateway** — allows private subnets to access the internet securely.
+3. **IAM Roles** — provide secure access to AWS services for applications **without hard-coded credentials**.
+4. **Parameter Store** — secure storage for configuration data and secrets, with encryption using **AWS KMS**.
+5. **Elastic Load Balancer (ELB)** — distributes incoming traffic for high availability and integrates with **WAF** for security.
+
+💡 **Why It Matters:** These are the shared building blocks of a safe production deployment. Notice the recurring theme: secrets and credentials are never written into source code — they are held in IAM Roles or Parameter Store.
+
+⚠️ **Common Trap:** Hard-coding an AWS access key into `settings.py`. That is exactly what IAM Roles and Parameter Store exist to avoid, and it also leaks secrets into Git history.
+
+------------------------------------------------
+SECTION 4: Additional AWS Services
+------------------------------------------------
+1. **Amazon S3** — scalable object storage with high durability, versioning and lifecycle management.
+2. **AWS CloudFront** — a Content Delivery Network (CDN) for low-latency content delivery.
+3. **AWS CloudWatch** — monitoring and observability service for metrics, logs and alerts.
+
+💡 **Why It Matters:** S3 is the natural home for user-uploaded media and static files, CloudFront speeds up delivery around the world, and CloudWatch is how you would notice a production problem before users report it.
+
+------------------------------------------------
+SECTION 5: What You Will Actually Deploy
+------------------------------------------------
+For the final assignment (deployment) you do **not** need to build a full AWS cloud architecture. Instead you will generally use an **EC2 instance to host both the application and the web server** — that is, **EC2 + Nginx + uWSGI**. You may also consider using **Amazon RDS** and **Amazon S3** as needed.
+
+💡 **Why It Matters:** This scopes the exam and the assignment. You are not expected to wire up the full VPC/ELB/CDN stack; a single EC2 instance running Nginx in front of uWSGI is the baseline, with RDS and S3 as optional additions.
+
+------------------------------------------------
+SECTION 6: Amazon RDS: Managed Database
+------------------------------------------------
+**Amazon Relational Database Service (Amazon RDS)** is an easy-to-manage relational database service optimised for **total cost of ownership**. It supports engines such as **MySQL, PostgreSQL and Oracle**, and offers automated backups, scaling and **multi-AZ** deployments.
+
+For more information and hands-on practice with Amazon RDS, the lab points to:
+- **Module 8 – Databases**, AWS Academy Cloud Foundations
+- **Module 6 – Adding a Database Layer**, AWS Academy Cloud Architecting
+
+ℹ️ **Background:** Since RDS is the "remote database" the lab recommends for team development, the next section explains exactly why a shared cloud database beats everyone running their own local copy.
+
+------------------------------------------------
+SECTION 7: Why Use a Remote Database
+------------------------------------------------
+1. **Centralised and consistent database management** — Using Amazon RDS or any cloud-based database ensures all team members work with a centralised, shared database. This eliminates the need to manually update local databases when changes are made, reducing errors and ensuring consistency across the team.
+2. **Avoiding database files in version control** — Database files like `db.sqlite3` are unsuitable for version control because of their size, frequent changes and potential security risks. Amazon RDS manages the database remotely, keeping the repository clean and focused on code and migrations rather than raw data.
+3. **Remote access and collaboration** — Amazon RDS lets multiple developers access the same database remotely, facilitating collaboration in distributed teams. Changes made by one developer are instantly available to others, eliminating the need to share database dumps or set up local databases repeatedly.
+4. **Simplified database migrations** — With Amazon RDS, migrations are applied to a central instance, giving all developers immediate access to updated schemas. This streamlines the process compared to running scripts on individual local environments, ensuring everyone is on the same page.
+5. **Development environment parity** — Using Amazon RDS in development makes the environment closely mirror production, reducing environment-specific issues during deployment. This consistency helps developers catch potential issues early and smooths production rollouts.
+6. **Backup, recovery and security** — Amazon RDS offers built-in features for backup, recovery, encryption and scaling that are difficult to manage in local environments. This keeps the development database secure and reduces the risk of data loss or unauthorised access.
+
+🧠 **Memory Hook:** Six reasons — **C-V-R-M-P-B** — "Centralised, Version-control-free, Remote, Migrations, Parity, Backup."
+
+⚠️ **Common Trap:** Committing `db.sqlite3` to GitHub. It bloats the repo, conflicts constantly, and can expose real user data. A managed remote database removes the file from the repo entirely.
+
+------------------------------------------------
+SECTION 8: GraphQL: Origins and Purpose
+------------------------------------------------
+**GraphQL is a query language for APIs and a runtime for executing those queries against your data.** It was developed by **Facebook in 2012** and released to the public in **2015**. GraphQL provides a more efficient, powerful and flexible alternative to REST for interacting with APIs.
+
+Many popular public APIs have adopted GraphQL as the default way to access them, including **GitHub, Yelp and Shopify**.
+
+📌 **Info:** The lab includes a ByteByteGo video to give a basic understanding of GraphQL — worth watching before the tutorial.
+
+------------------------------------------------
+SECTION 9: Limitations of REST
+------------------------------------------------
+The lab is careful to say these are the limitations of **poorly designed and managed** REST.
+
+- **Over-fetching and under-fetching** — REST APIs often return more data than needed (over-fetching) or too little data (under-fetching), requiring multiple requests to different endpoints.
+- **Multiple endpoints** — REST typically uses multiple endpoints for different resources (`/users`, `/posts`, `/comments`, etc.). Managing and maintaining these endpoints can be cumbersome as the API evolves or scales.
+- **Lack of flexibility** — REST responses are often fixed by the server, meaning clients have little control over what data is returned. Changing data needs may require additional endpoints or modifications to the API.
+- **Versioning issues** — REST APIs commonly use versioning (e.g. `/v1/users`, `/v2/users`) to manage changes, which can lead to bloated and complex API management.
+
+🧠 **Memory Hook:** Four REST pain points — **O-M-F-V** — "Over/under-fetching, Multiple endpoints, Flexibility, Versioning."
+
+------------------------------------------------
+SECTION 10: How GraphQL Works
+------------------------------------------------
+- **GraphQL schema** — The schema is the core of any GraphQL server. It defines the types, queries and mutations that clients can use to interact with the API.
+- **Defining types** — Types are the building blocks of a schema. They define the shape of the data that can be queried.
+- **Queries** — Used to fetch data from a GraphQL server. They define what data the client can request (the read operations in CRUD).
+- **Mutations** — Used to modify data on the server (create, update and delete operations).
+- **Resolvers** — Functions that provide the logic for fetching or modifying data for each field in a type.
+- **Subscriptions** — Enable real-time capabilities, allowing clients to subscribe to certain events.
+- **Running a server** — Can be done using libraries such as **Apollo Server** or **Graphene (Python)**.
+
+💡 **Why It Matters:** A GraphQL server is described by a schema, and resolvers connect each schema field to real data. That single-endpoint, schema-driven model is what removes REST's fixed-response and versioning problems.
+
+🧠 **Memory Hook:** Building blocks — **S-T-Q-M-R-S** — "Schema, Types, Queries, Mutations, Resolvers, Subscriptions."
+
+------------------------------------------------
+SECTION 11: GraphQL vs REST: Similarities
+------------------------------------------------
+| Aspect | Shared Feature | Notes |
+| --- | --- | --- |
+| Architectural Principles | Stateless, client-server architecture, CRUD operations | Both follow the same high-level principles. |
+| Transport Protocol | Use HTTP as the transport layer | Standard communication method for both. |
+| Data Transfer Formats | JSON (common); REST also supports XML | JSON is the default, but REST allows additional formats. |
+
+💡 **Why It Matters:** GraphQL is not a replacement transport — it still rides on HTTP and still speaks JSON. The difference is *how* clients ask for data, not *how* the bytes travel.
+
+------------------------------------------------
+SECTION 12: Drawbacks of GraphQL
+------------------------------------------------
+| Drawback | Explanation |
+| --- | --- |
+| Learning curve & implementation complexity | Requires schemas, types and resolvers, making setup more complex than REST. |
+| Over-fetching / N+1 problem | Deeply nested queries can cause N+1 issues if not optimised properly. |
+| Performance with large queries | Large, dynamic queries can degrade server performance. |
+| Caching complexity | Lacks standard HTTP caching; requires custom strategies or tools like Apollo. |
+| Security / malicious queries | Flexible queries can be abused (e.g. DoS); requires rate limiting and complexity analysis. |
+| Lack of built-in file upload support | No native file upload support; needs workarounds such as `multipart/form-data` or `graphql-upload`. |
+
+⚠️ **Common Trap:** Assuming GraphQL is always "better." Its flexibility shifts complexity onto the server — you must handle caching, query cost and abuse prevention yourself.
+
+================================================
+KEY TAKEAWAYS
+================================================
+1. **AWS services group into five areas** — compute, storage, networking, security and management.
+2. **Five core components** — EC2 (virtual servers), RDS (managed relational DB), VPC (isolated network), AMI (instance templates) and IAM (access control).
+3. **Never hard-code credentials** — use IAM Roles for service access and Parameter Store (encrypted with KMS) for secrets.
+4. **RDS supports MySQL, PostgreSQL and Oracle** and adds automated backups, scaling and multi-AZ deployments.
+5. **A remote database centralises the team's data**, keeps `db.sqlite3` out of version control, simplifies migrations and matches production.
+6. **GraphQL is a query language for APIs plus a runtime** — created by Facebook in 2012, public in 2015, adopted by GitHub, Yelp and Shopify.
+7. **REST pain points** are over-fetching/under-fetching, multiple endpoints, inflexible fixed responses and versioning bloat.
+8. **A GraphQL schema defines types, queries and mutations**, while resolvers supply the data logic and subscriptions add real-time events.
+9. **GraphQL still uses HTTP and JSON**, like REST — it differs in letting the client specify the data shape.
+10. **GraphQL has real costs** — a learning curve, N+1 risks, caching complexity, query-abuse risk and no native file upload.
+11. **For the final assignment**, a single EC2 instance running Nginx + uWSGI is the baseline; RDS and S3 are optional additions.
+12. **Your individual task is Task 8 – Basic Cloud Deployment** using the AWS Challenge Labs.
+
+================================================
+TERMS TO KNOW
+================================================
+**Amazon EC2**: Elastic Compute Cloud — scalable virtual servers supporting instance types, Auto Scaling and Load Balancing.
+**Amazon RDS**: Relational Database Service — managed relational database supporting MySQL, PostgreSQL, Oracle and others.
+**Amazon VPC**: Virtual Private Cloud — an isolated network environment with customizable IP ranges, subnets, route tables and gateways.
+**Amazon AMI**: Amazon Machine Image — a pre-configured template for an EC2 instance (OS, software, configuration).
+**AWS IAM**: Identity and Access Management — controls user access and permissions via roles, policies and multifactor authentication.
+**Internet Gateway**: Enables internet access for VPC resources.
+**NAT Gateway**: Allows private subnets to reach the internet securely.
+**IAM Role**: Provides secure service access to applications without hard-coded credentials.
+**Parameter Store**: Secure storage for configuration data and secrets, encrypted using AWS KMS.
+**Elastic Load Balancer (ELB)**: Distributes incoming traffic for high availability and integrates with WAF.
+**Amazon S3**: Scalable object storage with high durability, versioning and lifecycle management.
+**AWS CloudFront**: A Content Delivery Network (CDN) for low-latency delivery.
+**AWS CloudWatch**: Monitoring and observability for metrics, logs and alerts.
+**Multi-AZ**: A deployment across multiple Availability Zones for resilience (offered by RDS).
+**GraphQL**: A query language for APIs and a runtime for executing queries against your data.
+**Schema**: The core of a GraphQL server; defines the types, queries and mutations available.
+**Type**: A GraphQL building block that defines the shape of data that can be queried.
+**Query**: A GraphQL read operation specifying what data the client wants.
+**Mutation**: A GraphQL operation that creates, updates or deletes data.
+**Resolver**: A function providing the fetch/modify logic for a field in a type.
+**Subscription**: A GraphQL feature enabling real-time updates from server events.
+**Apollo Server**: A JavaScript library for running a GraphQL server.
+**Graphene**: A Python library for running a GraphQL server.
+**Over-fetching**: A REST response returning more data than the client needs.
+**Under-fetching**: A REST response returning too little data, forcing extra requests.
+**N+1 problem**: A performance issue where nested queries trigger many extra data lookups.
+**Versioning**: REST practice of exposing `/v1`, `/v2` etc. to manage breaking changes.
+**WAF**: Web Application Firewall — filters malicious requests; integrates with ELB.
+**Amazon KMS**: Key Management Service — provides the encryption keys for Parameter Store.
+**Total cost of ownership (TCO)**: The overall cost of running and maintaining a system; RDS is optimised for it.
+
+================================================
+MNEMONICS & QUICK RECALL
+================================================
+**AWS Service Groups**: **C-S-N-S-M** — "Compute, Storage, Networking, Security, Management."
+**Core AWS Components**: **C-R-V-A-I** — "Compute (EC2), Relational (RDS), Virtual network (VPC), AMI, Identity (IAM)."
+**REST Limitations**: **O-M-F-V** — "Over/under-fetching, Multiple endpoints, Flexibility, Versioning."
+**GraphQL Building Blocks**: **S-T-Q-M-R-S** — "Schema, Types, Queries, Mutations, Resolvers, Subscriptions."
+**RDS Reasons**: **C-V-R-M-P-B** — "Centralised, Version-control-free, Remote access, Migrations, Parity, Backup."
+**GraphQL Server Options**: **A-G** — "Apollo Server (JS) or Graphene (Python)."
+**Deployment Baseline**: **E-N-U** — "EC2 + Nginx + uWSGI."
+
+================================================
+WORKED EXAMPLES
+================================================
+### Example 1: Over-fetching explained
+A mobile app wants only a user's display name. A REST endpoint `GET /users/42` returns the full profile — name, email, address, phone, preferences — even though the screen shows only the name. That is **over-fetching**: bandwidth and parsing work are wasted. With GraphQL the client describes the fields it wants, so it can request the name alone.
+
+### Example 2: Under-fetching and multiple endpoints
+A profile screen needs a user's posts and each post's comments. In REST this often means three calls in sequence: `/users/42`, then `/users/42/posts`, then `/posts/{id}/comments`. That is **under-fetching** driving **multiple round trips**. In GraphQL the client sends one query that traverses user → posts → comments, and the server resolves the graph in a single request.
+
+### Example 3: Why a shared RDS beats local SQLite
+Three teammates each run a local SQLite database. A schema change made by one developer is invisible to the others until they manually re-run migrations or swap a `db.sqlite3` file, and that binary file conflicts badly in Git. Moving the database to **Amazon RDS** means migrations are applied to one central instance, every developer sees the new schema immediately, no database dumps are emailed around, and the repository contains only code and migrations.
+
+### Example 4: Choosing the architecture for the final assignment
+A team is tempted to recreate the full AWS diagram — CDN, load balancer, VPC, auto-scaling — because it looks impressive. The lab's guidance is simpler: for the final deployment, host the **application and web server on one EC2 instance** using **Nginx + uWSGI**, and add **Amazon RDS** or **Amazon S3** only if the project genuinely needs a managed database or object storage.
+
+### Example 5: The N+1 trap in a nested GraphQL query
+A client requests a list of posts with each post's author. A naive resolver fetches the list of posts (1 query) and then, for each post, separately fetches its author (N more queries) — the **N+1 problem**. The fix is to batch or optimise the resolver logic. This is why the lab lists N+1 as a GraphQL drawback: the flexibility of nested queries can hide a performance cliff.
+
+================================================
+EXAM FOCUS
+================================================
+1. Name the five broad groups of AWS cloud architecture components. → Answer: Compute, storage, networking, security and management services.
+2. What does Amazon EC2 provide? → Answer: Scalable virtual servers to run applications, with support for instance types, Auto Scaling and Load Balancing.
+3. What engines does Amazon RDS support, and what management features does it add? → Answer: MySQL, PostgreSQL, Oracle and others; it adds automated backups, scaling and multi-AZ deployments.
+4. What is an Amazon AMI? → Answer: A pre-configured template for EC2 instances containing the operating system, software and configurations.
+5. How do IAM Roles improve security? → Answer: They give applications access to AWS services without hard-coding credentials.
+6. What is Parameter Store used for, and how is it protected? → Answer: Secure storage of configuration data and secrets, encrypted using AWS KMS.
+7. What is the recommended deployment stack for the final assignment? → Answer: A single EC2 instance hosting both the application and web server, i.e. EC2 + Nginx + uWSGI, with RDS/S3 optional.
+8. List four limitations of poorly designed REST APIs. → Answer: Over-fetching/under-fetching, multiple endpoints, lack of flexibility, and versioning issues.
+9. What is GraphQL, and where did it come from? → Answer: A query language for APIs and a runtime for executing queries against your data; developed by Facebook in 2012 and released publicly in 2015.
+10. Name the key GraphQL concepts and what each does. → Answer: Schema (defines types/queries/mutations), types (data shape), queries (reads), mutations (create/update/delete), resolvers (field logic) and subscriptions (real-time events).
+11. In what ways are GraphQL and REST similar? → Answer: Both are stateless client-server architectures with CRUD operations, both use HTTP as the transport, and both commonly use JSON (REST also supports XML).
+12. Give three drawbacks of GraphQL. → Answer: Any of: learning curve/complexity, N+1 and over-fetching in deep queries, poor performance with large dynamic queries, caching complexity, malicious-query/DoS risk, and lack of built-in file upload support.
+13. Which popular public APIs have adopted GraphQL? → Answer: GitHub, Yelp and Shopify.
+14. Why is `db.sqlite3` unsuitable for version control? → Answer: Its size, frequent changes and potential security risks make it a poor fit; a remote managed database keeps the repo focused on code and migrations.

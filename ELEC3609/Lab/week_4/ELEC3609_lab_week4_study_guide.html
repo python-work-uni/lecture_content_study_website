@@ -1,0 +1,2960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ELEC3609 Week 4 Study Guide – Django Models, ORM & Admin · Lab 4</title>
+  <meta name="description" content="This lab connects Django to a real database. You learn what an ORM is and why it exists, how to define data models and their relationships in Python, how Django turns those models into database schema">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for crisp mathematical formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+:root {
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Light Theme (Default) */
+      --bg-primary: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-alt: #e2e8f0;
+      
+      --border-color: #e2e8f0;
+      --border-focus: #6366f1;
+      
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-glow: rgba(79, 70, 229, 0.15);
+      
+      --accent-blue: #0284c7;
+      --accent-blue-bg: #e0f2fe;
+      --accent-emerald: #059669;
+      --accent-emerald-bg: #d1fae5;
+      --accent-amber: #d97706;
+      --accent-amber-bg: #fef3c7;
+      --accent-rose: #e11d48;
+      --accent-rose-bg: #ffe4e6;
+      --accent-purple: #7c3aed;
+      --accent-purple-bg: #ede9fe;
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --nav-width: 280px;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0b0f19;
+      --bg-surface: #131b2e;
+      --bg-subtle: #1e293b;
+      --bg-alt: #334155;
+      
+      --border-color: #1e293b;
+      --border-focus: #818cf8;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-light: #64748b;
+      
+      --primary: #6366f1;
+      --primary-hover: #818cf8;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      
+      --accent-blue: #38bdf8;
+      --accent-blue-bg: rgba(56, 189, 248, 0.15);
+      --accent-emerald: #34d399;
+      --accent-emerald-bg: rgba(52, 211, 153, 0.15);
+      --accent-amber: #fbbf24;
+      --accent-amber-bg: rgba(251, 191, 36, 0.15);
+      --accent-rose: #fb7185;
+      --accent-rose-bg: rgba(251, 113, 133, 0.15);
+      --accent-purple: #a78bfa;
+      --accent-purple-bg: rgba(167, 139, 250, 0.15);
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      --card-shadow-hover: 0 10px 20px -3px rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(19, 27, 46, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Reading Progress Bar */
+    #progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981);
+      width: 0%;
+      z-index: 1000;
+      transition: width 0.1s ease-out;
+    }
+
+    /* Top Sticky Header */
+    header.site-header {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: var(--glass-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.6rem;
+      color: var(--text-main);
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .course-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-box input {
+      padding: 0.45rem 0.75rem 0.45rem 2rem;
+      font-size: 0.85rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      width: 180px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      width: 240px;
+      background: var(--bg-surface);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 0.65rem;
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .btn-icon {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-alt);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      max-width: 1520px;
+      margin: 0 auto;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: var(--nav-width);
+      flex-shrink: 0;
+      position: sticky;
+      top: 57px;
+      height: calc(100vh - 57px);
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-primary);
+    }
+
+    .sidebar-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-light);
+      margin-bottom: 0.75rem;
+      padding-left: 0.5rem;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.65rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      line-height: 1.3;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+      background: var(--bg-subtle);
+    }
+
+    .nav-link.active {
+      color: var(--primary);
+      background: var(--primary-light);
+      font-weight: 600;
+    }
+
+    .nav-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    /* Main Content Area */
+    main.main-content {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      max-width: 1020px;
+      min-width: 0;
+    }
+
+    /* Hero Banner */
+    .hero-card {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-main);
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-overview {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      background: var(--bg-surface);
+      padding: 1.25rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      line-height: 1.7;
+    }
+
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .stat-val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Section Styling */
+    section.guide-section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 80px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .section-number {
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+    }
+
+    h2.section-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    h3.subsection-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.75rem 0;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-main);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--card-shadow);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Callout Boxes */
+    .callout {
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      margin: 1.25rem 0;
+      display: flex;
+      gap: 0.9rem;
+      align-items: flex-start;
+      border-left: 4px solid transparent;
+    }
+
+    .callout-icon {
+      font-size: 1.35rem;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .callout-content {
+      flex: 1;
+      font-size: 0.95rem;
+    }
+
+    .callout-content strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.95rem;
+    }
+
+    .callout-why {
+      background: var(--accent-amber-bg);
+      border-left-color: var(--accent-amber);
+      color: var(--text-main);
+    }
+
+    .callout-memory {
+      background: var(--accent-purple-bg);
+      border-left-color: var(--accent-purple);
+      color: var(--text-main);
+    }
+
+    .callout-tip {
+      background: var(--accent-emerald-bg);
+      border-left-color: var(--accent-emerald);
+      color: var(--text-main);
+    }
+
+    .callout-warning {
+      background: var(--accent-rose-bg);
+      border-left-color: var(--accent-rose);
+      color: var(--text-main);
+    }
+
+    .callout-info {
+      background: var(--accent-blue-bg);
+      border-left-color: var(--accent-blue);
+      color: var(--text-main);
+    }
+
+    /* Formula & Math Block */
+    .formula-block {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin: 1.25rem 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .formula-title {
+      position: absolute;
+      top: -10px;
+      left: 14px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .formula-math {
+      font-size: 1.2rem;
+      margin: 0.5rem 0;
+      color: var(--text-main);
+      overflow-x: auto;
+    }
+
+    /* ELEC3609 local: code / plain-text reference blocks render left-aligned in mono */
+    .formula-block pre.formula-math {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.55;
+      text-align: left;
+      white-space: pre;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      margin: 0;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.25rem 0;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      background: var(--bg-surface);
+    }
+
+    table.study-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    table.study-table th {
+      background: var(--bg-subtle);
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border-color);
+      letter-spacing: 0.02em;
+    }
+
+    table.study-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    table.study-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.study-table tr:hover td {
+      background: var(--bg-subtle);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .badge-recall {
+      background: var(--accent-emerald-bg);
+      color: var(--accent-emerald);
+    }
+
+    .badge-precision {
+      background: var(--accent-blue-bg);
+      color: var(--accent-blue);
+    }
+
+    .badge-f1 {
+      background: var(--accent-purple-bg);
+      color: var(--accent-purple);
+    }
+
+    .badge-danger {
+      background: var(--accent-rose-bg);
+      color: var(--accent-rose);
+    }
+
+    /* Pipeline Diagram */
+    .pipeline-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      box-shadow: var(--card-shadow);
+    }
+
+    .pipeline-flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin: 1rem 0;
+    }
+
+    .pipe-step {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .pipe-step .step-num {
+      font-size: 0.7rem;
+      color: var(--primary);
+      font-family: var(--font-mono);
+    }
+
+    .pipe-step:hover, .pipe-step.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .pipe-arrow {
+      color: var(--text-light);
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    /* Interactive Confusion Matrix Calculator Widget */
+    .calculator-card {
+      background: var(--bg-surface);
+      border: 2px solid var(--primary);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin: 2rem 0;
+      box-shadow: 0 10px 25px -5px var(--primary-glow);
+    }
+
+    .calc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .calc-presets {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .cm-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    .cm-table th, .cm-table td {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem;
+    }
+
+    .cm-table th {
+      background: var(--bg-subtle);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .cm-input-cell {
+      background: var(--bg-surface);
+    }
+
+    .cm-input-cell label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+    }
+
+    .cm-input-cell input {
+      width: 100%;
+      max-width: 90px;
+      padding: 0.4rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .cm-input-cell input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    .calc-results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .metric-card {
+      background: var(--bg-subtle);
+      border-radius: 10px;
+      padding: 0.85rem;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .metric-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--primary);
+      margin: 0.2rem 0;
+    }
+
+    .metric-formula {
+      font-size: 0.7rem;
+      color: var(--text-light);
+      font-family: var(--font-mono);
+    }
+
+    /* Key Takeaways list */
+    .takeaways-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .takeaway-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.9rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .takeaway-num {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.85rem;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    /* Terms & Glossary Section */
+    .glossary-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .filter-chip {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-chip:hover, .filter-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .terms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .term-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.1rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .term-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .term-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--primary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .term-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Exam Questions Section */
+    .exam-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .exam-progress {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .exam-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-secondary {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-alt);
+    }
+
+    .quiz-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--card-shadow);
+      transition: border-color 0.2s ease;
+    }
+
+    .quiz-card.mastered {
+      border-left: 4px solid var(--accent-emerald);
+      opacity: 0.9;
+    }
+
+    .quiz-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      cursor: pointer;
+    }
+
+    .quiz-qnum {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+
+    .quiz-question {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      flex: 1;
+      line-height: 1.5;
+    }
+
+    .quiz-status-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .quiz-answer {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+      color: var(--text-main);
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .quiz-answer.show {
+      display: block;
+    }
+
+    .quiz-toggle-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0;
+    }
+
+    .quiz-toggle-btn:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--border-color);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      background: var(--bg-surface);
+      margin-top: 4rem;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      header.site-header, aside.sidebar, #progress-bar, .calculator-card, .btn-icon, .exam-actions, .filter-chip {
+        display: none !important;
+      }
+      .app-container {
+        display: block;
+        max-width: 100%;
+      }
+      main.main-content {
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .card, .hero-card, .takeaway-item, .quiz-card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .quiz-answer {
+        display: block !important;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      aside.sidebar {
+        position: fixed;
+        left: -100%;
+        top: 57px;
+        z-index: 950;
+        background: var(--bg-surface);
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        transition: left 0.3s ease;
+      }
+      aside.sidebar.open {
+        left: 0;
+      }
+      .menu-toggle {
+        display: block;
+      }
+      main.main-content {
+        padding: 1.5rem;
+      }
+      .grid-2, .calc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="progress-bar"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-left">
+      <button class="menu-toggle" id="menu-btn" aria-label="Toggle navigation menu">&#9776;</button>
+      <span class="course-badge">ELEC3609 • Week 4</span>
+      <span class="header-title">Django Models, ORM & Admin · Lab 4</span>
+    </div>
+    <div class="header-controls">
+      <div class="search-box">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" id="site-search" placeholder="Search guide..." aria-label="Search study guide">
+      </div>
+      <button class="btn-icon" id="theme-toggle" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">&#127769;</button>
+      <button class="btn-icon" onclick="window.print()" title="Print Study Guide" aria-label="Print Guide">&#128424;</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">Table of Contents</div>
+      <ul class="nav-list">
+<li><a href="#overview" class="nav-link"><span class="nav-num">00</span> Overview</a></li>
+        <li><a href="#section-1" class="nav-link"><span class="nav-num">01</span> What This Lab Builds</a></li>
+        <li><a href="#section-2" class="nav-link"><span class="nav-num">02</span> What Is an ORM?</a></li>
+        <li><a href="#section-3" class="nav-link"><span class="nav-num">03</span> ORM Strengths &amp; Trade-offs</a></li>
+        <li><a href="#section-4" class="nav-link"><span class="nav-num">04</span> Defining Models in Django</a></li>
+        <li><a href="#section-5" class="nav-link"><span class="nav-num">05</span> Common Model Field Types</a></li>
+        <li><a href="#section-6" class="nav-link"><span class="nav-num">06</span> Relationship Field Types</a></li>
+        <li><a href="#section-7" class="nav-link"><span class="nav-num">07</span> Direct vs String References</a></li>
+        <li><a href="#section-8" class="nav-link"><span class="nav-num">08</span> Circular Dependencies &amp; Deadlocks</a></li>
+        <li><a href="#section-9" class="nav-link"><span class="nav-num">09</span> The TIL Models</a></li>
+        <li><a href="#section-10" class="nav-link"><span class="nav-num">10</span> Activating Your App</a></li>
+        <li><a href="#section-11" class="nav-link"><span class="nav-num">11</span> Making &amp; Viewing Migrations</a></li>
+        <li><a href="#section-12" class="nav-link"><span class="nav-num">12</span> Applying Migrations &amp; Workflow</a></li>
+        <li><a href="#section-13" class="nav-link"><span class="nav-num">13</span> Choosing the Database Engine</a></li>
+        <li><a href="#section-14" class="nav-link"><span class="nav-num">14</span> The Django Admin Interface</a></li>
+        <li><a href="#key-takeaways" class="nav-link"><span class="nav-num">15</span> 14 Key Takeaways</a></li>
+        <li><a href="#terms-to-know" class="nav-link"><span class="nav-num">16</span> Terms to Know (Glossary)</a></li>
+        <li><a href="#mnemonics" class="nav-link"><span class="nav-num">17</span> Mnemonics &amp; Quick Recall</a></li>
+        <li><a href="#worked-examples" class="nav-link"><span class="nav-num">18</span> Worked Scenarios &amp; Calculations</a></li>
+        <li><a href="#exam-focus" class="nav-link"><span class="nav-num">19</span> Potential Exam Focus &amp; Practice</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+<section id="overview" class="hero-card">
+  <div class="hero-tagline">📖 Official Course Notes • Week 4</div>
+  <h1 class="hero-title">Django Models, ORM &amp; Admin · Lab 4</h1>
+  <p class="hero-subtitle">This lab connects Django to a real database. You learn what an ORM is and why it exists, how to define data models and their relationships…</p>
+  <div class='hero-overview'><strong>Lecture Overview:</strong> This lab connects Django to a real database. You learn what an ORM is and why it exists, how to define data models and their relationships in Python, how Django turns those models into database schema through migrations, and how to manage data through the built-in Django admin. You also inspect the SQL Django generates and learn how to keep your models and database in sync. The individual task is Individual Task 4 – Django Relationship Constraint and Design, based on the TIL-Lab04 project.</div>
+  <div class="quick-stats">
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">⚙️</div>
+  <div>
+    <div class="stat-label">Lab</div>
+    <div class="stat-val">Week 4</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-blue-bg); color: var(--accent-blue);">📊</div>
+  <div>
+    <div class="stat-label">Individual Task</div>
+    <div class="stat-val">Django Relationship Constraint &amp; Design</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-emerald-bg); color: var(--accent-emerald);">🎯</div>
+  <div>
+    <div class="stat-label">Lab Resource</div>
+    <div class="stat-val">TIL-Lab04 source code</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-amber-bg); color: var(--accent-amber);">📝</div>
+  <div>
+    <div class="stat-label">Core Topics</div>
+    <div class="stat-val">ORM, Models, Migrations, Admin</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-purple-bg); color: var(--accent-purple);">🧠</div>
+  <div>
+    <div class="stat-label">Default Database</div>
+    <div class="stat-val">SQLite</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="section-1" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">01</span>
+    <h2 class="section-title">What This Lab Builds</h2>
+  </div>
+  <p>This lab teaches you how to define data models using Django's ORM, manage database schema through migrations, and interact with model data using the Django admin interface. It also introduces model relationships and gives guidance on maintaining consistency between your Python models and the underlying database.</p>
+
+<h3 class="subsection-title">Learning Objectives</h3>
+
+<p>After completing this lab you should be able to:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Understand the purpose and benefits of using an ORM.</li><li>Define and manage Django models and their relationships.</li><li>Apply and inspect schema migrations.</li><li>Interpret Django's model-to-SQL translation.</li><li>Use the Django admin interface to manage data.</li></ul>
+
+<p><strong>Lab resource:</strong> TIL-Lab04 (Today I Learned project) source code.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Week 3 stored posts in a Python list that vanished on restart. This lab makes data persistent — the foundation of every real web application.
+  </div>
+</div>
+</section>
+
+<section id="section-2" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">02</span>
+    <h2 class="section-title">What Is an ORM?</h2>
+  </div>
+  <p><strong>ORM (Object-Relational Mapping)</strong> is a programming technique used to convert data between incompatible systems — in particular, between object-oriented programming languages and relational databases. ORMs let developers interact with a database using their preferred programming language, rather than writing raw SQL queries.</p>
+
+<h3 class="subsection-title">Key Features of an ORM</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Mapping objects to database tables</strong> — each class (in Python, Java, C#, etc.) corresponds to a table; each instance represents a row; each class attribute corresponds to a column.</li><li><strong>Abstracts SQL</strong> — ORMs hide SQL syntax and provide methods for common operations (CREATE, READ, UPDATE, DELETE) using object-oriented code.</li><li><strong>Automatic data conversion</strong> — the ORM converts between database types (like VARCHAR, INT) and language types (like strings, integers).</li><li><strong>Database-agnostic code</strong> — code written with an ORM can work with different databases (MySQL, PostgreSQL, SQLite) with minimal changes, increasing flexibility and portability.</li><li><strong>Reduces boilerplate code</strong> — less repetitive database code, faster development, and fewer SQL-related errors.</li></ul>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Background::</strong>
+    There are many ORM libraries — for example Java's <strong>Hibernate</strong> and Python's <strong>Django ORM</strong>.
+  </div>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Because the ORM is database-agnostic, you can develop on SQLite and later move to PostgreSQL/MySQL for deployment without rewriting your queries.
+  </div>
+</div>
+</section>
+
+<section id="section-3" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">03</span>
+    <h2 class="section-title">ORM Strengths &amp; Trade-offs</h2>
+  </div>
+  <h3 class="subsection-title">What an ORM Can Do</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>DRY Principle</strong> — define your data model in one place, making code easier to update, maintain and reuse.</li><li><strong>Encourages MVC architecture</strong> — promotes cleaner, more organised code.</li><li><strong>Avoids poorly formed SQL</strong> — minimises SQL errors by letting developers work in their native language.</li><li><strong>Simplifies security practices</strong> — makes it easy to use prepared statements and transactions.</li><li><strong>Database abstraction</strong> — allows easy changes to the underlying database without rewriting queries.</li><li><strong>Loose coupling</strong> — the data model is loosely bound to the application, allowing flexibility and reuse.</li><li><strong>Supports OOP concepts</strong> — facilitates object-oriented features such as data inheritance.</li></ul>
+
+<h3 class="subsection-title">What an ORM Cannot Do</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Learning curve</strong> — ORMs can be complex and are not lightweight; they take time to learn and set up.</li><li><strong>Performance limitations</strong> — while sufficient for typical queries, ORM-generated queries may not match hand-written SQL in large-scale projects.</li><li><strong>Impedance mismatch</strong> — the way a developer uses objects differs from how data is stored and joined in relational tables.</li></ul>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap — Don't drop down to raw SQL until it's necessary::</strong>
+    Databases are critical to performance, scalability and security, and are complex enough to require expert teams. Use ORMs when possible, and only drop to raw SQL when absolutely needed.
+  </div>
+</div>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap — Avoid writing your own ORM:</strong>
+    for an application unless it is specifically for learning purposes. Existing ORM libraries are well-tested, optimised and feature-rich, and are difficult to replicate from scratch.
+  </div>
+</div>
+</section>
+
+<section id="section-4" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">04</span>
+    <h2 class="section-title">Defining Models in Django</h2>
+  </div>
+  <p>Models in Django are implemented via Python classes, and they form the <strong>canonical representation</strong> of your entities. The models are used to generate the underlying database schema as well as the Python-database interfaces for accessing those tables. For the examples in this lab, all models are placed in a single file, <code>models.py</code>. In assignments you might consider splitting models into separate files when the models file becomes too large or complex (20+).</p>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap — Model inheritance::</strong>
+    Django model inheritance works almost identically to normal Python class inheritance, but be careful. Each model you want in your application must subclass the <strong><code>django.db.models.Model</code></strong> class, and the attributes of your Python class become database fields.
+  </div>
+</div>
+
+<h3 class="subsection-title">A Basic Model</h3>
+
+<p>Each attribute must be mapped to an appropriate Django <strong>Field</strong> class, so Django knows the type of each attribute and can generate an accurate schema. Fields can be customised with default values, unique constraints and validations. For example, a <code>Post</code> model with a title and content:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">from django.db import models
+class Post(models.Model):
+    title = models.CharField(max_length=100)
+    content = models.TextField()</pre></div>
+</div>
+
+<div class="callout callout-tip">
+  <div class="callout-icon">✅</div>
+  <div class="callout-content">
+    <strong>Exam Tip::</strong>
+    Models are the single source of truth for your schema — Django generates the database tables from them, not the other way around.
+  </div>
+</div>
+</section>
+
+<section id="section-5" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">05</span>
+    <h2 class="section-title">Common Model Field Types</h2>
+  </div>
+  <div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Field Type</th><th>Description</th><th>Example Usage</th></tr></thead>
+<tbody><tr><td><strong>CharField</strong></td><td>A string field with a max length.</td><td>Name, title, short text fields</td></tr><tr><td><strong>TextField</strong></td><td>A long text field without a max length (in database).</td><td>Article content, comments</td></tr><tr><td><strong>IntegerField</strong></td><td>An integer field.</td><td>Age, count, score</td></tr><tr><td><strong>FloatField</strong></td><td>A floating-point number field.</td><td>Rating, price</td></tr><tr><td><strong>BooleanField</strong></td><td>A true/false field.</td><td>Is active, is published</td></tr><tr><td><strong>DateField</strong></td><td>A date field (without time).</td><td>Birthday, published date</td></tr><tr><td><strong>DateTimeField</strong></td><td>A date and time field.</td><td>Created timestamp, updated timestamp</td></tr><tr><td><strong>EmailField</strong></td><td>A string field for email addresses (with validation).</td><td>User email</td></tr><tr><td><strong>URLField</strong></td><td>A string field for URLs (with validation).</td><td>Profile URL, external link</td></tr><tr><td><strong>ImageField</strong></td><td>A field for uploading image files.</td><td>User avatar, post image</td></tr><tr><td><strong>FileField</strong></td><td>A field for uploading any file.</td><td>Attachment, document</td></tr><tr><td><strong>ForeignKey</strong></td><td>A many-to-one relationship to another model.</td><td>Author of a post, category of a product</td></tr><tr><td><strong>ManyToManyField</strong></td><td>A many-to-many relationship to another model.</td><td>Tags, group memberships</td></tr><tr><td><strong>OneToOneField</strong></td><td>A one-to-one relationship to another model.</td><td>User profile</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Background::</strong>
+    It is also possible to add your own field types, either by writing a new Field subclass or through Django plugins.
+  </div>
+</div>
+</section>
+
+<section id="section-6" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">06</span>
+    <h2 class="section-title">Relationship Field Types</h2>
+  </div>
+  <p>Relationships between models are represented with specific field types:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Many-to-one:</strong> <code>models.ForeignKey</code> on the many-side model.</li><li><strong>Many-to-many:</strong> <code>models.ManyToManyField</code> on either (or both) models.</li><li><strong>One-to-one:</strong> <code>models.OneToOneField</code> or <code>models.ForeignKey(unique=True)</code>.</li><li><strong>Many-to-optional-one:</strong> <code>models.ForeignKey(null=True, blank=True)</code> on the many-side model.</li></ul>
+
+<h3 class="subsection-title">Many-to-One (ForeignKey)</h3>
+
+<p>An Author can write many Book instances, but each Book has only one Author.</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">from django.db import models
+class Author(models.Model):
+    name = models.CharField(max_length=100)
+    bio = models.TextField()
+    def __str__(self):
+        return self.name
+class Book(models.Model):
+    title = models.CharField(max_length=200)
+    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name=&#x27;books&#x27;)
+    published_date = models.DateField()
+    def __str__(self):
+        return self.title</pre></div>
+</div>
+
+<h3 class="subsection-title">Many-to-Many (ManyToManyField)</h3>
+
+<p>A Student can enroll in many Course instances, and a Course can have many Student instances.</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">from django.db import models
+class Student(models.Model):
+    name = models.CharField(max_length=100)
+    age = models.IntegerField()
+    def __str__(self):
+        return self.name
+class Course(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField()
+    students = models.ManyToManyField(Student, related_name=&#x27;courses&#x27;)
+    def __str__(self):
+        return self.name</pre></div>
+</div>
+
+<h3 class="subsection-title">One-to-One</h3>
+
+<p>A User can have exactly one UserProfile, and a UserProfile can belong to exactly one User.</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">from django.db import models
+from django.contrib.auth.models import User
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio = models.TextField()
+    profile_picture = models.ImageField(upload_to=&#x27;profiles/&#x27;)
+    def __str__(self):
+        return self.user.username</pre></div>
+</div>
+
+<p>The one-to-one alternative uses <code>ForeignKey(..., unique=True)</code>:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class UserProfile(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, unique=True)
+    bio = models.TextField()
+    profile_picture = models.ImageField(upload_to=&#x27;profiles/&#x27;)
+    def __str__(self):
+        return self.user.username</pre></div>
+</div>
+
+<h3 class="subsection-title">Many-to-Optional-One</h3>
+
+<p>An Employee can belong to one Department, but not every Employee has to be assigned to a department.</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">from django.db import models
+class Department(models.Model):
+    name = models.CharField(max_length=100)
+    def __str__(self):
+        return self.name
+class Employee(models.Model):
+    name = models.CharField(max_length=100)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    def __str__(self):
+        return self.name</pre></div>
+</div>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>FK = many-to-one</strong> (on the many side), <strong>M2M = many-to-many</strong>, <strong>OneToOneField = one-to-one</strong>, and adding <code>null=True, blank=True</code> makes a FK optional.
+  </div>
+</div>
+</section>
+
+<section id="section-7" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">07</span>
+    <h2 class="section-title">Direct vs String References</h2>
+  </div>
+  <p>When defining relationships between models, you can refer to a related model in two ways: <strong>directly by class name</strong> or <strong>using a string reference</strong>.</p>
+
+<h3 class="subsection-title">Referring Directly by Class Name</h3>
+
+<p>If the related model is already defined in the file, you can refer to it by its class name. This is straightforward and used when there is no circular dependency, or when the order of model definitions can be managed.</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class Tag(models.Model):
+    name = models.CharField(max_length=100)
+class Post(models.Model):
+    tag = models.ForeignKey(Tag, on_delete=models.CASCADE)  # Direct reference</pre></div>
+</div>
+
+<h3 class="subsection-title">Referring Using a String Reference</h3>
+
+<p>If the related model is not yet defined, refer to it using a <strong>string</strong> containing the model's name. This lets you define models in any order, including cases where two models refer to each other (mutual or circular references).</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class Post(models.Model):
+    tag = models.ForeignKey(&quot;Tag&quot;, on_delete=models.CASCADE)  # String reference
+# Defined later
+class Tag(models.Model):
+    name = models.CharField(max_length=100)</pre></div>
+</div>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Background — Lazy relationships::</strong>
+    String references (also known as <strong>lazy relationships</strong>) also work when a model wants to reference itself.
+  </div>
+</div>
+</section>
+
+<section id="section-8" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">08</span>
+    <h2 class="section-title">Circular Dependencies &amp; Deadlocks</h2>
+  </div>
+  <p>If two models refer to each other, reordering their definitions won't solve the problem because both depend on each other. In such cases you use a <strong>string reference</strong> to break the circular dependency.</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class Author(models.Model):
+    name = models.CharField(max_length=100)
+    favorite_book = models.ForeignKey(&quot;Book&quot;, on_delete=models.CASCADE, null=False)  # String reference
+class Book(models.Model):
+    title = models.CharField(max_length=200)
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)  # null=False by default</pre></div>
+</div>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap — The example is a deadlock::</strong>
+    Avoid circular foreign keys where both sides are required. Making <code>Book.author</code> and <code>Author.favorite_book</code> non-nullable creates a chicken-and-egg situation: you cannot create either row first.
+  </div>
+</div>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap — Avoid circular dependency::</strong>
+    Circular references are not inherently invalid, but they should be used with caution. They can lead to complex migration dependencies and maintenance challenges. This complexity arises because Django models map to a <strong>relational database</strong>, which follows a <strong>static schema</strong> and enforces <strong>referential integrity</strong>. Unlike runtime memory, where objects can point to each other freely, relational databases require all references to be well-defined ahead of time. Circular references are often a sign that your model design could be simplified.
+  </div>
+</div>
+</section>
+
+<section id="section-9" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">09</span>
+    <h2 class="section-title">The TIL Models</h2>
+  </div>
+  <p>In the TIL ERD, a Post can be associated with <strong>zero, one or many</strong> Tags, and a Tag can be applied to <strong>one or many</strong> Posts.</p>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    The ERD has not been normalised to show mapping tables (the many-to-many between Post and Tag). Turning the TIL ERD into models gives the following Python classes in <code>til_app/models.py</code>:
+  </div>
+</div>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math"># til_app/models.py
+from django.db import models
+class Tag(models.Model):
+    name = models.CharField(max_length=10, unique=True)
+    creation_date = models.DateTimeField(auto_now_add=True)
+class Post(models.Model):
+    subject = models.CharField(max_length=160)
+    content = models.CharField(max_length=800)
+    # creator = ???  # Django built-in auth user
+    visibility = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    tags = models.ManyToManyField(Tag, related_name=&#x27;posts&#x27;, blank=True)  # Many-to-many relationship</pre></div>
+</div>
+
+<p>With <code>related_name</code>, you can do things like <code>tag_instance.posts.all()</code>, which returns all posts associated with a Tag instance.</p>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Background::</strong>
+    For now the creator of a Post is left out, because an in-built Django user system (the auth application) is introduced in the next lab.
+  </div>
+</div>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    The <code>ManyToManyField</code> in Django does <strong>not</strong> provide built-in support for enforcing constraints like "at least one." To ensure a Tag is always associated with one or more Posts, you need custom validations and signals (covered in a later lab).
+  </div>
+</div>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Background::</strong>
+    While Django's <code>ManyToManyField</code> automatically creates an intermediary model for managing many-to-many relationships, it may lack flexibility for complex use cases. When you need more control — extra fields on the relationship or custom constraints — it is often better to define an <strong>explicit mapping class</strong> instead of relying on <code>ManyToManyField</code>.
+  </div>
+</div>
+</section>
+
+<section id="section-10" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">10</span>
+    <h2 class="section-title">Activating Your App</h2>
+  </div>
+  <p>Now that models are defined, integrate them into the project. Django maintains a list of installed applications in <code>settings.py</code> under <code>INSTALLED_APPS</code>. By default, Django comes with these applications installed:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">INSTALLED_APPS = [
+    &#x27;django.contrib.admin&#x27;,
+    &#x27;django.contrib.auth&#x27;,
+    &#x27;django.contrib.contenttypes&#x27;,
+    &#x27;django.contrib.sessions&#x27;,
+    &#x27;django.contrib.messages&#x27;,
+    &#x27;django.contrib.staticfiles&#x27;,
+]</pre></div>
+</div>
+
+<p>Before Django can generate the schema for your models, add your TIL application to the list of installed applications. This is done by including the <code>TilAppConfig</code> class defined in <code>apps.py</code>:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">INSTALLED_APPS = [
+    &#x27;til_app.apps.TilAppConfig&#x27;,
+    &#x27;django.contrib.admin&#x27;,
+    &#x27;django.contrib.auth&#x27;,
+    # ...
+]</pre></div>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    If your app is not in <code>INSTALLED_APPS</code>, Django will not see your models, and <code>makemigrations</code> will produce nothing. This is a very common beginner mistake.
+  </div>
+</div>
+</section>
+
+<section id="section-11" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">11</span>
+    <h2 class="section-title">Making &amp; Viewing Migrations</h2>
+  </div>
+  <p>Django can generate and manage the database schema from your Python model files. Once models are defined and the app is installed, you use Django's tools to generate schemas.</p>
+
+<h3 class="subsection-title">Make Migrations</h3>
+
+<p>Create migrations for a specific app:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math"># Generate migrations for a specific app.
+# The application name is optional.
+# With no name, Django checks all installed apps.
+python3 manage.py makemigrations &lt;application&gt;</pre></div>
+</div>
+
+<p>Or check all installed apps for pending changes:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">python3 manage.py makemigrations</pre></div>
+</div>
+
+<p>The second form checks all apps listed in <code>INSTALLED_APPS</code> and creates migrations for all apps that have pending changes. For our example:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">$ python3 manage.py makemigrations til_app
+Migrations for &#x27;til_app&#x27;:
+  til_app/migrations/0001_initial.py
+    - + Create model Tag
+    - + Create model Post</pre></div>
+</div>
+
+<p>This generates a migration file at <code>til_app/migrations/0001_initial.py</code> but does <strong>not</strong> apply it yet.</p>
+
+<h3 class="subsection-title">View Migrations</h3>
+
+<p>To see the corresponding SQL commands that will be run against the database, use <code>sqlmigrate</code>:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">python manage.py sqlmigrate til_app 0001</pre></div>
+</div>
+
+<p>Example output (for SQLite):</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">BEGIN;
+-- Create model Tag --
+CREATE TABLE &quot;til_app_tag&quot; (
+  &quot;id&quot; INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  &quot;name&quot; VARCHAR(10) NOT NULL UNIQUE,
+  &quot;creation_date&quot; DATETIME NOT NULL
+);
+-- Create model Post --
+CREATE TABLE &quot;til_app_post&quot; (
+  &quot;id&quot; INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  &quot;subject&quot; VARCHAR(160) NOT NULL,
+  &quot;content&quot; VARCHAR(800) NOT NULL,
+  &quot;visibility&quot; BOOL NOT NULL,
+  &quot;created_at&quot; DATETIME NOT NULL
+);
+-- Create many-to-many table for Post and Tag relationship --
+CREATE TABLE &quot;til_app_post_tags&quot; (
+  &quot;id&quot; INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+  &quot;post_id&quot; BIGINT NOT NULL REFERENCES &quot;til_app_post&quot; (&quot;id&quot;) DEFERRABLE INITIALLY DEFERRED,
+  &quot;tag_id&quot; BIGINT NOT NULL REFERENCES &quot;til_app_tag&quot; (&quot;id&quot;) DEFERRABLE INITIALLY DEFERRED
+);
+CREATE UNIQUE INDEX &quot;til_app_post_tags_post_id_tag_id_3b9d1d8d_uniq&quot;
+  ON &quot;til_app_post_tags&quot; (&quot;post_id&quot;, &quot;tag_id&quot;);
+CREATE INDEX &quot;til_app_post_tags_post_id_96b51563&quot; ON &quot;til_app_post_tags&quot; (&quot;post_id&quot;);
+CREATE INDEX &quot;til_app_post_tags_tag_id_d18818ba&quot; ON &quot;til_app_post_tags&quot; (&quot;tag_id&quot;);
+COMMIT;</pre></div>
+</div>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Background::</strong>
+    This SQL has been generated for <strong>SQLite</strong>; changing the database engine is discussed later in the lab.
+  </div>
+</div>
+
+<div class="callout callout-tip">
+  <div class="callout-icon">✅</div>
+  <div class="callout-content">
+    <strong>Exam Tip::</strong>
+    Notice that Django automatically creates a <strong>junction table</strong> <code>til_app_post_tags</code> to manage the <code>ManyToManyField</code> relationship — this is the normalised mapping table the Week 1 ERD taught you about.
+  </div>
+</div>
+</section>
+
+<section id="section-12" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">12</span>
+    <h2 class="section-title">Applying Migrations &amp; Workflow</h2>
+  </div>
+  <h3 class="subsection-title">Apply Migrations</h3>
+
+<p>To apply your migration to the database, use the <code>migrate</code> command:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math"># Apply migrations to the database.
+# The application argument is optional.
+# With no argument, all unapplied migrations run.
+python3 manage.py migrate &lt;application|optional&gt;</pre></div>
+</div>
+
+<p>This runs any migrations from all installed applications that have not yet been applied:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">$ python manage.py migrate
+Operations to perform:
+  Apply all migrations: admin, auth, contenttypes, sessions, til_app
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying auth.0001_initial... OK
+  Applying admin.0001_initial... OK
+  ...
+  Applying sessions.0001_initial... OK
+  Applying til_app.0001_initial... OK</pre></div>
+</div>
+
+<h3 class="subsection-title">The Workflow</h3>
+
+<p>Applying models and getting them into the database involves three steps:</p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Modify the model Python files (<code>models.py</code>).</li><li>Run <code>python manage.py makemigrations</code>.</li><li>Run <code>python manage.py migrate</code>.</li></ol>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap — Stay in sync::</strong>
+    Modifying model files without applying migrations, or modifying the database schema without modifying the models, can cause many issues. It is critical to keep these in sync.
+  </div>
+</div>
+
+<div class="callout callout-tip">
+  <div class="callout-icon">✅</div>
+  <div class="callout-content">
+    <strong>Exam Tip::</strong>
+    Examine the generated migration code before you run it, especially when complex changes are involved, and always back up your data before running a migration.
+  </div>
+</div>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>Model → makemigrations → migrate</strong> — "write, prepare, apply".
+  </div>
+</div>
+</section>
+
+<section id="section-13" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">13</span>
+    <h2 class="section-title">Choosing the Database Engine</h2>
+  </div>
+  <p>By default, Django uses <strong>SQLite</strong>, a standalone file-based database, as its database engine. You may also use <strong>MySQL</strong> or <strong>PostgreSQL</strong> for eventual deployment into AWS. The database engine is configured in <code>settings.py</code> under the <code>DATABASES</code> variable:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">DATABASES = {
+    &#x27;default&#x27;: {
+        &#x27;ENGINE&#x27;: &#x27;django.db.backends.sqlite3&#x27;,
+        &#x27;NAME&#x27;: BASE_DIR / &#x27;db.sqlite3&#x27;,
+    }
+}</pre></div>
+</div>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Background::</strong>
+    SQLite is typically sufficient for your group assignment if you are not familiar with database engine mechanisms. Changing the engine is documented in Django's database reference.
+  </div>
+</div>
+</section>
+
+<section id="section-14" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">14</span>
+    <h2 class="section-title">The Django Admin Interface</h2>
+  </div>
+  <p>Django comes with a powerful <strong>admin interface</strong> automatically out of the box at <code>http://127.0.0.1:8000/admin</code>. It lets you add, edit and delete models with very little application code. You need to be running the app with <code>python manage.py runserver</code> to access it.</p>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap — Don't use Django admin for end users::</strong>
+    The admin interface is designed for <strong>site administrators/developers</strong>, not end users. It is a place for site administrators (like an ICT team) to add/edit/delete data and perform site management tasks. Although it is possible to stretch it into something end users could use, you really should not — it is not designed for every site visitor.
+  </div>
+</div>
+
+<h3 class="subsection-title">Create an Admin User</h3>
+
+<p>The admin interface is guarded by username/password credentials. The auth application exposes a command to create <strong>superusers</strong>:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">python manage.py createsuperuser</pre></div>
+</div>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">$ python manage.py createsuperuser
+Username (leave blank to use &#x27;user&#x27;): user
+Email address: user@user.com
+Password:
+Password (again):
+Superuser created successfully.</pre></div>
+</div>
+
+<p>These users have access to the admin interface and provide an easy way to bootstrap new admin users without touching the database directly. You can run <code>createsuperuser</code> multiple times to add more superusers.</p>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    The Django auth application has default rules preventing common and insecure passwords. While you can bypass them, it is not recommended. Once your user is created, log in at <code>http://127.0.0.1:8000/admin</code> (or whatever port you are using).
+  </div>
+</div>
+
+<h3 class="subsection-title">Add Models to Django Admin</h3>
+
+<p>Models are not automatically exposed through the admin interface. Register them from the TIL application by modifying <code>til_app/admin.py</code> and calling <code>admin.site.register(&lt;model&gt;)</code>:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">from django.contrib import admin
+from .models import Post, Tag
+admin.site.register(Post)
+admin.site.register(Tag)</pre></div>
+</div>
+
+<p>Reload the admin interface and you will see the TIL application and its exposed models.</p>
+
+<h3 class="subsection-title">Secure the Django Admin</h3>
+
+<p>Because the admin gives special powers, it is good practice to make it extra secure:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Change the default admin URL</strong> — Django co-leader Jacob Kaplan-Moss (paraphrased) suggests using a different name (or even a different domain) for the admin. It also prevents attackers from profiling your site: they can tell which version of Django you use, sometimes down to the point release, by examining the HTML of the login screen at <code>admin/</code>.</li><li><strong>Limit admin access based on IP</strong> — configure your web server to allow access only from certain IP addresses. An acceptable alternative is to put this logic into <strong>middleware</strong>: easy to implement, no web-server changes, but it introduces slight performance overhead compared with doing it at the web-server level.</li></ul>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Background::</strong>
+    You are not required to secure the Django admin for your assignments.
+  </div>
+</div>
+
+<div class="callout callout-tip">
+  <div class="callout-icon">✅</div>
+  <div class="callout-content">
+    <strong>Exam Tip::</strong>
+    The admin is a development/administration tool. Your users interact with the views and templates you build — not the admin. <strong>Further readings:</strong> Greenfeld &amp; Roy Greenfeld, <em>Two Scoops of Django 3.x: Best Practices for the Django Web Framework</em> — especially Chapter 1 (Coding Style), Chapter 2 (Optimal Django Environment Setup), Chapter 3 (How to Lay Out Django Projects) and Chapter 5 (Settings and Requirements Files).
+  </div>
+</div>
+</section>
+
+<section id="key-takeaways" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">15</span>
+    <h2 class="section-title">14 Key Takeaways</h2>
+  </div>
+  <div class="takeaways-list">
+<div class="takeaway-item">
+  <span class="takeaway-num">1</span>
+  <div><strong><strong>An ORM maps objects to tables</strong></strong> — classes become tables, instances become rows, and attributes become columns.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">2</span>
+  <div><strong><strong>ORMs abstract SQL</strong></strong> — they handle data conversion, are database-agnostic, and reduce boilerplate code.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">3</span>
+  <div><strong><strong>ORM benefits include DRY, MVC, security and loose coupling</strong></strong> — prepared statements and transactions come easily.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">4</span>
+  <div><strong><strong>ORM limits</strong></strong> — a learning curve, possible performance gaps vs hand-written SQL, and the object/relational impedance mismatch.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">5</span>
+  <div><strong><strong>Use ORMs by default; drop to raw SQL only when necessary</strong></strong> — and never write your own ORM for a real application.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">6</span>
+  <div><strong><strong>Django models are Python classes subclassing <code>django.db.models.Model</code></strong></strong> — they are the canonical source of the schema.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">7</span>
+  <div><strong><strong>Every attribute maps to a Field type</strong></strong> — CharField, TextField, IntegerField, FloatField, BooleanField, Date/DateTimeField, EmailField, URLField, ImageField, FileField.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">8</span>
+  <div><strong><strong>Relationships have dedicated fields</strong></strong> — ForeignKey (many-to-one), ManyToManyField (many-to-many), OneToOneField (one-to-one), and ForeignKey(null=True, blank=True) (many-to-optional-one).</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">9</span>
+  <div><strong><strong>Refer to models directly or by string</strong></strong> — string references (lazy relationships) let you define models in any order and break circular dependencies.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">10</span>
+  <div><strong><strong>Avoid required circular FKs</strong></strong> — they create a chicken-and-egg deadlock; circular references add migration complexity and often signal over-complex design.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">11</span>
+  <div><strong><strong>Add your app to INSTALLED_APPS</strong></strong> — otherwise Django cannot see your models.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">12</span>
+  <div><strong><strong>The migration workflow is Model → makemigrations → migrate</strong></strong> — and <code>sqlmigrate</code> shows the SQL that will run.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">13</span>
+  <div><strong><strong>Django auto-creates junction tables for many-to-many</strong></strong> — e.g. <code>til_app_post_tags</code> with a unique index on the pair of foreign keys.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">14</span>
+  <div><strong><strong>The admin is for administrators, not end users</strong></strong> — create a superuser, register models, and consider hardening the admin URL and IP access.</div>
+</div>
+</div>
+</section>
+
+<section id="terms-to-know" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">16</span>
+    <h2 class="section-title">Terms to Know (Glossary)</h2>
+  </div>
+  <div class="glossary-controls">
+  <button class="filter-chip active" onclick="filterTerms('all', this)">All (46)</button>
+  <button class="filter-chip" onclick="filterTerms('models', this)">Core Concepts</button>
+  <button class="filter-chip" onclick="filterTerms('pipeline', this)">Architecture & Data</button>
+</div>
+<div class="terms-grid" id="terms-container">
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ORM</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Object-Relational Mapping — a technique mapping objects to relational database tables.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Django ORM</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Django's built-in ORM for defining models and querying the database in Python.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Hibernate</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A well-known ORM library for Java.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Model</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">A Python class subclassing <code>django.db.models.Model</code> that defines a database table.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Field</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">A Django class describing a model attribute's type and constraints.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>CharField</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A string field with a maximum length.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>TextField</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A long text field without a database max length.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>IntegerField</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">An integer field.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>FloatField</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A floating-point number field.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>BooleanField</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A true/false field.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>DateField</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A date field (no time).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>DateTimeField</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A date-and-time field.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>EmailField</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A string field for email addresses, with validation.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>URLField</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A string field for URLs, with validation.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ImageField</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A field for uploading image files.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>FileField</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A field for uploading any file.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>ForeignKey</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">A many-to-one relationship field placed on the many-side model.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ManyToManyField</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A many-to-many relationship field.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>OneToOneField</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A one-to-one relationship field.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>on_delete</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The behaviour when the referenced row is deleted (e.g. CASCADE, SET_NULL).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>CASCADE</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Deletes dependent rows when the referenced row is deleted.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>SET_NULL</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Sets the foreign key to NULL when the referenced row is deleted (requires null=True).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>related_name</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The name used to access the reverse relation (e.g. <code>tag_instance.posts.all()</code>).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>null=True</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Allows the database column to store NULL.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>blank=True</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Allows the field to be left empty in forms/validation.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>unique=True</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Enforces uniqueness for the column.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Lazy relationship</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">A string reference to a model that is resolved later by Django.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Circular dependency</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Two models referencing each other, requiring string references and careful migration handling.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Referential integrity</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The database rule that all references must point to valid rows.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Impedance mismatch</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">The conceptual gap between object models and relational tables.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>DRY</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Don't Repeat Yourself — define a model once and reuse it.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>MVC</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Model–View–Controller — the architectural pattern ORMs encourage.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Migration</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">A file describing a schema change generated from your models.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>makemigrations</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">The command that generates migration files from model changes.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>migrate</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The command that applies migrations to the database.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>sqlmigrate</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The command that prints the SQL a migration will run.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Junction table</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A table Django auto-creates for a many-to-many relationship (e.g. <code>til_app_post_tags</code>).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>INSTALLED_APPS</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The settings list of apps Django should load and manage.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>TilAppConfig</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The app configuration class in <code>apps.py</code>, added to INSTALLED_APPS.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>DATABASES</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The settings variable defining the database engine and connection.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>SQLite</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Django's default standalone, file-based database engine.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>PostgreSQL / MySQL</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">Relational databases often used for deployment (e.g. on AWS).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Admin site</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Django's built-in interface (<code>/admin</code>) for administrators to manage data.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Superuser</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A privileged account created by <code>createsuperuser</code> with admin access.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>admin.site.register</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">The call that exposes a model in the admin interface.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Middleware</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A layer that processes requests/responses globally, usable to restrict admin access by IP.</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="mnemonics" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">17</span>
+    <h2 class="section-title">Mnemonics &amp; Quick Recall</h2>
+  </div>
+  <div class="grid-2">
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🔄 Migration Workflow</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">M-M-M</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Model, makemigrations, migrate&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—  — write, prepare, apply.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Relationship Fields</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">FK = many-to-one, M2M = many-to-many, O2O = one-to-one</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">— add <code>null=True, blank=True</code> for optional.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Field Types</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Char, Text, Int, Float, Bool, Date, DateTime, Email, URL, Image, File</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">— plus the relationship fields.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 ORM Powers</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">DRY, MVC, Security, Abstraction, Loose coupling, OOP</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 ORM Limits</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Learn, Perform, Impedance</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">— the learning curve, performance gaps and impedance mismatch.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Admin Rule</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Admin is for administrators, not end users</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">.</p>
+</div>
+</div>
+</section>
+
+<section id="worked-examples" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">18</span>
+    <h2 class="section-title">Worked Scenarios &amp; Calculations</h2>
+  </div>
+  <div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 1 &bull; From ERD to models</div>
+  <h3 class="subsection-title" style="margin-top:0;">From ERD to models</h3>
+<p>The TIL ERD has a many-to-many between Post and Tag. This becomes:</p>
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class Tag(models.Model):
+    name = models.CharField(max_length=10, unique=True)
+    creation_date = models.DateTimeField(auto_now_add=True)
+class Post(models.Model):
+    subject = models.CharField(max_length=160)
+    content = models.CharField(max_length=800)
+    visibility = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    tags = models.ManyToManyField(Tag, related_name=&#x27;posts&#x27;, blank=True)</pre></div>
+</div>
+<p><code>related_name='posts'</code> lets you call <code>tag_instance.posts.all()</code> to get every post for a tag.</p>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 2 &bull; Choosing a relationship field</div>
+  <h3 class="subsection-title" style="margin-top:0;">Choosing a relationship field</h3>
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Author writes many Books, each Book has one Author → <code>ForeignKey(Author, on_delete=models.CASCADE, related_name='books')</code> on Book.</li><li>Student enrolls in many Courses, a Course has many Students → <code>ManyToManyField(Student, related_name='courses')</code> on Course.</li><li>User has exactly one UserProfile → <code>OneToOneField(User, on_delete=models.CASCADE)</code>.</li><li>Employee may or may not have a Department → <code>ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)</code>.</li></ul>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 3 &bull; Breaking a circular reference</div>
+  <h3 class="subsection-title" style="margin-top:0;">Breaking a circular reference</h3>
+<p>If Author needs a <code>favorite_book</code> and Book needs an <code>author</code>, define the reference as a string:</p>
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class Author(models.Model):
+    favorite_book = models.ForeignKey(&quot;Book&quot;, on_delete=models.CASCADE, null=False)
+class Book(models.Model):
+    author = models.ForeignKey(Author, on_delete=models.CASCADE)</pre></div>
+</div>
+<p>This compiles, but if both sides are non-nullable it is a <strong>deadlock</strong> — you cannot create the first row. Prefer making at least one side optional or redesigning.</p>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 4 &bull; Tracing a migration to SQL</div>
+  <h3 class="subsection-title" style="margin-top:0;">Tracing a migration to SQL</h3>
+<p>Run <code>python3 manage.py makemigrations til_app</code>, then <code>python manage.py sqlmigrate til_app 0001</code>. Django prints <code>CREATE TABLE "til_app_tag"</code>, <code>CREATE TABLE "til_app_post"</code>, and a junction table <code>til_app_post_tags</code> with <code>post_id</code> and <code>tag_id</code> foreign keys plus a unique index on the pair. This confirms the ORM translated your Python classes into normalised SQL.</p>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 5 &bull; Exposing models in the admin</div>
+  <h3 class="subsection-title" style="margin-top:0;">Exposing models in the admin</h3>
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">from django.contrib import admin
+from .models import Post, Tag
+admin.site.register(Post)
+admin.site.register(Tag)</pre></div>
+</div>
+<p>After <code>createsuperuser</code> and a server reload, log in at <code>/admin</code> and you can create, edit and delete Posts and Tags without writing any management views.</p>
+</div>
+</section>
+
+<section id="exam-focus" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">19</span>
+    <h2 class="section-title">Potential Exam Focus &amp; Practice</h2>
+  </div>
+  <div class="exam-toolbar">
+  <div class="exam-progress" id="exam-progress-tracker">Progress: 0 / 18 Mastered</div>
+  <div class="exam-actions">
+    <button class="btn-secondary" onclick="toggleAllAnswers(true)">Reveal All</button>
+    <button class="btn-secondary" onclick="toggleAllAnswers(false)">Hide All</button>
+    <button class="btn-secondary" onclick="resetExamProgress()">Reset Progress</button>
+  </div>
+</div><div class="quiz-card" id="q1">
+  <div class="quiz-header" onclick="toggleAnswer('ans-1')">
+    <span class="quiz-qnum">Q1</span>
+    <div class="quiz-question">What is an ORM and what problem does it solve?</div>
+  </div>
+  <div class='quiz-answer' id='ans-1'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Object-Relational Mapping converts data between object-oriented code and relational databases, letting developers use their language instead of raw SQL and hiding the SQL/type differences.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-1')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q1', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q2">
+  <div class="quiz-header" onclick="toggleAnswer('ans-2')">
+    <span class="quiz-qnum">Q2</span>
+    <div class="quiz-question">List the key features of an ORM.</div>
+  </div>
+  <div class='quiz-answer' id='ans-2'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Maps objects to tables, abstracts SQL, performs automatic data conversion, produces database-agnostic code, and reduces boilerplate.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-2')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q2', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q3">
+  <div class="quiz-header" onclick="toggleAnswer('ans-3')">
+    <span class="quiz-qnum">Q3</span>
+    <div class="quiz-question">What are the benefits ("can do") of an ORM?</div>
+  </div>
+  <div class='quiz-answer' id='ans-3'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>DRY, encourages MVC, avoids poorly formed SQL, simplifies security (prepared statements/transactions), database abstraction, loose coupling, and support for OOP concepts like inheritance.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-3')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q3', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q4">
+  <div class="quiz-header" onclick="toggleAnswer('ans-4')">
+    <span class="quiz-qnum">Q4</span>
+    <div class="quiz-question">What are the limitations ("cannot do") of an ORM?</div>
+  </div>
+  <div class='quiz-answer' id='ans-4'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A learning curve (complex, not lightweight), performance limitations versus hand-written SQL at scale, and the impedance mismatch between objects and relational tables.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-4')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q4', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q5">
+  <div class="quiz-header" onclick="toggleAnswer('ans-5')">
+    <span class="quiz-qnum">Q5</span>
+    <div class="quiz-question">When should you drop down to raw SQL, and should you write your own ORM?</div>
+  </div>
+  <div class='quiz-answer' id='ans-5'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Only when absolutely necessary, because databases are complex and performance/security critical; never write your own ORM for an application unless it is for learning.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-5')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q5', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q6">
+  <div class="quiz-header" onclick="toggleAnswer('ans-6')">
+    <span class="quiz-qnum">Q6</span>
+    <div class="quiz-question">How do you define a model in Django?</div>
+  </div>
+  <div class='quiz-answer' id='ans-6'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Define a Python class that subclasses <code>django.db.models.Model</code>, with each attribute mapped to a Django Field class.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-6')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q6', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q7">
+  <div class="quiz-header" onclick="toggleAnswer('ans-7')">
+    <span class="quiz-qnum">Q7</span>
+    <div class="quiz-question">Give the Django field types for string, long text, integer, float, boolean, date, datetime, email, URL, image and file.</div>
+  </div>
+  <div class='quiz-answer' id='ans-7'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>CharField, TextField, IntegerField, FloatField, BooleanField, DateField, DateTimeField, EmailField, URLField, ImageField, FileField.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-7')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q7', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q8">
+  <div class="quiz-header" onclick="toggleAnswer('ans-8')">
+    <span class="quiz-qnum">Q8</span>
+    <div class="quiz-question">Which field types represent relationships?</div>
+  </div>
+  <div class='quiz-answer' id='ans-8'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>ForeignKey (many-to-one, on the many side), ManyToManyField (many-to-many), OneToOneField or ForeignKey(unique=True) (one-to-one), and ForeignKey(null=True, blank=True) (many-to-optional-one).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-8')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q8', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q9">
+  <div class="quiz-header" onclick="toggleAnswer('ans-9')">
+    <span class="quiz-qnum">Q9</span>
+    <div class="quiz-question">What is the difference between a direct class reference and a string reference?</div>
+  </div>
+  <div class='quiz-answer' id='ans-9'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Direct reference uses the class name when the model is already defined; a string reference (lazy relationship) uses the model name in quotes so models can be defined in any order, including mutual/circular references.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-9')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q9', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q10">
+  <div class="quiz-header" onclick="toggleAnswer('ans-10')">
+    <span class="quiz-qnum">Q10</span>
+    <div class="quiz-question">Why are required circular foreign keys a problem?</div>
+  </div>
+  <div class='quiz-answer' id='ans-10'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>They create a chicken-and-egg deadlock — if both FKs are non-nullable you cannot create either row first. Circular references also complicate migrations, and relational databases need all references well-defined ahead of time.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-10')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q10', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q11">
+  <div class="quiz-header" onclick="toggleAnswer('ans-11')">
+    <span class="quiz-qnum">Q11</span>
+    <div class="quiz-question">Why must an app be added to INSTALLED_APPS?</div>
+  </div>
+  <div class='quiz-answer' id='ans-11'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Django only loads and manages apps in INSTALLED_APPS; if your app is missing, Django will not see your models and migrations will not be generated.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-11')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q11', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q12">
+  <div class="quiz-header" onclick="toggleAnswer('ans-12')">
+    <span class="quiz-qnum">Q12</span>
+    <div class="quiz-question">What is the migration workflow, and what does each command do?</div>
+  </div>
+  <div class='quiz-answer' id='ans-12'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Modify models.py, run <code>python manage.py makemigrations</code> (generates migration files without applying), then <code>python manage.py migrate</code> (applies unapplied migrations to the database).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-12')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q12', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q13">
+  <div class="quiz-header" onclick="toggleAnswer('ans-13')">
+    <span class="quiz-qnum">Q13</span>
+    <div class="quiz-question">What does sqlmigrate show, and what does it reveal about ManyToManyField?</div>
+  </div>
+  <div class='quiz-answer' id='ans-13'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>It prints the SQL a migration will run. It reveals that Django automatically creates a junction table (e.g. <code>til_app_post_tags</code>) with two foreign keys and a unique index to manage the many-to-many relationship.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-13')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q13', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q14">
+  <div class="quiz-header" onclick="toggleAnswer('ans-14')">
+    <span class="quiz-qnum">Q14</span>
+    <div class="quiz-question">What database does Django use by default, and where is it configured?</div>
+  </div>
+  <div class='quiz-answer' id='ans-14'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>SQLite, a standalone file-based database, configured in <code>settings.py</code> under the <code>DATABASES</code> variable; MySQL or PostgreSQL can be used for AWS deployment.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-14')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q14', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q15">
+  <div class="quiz-header" onclick="toggleAnswer('ans-15')">
+    <span class="quiz-qnum">Q15</span>
+    <div class="quiz-question">What is the Django admin, who is it for, and how do you get access?</div>
+  </div>
+  <div class='quiz-answer' id='ans-15'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A built-in interface at <code>/admin</code> for site administrators/developers (not end users) to add/edit/delete models; access it by creating a superuser with <code>python manage.py createsuperuser</code> while the server runs.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-15')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q15', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q16">
+  <div class="quiz-header" onclick="toggleAnswer('ans-16')">
+    <span class="quiz-qnum">Q16</span>
+    <div class="quiz-question">How do you expose models in the admin?</div>
+  </div>
+  <div class='quiz-answer' id='ans-16'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Import the models in <code>til_app/admin.py</code> and call <code>admin.site.register(Model)</code> for each.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-16')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q16', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q17">
+  <div class="quiz-header" onclick="toggleAnswer('ans-17')">
+    <span class="quiz-qnum">Q17</span>
+    <div class="quiz-question">How can you secure the Django admin?</div>
+  </div>
+  <div class='quiz-answer' id='ans-17'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Change the default admin URL (also prevents version profiling), and limit admin access by IP at the web-server level (or via middleware, which is easier but slightly slower).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-17')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q17', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q18">
+  <div class="quiz-header" onclick="toggleAnswer('ans-18')">
+    <span class="quiz-qnum">Q18</span>
+    <div class="quiz-question">What constraint does ManyToManyField not enforce, and what is the alternative?</div>
+  </div>
+  <div class='quiz-answer' id='ans-18'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>It does not enforce "at least one" — you need custom validations and signals. When you need extra fields or custom constraints, define an explicit mapping class instead of relying on ManyToManyField.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-18')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q18', this)"> Mastered
+    </label>
+  </div>
+</div>
+</section>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+<p><strong>ELEC3609 Engineering Study Guide</strong> &bull; Week 4: Django Models, ORM &amp; Admin · Lab 4</p>
+    <p style="font-size: 0.75rem; margin-top: 0.4rem;">Generated for self-paced revision and exam preparation.</p>
+  </footer>
+
+  <!-- Interactive JavaScript -->
+  <script>
+// Theme Toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let currentTheme = localStorage.getItem('study_theme') || (prefersDark ? 'dark' : 'light');
+
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeBtn.textContent = '☀️';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        themeBtn.textContent = '🌙';
+      }
+      localStorage.setItem('study_theme', theme);
+    }
+    applyTheme(currentTheme);
+
+    themeBtn.addEventListener('click', () => {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(currentTheme);
+    });
+
+    // Mobile Menu Toggle
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    menuBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+
+    // Close sidebar when clicking links on mobile
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 1024) {
+          sidebar.classList.remove('open');
+        }
+      });
+    });
+
+    // Reading Progress & Active Nav Link Highlight
+    window.addEventListener('scroll', () => {
+      const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById('progress-bar').style.width = scrolled + '%';
+
+      // Active Section Highlighting
+      const sections = document.querySelectorAll('section.guide-section, section.hero-card');
+      let currentSecId = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 120;
+        if (winScroll >= top) {
+          currentSecId = sec.getAttribute('id');
+        }
+      });
+
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentSecId) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Interactive Confusion Matrix Calculator Logic
+    function calculateMetrics() {
+      const tp = parseFloat(document.getElementById('inp-tp').value) || 0;
+      const fn = parseFloat(document.getElementById('inp-fn').value) || 0;
+      const fp = parseFloat(document.getElementById('inp-fp').value) || 0;
+      const tn = parseFloat(document.getElementById('inp-tn').value) || 0;
+
+      const total = tp + fn + fp + tn;
+      const acc = total > 0 ? ((tp + tn) / total) * 100 : 0;
+      const prec = (tp + fp) > 0 ? (tp / (tp + fp)) * 100 : 0;
+      const rec = (tp + fn) > 0 ? (tp / (tp + fn)) * 100 : 0;
+      const f1 = (prec + rec) > 0 ? 2 * (prec * rec) / (prec + rec) / 100 : 0;
+
+      document.getElementById('res-acc').textContent = acc.toFixed(1) + '%';
+      document.getElementById('res-prec').textContent = (tp + fp) > 0 ? prec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-rec').textContent = (tp + fn) > 0 ? rec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-f1').textContent = (prec + rec) > 0 ? f1.toFixed(3) : '0.000';
+    }
+
+    function setPreset(tp, fp, tn, fn) {
+      document.getElementById('inp-tp').value = tp;
+      document.getElementById('inp-fp').value = fp;
+      document.getElementById('inp-tn').value = tn;
+      document.getElementById('inp-fn').value = fn;
+      calculateMetrics();
+    }
+
+    // Glossary Filter Logic
+    function filterTerms(category, btn) {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+
+      const cards = document.querySelectorAll('.term-card');
+      cards.forEach(card => {
+        if (category === 'all' || card.getAttribute('data-cat') === category) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // Global Search Logic
+    const searchInput = document.getElementById('site-search');
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      const termCards = document.querySelectorAll('.term-card');
+      const quizCards = document.querySelectorAll('.quiz-card');
+
+      if (!query) {
+        termCards.forEach(c => c.style.display = 'flex');
+        quizCards.forEach(c => c.style.display = 'block');
+        return;
+      }
+
+      termCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+
+      quizCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'block' : 'none';
+      });
+    });
+
+    // Exam Questions Show/Hide & Progress Tracker
+    function toggleAnswer(id) {
+      const ans = document.getElementById(id);
+      ans.classList.toggle('show');
+    }
+
+    function toggleAllAnswers(show) {
+      document.querySelectorAll('.quiz-answer').forEach(ans => {
+        if (show) ans.classList.add('show');
+        else ans.classList.remove('show');
+      });
+    }
+
+    let masteredMap = JSON.parse(localStorage.getItem('engg2112_w3_mastered') || '{}');
+
+    function updateProgressUI() {
+      const total = document.querySelectorAll('.quiz-card').length;
+      const count = Object.values(masteredMap).filter(Boolean).length;
+      document.getElementById('exam-progress-tracker').textContent = `Progress: ${count} / ${total} Mastered`;
+
+      for (let i = 1; i <= total; i++) {
+        const card = document.getElementById('q' + i);
+        const checkbox = card ? card.querySelector('input[type="checkbox"]') : null;
+        if (card && checkbox) {
+          if (masteredMap['q' + i]) {
+            card.classList.add('mastered');
+            checkbox.checked = true;
+          } else {
+            card.classList.remove('mastered');
+            checkbox.checked = false;
+          }
+        }
+      }
+    }
+
+    function toggleMastered(qid, checkbox) {
+      masteredMap[qid] = checkbox.checked;
+      localStorage.setItem('engg2112_w3_mastered', JSON.stringify(masteredMap));
+      updateProgressUI();
+    }
+
+    function resetExamProgress() {
+      if (confirm('Reset all exam progress checkboxes?')) {
+        masteredMap = {};
+        localStorage.removeItem('engg2112_w3_mastered');
+        updateProgressUI();
+      }
+    }
+
+    // Initialize state on load
+    window.addEventListener('DOMContentLoaded', () => {
+      calculateMetrics();
+      updateProgressUI();
+    });
+  </script>
+</body>
+</html>

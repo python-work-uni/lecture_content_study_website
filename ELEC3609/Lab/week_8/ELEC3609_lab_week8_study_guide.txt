@@ -1,0 +1,546 @@
+================================================
+ELEC3609 Lab Week 8 – Study Guide
+Django Security & Testing · Lab 8
+================================================
+
+OVERVIEW
+--------
+This lab explores fundamental web security issues — **XSS, CSRF, SQL injection, clickjacking**
+and **session handling** — within Django, showing common pitfalls and the **built-in mechanisms
+that mitigate them**. It then covers **secure deployment settings** such as ALLOWED_HOSTS, HTTPS
+enforcement and secret key management. The second half teaches **Django testing**: how to write
+unit tests for models, forms, views and templates with **unittest** and Django's **test client**,
+measure **code coverage**, and where **frontend testing** tools fit. The individual task is to
+understand and evaluate Django security.
+
+------------------------------------------------
+STATS:
+------------------------------------------------
+Chapters|2
+Individual task|Task 7 (Django security)
+Lab resource|N/A
+Threats covered|XSS, CSRF, SQLi, clickjacking
+Test runner|python manage.py test
+
+------------------------------------------------
+SECTION 1: Web Security Threats Overview
+------------------------------------------------
+Web applications are vulnerable to a wide variety of attacks, which can lead to **data breaches,
+loss of user trust, and downtime**. This guide walks through the most common security concerns in
+web development and deployment.
+
+**Learning objectives** — after the lab you should be able to:
+
+- Identify and explain common web application vulnerabilities including **XSS, CSRF, SQL injection, and clickjacking**.
+- Apply Django's built-in security features such as **CSRF middleware, autoescaping, and secure cookie settings**.
+- Configure secure deployment settings such as **ALLOWED_HOSTS, HTTPS enforcement, and secret key management**.
+- Write effective **unit tests** for Django models, views, forms and templates using **unittest** and Django's **test client**.
+
+💡 **Why It Matters:** Security is not one feature — it is a set of defaults and disciplines. Django ships secure defaults, but the lab shows where developers can accidentally defeat them.
+
+------------------------------------------------
+SECTION 2: XSS: How the Attack Works
+------------------------------------------------
+**XSS (Cross-Site Scripting)** is a vulnerability where attackers **inject malicious scripts into websites**. These scripts are **executed by users' browsers** and can **steal sensitive information like cookies, hijack sessions, or perform malicious actions on behalf of the user**.
+
+**How an XSS attack works:**
+
+1. The attacker finds a **form or input field that does not properly sanitise or escape user input**. For example, a comment section rendered as:
+
+```html
+<div>{{ user_comment }}</div>
+```
+
+2. The attacker submits **malicious JavaScript** via that input. If `user_comment` is not properly escaped, the attacker could inject something like:
+
+```html
+<script>alert('Your session has been hijacked');</script>
+```
+
+This would execute when **any user visits the page** containing the comment.
+
+💡 **Why It Matters:** XSS turns your own website into the delivery vehicle. The browser trusts your page, so injected script runs with the user's privileges.
+
+------------------------------------------------
+SECTION 3: XSS: Protection Strategies
+------------------------------------------------
+The lab lists four layers of XSS protection:
+
+1. **Django's built-in protection (autoescaping).** Django **automatically escapes dangerous characters** in HTML templates, preventing inputs like `<script>` tags from executing. By default, **every template automatically escapes the output of every variable tag**:
+
+```
+{% autoescape on %}
+{{ body }}
+{% endautoescape %}
+```
+
+2. **Avoid using the safe filter.** Django provides a **safe** filter that marks a string as safe and **prevents escaping**. Use it cautiously, as it can allow XSS:
+
+```html
+<p>{{ user_input|safe }}</p>   <!-- Avoid this unless absolutely necessary -->
+```
+
+3. **Input sanitisation in the backend.** Even though Django's template system escapes content by default, it is good practice to **sanitise input when it is stored or processed**, especially for data used in **non-HTML contexts like JSON or JavaScript**. You can use Python libraries like **Bleach** or **nh3** before saving to the database:
+
+```python
+import bleach
+clean_input = bleach.clean(user_input)
+```
+
+4. **Setting HTTP-Only cookies.** This makes it less trivial for an attacker to escalate an XSS vulnerability into **full session hijacking**. Django uses HTTP-only cookies for session management by default:
+
+```python
+# settings.py
+SESSION_COOKIE_HTTPONLY = True
+```
+
+⚠️ **Common Trap:** Reaching for the **safe** filter to make a template "work." It disables the escaping that protects you — use it only when absolutely necessary.
+
+------------------------------------------------
+SECTION 4: CSRF: How the Attack Works
+------------------------------------------------
+**CSRF (Cross-Site Request Forgery)** tricks users into making **unwanted actions on a site where they are authenticated**. An attacker crafts a malicious request that uses the victim's authentication credentials to perform actions such as **transferring funds or changing account information**.
+
+**Common example:** Alice is logged into her bank `http://bank.com` and has a valid session cookie. Malicious Maria wants to trick Alice into transferring money to Maria's account without consent. With social engineering, Maria sends Alice a malicious link or embeds an image tag:
+
+```html
+<a href="https://bank.com/transfer?acct=Maria&amount=10000">Check out this cool picture!</a>
+<!-- Or as a hidden request -->
+<img src="https://bank.com/transfer?acct=Maria&amount=10000" width="0" height="0">
+```
+
+When Alice clicks the link (or the image loads), **her browser automatically sends the session
+cookie to bank.com**, executing the action without Alice's knowledge.
+
+💡 **Why It Matters:** CSRF exploits **trust in the browser**, not a flaw in the script. The victim's own valid session becomes the weapon.
+
+🧠 **Memory Hook:** XSS injects code the **victim runs**; CSRF makes the victim's browser send a request **the victim never intended**.
+
+------------------------------------------------
+SECTION 5: CSRF: GET vs POST
+------------------------------------------------
+**GET requests and CSRF:**
+
+- **GET requests** are typically used to **retrieve data** and **are not meant to modify state** (e.g. transfer money, delete an account). However, if an application **incorrectly uses GET for sensitive actions**, it becomes vulnerable to CSRF **even with CSRF token protection**.
+- **Example:** if the bank uses GET to transfer funds, an attacker can exploit it by phishing a user into clicking a malicious link.
+- **Solution:** **avoid using GET requests for any state-changing actions.**
+
+**POST requests and CSRF:**
+
+- The only difference between GET and POST attacks is **how the attack is executed by the victim**. Suppose the bank uses POST at `POST http://bank.com/transfer`.
+- Such a request **cannot be delivered using standard A or IMG tags**, but can be delivered using a **FORM** on behalf of Alice:
+
+```html
+<form action="https://bank.com/transfer" method="POST">
+  <input type="hidden" name="account" value="attacker_account">
+  <input type="hidden" name="amount" value="1000">
+</form>
+<script>document.forms[0].submit();</script>
+```
+
+- **Solution:** to prevent CSRF attacks on POST requests, websites typically use **CSRF tokens** as an additional layer of security.
+
+⚠️ **Common Trap:** Assuming that "we protect POSTs" makes the app safe. A state-changing **GET** is still CSRF-able no matter how good your token handling is for POSTs.
+
+------------------------------------------------
+SECTION 6: CSRF Tokens & Django Protection
+------------------------------------------------
+**What a CSRF token is:** a **unique, random value generated by the server and associated with the user's session**. It is included in **every form submission or AJAX request for state-changing actions**. When the user submits, the token is sent **alongside the session cookie**, and the server checks **both** to ensure the request is legitimate.
+
+**CSRF token in a Django template:**
+
+```html
+<form action="{% url 'transfer' %}" method="POST">
+  {% csrf_token %}
+  <input type="hidden" name="account" value="recipient_account">
+  <input type="hidden" name="amount" value="1000">
+  <button type="submit">Transfer</button>
+</form>
+<script>
+  document.forms[0].submit();  // Automatically submits the form
+</script>
+```
+
+Now the server **validates the CSRF token before processing the request**. If the token is missing
+or invalid, the server **rejects** the request — so a simple phishing email alone will not work.
+
+**CSRF token in AJAX requests:**
+
+```javascript
+fetch('/transfer', {
+  method: 'POST',
+  headers: {
+    'X-CSRFToken': 'random_token_value'
+  },
+  body: JSON.stringify({ amount: 1000, to: 'Bob' })
+});
+```
+
+**Django's built-in CSRF protection** secures POST requests by verifying a CSRF token embedded in forms or headers and ensuring it matches a CSRF cookie sent to the client. Specifically:
+
+- **CsrfViewMiddleware** checks for the CSRF token on **unsafe requests (POST, PUT, DELETE)**.
+- It validates the **Origin** or **Referer** headers for requests over **HTTPS** and compares them with trusted domains or subdomains to block cross-origin attacks.
+- **GET requests are exempt** (as they should not modify data).
+- Using **HTTPS and HSTS** is essential to defend against **man-in-the-middle** attacks.
+- Disabling CSRF protection should only be done with caution; cross-subdomain POSTs can be allowed by configuring **CSRF_TRUSTED_ORIGINS** and **CSRF_COOKIE_DOMAIN**.
+
+💡 **Why It Matters:** The token proves the request originated from a page your server rendered, not from a malicious third-party page that merely borrowed the user's cookie.
+
+------------------------------------------------
+SECTION 7: JWT & CSRF in DRF
+------------------------------------------------
+When using **JWT** for authentication, CSRF protection becomes relevant **based on how the JWT is
+stored**:
+
+- **JWT in LocalStorage** — it is **not automatically sent** with requests like cookies, reducing the risk of CSRF. However, **XSS becomes a concern**.
+- **JWT in cookies as HTTP-only** — CSRF protection is **still required**, since the browser automatically includes cookies in every request, making CSRF attacks possible. Mitigate with
+  **CSRF tokens** or by configuring **SameSite** attributes for cookies.
+
+In **Django REST Framework**, CSRF protection is **disabled by default for API views** unless you
+are using **session-based authentication**. DRF's **APIView** and **ViewSet** classes are typically
+**CSRF exempt**. It is important to **explicitly re-implement CSRF protection** or take alternative measures depending on your authentication and storage strategy.
+
+💡 **Why It Matters:** The storage location of the JWT changes your threat model: local storage shifts risk toward XSS; cookie storage re-introduces CSRF. Neither choice is free.
+
+------------------------------------------------
+SECTION 8: SQL Injection & Clickjacking
+------------------------------------------------
+**SQL injection protection.** SQL injection vulnerabilities let attackers **run arbitrary SQL code on your database**, potentially modifying, accessing or deleting data without authorisation. When using **Django's models and querysets (the Django ORM)**, the underlying database driver
+**automatically escapes the SQL**, which mitigates the risk of injection. However, when writing
+**raw SQL queries**, it is essential to **explicitly prevent SQL injection by safely parameterising inputs**.
+
+**Clickjacking protection.** Clickjacking is an attack where a malicious user **hijacks clicks meant for a top-level site**, routing them to a **hidden, malicious page underneath**. Attackers may display legitimate content — such as a bank's login page — while **capturing user credentials in an invisible iframe** they control. Django combats this through the **X-Frame-Options middleware**, which prevents your site from being rendered inside an iframe in compatible browsers.
+
+💡 **Why It Matters:** The ORM protects you *by default* — the danger appears the moment you drop to raw SQL and forget to parameterise.
+
+------------------------------------------------
+SECTION 9: Enforcing TLS/HTTPS
+------------------------------------------------
+**TLS/HTTPS encrypts communication between server and client**, ensuring sensitive data — including authentication credentials — is **not sent in plain text**. Enabling HTTPS is crucial. Django offers additional protections when HTTPS is enabled:
+
+- **SECURE_PROXY_SSL_HEADER** — ensures security even when traffic passes through a **non-HTTPS proxy**.
+- **SECURE_SSL_REDIRECT** — **automatically redirects all HTTP requests to HTTPS**.
+- **HTTP Strict Transport Security (HSTS)** — an HTTP header that **enforces HTTPS for all future connections** to the site. Combined with redirecting HTTP to HTTPS, it ensures HTTPS is always used once a secure connection is established. Configure it with **SECURE_HSTS_SECONDS** and
+  **SECURE_HSTS_INCLUDE_SUBDOMAINS**.
+- **Secure cookies** — set **SESSION_COOKIE_SECURE** and **CSRF_COOKIE_SECURE** to `True` so cookies are sent **only over HTTPS**.
+
+💡 **Why It Matters:** Redirects fix the *current* request; HSTS fixes *future* ones by telling the browser never to try plain HTTP again.
+
+------------------------------------------------
+SECTION 10: Security Settings for Deployment
+------------------------------------------------
+The lab lists deployment-hardening settings and practices:
+
+- **ALLOWED_HOSTS** — restricts which domains can serve your Django app, preventing **HTTP Host header attacks**:
+
+```python
+ALLOWED_HOSTS = ['yourdomain.com', 'www.yourdomain.com']
+```
+
+- **SECRET_KEY in .env** — keep secret keys and sensitive data out of your codebase using environment variables stored in a **.env** file:
+
+```python
+SECRET_KEY = os.getenv('SECRET_KEY')
+```
+
+- **DEBUG mode** — **never run your app with DEBUG=True in production**, as it exposes sensitive information:
+
+```python
+DEBUG = False
+```
+
+- **CORS and CSRF trusted origins** — control which domains can interact with your API securely:
+
+```python
+CORS_ALLOWED_ORIGINS = ['https://yourfrontend.com']
+CSRF_TRUSTED_ORIGINS = ['https://yourfrontend.com']
+```
+
+- **Database permissions** — ensure the database user connecting to Django has **limited permissions** (avoid root). **Limit CREATE, ALTER or DROP** permissions to reduce the impact of SQL injections.
+- **Linux file permission management** — protect sensitive files with appropriate permissions:
+
+```bash
+chmod 600 /path/to/.env
+```
+
+⚠️ **Common Trap:** Shipping with DEBUG=True. It exposes sensitive information, which is exactly what an attacker wants.
+
+------------------------------------------------
+SECTION 11: Django Testing Fundamentals
+------------------------------------------------
+Django provides a **robust suite of built-in testing tools** to verify that an application works as
+expected. Testing is critical to verify the functionality of your **models, views, forms, databases
+and even templates**. You should write tests for anything crucial — particularly features that
+**handle user data, interact with the database, or display dynamic content**. Django's testing framework integrates seamlessly with Python's **unittest**.
+
+**Testing structure:** Django organises tests using classes derived from **TestCase**, and individual test methods are **prefixed with `test_`**. Test files go inside an app's **tests.py** or a dedicated **tests** directory:
+
+```text
+til_app/
+  tests.py
+  /tests/
+    __init__.py
+    test_models.py
+    test_forms.py
+    test_views.py
+```
+
+**Run the tests:**
+
+```bash
+python manage.py test
+```
+
+This command **automatically discovers and runs all tests** across the project and provides
+feedback on which tests pass or fail. The test runner provides many options (see the Django test
+runner documentation).
+
+💡 **Why It Matters:** Tests turn "I think it works" into "I can prove it works," and rerun that proof after every change — exactly what you need for features touching user data.
+
+------------------------------------------------
+SECTION 12: Testing Models, Forms & Views
+------------------------------------------------
+**Testing models** verifies database structure and logic: field default values, model methods, and relationships.
+
+```python
+from django.test import TestCase
+from .models import Post
+
+class PostModelTests(TestCase):
+    def test_default_visibility_should_be_public(self):
+        post = Post(subject="Test Post", content="This is a test post.")
+        self.assertEqual(post.public, True)
+```
+
+**assertTrue**, **assertFalse** and **assertEqual** are standard assertions provided by
+**unittest**. There are other standard assertions and Django-specific ones such as
+**assertRedirects** (view redirects) and **assertTemplateUsed** (a particular template was used).
+
+**Testing forms** checks that forms validate input, handle missing fields, and reject invalid submissions:
+
+```python
+from django.test import TestCase
+from .forms import PostForm
+
+class PostFormTests(TestCase):
+    def test_post_form_valid(self):
+        form_data = {'subject': 'Test Post', 'content': 'Test content'}
+        form = PostForm(data=form_data)
+        self.assertTrue(form.is_valid())
+```
+
+**Testing views** verifies the correct response, template rendering, and context variables. You simulate HTTP requests with Django's **test client**:
+
+```python
+from django.test import TestCase
+from django.urls import reverse
+
+class PostViewTests(TestCase):
+    def test_post_list_view(self):
+        response = self.client.get(reverse('post_list'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Post List")
+```
+
+⚠️ **Common Trap:** The **test client is not supposed to replace frontend testing** — you still need something to verify that JavaScript functions correctly and to catch layout or styling issues.
+
+**Testing templates** checks correct rendering, dynamic content and layout:
+
+```python
+from django.test import TestCase
+from django.urls import reverse
+
+class TemplateTests(TestCase):
+    def test_home_template(self):
+        response = self.client.get(reverse('home'))
+        self.assertTemplateUsed(response, 'home.html')
+```
+
+💡 **Why It Matters:** `reverse()` looks up URLs by name, so tests keep passing even if the URL path changes — test behaviour, not hard-coded strings.
+
+------------------------------------------------
+SECTION 13: The Test Database & setUpTestData
+------------------------------------------------
+Use Django's **test database** to test model behaviour **without affecting production data**. You
+can use **fixtures** or **setUpTestData()** to create data shared across tests:
+
+```python
+from django.test import TestCase
+from .models import Post
+
+class PostDatabaseTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.post = Post.objects.create(subject="Test Post", content="Test content")
+
+    def test_post_creation(self):
+        self.assertEqual(Post.objects.count(), 1)
+```
+
+Usually **constructing objects directly in setUpTestData() is sufficient** for testing the
+database.
+
+💡 **Why It Matters:** `setUpTestData()` runs once per class (not per test method), so shared objects are built efficiently and safely inside the isolated test database.
+
+------------------------------------------------
+SECTION 14: Code Coverage & Frontend Testing
+------------------------------------------------
+**Code coverage** helps identify parts of your code **not covered by tests**. Django integrates with the **Coverage.py** tool to measure how much of your codebase is tested. To use it:
+
+1. Install Coverage.py:
+
+```bash
+pip install coverage
+```
+
+2. Run coverage with Django's test suite:
+
+```bash
+coverage run manage.py test
+coverage report    # or: coverage html for a more visual report
+```
+
+**Frontend testing tools.** While Django's built-in tools focus on the **backend**, frontend testing is essential for validating **JavaScript, user interactions, and layout consistency**:
+
+- **Selenium** — automates browser interactions, simulating real user actions like clicks, form submissions and navigation across multiple pages. Ideal for testing complete user flows in a browser.
+- **Jest** — a JavaScript testing framework designed for testing frontend logic, with easy-to-use syntax for unit tests.
+- **Jasmine** — a behaviour-driven JavaScript testing framework, often used for unit and integration tests, focusing on simple syntax and intuitive test writing.
+
+💡 **Why It Matters:** Coverage tells you what is *untested*, not that your tests are *good* — use it as a map of gaps, and pair backend tests with frontend tools for the full picture.
+
+================================================
+KEY TAKEAWAYS
+================================================
+1. **XSS injects scripts that run in the victim's browser** — Django autoescapes variables by default, so avoid the `safe` filter.
+2. **Sanitise backend input too** — use Bleach or nh3 for data used in non-HTML contexts like JSON or JavaScript.
+3. **HTTP-only cookies limit XSS damage** — SESSION_COOKIE_HTTPONLY = True is Django's default for sessions.
+4. **CSRF uses the victim's own authenticated session** — a malicious link or hidden image/form triggers an unwanted action.
+5. **Never use GET for state-changing actions** — doing so is CSRF-vulnerable even with token protection.
+6. **CSRF tokens pair with the session cookie** — the server checks both; missing or invalid tokens are rejected.
+7. **Django checks unsafe methods (POST, PUT, DELETE)** — CsrfViewMiddleware validates Origin/Referer over HTTPS; GETs are exempt.
+8. **JWT storage changes the threat model** — LocalStorage shifts risk to XSS; HTTP-only cookies re-introduce CSRF.
+9. **DRF disables CSRF by default for API views** — APIView and ViewSet are typically exempt unless using session auth.
+10. **The ORM escapes SQL automatically** — raw SQL must be safely parameterised.
+11. **Clickjacking is stopped by X-Frame-Options middleware** — it prevents iframe embedding.
+12. **Enforce HTTPS with redirects, HSTS and secure cookies** — SECURE_SSL_REDIRECT, SECURE_HSTS_SECONDS, SESSION_COOKIE_SECURE, CSRF_COOKIE_SECURE.
+13. **Harden deployment** — restrict ALLOWED_HOSTS, keep SECRET_KEY in .env, set DEBUG=False, limit DB and file permissions.
+14. **Write tests for models, forms, views and templates** — classes derive from TestCase; methods are prefixed test_ and run with python manage.py test.
+15. **Use the isolated test database and setUpTestData()** — share created objects without touching production data.
+16. **Measure coverage with Coverage.py** — and remember the test client does not replace frontend testing (Selenium, Jest, Jasmine).
+
+================================================
+TERMS TO KNOW
+================================================
+**ALLOWED_HOSTS**: Setting restricting which domains may serve the app, preventing Host header attacks.
+**assertContains / assertRedirects / assertTemplateUsed**: Django test assertions for response content, redirects, and template usage.
+**Autoescaping**: Django's default escaping of variable output in templates to prevent XSS.
+**Bleach**: Python library for sanitising input before storage.
+**Clickjacking**: Hijacking clicks meant for a top-level site, routing them to a hidden malicious page via an iframe.
+**Code coverage**: Measure of how much of the codebase the tests exercise, via Coverage.py.
+**CORS_ALLOWED_ORIGINS**: Setting controlling which domains may interact with your API.
+**Coverage.py**: Tool integrated with Django to measure tested code.
+**CSRF**: Cross-Site Request Forgery; tricking a user's browser into an unwanted authenticated action.
+**CSRF token**: Unique random value tied to the session, submitted with state-changing requests and validated by the server.
+**CSRF_COOKIE_DOMAIN / CSRF_TRUSTED_ORIGINS**: Settings allowing cross-subdomain POSTs.
+**CSRF_COOKIE_SECURE**: Setting that sends the CSRF cookie only over HTTPS.
+**CsrfViewMiddleware**: Django middleware checking CSRF tokens on unsafe requests and validating Origin/Referer.
+**DEBUG**: Setting that must be False in production to avoid exposing sensitive information.
+**Fixtures**: Predefined data usable to populate the test database.
+**HSTS**: HTTP Strict Transport Security; enforces HTTPS for future connections (SECURE_HSTS_SECONDS, SECURE_HSTS_INCLUDE_SUBDOMAINS).
+**HTTP-only cookie**: Cookie inaccessible to JavaScript, limiting XSS session theft.
+**Jasmine**: Behaviour-driven JavaScript testing framework.
+**Jest**: JavaScript testing framework for frontend logic.
+**LocalStorage**: Client-side JWT storage that is not auto-sent with requests, reducing CSRF but raising XSS risk.
+**nh3**: Python library for input sanitisation.
+**Origin / Referer header**: Headers validated by Django over HTTPS to block cross-origin requests.
+**Parameterisation**: Safely passing inputs to raw SQL to prevent injection.
+**SameSite**: Cookie attribute that helps mitigate CSRF when JWT is stored in cookies.
+**Selenium**: Tool that automates browser interactions for end-to-end frontend testing.
+**SECRET_KEY**: Secret used by Django; keep it out of the codebase in a .env file.
+**SECURE_HSTS_INCLUDE_SUBDOMAINS**: HSTS setting extending enforcement to subdomains.
+**SECURE_HSTS_SECONDS**: HSTS setting controlling how long browsers enforce HTTPS.
+**SECURE_PROXY_SSL_HEADER**: Setting ensuring security when traffic passes through a non-HTTPS proxy.
+**SECURE_SSL_REDIRECT**: Setting that redirects all HTTP requests to HTTPS.
+**SESSION_COOKIE_HTTPONLY**: Setting making the session cookie HTTP-only (True by default).
+**SESSION_COOKIE_SECURE**: Setting sending the session cookie only over HTTPS.
+**setUpTestData()**: Class method creating shared test data once per test class.
+**SQL injection**: Attack running arbitrary SQL against the database; mitigated by the ORM and by parameterising raw SQL.
+**Test client**: Django tool that simulates HTTP requests to test views and templates.
+**TestCase**: Class tests derive from; test methods are prefixed test_.
+**unittest**: Python's standard testing framework, integrated with Django.
+**X-Frame-Options**: Middleware/header preventing the site being rendered in an iframe (clickjacking defence).
+**XSS**: Cross-Site Scripting; injecting scripts executed by users' browsers.
+
+================================================
+MNEMONICS & QUICK RECALL
+================================================
+**XSS Defences**: **A-S-S-H** — "Autoescape, Sanitise, avoid Safe filter, HTTP-only cookies."
+**CSRF Defence**: **Token + Cookie + Origin** — "all three must agree on unsafe methods."
+**State-Changing Safety**: **No GET** — "only POST (or PUT/DELETE) should change state."
+**HTTPS Hardening**: **P-R-H-C** — "Proxy header, Redirect, HSTS, secure Cookies."
+**Deployment Checklist**: **H-K-D-C-F** — "Hosts, Key in .env, Debug off, CORS/CSRF origins, File/DB permissions."
+**Test Structure**: **C-T** — "Class from TestCase, methods start with test_."
+**What to Test**: **M-F-V-T** — "Models, Forms, Views, Templates."
+**Frontend Tools**: **S-J-J** — "Selenium, Jest, Jasmine."
+**Coverage Commands**: **run → report/html** — "coverage run manage.py test; coverage report."
+
+================================================
+WORKED EXAMPLES
+================================================
+### Example 1: Killing an XSS Injection
+An attacker submits `<script>alert('Your session has been hijacked');</script>` into a comment
+field rendered as `<div>{{ user_comment }}</div>`. Because **Django autoescapes** every variable
+tag by default, the angle brackets are escaped and the script does not execute. If a developer had
+written `<p>{{ user_input|safe }}</p>`, escaping would be disabled and the script would run. Extra
+defence: sanitise stored input with `bleach.clean(user_input)` and keep
+`SESSION_COOKIE_HTTPONLY = True`.
+
+### Example 2: The Bank Transfer That Was Never Authorised (CSRF)
+Maria sends Alice a link or a zero-size image pointing at `https://bank.com/transfer?acct=Maria&amount=10000`.
+Alice is logged in, so her browser **automatically attaches the session cookie**, and the transfer
+executes. Two lessons: if the bank had used **POST** instead of GET, the attack would need a hidden
+**FORM** rather than a simple link/image; and a **CSRF token** (`{% csrf_token %}`) validated against the CSRF cookie would cause the server to reject the forged request.
+
+### Example 3: AJAX POST Without a CSRF Token
+A JavaScript `fetch('/transfer', { method: 'POST', ... })` fails because the request lacks the CSRF
+token. The fix is to send it in the header:
+```javascript
+headers: { 'X-CSRFToken': 'random_token_value' }
+```
+Django's CsrfViewMiddleware then compares it with the CSRF cookie and accepts the request.
+
+### Example 4: Testing a View End to End
+1. Import `TestCase` and `reverse`.
+2. Create `PostViewTests(TestCase)`.
+3. In `test_post_list_view`, call `self.client.get(reverse('post_list'))`.
+4. Assert `response.status_code == 200`.
+5. Assert `self.assertContains(response, "Post List")`. Because `reverse()` resolves the URL by name, the test survives path changes. The test client checks backend responses only — use Selenium/Jest/Jasmine for JavaScript and layout.
+
+### Example 5: Sharing Data with setUpTestData()
+`PostDatabaseTests` defines `@classmethod setUpTestData(cls)` and creates `cls.post`. The test
+`test_post_creation` then asserts `Post.objects.count() == 1`. The data is built once per class in
+the isolated **test database**, so production data is untouched and tests stay fast.
+
+================================================
+EXAM FOCUS
+================================================
+1. What is XSS and what can injected scripts do? → Answer: Cross-Site Scripting injects malicious scripts into websites; executed by users' browsers, they can steal cookies, hijack sessions, or perform actions on the user's behalf.
+2. How does Django protect against XSS by default? → Answer: Template autoescaping escapes dangerous characters in every variable tag by default; use {% autoescape on %} to be explicit.
+3. Why is the safe filter dangerous, and what should you do instead? → Answer: It marks a string safe and prevents escaping, enabling XSS; avoid it unless absolutely necessary, and sanitise backend input with libraries such as Bleach or nh3.
+4. How do HTTP-only cookies reduce XSS impact, and what is the setting? → Answer: They make it harder to escalate XSS into full session hijacking; Django uses them by default and you set SESSION_COOKIE_HTTPONLY = True.
+5. What is CSRF, and why does it work even without stealing a password? → Answer: It tricks a user into unwanted actions on a site where they are authenticated; the browser automatically sends the valid session cookie, so no password is needed.
+6. Why is using GET for state-changing actions dangerous? → Answer: GET should only retrieve data; if used for sensitive actions, it becomes CSRF-vulnerable even with CSRF token protection — avoid GET for any state-changing action.
+7. How does a CSRF token prevent an attack? → Answer: The server generates a unique random value tied to the session; it is submitted with the form/AJAX alongside the session cookie, and the server checks both, rejecting requests with a missing or invalid token.
+8. What does CsrfViewMiddleware check, and which methods are exempt? → Answer: It checks for the CSRF token on unsafe requests (POST, PUT, DELETE) and validates Origin/Referer over HTTPS against trusted domains; GET requests are exempt.
+9. How does JWT storage affect CSRF and XSS risk? → Answer: JWT in LocalStorage is not auto-sent, reducing CSRF but raising XSS risk; JWT in HTTP-only cookies is auto-sent, requiring CSRF protection via tokens or SameSite.
+10. What is DRF's default CSRF posture, and what must developers do? → Answer: CSRF protection is disabled by default for API views; APIView and ViewSet are typically CSRF exempt, so developers must explicitly re-implement protection or use alternatives.
+11. How does Django mitigate SQL injection, and when must you act? → Answer: The ORM's database driver automatically escapes SQL; when writing raw SQL you must explicitly parameterise inputs safely.
+12. What is clickjacking and how does Django defend against it? → Answer: Hijacking clicks meant for a top-level site and routing them to a hidden malicious page (e.g. an invisible iframe capturing credentials); Django uses X-Frame-Options middleware to prevent iframe rendering.
+13. Name the Django HTTPS protections and their settings. → Answer: SECURE_PROXY_SSL_HEADER, SECURE_SSL_REDIRECT, HSTS (SECURE_HSTS_SECONDS, SECURE_HSTS_INCLUDE_SUBDOMAINS), and secure cookies (SESSION_COOKIE_SECURE, CSRF_COOKIE_SECURE).
+14. How should ALLOWED_HOSTS and DEBUG be set for production? → Answer: ALLOWED_HOSTS should list only your domains to prevent Host header attacks, and DEBUG must be False in production because DEBUG=True exposes sensitive information.
+15. Where should SECRET_KEY live, and what Linux permissions protect it? → Answer: In a .env file loaded via os.getenv('SECRET_KEY'); protect it with chmod 600 /path/to/.env.
+16. Why limit database user permissions? → Answer: To reduce the impact of SQL injections — avoid root and limit CREATE, ALTER or DROP permissions.
+17. How are Django tests structured and run? → Answer: Test classes derive from TestCase with methods prefixed test_, placed in tests.py or a tests/ directory, and run with python manage.py test.
+18. What tools does the test client offer for views and templates? → Answer: It simulates HTTP requests (self.client.get), letting you assert response.status_code, assertContains, assertRedirects and assertTemplateUsed; it does not replace frontend testing.
+19. What is setUpTestData() for? → Answer: A class method that creates shared test data once per test class in the isolated test database, used to test model behaviour without affecting production data.
+20. How is code coverage measured, and what frontend tools are suggested? → Answer: Install Coverage.py (pip install coverage), then run coverage run manage.py test and coverage report (or coverage html for a visual report); frontend tools are Selenium, Jest and Jasmine.

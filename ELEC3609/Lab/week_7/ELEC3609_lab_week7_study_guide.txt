@@ -1,0 +1,829 @@
+================================================
+ELEC3609 Lab Week 7 – Study Guide
+Django REST Framework & Django Advanced · Lab 7
+================================================
+
+OVERVIEW
+--------
+This lab explores **Django REST Framework (DRF)** and several advanced topics for building
+scalable, modern web applications. It goes beyond basic API usage into **stateless
+authentication with JWT**, **asynchronous task handling with Celery**, **real-time communication
+with WebSockets (Django Channels)**, and **performance work such as fixing the N+1 query
+problem**. The individual task is to find and fix a hidden N+1 problem in the TIL-Lab06 project.
+The Celery and WebSocket chapters are marked **optional reading and are not assessed in the final
+exam** — but they are still worth understanding.
+
+------------------------------------------------
+STATS:
+------------------------------------------------
+Chapters|5 (Chapters 4-5 optional)
+Individual task|Task 6 (find & fix N+1)
+Lab resource|TIL-Lab06 source
+Core API toolkit|Django REST Framework
+Auth format focused|JWT (Simple JWT)
+
+------------------------------------------------
+SECTION 1: Django REST Framework Overview
+------------------------------------------------
+Developers today must support **web clients, native mobile apps, and business-to-business
+applications**. **Django REST Framework (DRF)** is a powerful toolkit for building **Web APIs**
+in Django. It provides a flexible, powerful system for building and consuming **RESTful APIs**
+with strong authentication and authorization.
+
+In the TIL project, a new application **til_api** holds all contexts for RESTful APIs; the file
+**api_endpoints.json** is provided to play with the TIL APIs.
+
+💡 **Why It Matters:** The same backend must serve many clients. A well-structured REST API lets a browser, a phone app and a partner system all use one set of endpoints.
+
+ℹ️ **Background:** A common gotcha — **"RESTful" is not just "returns JSON."** REST is about using HTTP semantics (methods, status codes, resources) correctly, which is why the rest of this chapter is about serializers, requests/responses, views, permissions and throttling.
+
+------------------------------------------------
+SECTION 2: Serialization: Models to JSON
+------------------------------------------------
+**Serialization** in DRF converts complex data types — Django (**ORM**) model instances and
+**querysets** — into **native Python data types** that can be easily rendered into **JSON** or other content types. Serializers also provide **deserialization**, converting parsed data back into complex types. Serializers work very similarly to Django's **Form** and **ModelForm** classes; this is the real "magic" DRF provides.
+
+A **ModelSerializer** is a shortcut: by inheriting from it, fields are generated automatically
+from the model, including default implementations of **.create()** and **.update()**.
+
+```python
+from rest_framework import serializers
+from til_app.models import Post
+
+class PostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Post
+        fields = ['id', 'subject', 'contents', 'created_at', 'visibility', 'tags', 'image']
+```
+
+- **PostSerializer** — defines a serializer for the Post model.
+- **class Meta** — provides metadata about the serializer.
+  - **model = Post** — specifies the model to serialize.
+  - **fields = [...]** — lists the fields to include in the serialized representation.
+
+**Serializing an object:**
+
+```python
+post = Post.objects.first()
+serializer = PostSerializer(post)   # Use PostSerializer to serialize a post.
+print(serializer.data)
+```
+
+- **serializer = PostSerializer(post)** — creates a serializer instance for a single Post object.
+- **serializer.data** — converts the Post into a dictionary format suitable for rendering into JSON. The output looks like:
+
+```json
+{
+  "id": 1,
+  "subject": "First Post",
+  "contents": "This is the content of the first post.",
+  "created_at": "2024-09-25T16:24:38.096845+10:00",
+  "visibility": true,
+  "tags": [
+    { "id": 1, "name": "tag1", "creation_date": "2024-09-25T16:18:22.201810+10:00" }
+  ],
+  "image": "image_media_url"
+}
+```
+
+💡 **Why It Matters:** Serializers are the translation layer between your database objects and the JSON that any client can consume.
+
+------------------------------------------------
+SECTION 3: Saving & Validation
+------------------------------------------------
+**Deserializing objects** means creating a serializer with raw input data, validating it, and using the validated data:
+
+```python
+serializer = PostSerializer(data=request.data)
+if serializer.is_valid():
+    validated_data = serializer.validated_data
+    print(validated_data)
+```
+
+- **serializer = PostSerializer(data=data)** — creates a serializer instance with raw input data.
+- **serializer.is_valid()** — validates the input against the serializer's fields and rules.
+- **serializer.validated_data** — the validated data as a dictionary, which can be used to create or update a model instance.
+
+**Saving instances:** you can override **create()**, which is called when `serializer.save()` is used with no instance:
+
+```python
+class PostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Post
+        fields = ['subject', 'contents', 'visibility']
+
+    def create(self, validated_data):
+        # Custom creation logic, additional processing before saving
+        return Post.objects.create(**validated_data)
+
+serializer = PostSerializer(data=request.data)
+if serializer.is_valid():
+    post = serializer.save()   # Calls the create() method
+    print(post)
+```
+
+- **def create(self, validated_data)** — called when serializer.save() is used with no instance.
+- The **validated_data** is a dictionary containing the validated input data.
+- **serializer.save()** — calls create() and returns the newly created Post object.
+
+**Validation** has two levels:
+
+```python
+class PostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Post
+        fields = ['subject', 'contents', 'visibility']
+
+    def validate_subject(self, value):
+        if len(value) < 5:
+            raise serializers.ValidationError(
+                "The subject must be at least 5 characters long.")
+        return value
+```
+
+- Add **.validate_<field_name>** methods to a Serializer subclass for **field-level validation** (similar to Django forms' `.clean_<field_name>`). Each takes a single argument: the field value.
+
+```python
+class PostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Post
+        fields = ['subject', 'contents', 'visibility']
+
+    def validate(self, data):
+        if 'spam' in data['contents'].lower():
+            raise serializers.ValidationError("The content contains prohibited words.")
+        return data
+```
+
+- Override **validate()** for **object-level validation**. It takes a dictionary of field values, raises `serializers.ValidationError` if necessary, or returns the validated values.
+
+💡 **Why It Matters:** Validation at the serializer boundary keeps bad data out of your database and returns clean, structured errors to the API client.
+
+------------------------------------------------
+SECTION 4: Request, Response & Views
+------------------------------------------------
+DRF provides enhanced **Request** and **Response** objects, making API handling easier.
+
+**Request example:**
+
+```python
+class ExampleView(APIView):
+    def post(self, request):
+        data = request.data
+        return Response({'received_data': data})
+```
+
+- **request.data** — contains the parsed data from the body of the request. For POST, PUT and PATCH, request.data is a dictionary-like object (**QueryDict**) containing the request data. It includes all parsed content, including **file** and **non-file** inputs.
+
+**Response example:**
+
+```python
+def example_function_view(request):
+    data = {'message': 'Hello, world!'}
+    return Response(data)
+```
+
+- **Response(data)** — instantiates a response object with the given data, and DRF converts it into the appropriate content type (for example, **JSON**).
+
+**APIView** is the base class for all DRF views; it subclasses Django's View:
+
+```python
+class HelloWorldView(APIView):
+    def get(self, request):
+        return Response({"message": "Hello, world!"})
+```
+
+- **def get(self, request)** — defines the behaviour for HTTP GET requests.
+
+**Generic API views** let you quickly build views that map closely to your database models:
+
+```python
+class PostListView(generics.ListAPIView):
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+```
+
+- **ListAPIView** — a generic view for listing multiple objects.
+- **queryset** — the set of objects to be listed.
+- **serializer_class** — the serializer used to format the response data.
+
+**Custom function-based views** offer more control and suit simple or highly customised logic:
+
+```python
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def post_list_create(request):
+    if request.method == 'GET':
+        posts = Post.objects.all()
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
+        serializer = PostSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+```
+
+- **@api_view(['GET', 'POST'])** — this view only handles GET and POST requests.
+- **@permission_classes([IsAuthenticated])** — restricts access to authenticated users only.
+
+💡 **Why It Matters:** Choose the lightest tool: APIView for full control, generic views for standard CRUD, and function-based views for simple custom logic.
+
+------------------------------------------------
+SECTION 5: Views & Pagination
+------------------------------------------------
+DRF includes **customisable pagination styles**, making large datasets easier to manage.
+
+**Global pagination settings** in settings.py:
+
+```python
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+}
+```
+
+- The pagination style may be set **globally**.
+- Pagination is only performed **automatically** if you are using **generic views or viewsets**.
+
+**Custom pagination classes:**
+
+```python
+from rest_framework.pagination import PageNumberPagination
+
+class CustomPagination(PageNumberPagination):
+    page_size = 5
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+```
+
+- Override the pagination class to modify particular aspects of the style. Here the default page size is 5, clients may request a size via the `page_size` query parameter, up to a maximum of 100.
+
+**Applying pagination to a view:**
+
+```python
+class PostListView(generics.ListAPIView):
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+    pagination_class = CustomPagination
+```
+
+- **pagination_class = CustomPagination** — specifies the custom pagination class for this view.
+
+💡 **Why It Matters:** Without pagination, a list endpoint returns everything and can time out or melt the client. Page-number pagination puts a predictable bound on each response.
+
+------------------------------------------------
+SECTION 6: Auth, Permissions & Throttling
+------------------------------------------------
+Three distinct concerns protect an API:
+
+- **Authentication** — verifies **the identity** of the user making a request, ensuring only authorised users can access or modify resources. DRF provides several mechanisms, including
+  **session-based, token-based, and JWT-based** authentication.
+- **Permissions** — determine whether a request should be **granted or denied**. DRF provides a variety of permission classes, applied globally or at the view level.
+- **Throttling** — controls the **rate of requests** a user or client can make to an API. It helps prevent abuse such as spamming or excessive usage by limiting requests within a specified time period.
+
+💡 **Why It Matters:** Authentication answers "who are you?", permissions answer "are you allowed to do this?", and throttling answers "how often may you ask?" Keep the three separate in your mind — and in your settings.
+
+------------------------------------------------
+SECTION 7: JWT: Structure & Workflow
+------------------------------------------------
+**JWT (JSON Web Token)** is a compact, **URL-safe** means of representing **claims** between two parties. It is a popular format for securely transmitting information as a JSON object, **signed** using a secret or a **public/private key pair** to ensure the **integrity and authenticity** of the claims. JWTs are powerful for authentication and authorization, especially in **stateless and distributed environments**. They offer scalability and flexibility but require careful handling to address security concerns. They are **not suitable for scenarios requiring immediate revocation or one-time use**, where traditional tokens stored in a database are more appropriate.
+
+**Structure of a JWT:** three parts separated by dots — `header.payload.signature` (`xxxxx.yyyyy.zzzzz`):
+
+- **Header** — metadata about the token, such as the signing algorithm and token type:
+
+```json
+{ "alg": "HS256", "typ": "JWT" }
+```
+
+- **Payload** — the **claims**, statements about the user or additional data. Common claims include **iss** (issuer), **exp** (expiration time), **sub** (subject), and **aud** (audience):
+
+```json
+{ "sub": "1234567890", "name": "John Doe", "admin": true }
+```
+
+- **Signature** — ensures the token has not been altered. Created by encoding the header and payload, then signing with a secret key or private key:
+
+```text
+HMACSHA256(
+    base64UrlEncode(header) + "." + base64UrlEncode(payload),
+    secret)
+```
+
+**JWT workflow:**
+
+1. The server **generates a token** upon user authentication and returns it to the client.
+2. The client includes this token in the **Authorization header** of every subsequent HTTP request, using the **Bearer** schema.
+3. The server **validates the token** by checking the signature and ensuring it has not expired. If valid, the request is processed; otherwise it is rejected.
+
+**Example of a JWT:**
+
+```text
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
+```
+
+⚠️ **Common Trap:** A naive JWT implementation without additional measures is **not good practice for authorization**. One good practice is to use a **token blacklist** and a **short-lived accessToken with a refreshToken**.
+
+ℹ️ **Background:** JWT alone is not sufficient for comprehensive authorization in modern applications; that is one reason **OAuth 2.0** (RFC 6749) is often needed. JWT itself is defined in
+**RFC 7519**.
+
+------------------------------------------------
+SECTION 8: JWT vs Sessions & Tokens
+------------------------------------------------
+**JWT vs session:**
+
+| Feature | JWT | Session |
+| --- | --- | --- |
+| Storage | Client-side (usually local storage or cookies) | Server-side (memory or database) |
+| State management | Stateless — no server storage | Stateful — requires server storage and management |
+| Scalability | Highly scalable; no need to synchronise state across servers | Can be challenging to scale due to centralised state |
+| Performance | Less server load; verification is local | Higher server load; session lookup on each request |
+| Expiration | Expiry built into the token (exp claim) | Controlled by server; can be invalidated any time |
+| Revocation | Difficult without extra mechanisms (e.g. blacklists) | Easy; invalidate the session on the server |
+| Security concerns | Token theft/misuse if poorly stored; hard to revoke | Easier to revoke; vulnerable to session hijacking |
+| Use case | APIs, microservices, single-page applications | Traditional web apps with server-side rendering |
+
+**JWT is not a traditional token:**
+
+1. **Self-contained and stateless** — unlike traditional tokens, JWTs need no server-side storage; all necessary information is embedded in the token itself.
+2. **Not meant for one-time expiration** — traditional tokens (email verification, password reset) are one-time-use and managed on the server; JWTs are often used for continuous sessions with a defined expiration and are not inherently one-time use.
+3. **Non-revocable by default** — once issued, a JWT remains valid until it expires. Traditional tokens stored in the database can be invalidated by changing their state.
+
+**Use cases for traditional tokens:** email verification (one-time token), password reset (temporary, expires after a few minutes), and coupon or discount codes (redeemed only once).
+
+| Feature | JWT | Traditional Tokens |
+| --- | --- | --- |
+| Storage | Client-side, no server storage needed | Server-side, in a database |
+| Revocation | Difficult; needs a blacklist | Easy; change state in the database |
+| Expiration | Controlled by exp claim; not one-time use | Usually one-time use or short-lived |
+| Security | Token theft risk; secure storage required | Secure DB access; prevent replay attacks |
+| Use case | Authentication and continuous sessions | One-time actions like email verification, password reset |
+
+💡 **Why It Matters:** Pick the token type to match the job. Continuous API sessions suit JWT; one-shot actions with immediate revocation needs suit database-backed tokens.
+
+------------------------------------------------
+SECTION 9: Simple JWT
+------------------------------------------------
+**Simple JWT** provides a **JSON Web Token authentication backend for Django REST Framework**. It aims to cover the most common JWT use cases with a **conservative set of default features**, and to be **easily extensible** when a desired feature is not present. In the TIL demo, **til_api is integrated with Simple JWT as the authentication backend**.
+
+💡 **Why It Matters:** Rather than hand-rolling token generation and validation, Simple JWT gives you a vetted, default-secure backend you can extend.
+
+------------------------------------------------
+SECTION 10: The N+1 Query Problem
+------------------------------------------------
+The **N+1 query problem** is an ORM performance problem so common it has a name. It occurs when a
+query built with the ORM **inadvertently causes additional queries** to look up related records
+that were **not loaded by the original query**. It typically happens when a separate database
+query runs **for each object in a set**, resulting in **N** queries (where N is the number of
+objects) **plus one initial query** to retrieve the set — a total of **N+1 queries** (a loop).
+
+Example: given a list of posts, fetch comments (or creator name, or comment count) for each post:
+
+```python
+# This results in N+1 trips to the database
+posts = Post.objects.all()            # 1 hit
+for post in posts:                    # N hits
+    comments = Comment.objects.filter(post=post)
+    # creator_name = post.creator.username                      # second N
+    # comment_count = Comment.objects.filter(post=post).count() # third N
+```
+
+**Why it hurts:**
+
+- **Higher resource consumption** — the database and application communicate many times, degrading CPU, memory and I/O.
+- **Increased latency** — every query incurs **Round-Trip Time (RTT)** for the request to travel to the server and back.
+
+As the number of objects (N) grows, the number of queries grows **linearly**, causing significant
+slowdowns.
+
+⚠️ **Common Trap:** Premature optimisation is bad. If your site is small or medium sized and pages load fine, it is okay to ignore the optimisation. Fix N+1 when it is actually a bottleneck.
+
+ℹ️ **Background:** Modern databases with sophisticated query optimisers can handle complex queries efficiently (see the SQLite Query Optimizer Overview).
+
+**Finding N+1 queries:** use **Django Debug Toolbar** to inspect the SQL queries generated for each request. The TIL project provides two endpoints to compare:
+
+- (Problematic) `http://127.0.0.1:8000/til_app/posts_n_plus_one/`
+- (Optimised) `http://127.0.0.1:8000/til_app/posts_optimized/`
+
+These are implemented in `til_app.views.post_comments_n_plus_one()` and
+`til_app.views.post_comments_optimized()` respectively.
+
+------------------------------------------------
+SECTION 11: Fixing N+1 with QuerySets
+------------------------------------------------
+Optimised QuerySets prevent the N+1 problem using **select_related**, **prefetch_related** and
+**annotate**.
+
+**select_related()** — use when fetching related objects via **foreign key** relationships. It performs an **SQL JOIN** to fetch related objects in a single query:
+
+```python
+posts = Post.objects.select_related('creator').all()
+for post in posts:
+    print(post)
+    print(post.creator.username)
+```
+
+This returns a QuerySet for each post with its creator, via a single joined query:
+
+```sql
+SELECT "post"."id", "post"."subject", "post"."contents", "auth_user"."username"
+FROM "post"
+INNER JOIN "auth_user" ON ("post"."creator_id" = "auth_user"."id")
+```
+
+**prefetch_related()** — use for **many-to-many** or **reverse foreign key** relationships. Django performs **two queries** and "joins" the results **in Python**:
+
+```python
+posts = Post.objects.prefetch_related('post_comment').all()
+for post in posts:
+    print(post)
+    for comment in post.post_comment.all():
+        print(comment)
+```
+
+```sql
+SELECT "post"."id", "post"."subject" FROM "post";
+SELECT "comment"."id", "comment"."post_id", "comment"."content"
+FROM "comment" WHERE "comment"."post_id" IN (1, 2, 3, ...);  -- all post IDs from query 1
+```
+
+**annotate()** — aggregates data and performs calculations across related models without extra queries per related object:
+
+```python
+posts = Post.objects.annotate(comment_count=models.Count('post_comment')).all()
+for post in posts:
+    print(post.comment_count)
+```
+
+```sql
+SELECT "post"."id", COUNT("post_comment"."id") AS "comment_count"
+FROM "post"
+LEFT JOIN "post_comment" ON ("post"."id" = "post_comment"."post_id")
+GROUP BY "post"."id"
+```
+
+**Raw SQL** is also possible for complex cases, but ⚠️ you should be **very careful** whenever you write raw SQL, for both **security** and **performance** reasons.
+
+🧠 **Memory Hook:** **select_related = one JOIN for single-valued (FK) links; prefetch_related = two queries joined in Python for many-valued links; annotate = compute the count in the database.**
+
+------------------------------------------------
+SECTION 12: Mitigating Remaining N+1
+------------------------------------------------
+Sometimes N+1 cannot be avoided entirely. Strategies to mitigate performance:
+
+- **Pagination (infinite scroll)** — load a few items at a time using Django's built-in pagination utilities:
+
+```python
+from django.core.paginator import Paginator
+
+paginator = Paginator(Post.objects.all(), 9)   # Show 9 posts per page
+page_number = request.GET.get('page')
+page_obj = paginator.get_page(page_number)
+```
+
+  See `til_app.views.posts()` and `template/post/posts.html` for a simple pagination with
+  infinite scroll (read more about Django Pagination).
+
+- **Lazy loading** — load only the data needed at a given time, avoiding unnecessary fetching. Commonly used in frontend optimisation for images and videos.
+
+- **Caching in Django** — store frequently accessed data to reduce database hits (see Django's cache framework).
+
+💡 **Why It Matters:** Combined, pagination caps how much work each request does, lazy loading defers non-essential data, and caching removes repeated database hits — three independent levers.
+
+------------------------------------------------
+SECTION 13: Async Task Queues & Celery
+------------------------------------------------
+⚠️ **Optional reading — NOT assessed in the final exam** (Chapters 4 and 5 are provided for interest and broader topics).
+
+An **asynchronous task queue** executes tasks at a **different time** from when they were created,
+and possibly **not in the same order**. It lets you run background tasks outside the main
+application process, enabling **non-blocking operations**.
+
+**Basic concepts:**
+
+1. **Task/Job** — a unit of work performed asynchronously (sending an email, processing a file).
+2. **Task Queue** — a data structure holding tasks to be executed.
+3. **Broker/Message Queue** — middleware handling storage and delivery of tasks (Redis, RabbitMQ, Amazon SQS).
+4. **Producer** — the entity (code, web app) that creates tasks and puts them in the queue.
+5. **Worker** — a process that fetches tasks and executes them; multiple workers can run concurrently, and most commonly each worker runs as a **daemon under supervision**.
+
+ℹ️ **Background:** "Task queue" is not a traditional academic term; in Django it usually means an
+**asynchronous** task queue. The concept is closely related to message queues and message-oriented middleware, rooted in distributed systems and concurrent computing.
+
+**When you need a task queue:**
+
+- **Long-running tasks** — sending emails, generating reports, processing large files, image processing.
+- **Resource-intensive operations** — video encoding, ML model training.
+- **Scheduled tasks** — backups, data synchronisation, periodic notifications.
+- **Concurrency** — running tasks at controlled rates.
+
+| Issue | Use Task Queue? | Reason |
+| --- | --- | --- |
+| Sending bulk email | Yes | Each send involves network I/O; bulk sends are slow inline |
+| Modifying files (including images) | Yes | File/image processing is CPU/I/O intensive |
+| Fetching large data from third-party APIs | Yes | Network calls are slow and can exceed request timeouts |
+| Inserting/updating many records | Yes | Bulk DB operations can be long-running; safer asynchronously |
+| Time-intensive calculations | Yes | CPU-bound; should not block the main web thread |
+| Updating a user profile | No | Simple DB write, completes in milliseconds |
+| Adding a blog | No | One insert and maybe a few updates; fast enough inline |
+
+⚠️ **Not for user-interactive tasks:** a task queue is **not suitable for User-Interactive tasks.** A task queue can add complexity but can improve user experience; arguably it comes down to whether a piece of code causes a bottleneck and can be deferred until more CPU cycles are free.
+
+**Implementations in Django:**
+
+- **Celery** — a robust, distributed task queue system supporting complex workflows and high concurrency. Ideal for heavy background tasks (bulk emails, large data sets, scheduled jobs). Works with multiple brokers (Redis, RabbitMQ) and offers **task retry, chaining, and monitoring**. In the TIL project, Celery is used for **asynchronous email services**.
+- **Django native asynchronous support** — async views and an entirely async-enabled request stack under ASGI. Async views still work under WSGI but with performance penalties and without efficient long-running requests.
+- **Other lightweight task queues** — Django Q and Huey.
+
+**Where the code lives in TIL:**
+
+- **til_api.views.RegisterView()** — enqueues the email task during user registration.
+- **til_api.tasks** — contains the Celery task(s) that actually send the email.
+
+⚠️ **Settings reminder:** the TIL project is configured for **demo purposes**:
+- The **.env** file uses **placeholder values** for email; replace them with a real email service configuration to make it work.
+- In settings, **celery_task_always_eager = True** is enabled, meaning tasks run **synchronously in-process**, not in a real background worker.
+
+For true asynchronous behaviour you must change these settings and run Celery with a broker.
+
+💡 **Why It Matters:** celery_task_always_eager = True is a great teaching trap: the code *looks* asynchronous, but it executes inline, so you will not observe real background behaviour.
+
+------------------------------------------------
+SECTION 14: WebSockets & Django Channels
+------------------------------------------------
+⚠️ **Optional reading — NOT assessed in the final exam.**
+
+**WebSocket** is a protocol enabling **real-time, two-way communication** between a client (a browser) and a server over a **single, persistent connection**. Unlike traditional HTTP, which needs separate requests for each interaction, WebSocket allows **continuous, low-latency** communication. This suits **chat applications, live notifications, online gaming, and collaborative tools**. The latest specification is **RFC 6455**, supported by Chrome, Safari and Firefox.
+
+**Django Channels** extends Django beyond HTTP, enabling it to handle protocols that require
+**long-running connections** such as WebSocket, MQTT and more. It lets Django manage real-time functionality (chat rooms, live updates, notifications) while staying compatible with the standard Django ecosystem.
+
+**Key concepts:**
+
+1. **ASGI (Asynchronous Server Gateway Interface)** — Channels uses ASGI instead of WSGI to support asynchronous protocols; ASGI is the asynchronous counterpart of WSGI, enabling WebSockets and other long-lived connections.
+2. **Consumers** — the basic unit of Channels code; Django's equivalent of **views** for handling WebSocket and other asynchronous events. Consumers structure code as functions called whenever an event happens, rather than making you write an event loop, and they handle synchronous/async code plus handoffs and threading for you.
+3. **Routing** — like Django's URL routing for HTTP, Channels routes WebSocket connections and protocol events to specific consumers, letting you combine and stack consumers (and other valid ASGI applications).
+4. **Channel Layers** — a mechanism for communication between different instances of the application; a **cross-process communication layer** supporting group and broadcast messaging. Channel layers use backends such as **Redis or in-memory storage**.
+
+💡 **Why It Matters:** HTTP is request/response; chat needs a two-way pipe. ASGI + consumers + routing + channel layers are the four moving parts that turn Django into a real-time server.
+
+------------------------------------------------
+SECTION 15: Building the Chat Room
+------------------------------------------------
+The TIL project extends itself to support **real-time chat using Django Channels**, combining
+WebSockets, a consumer, and a simple frontend template in til_app. The chat can be tested at
+`http://127.0.0.1:8000/til_app/chat/All/`.
+
+**1. Settings and ASGI configuration.**
+
+In **til_project/settings.py**, add Channels and configure ASGI and channel layers:
+
+```python
+INSTALLED_APPS = [
+    'daphne',
+    'channels',
+    ...
+]
+
+ASGI_APPLICATION = 'til_project.asgi.application'
+
+CHANNEL_LAYERS = {
+    "default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}
+}
+```
+
+In **til_project/asgi.py**, route HTTP to Django and WebSockets to Channels:
+
+```python
+websocket_urlpatterns = [
+    re_path(r'ws/chat/(?P<room_name>\w+)/$', consumers.ChatConsumer.as_asgi()),
+]
+
+application = ProtocolTypeRouter({
+    "http": django_asgi_app,
+    "websocket": AllowedHostsOriginValidator(
+        AuthMiddlewareStack(URLRouter(websocket_urlpatterns))
+    ),
+})
+```
+
+**2. Routing and consumers.**
+
+In **til_app/routing.py**, define WebSocket URL patterns. In **til_app/consumers.py**, handle
+WebSocket connections, save messages, and broadcast:
+
+```python
+class ChatConsumer(WebsocketConsumer):
+    def connect(self):
+        self.room_name = self.scope['url_route']['kwargs']['room_name']
+        self.room_group_name = f"chat_{self.room_name}"
+        async_to_sync(self.channel_layer.group_add)(
+            self.room_group_name,
+            self.channel_name
+        )
+        self.accept()
+
+    def receive(self, text_data):
+        data = json.loads(text_data)
+        async_to_sync(self.channel_layer.group_send)(
+            self.room_group_name,
+            {"type": "chat_message", "username": data["username"], "message": data["message"]}
+        )
+
+    def chat_message(self, event):
+        self.send(text_data=json.dumps(event))
+```
+
+**3. Views and URLs.**
+
+```python
+# til_app/views.py
+@login_required
+def chat(request, room):
+    messages = ChatMessage.objects.filter(room_name=room).order_by('timestamp')[:50]
+    return render(request, "chat/index.html",
+                  {"room_name": room, "messages": reversed(messages)})
+```
+
+```python
+# til_app/urls.py
+path('chat/<str:room>/', views.chat, name='chat')
+```
+
+**4. Template and frontend logic.** In **template/chat/index.html**, connect to the WebSocket and display messages dynamically:
+
+```javascript
+const chatSocket = new WebSocket(
+    (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
+    window.location.host + '/ws/chat/' + "{{ room_name }}" + '/'
+);
+
+chatSocket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    // Append new messages to chat window
+};
+
+document.querySelector('#chat-message-submit').onclick = function() {
+    chatSocket.send(JSON.stringify({
+        'username': '{{ user.username }}',
+        'email': '{{ user.email }}',
+        'message': messageInput.value
+    }));
+};
+```
+
+**Summary of the structure:**
+
+- **settings.py + asgi.py** → enable Channels and WebSocket support.
+- **routing.py + consumers.py** → manage connections and message broadcasting.
+- **views.py + urls.py** → serve chat pages and history.
+- **index.html** → frontend UI and JavaScript logic for sending/receiving messages.
+
+This structure demonstrates a minimal yet functional real-time chat system with Django Channels.
+
+💡 **Why It Matters:** Notice the separation: ASGI wiring chooses the protocol, routing maps the URL to a consumer, the consumer manages the connection and broadcasts, and the view/template handle the ordinary HTTP page and JavaScript client.
+
+================================================
+KEY TAKEAWAYS
+================================================
+1. **DRF is Django's Web API toolkit** — it supports web, mobile and B2B clients with serialization, auth and permissions.
+2. **Serializers translate models to JSON and back** — ModelSerializer generates fields and default create()/update().
+3. **Validate at field and object level** — validate_<field>() for one field, validate() for the whole object.
+4. **request.data and Response()** — DRF gives parsed request data and content-negotiated responses.
+5. **Three view styles** — APIView for control, generic views for standard patterns, function-based views for simple custom logic.
+6. **Pagination is configurable globally or per view** — and only auto-applies to generic views/viewsets.
+7. **Authentication, permissions and throttling are separate concerns** — identity, authorisation, and rate limiting.
+8. **A JWT is header.payload.signature** — header has alg/typ, payload holds claims (iss, exp, sub, aud), signature guards integrity.
+9. **JWTs are stateless and scale well** — but they are hard to revoke and not for one-time use; use blacklists and short-lived access tokens with refresh tokens.
+10. **Traditional DB tokens suit one-time actions** — email verification, password reset, single-use coupons.
+11. **The N+1 problem is a query loop** — one query for the set plus N for related records, worsening linearly and adding RTT latency.
+12. **select_related, prefetch_related, annotate fix N+1** — FK JOIN, many-valued two-query prefetch, and database-side aggregation respectively.
+13. **Sometimes N+1 remains** — mitigate with pagination, lazy loading and caching.
+14. **Async task queues run work out of band** — Celery is robust and distributed; TIL uses it for email and runs eagerly for the demo.
+15. **WebSocket gives persistent two-way communication** — Django Channels adds ASGI, consumers, routing and channel layers for real-time features.
+
+================================================
+TERMS TO KNOW
+================================================
+**APIView**: Base class for all DRF views; subclasses Django's View.
+**annotate()**: QuerySet method that aggregates/calculates across related models in the database.
+**ASGI**: Asynchronous Server Gateway Interface; Channels uses it instead of WSGI.
+**Authentication**: Verifying the identity of the user making a request.
+**Bearer schema**: The Authorization header scheme used to send a JWT.
+**Broker**: Middleware that stores and delivers tasks (Redis, RabbitMQ, Amazon SQS).
+**Celery**: Robust distributed task queue system supporting workflows, retries, chaining and monitoring.
+**celery_task_always_eager**: Setting that runs Celery tasks synchronously in-process for the TIL demo.
+**Channel Layers**: Cross-process communication layer for group/broadcast messaging; uses Redis or in-memory backends.
+**Channels**: Django extension that handles long-running protocols such as WebSocket and MQTT.
+**Claims**: Statements in a JWT payload (iss, exp, sub, aud) about the user or data.
+**Consumers**: Basic unit of Channels code; Django's equivalent of views for async/WebSocket events.
+**Django Debug Toolbar**: Tool for inspecting the SQL queries generated per request; used to find N+1.
+**Django Q / Huey**: Lightweight alternative task queues.
+**DRF**: Django REST Framework; toolkit for building Web APIs.
+**function-based views**: DRF views using regular functions, decorated with @api_view.
+**Generic API views**: Pre-built DRF views (e.g. ListAPIView) mapping closely to database models.
+**JWT**: JSON Web Token; compact URL-safe signed representation of claims (RFC 7519).
+**ListAPIView**: Generic DRF view for listing multiple objects.
+**ModelSerializer**: Serializer shortcut that auto-generates fields and create()/update().
+**N+1 query problem**: Performance issue where one query plus N related queries run in a loop.
+**Pagination**: Limiting list results into pages; configurable globally or per view.
+**Permissions**: Rules determining whether a request is granted or denied.
+**prefetch_related()**: QuerySet method for many-to-many/reverse FK relations; two queries joined in Python.
+**Producer**: Entity that creates tasks and puts them in the queue.
+**ProtocolTypeRouter**: ASGI router that dispatches by protocol (http vs websocket).
+**QueryDict**: Dictionary-like object holding parsed request data in request.data.
+**REST / RESTful**: Architectural style using HTTP semantics to expose resources.
+**Routing (Channels)**: Maps WebSocket connections/events to specific consumers.
+**select_related()**: QuerySet method for foreign keys; performs a SQL JOIN in one query.
+**Serializer**: DRF class converting complex types to/from native Python types.
+**Simple JWT**: JWT authentication backend for DRF with conservative defaults, used by til_api.
+**Task Queue**: Data structure holding async tasks to be executed by workers.
+**Throttling**: Limiting the rate of API requests to prevent abuse.
+**token blacklist**: Mechanism to revoke JWTs, which are otherwise non-revocable until expiry.
+**validate_<field_name>()**: Serializer field-level validation method.
+**validate()**: Serializer object-level validation method taking a dictionary of field values.
+**WebSocket**: Protocol (RFC 6455) for persistent, two-way, low-latency client-server communication.
+**Worker**: Process that fetches tasks from a queue and executes them, often as a supervised daemon.
+**WSGI**: Synchronous gateway interface; the counterpart to ASGI.
+
+================================================
+MNEMONICS & QUICK RECALL
+================================================
+**JWT Parts**: **H-P-S** — "Header, Payload, Signature," separated by dots.
+**JWT Header Fields**: **A-T** — "alg (algorithm) and typ (type)."
+**JWT Workflow**: **G-S-V** — "Generate on login, Send as Bearer, Validate signature and expiry."
+**N+1 Fixes**: **S-P-A** — "Select_related (FK), Prefetch_related (M2M/reverse), Annotate (counts)."
+**Remaining N+1 Mitigations**: **P-L-C** — "Pagination, Lazy loading, Caching."
+**DRF View Choice**: **A-G-F** — "APIView (control), Generic (standard), Function-based (simple custom)."
+**Task Queue Uses**: **L-R-S-C** — "Long-running, Resource-intensive, Scheduled, Concurrency."
+**Channels Stack**: **A-C-R-L** — "ASGI, Consumers, Routing, Channel Layers."
+**Task Queue Classes**: **P-Q-B-W** — "Producer, Queue, Broker, Worker."
+
+================================================
+WORKED EXAMPLES
+================================================
+### Example 1: From ModelInstance to JSON
+1. A **ModelSerializer** (`PostSerializer`) inherits from `serializers.ModelSerializer`.
+2. `class Meta` sets `model = Post` and lists the fields.
+3. Fetch a single object: `post = Post.objects.first()`.
+4. Serialize it: `serializer = PostSerializer(post)`.
+5. Read `serializer.data` — a dictionary with id, subject, contents, created_at, visibility, tags (a nested list) and image, ready to render as JSON.
+
+### Example 2: Add Up the Queries in an N+1 Loop
+The lab's loop does three things per post: filter comments, read the creator username, and count
+comments. For N posts:
+
+- 1 query to fetch all posts.
+- N queries for comments, plus up to N for creator names and N for counts.
+
+Those are the "N+1 trips to the database." Fix with `select_related('creator')` for the creator
+(one JOIN), `prefetch_related('post_comment')` for comments (two queries joined in Python), and
+`annotate(comment_count=models.Count('post_comment'))` for the count (computed by the database).
+
+### Example 3: JWT vs Session in a Scaling Scenario
+A stateless API behind a load balancer with several app servers needs to authenticate each
+request. With **JWT**, the token is self-contained and verified locally with no shared session
+store, so it scales easily — but a leaked token stays valid until it expires unless you add a
+blacklist. With **sessions**, the server must look up shared state on each request and centralised
+state is harder to scale, but a session can be invalidated instantly. Choose based on whether you
+value scalability (JWT) or easy revocation (session).
+
+### Example 4: Should This Be a Background Task?
+- Sending bulk email → **Yes** (network I/O, slow inline).
+- Generating an image thumbnail → **Yes** (CPU/I/O intensive).
+- Updating a user profile → **No** (simple millisecond DB write).
+- A live chat message the user is waiting to see → **No** (task queues are not for user-interactive tasks).
+
+### Example 5: Tracing a Chat Message Through Channels
+1. The browser opens a WebSocket to `/ws/chat/All/` using the JS `WebSocket` constructor.
+2. **Routing** matches the URL to `ChatConsumer`.
+3. `connect()` joins the channel layer group `chat_All` and calls `self.accept()`.
+4. The user clicks send; the JS calls `chatSocket.send(JSON.stringify({...}))`.
+5. `receive()` parses the JSON and calls `group_send` with type `chat_message`.
+6. `chat_message()` sends the event back out to the group; each client's `onmessage` appends it.
+
+================================================
+EXAM FOCUS
+================================================
+1. What does DRF serialization do, and how does ModelSerializer simplify it? → Answer: It converts model instances/querysets into native Python types (and back via deserialization); ModelSerializer auto-generates fields from the model and provides default create() and update().
+2. How do you validate a single field versus the whole object in DRF? → Answer: Add validate_<field_name>() for field-level validation of one value; override validate() for object-level validation using a dictionary of field values.
+3. What is the difference between APIView, generic views and function-based views? → Answer: APIView is the base class giving full control; generic views are pre-built patterns mapping to models (e.g. ListAPIView); function-based views use @api_view for simple or highly custom logic.
+4. How is pagination configured and when does it apply automatically? → Answer: Set DEFAULT_PAGINATION_CLASS and PAGE_SIZE globally, or a pagination_class per view; automatic pagination applies when using generic views or viewsets.
+5. Distinguish authentication, permissions and throttling. → Answer: Authentication verifies identity; permissions decide if a request is granted or denied; throttling limits the rate of requests within a time period.
+6. Name the three parts of a JWT and what each holds. → Answer: Header (metadata: alg, typ), Payload (claims such as iss, exp, sub, aud), Signature (built by signing encoded header and payload with a secret/private key).
+7. Describe the JWT workflow from login to a protected request. → Answer: The server generates the token on authentication and returns it; the client sends it in the Authorization header using the Bearer schema; the server checks the signature and expiry and processes or rejects the request.
+8. Why are JWTs hard to revoke, and what practices mitigate this? → Answer: They are non-revocable by default and valid until expiry; use a token blacklist and short-lived access tokens with refresh tokens.
+9. When is a traditional database token better than a JWT? → Answer: For one-time or immediately revocable actions like email verification, password reset, and single-use coupon codes.
+10. What exactly is the N+1 query problem? → Answer: A query loop where one initial query retrieves a set and then N additional queries look up related records, giving N+1 total queries and linearly increasing cost.
+11. Which QuerySet method fixes foreign-key lookups, and which fixes many-to-many lookups? → Answer: select_related() for foreign keys (single SQL JOIN); prefetch_related() for many-to-many/reverse FK (two queries joined in Python).
+12. What does annotate() do in the N+1 context? → Answer: It aggregates/calculates across related models (e.g. Count of comments) in the database, avoiding a query per object.
+13. Name three ways to mitigate N+1 when it cannot be fully avoided. → Answer: Pagination (load few items at a time), lazy loading, and caching.
+14. What is an asynchronous task queue, and name its five basic concepts. → Answer: It runs tasks at a different time from creation, possibly out of order; concepts are Task/Job, Task Queue, Broker/Message Queue, Producer, and Worker.
+15. When should you NOT use a task queue? → Answer: For user-interactive tasks, and for simple fast operations like updating a user profile or adding a blog.
+16. What is Celery, and what is the demo caveat in the TIL project? → Answer: A robust distributed task queue supporting workflows and high concurrency, used for async email; the TIL project sets celery_task_always_eager = True so tasks run synchronously in-process.
+17. How does WebSocket differ from HTTP, and what does Channels add? → Answer: WebSocket gives persistent, two-way, low-latency communication over a single connection; Channels adds ASGI support, consumers, routing and channel layers so Django can handle it.
+18. What are the four key Channels concepts? → Answer: ASGI, Consumers, Routing, and Channel Layers.
+19. In the chat app, what happens in connect(), receive() and chat_message()? → Answer: connect() joins the group and accepts; receive() parses incoming JSON and group_sends a chat_message; chat_message() sends the event back out to the group.
+20. Are Celery and WebSocket assessed in the final exam? → Answer: No — Chapters 4 and 5 are optional reading and are not assessed in the final exam.

@@ -1,0 +1,463 @@
+================================================
+ELEC3609 Week 10 – Study Guide
+Software Quality, Testing & Defensive Design · 2025 Session
+================================================
+
+OVERVIEW
+--------
+This lecture covers the fundamentals of verifying that a web application is correct: the levels of testing, the difference between black-box and white-box perspectives, regression testing, fuzzing, non-functional testing, and chaos engineering. It then explains practical test strategy — the Test Pyramid, when to automate, and how to design high-quality test cases using equivalence partitioning and boundary analysis. Finally, it covers code coverage metrics and defensive programming with design patterns. Applying a combination of these techniques for the assignment helps ensure your application deploys successfully and meets its requirements.
+
+------------------------------------------------
+STATS:
+------------------------------------------------
+Lectures|1
+Testing Levels|Unit, Integration, System, Acceptance
+Coverage Types|5 (Function, Line, Statement, Branch, Condition)
+Pyramid Base|Many fast unit tests
+Chaos Tools|Chaos Monkey, Latency Monkey, etc.
+Test Case Examples|3 (odd/even, palindrome, signup)
+
+------------------------------------------------
+SECTION 1: Why Testing Matters
+------------------------------------------------
+The quality of a web application is critical. This lecture does **not** cover *why* testing is important (almost every course already has) — it focuses instead on **fundamental testing concepts**, like verifying the correctness of a web application and systems in general.
+
+**The testing budget.** Every test takes time to **write, maintain, and execute**, so each test should provide value. A useful way to think about it is that you have a **budget** for time spent on tests — focus your time where it will provide the **most value first**.
+
+When prioritising, weigh three things: **breadth**, **depth**, and **critical functionality**. The example given: users cannot do much unless they can **log in** to the website — so authentication is tested first.
+
+💡 **Why It Matters:** Testing is an economic trade-off, not an infinite activity. Aim to catch the bugs that matter most, earliest, for the least effort.
+
+🧠 **Memory Hook:** **Critical functionality first, then depth, then breadth.** If login is broken, nothing else matters.
+
+------------------------------------------------
+SECTION 2: The Four Levels of Testing
+------------------------------------------------
+Testing occurs at different levels of abstraction in the software architecture.
+
+| Level | Scope / Target | Typical techniques |
+| --- | --- | --- |
+| **1. Unit / Functional** | Smallest isolated unit — a function, method, or class | Mocks, stubs, PyTest, Jest, white-box |
+| **2. Integration** | Interactions and boundaries between modules/services | Stubs, drivers, API contract testing |
+| **3. System (End-to-End)** | The complete system behaving as a whole (UI, DB, network) | Selenium, Cypress, Playwright, black-box under load |
+| **4. Acceptance** | Verifying the system meets business requirements and user expectations | BDD, user stories, automated UAT |
+
+**1. Unit (functional) testing** verifies functionality and components **independently of the whole system**. The aim is to test the **smallest testable piece of code that can be isolated** — ideally a single function, method, or subroutine. One approach is to **mock out other dependencies**. Example: testing the `validate_email` function. These tests run in milliseconds and pinpoint the exact failure location.
+
+**2. Integration testing** verifies the **interactions/communication between software components**, where a component is usually a module or class. Helpers used at this level:
+- **Stub** — a dummy control module providing hardcoded data to the module under test.
+- **Driver** — a wrapper/invoker that simulates the calling module.
+
+**3. System testing** verifies the behaviour and functionality of the **entire system**, including:
+- Security
+- Performance
+- Reliability
+- External interfaces
+
+It is also commonly called **end-to-end (E2E) testing**.
+
+**4. Acceptance testing** verifies that **acceptance criteria are met from the user's perspective** and that the system satisfies the **business requirements**. Each **use case should be covered by one or more acceptance tests**. While it takes a more objective, user-facing view, it **can still be automated**.
+
+💡 **Why It Matters:** Each level catches a different class of bug. Unit tests catch logic errors cheaply; system and acceptance tests confirm the whole product actually works for the user.
+
+------------------------------------------------
+SECTION 3: Black-Box vs White-Box Testing
+------------------------------------------------
+Tests are categorised by how much **internal knowledge of the implementation** the tester has.
+
+| Feature | Black-Box Testing | White-Box Testing |
+| --- | --- | --- |
+| Internal code access | None (opaque box) | Full access (transparent box) |
+| Basis of test cases | Specification / design, user stories | Source-code logic, branch paths |
+| Primary level | System & Acceptance testing | Unit & Integration testing |
+| Primary tester | External tester, QA, end-users | The developer writing the code |
+| Advantage | Unbiased; tests actual usage | Deep code-path and edge coverage |
+
+- **Black-box testing** uses **no programming/software/implementation knowledge** — tests are based only on the specification or design. An **external tester is ideal** because they have no bias from knowing the implementation.
+- **White-box testing** uses **knowledge of the implementation** to design test cases covering key paths. It is written by the **developer to verify their own code**.
+
+🧠 **Memory Hook:** Black box = **"judge by the outside"**; White box = **"look inside the code."**
+
+------------------------------------------------
+SECTION 4: Regression Testing
+------------------------------------------------
+**Regression testing** verifies that **incremental changes have not broken existing functionality**.
+
+- It makes sense to run the **full suite of tests after any code, infrastructure, or configuration change**.
+- These tests can almost immediately identify issues and help **narrow down problems**.
+- Run **preemptively during development**, they highlight possible errors and **backwards-incompatible changes**.
+
+A comprehensive suite can take minutes, so you must decide **where** best to run it. A common approach is **after any manual or unit tests** as another check, and again **before commit/push** (continuous integration).
+
+**Fail-fast ordering** — run the quickest, cheapest checks first so failures surface in seconds:
+```
+Linters & static analysis → Fast unit tests → Integration tests → E2E / system regression suites
+```
+
+🧠 **Memory Hook:** Build a **safety net** — every fixed bug should become a **new regression test** so it can never return silently.
+
+------------------------------------------------
+SECTION 5: Brute-Forcing vs Fuzzing
+------------------------------------------------
+**Can we just brute-force all possible inputs and test them all?**
+- **Yes, sometimes — but it is not a great idea and almost never worth the time.**
+- Most systems are complex enough that the **sheer number of input combinations** means you would be running tests for a very long period.
+- Illustration: a phone. Does it make sense to call **every single phone number** to verify call functionality? That could take weeks and waste enormous network resources.
+
+Even brute force **still leaves gaps**:
+- **Concurrency** (race conditions)
+- **Order of inputs or timing of requests**
+- **Random seeds / non-deterministic input**
+- **Hardware failure**
+
+**Fuzzing** solves this differently. A **fuzzer** is an automated tool that generates **invalid and non-standard inputs** and tests the system's behaviour. The idea is to **define the valid inputs** and have the fuzzer generate **semi-valid input** to test **boundary conditions**.
+
+Fuzzing flow:
+```
+Define valid input boundaries → Fuzzer mutates input → Execute target program → Monitor for failures
+```
+
+Fuzzing can highlight:
+- **Unhandled edge cases**
+- **Non-performant code**
+- **Possible crashes (memory leaks)** and security concerns (injection flaws, buffer overflows, denial of service)
+
+💡 **Why It Matters:** You cannot enumerate an effectively infinite input space, and timing/concurrency bugs escape simple loops. Fuzzing attacks the boundaries where real bugs hide.
+
+------------------------------------------------
+SECTION 6: Non-Functional Testing
+------------------------------------------------
+Non-functional testing checks **how well** the system works, not just whether features exist.
+
+**Performance and load testing** determines how well a system performs under known workloads. By adjusting the **stress factor**, we simulate high load and identify **bottlenecks**:
+- **Volume testing** — testing **functionality** under load (large quantities of data).
+- **Stress testing** — testing **reliability** under load (pushing beyond normal limits until it breaks).
+- **Load testing** — testing **performance** under load (expected peak traffic).
+
+It is important that the simulated workload is **realistic**. Example: if the site must handle **10,000 concurrent users** at peak, test at **1,000, 5,000, 10,000, and 15,000** simulated users.
+
+**Security testing** is required to ensure the system is secure — the **top 10 vulnerability list** (OWASP) is the reference.
+
+**Usability testing** checks whether the website is **intuitive and discoverable**. Common techniques:
+- **Hallway testing** — asking random people to perform a task
+- **Expert review** — specialists analysing the workflow against heuristics
+- **A/B testing** — running two UI variants concurrently and measuring conversion
+
+**Robustness / destructive testing** intentionally causes failures in components to see how the system copes. It answers:
+- Will the system **recover** if it fails?
+- Will we **lose data**?
+- How long will recovery take (MTTR)?
+- Do we have **backups**, and do they work?
+- Who knows how to fix it?
+
+💡 **Why It Matters:** A feature can be functionally correct yet fail under load, be unusable, or lose data on crash. Non-functional testing exposes those risks.
+
+------------------------------------------------
+SECTION 7: Chaos Engineering & Simian Army
+------------------------------------------------
+Netflix desires high **uptime and availability**, so it developed a suite of automated tools — the **Simian Army** — to test how production systems handle failure and abnormal scenarios.
+
+| Tool | Action |
+| --- | --- |
+| **Chaos Monkey** | Randomly disables/terminates production instances |
+| **Latency Monkey** | Introduces artificial delay in the client-server communication layer |
+| **Conformity Monkey** | Detects abnormal instances that don't follow best practices and terminates them |
+| **Doctor Monkey** | Detects unhealthy instances and routes traffic away from them, allowing investigation without sacrificing stability |
+| **Chaos Gorilla** | "Big Chaos Monkey" — simulates the outage of an entire availability zone |
+
+💡 **Why It Matters:** If you never deliberately break production, you don't know whether it can recover. Chaos engineering proves resilience under realistic failure conditions.
+
+🧠 **Memory Hook:** **Monkey = small failure (one instance), Gorilla = big failure (whole AZ).**
+
+------------------------------------------------
+SECTION 8: Testing Approaches & Test Pyramid
+------------------------------------------------
+**Manual vs automated testing:**
+- **Manual testing** is performed directly by a human — the developer or a dedicated **QA agent**. Examples: **exploratory testing** and **visual regression testing**.
+- **Automated tests** are tools driven by a computer. Examples: **end-to-end (E2E) tests**, **unit tests**, **integration tests**, and **performance tests**.
+
+**Which approach?** The **Test Pyramid** conceptualises where the majority of tests should live. It **minimises time spent on tests for the most value** and leads to issues being caught **earlier** in development.
+
+```
+        /\
+       /  \    Acceptance / E2E tests  (fewest, slowest, highest maintenance)
+      /----\
+     / Int. \  Integration tests       (moderate count, medium speed)
+    /--------\
+   /  Unit    \ Unit tests             (many, fast, isolated, low cost)
+  /------------\
+```
+
+Why the pyramid works:
+- **Unit tests** catch low-level logic bugs instantly at minimal cost.
+- **High-level E2E tests** are reserved for validating overall workflow wiring.
+
+**The Ice-Cream Anti-Pattern (avoid):** the inverted shape — a massive manual/E2E suite on top and almost no unit tests at the bottom. It causes **slow test runs, brittle builds, high maintenance, and delayed feedback**. There is also the idea of a **3D Testability Polygon** as an alternative way to think about strategy.
+
+**Key strategy guidance:**
+- It is **more important to cover your acceptance criteria** than to adhere rigidly to a testing strategy. Find an approach that fits your framework, program, and users.
+- Consider the **cost/value** of each test you write.
+- Consider the risk of each test you *don't* write.
+- **Risk** `= (Cost of incident) × (Likelihood of occurrence)`
+
+💡 **Why It Matters:** The pyramid is a heuristic, not a law. Budget your test effort where risk is highest, and make the fast tests abundant.
+
+------------------------------------------------
+SECTION 9: Linting & Static Analysis
+------------------------------------------------
+**Linters** are tools that run over your program and identify **programmatic and stylistic errors** — before the code ever executes (static analysis).
+
+What linters detect:
+- **Unused imports** (and unused variables/parameters)
+- **Unreachable code** (e.g. code after a `return` or `throw`)
+- **Variable/class/function names that don't conform to style guidelines** (e.g. PEP 8 in Python, camelCase in JS)
+- **Syntax errors and type mismatches** (when combined with static type checkers)
+
+💡 **Why It Matters:** Linters are the fastest, cheapest gate — they catch whole categories of defects in seconds and belong first in a fail-fast pipeline.
+
+------------------------------------------------
+SECTION 10: Designing Good Test Cases
+------------------------------------------------
+**How to design good test cases:**
+- Prefer **quality of tests over quantity** — eliminate duplicate tests that exercise identical logic.
+- **Diversity is key** — aim to cover as many **unique** test cases as possible.
+- Cover the **basic test cases first**, before looking for more **esoteric edge cases**.
+- Always consider what could happen if someone was **intentionally malicious**.
+- Don't forget about possible **bugs in libraries** — would your code handle a dependency failing?
+
+**Guideline-based testing** targets **common logic flaws** that programmers repeatedly make. Buffer overflows in common programs/libraries are a prime example. Focus on issues **likely to slip by a developer** and draw attention to them:
+- Did you consider **Unicode** when handling strings (emoji, Chinese, Arabic)?
+- Did you **free the memory** you allocated?
+- Did you handle **right-to-left (RTL)** language formatting?
+- Did you handle **exceptions when external libraries fail**?
+
+**Static analysis tools can automate this technique** (e.g. flagging leaked resources and missing checks).
+
+💡 **Why It Matters:** Most bugs are not novel — they are known traps. A checklist of common oversights catches far more than random testing.
+
+------------------------------------------------
+SECTION 11: Equivalence Partitioning & Boundaries
+------------------------------------------------
+**Equivalence partitioning** is the technique of identifying **clusters of inputs that are functionally equivalent** — that the code treats similarly. Pick **one representative test case per partition** to minimise redundancy.
+
+In the `oddEven` example, **all odd numbers are treated equally**, as are all even numbers. Running many odd-number tests adds **reduced value** because you are not covering new failure cases. We are partitioning inputs by **even-ness**.
+
+**Boundary value analysis (BVA)** complements partitioning because **bugs concentrate at the edges** of partitions (e.g. `>` versus `>=`). Always test:
+- **Minimum and maximum values**
+- **Just below and just above a boundary**
+- **Zero (0)**, **empty collections**, and **null/undefined**
+
+A classic example: does `oddEven` handle **0** correctly? Zero is a boundary case that often reveals bugs.
+
+🧠 **Memory Hook:** **"Partition to avoid repeats, then attack the edges."**
+
+------------------------------------------------
+SECTION 12: Worked Test Case Design
+------------------------------------------------
+The lecture works through three examples that show how to enumerate categories.
+
+**Example 1 — `oddEven(num):`** a function returning `"Even"` if `num % 2 == 0`, else `"Odd"`. Test cases to consider:
+- **Odd numbers:** 1, 3 (and 2 appears here in the slide list)
+- **Even numbers:** 0, 2, 4, 6
+- **Negative numbers:** -1, -2, -3
+- **Large numbers:** max int (2^31 - 1, 2^63 - 1)
+- **Invalid data types:** String, Boolean, Float (3.14)
+- **None / Null / Undefined**
+
+**Example 2 — `isPalindrome(word):`**
+- **Even-length** words: `"noon"` → True
+- **Odd-length** words: `"madam"`, `"12321"` → True
+- Non-palindrome: `"hello"` → False
+- **Empty string** (boundary): `""`
+- String with spaces/punctuation: `"Madam, in Eden, I'm Adam"` / `"Madam, I'm Adam"` — depends on the requirement
+- **Invalid data types:** Number, Object, Boolean
+- **None / Null / Undefined**
+- **Unicode / multi-byte characters**, including **right-to-left** languages
+
+**Example 3 — User signup form / endpoint:**
+- **Empty strings:** first/last name, email, date of birth
+- **Missing parameters** from the request (omitted JSON fields)
+- **Long string fields:** names/email (e.g. 10,000 characters)
+- **Unicode string fields:** names/email (`José`, `O'Connor`)
+- **Invalid dates:** year `3000`, `-1700`, `40/15/2025`
+- **Numeric characters in first/last name:** `"John123"`
+- **Emails should match some format:** reject `"user@"`, `"user@domain"`, `"user.domain.com"`, `"<script>@x.com"`
+
+💡 **Why It Matters:** These lists are templates. For any function, ask: normal values, boundaries, wrong types, missing values, malformed formats, Unicode, and malicious input.
+
+------------------------------------------------
+SECTION 13: Code Coverage Metrics
+------------------------------------------------
+**Code coverage** estimates which parts of your code are covered by tests. Coverage tools highlight, **line by line**, which code is executed by tests.
+
+⚠️ **Critical warning:** **100% code coverage does NOT mean 100% bug-free code.** It only guarantees that a line was **executed at least once** — it says nothing about the quality of your assertions. Would you be satisfied with only one test for any of the example functions? **Code coverage is only an indicator — not a direct measure — of quality.**
+
+**The five types of coverage:**
+- **Function coverage** — how many of the defined functions have been called?
+- **Statement coverage** — how many statements have been executed?
+- **Branch coverage** — how many branches of control flow (`if/elif/else`, `while`, `for`, `switch`) have been executed in both directions?
+- **Condition coverage** — how many boolean sub-conditions within branches evaluated to **both true and false**?
+- **Line coverage** — a raw metric of how many lines have been tested.
+
+Approximate strength hierarchy:
+```
+Condition Coverage > Branch Coverage > Statement / Line Coverage > Function Coverage
+```
+
+💡 **Why It Matters:** Coverage tells you what you *touched*, not what you *verified*. Use it to find untested code, not as proof of correctness.
+
+------------------------------------------------
+SECTION 14: Defensive Programming & Patterns
+------------------------------------------------
+**Defensive programming** goes hand-in-hand with verifying quality: it **eliminates entire classes of bugs through good code design**. It comes at the cost of **more complicated code**, but ensures your application can deliver on **availability and security** requirements.
+
+**Core principles:**
+1. **Never trust external data** — validate and sanitise every input at entry boundaries.
+2. **Use in-built language constructs (built-in design patterns)** — e.g. always use a **context manager** (`with open(...)` in Python) or `try-finally` to guarantee resource cleanup. The lecture contrasts two programs that open a file and display its output; the defensive one takes advantage of language features.
+3. **Leverage established design patterns** — they represent **consensus from seasoned developers** that these patterns solve common problems. Use them rather than reinventing.
+4. **Be aware of the trade-off** — defensive code adds explicit complexity but yields immense gains in availability, error isolation, and security.
+
+🧠 **Memory Hook:** Defensive programming = **"assume input is hostile and resources must be released."**
+
+================================================
+KEY TAKEAWAYS
+================================================
+1. **Testing is a budget** — every test costs time to write, maintain, and execute, so prioritise by value: critical functionality, then depth, then breadth.
+2. **Four levels build on each other** — unit (isolated function), integration (interactions), system/E2E (whole system), acceptance (business requirements).
+3. **Mocks isolate units; stubs and drivers enable integration testing.**
+4. **Black-box tests the spec with no code knowledge; white-box tests code paths from the inside.**
+5. **Regression testing protects existing functionality after any code, infra, or config change** — run the full suite, fastest checks first.
+6. **Don't brute-force all inputs** — the space is effectively infinite and still misses concurrency, timing, and hardware failures.
+7. **Fuzzing generates semi-valid, malformed inputs** to find unhandled edge cases, crashes, leaks, and security flaws.
+8. **Non-functional testing covers performance/load, security, usability, and robustness** (volume, stress, load variants).
+9. **Chaos engineering (Netflix Simian Army)** deliberately breaks production: Chaos Monkey kills instances, Chaos Gorilla kills a whole AZ.
+10. **Follow the Test Pyramid** — many fast unit tests, fewer integration tests, fewest expensive E2E/acceptance tests; avoid the Ice-Cream anti-pattern.
+11. **Linters catch static defects fast** — unused imports, unreachable code, style violations — and belong first in the pipeline.
+12. **Design tests for quality and diversity** — basic cases first, then edges; always think like a malicious attacker.
+13. **Use equivalence partitioning and boundary value analysis** — one test per equivalent class, plus the boundaries (0, empty, max int).
+14. **100% coverage does not mean bug-free** — coverage is an indicator of what executed, not of correctness.
+15. **Defensive programming prevents entire bug classes** — validate all external data and use built-in constructs and design patterns.
+
+================================================
+TERMS TO KNOW
+================================================
+**Testing budget**: The finite time/resources available for tests; spend it where value is highest
+**Unit testing**: Verifying the smallest isolated piece of code, ideally one function/method
+**Functional testing**: Another name for unit testing — verifying components independently
+**Mock**: A stand-in replacement for a dependency used to isolate a unit test
+**Integration testing**: Verifying interactions and communication between modules/components
+**Component**: A module or class used as the unit of integration testing
+**Stub**: A dummy module providing hardcoded data to the module under test
+**Driver**: A wrapper that simulates the calling module in integration testing
+**System testing**: Verifying the whole system's behaviour, including security, performance, reliability, external interfaces
+**End-to-end (E2E) testing**: Another name for system testing across the full stack
+**Acceptance testing**: Verifying acceptance criteria and business requirements from the user's perspective
+**Use case**: A goal-oriented scenario that should be covered by one or more acceptance tests
+**Black-box testing**: Testing based only on specification/design, with no implementation knowledge
+**White-box testing**: Testing using knowledge of the code to cover key paths and branches
+**Regression testing**: Verifying that changes have not broken existing functionality
+**Brute-force testing**: Attempting to test all possible inputs; usually infeasible
+**Fuzzing**: Automated generation of invalid/semi-valid inputs to find crashes, leaks, and edge cases
+**Boundary condition**: An input at the edge of a partition where bugs commonly occur
+**Volume testing**: Testing functionality under large data/load
+**Stress testing**: Testing reliability by pushing beyond normal limits
+**Load testing**: Testing performance under expected peak traffic
+**Security testing**: Testing that the system is secure, referencing the OWASP Top 10
+**Usability testing**: Testing whether the site is intuitive and discoverable
+**Hallway testing**: Usability technique using random people to perform a task
+**Expert review**: Usability technique where specialists review against heuristics
+**A/B testing**: Running two UI variants concurrently and comparing outcomes
+**Destructive/robustness testing**: Intentionally causing failures to test recovery and data safety
+**MTTR**: Mean Time To Recovery — how long the system takes to recover from failure
+**Chaos engineering**: Deliberately injecting failures into production to test resilience
+**Simian Army**: Netflix's suite of chaos tools (Chaos Monkey, Latency Monkey, etc.)
+**Chaos Monkey**: Randomly disables production instances
+**Latency Monkey**: Introduces artificial client-server delay
+**Conformity Monkey**: Terminates instances that violate best practices
+**Doctor Monkey**: Detects unhealthy instances and routes traffic away
+**Chaos Gorilla**: Simulates the outage of an entire availability zone
+**Manual testing**: Testing performed directly by a human (exploratory, visual regression)
+**Automated testing**: Tests driven by tools (unit, integration, E2E, performance)
+**Test Pyramid**: Many fast unit tests at the base, fewer integration, fewest E2E/acceptance at the top
+**Ice-Cream anti-pattern**: Inverted pyramid with heavy manual/E2E testing and little unit testing
+**Linter**: Static analysis tool that finds programmatic and stylistic errors before execution
+**Static analysis**: Analysing code without running it
+**Equivalence partitioning**: Grouping inputs the code treats identically and testing one representative per group
+**Boundary value analysis**: Testing just inside, at, and outside partition boundaries
+**Guideline-based testing**: Targeting known common developer flaws, e.g. Unicode or buffer overflows
+**Code coverage**: A measure of which code is executed by tests
+**Function coverage**: Percentage of defined functions called by tests
+**Statement coverage**: Percentage of statements executed
+**Branch coverage**: Percentage of control-flow branches executed in both directions
+**Condition coverage**: Percentage of boolean sub-conditions evaluated to both true and false
+**Line coverage**: Raw measure of how many lines were tested
+**Defensive programming**: Designing code to prevent entire classes of bugs before they happen
+**Context manager**: A language construct (e.g. Python `with`) guaranteeing resource cleanup
+**Design pattern**: A consensus solution to a recurring architecture problem
+
+================================================
+MNEMONICS & QUICK RECALL
+================================================
+**Testing Levels**: **U-I-S-A** — Unit, Integration, System, Acceptance
+**Test Priority**: **Critical functionality → Depth → Breadth**
+**Coverage Order**: **Condition > Branch > Statement/Line > Function**
+**Test Pyramid**: **Many Unit, fewer Integration, fewest E2E/Acceptance**
+**Chaos Tools**: **Chaos Monkey = one instance, Chaos Gorilla = one AZ**
+**Box Testing**: **Black = spec, White = source**
+**Input Testing**: **Partition first, then attack the boundaries**
+**Fuzz Flow**: **Define valid input → Mutate → Execute → Monitor**
+
+================================================
+WORKED EXAMPLES
+================================================
+### Example 1: Partitioning `oddEven`
+The function returns `"Even"` when `num % 2 == 0`, otherwise `"Odd"`. Rather than testing many odd numbers, recognise that all odds behave identically (one partition) and all evens behave identically (another). Test one representative from each: `1` → `"Odd"`, `2` → `"Even"`. Then attack the boundaries: `0` (is it treated as Even?), `-1` and `-2` (negatives), max int (overflow), plus invalid types like `"hello"` and `None`.
+
+### Example 2: Test cases for `isPalindrome`
+Cover odd-length (`"madam"`), even-length (`"noon"`), and non-palindromes (`"hello"`). Add boundary cases: the empty string `""`; strings with spaces and punctuation (`"Madam, in Eden, I'm Adam"`), where the answer depends on the spec. Then invalid data types (Number, Object, Boolean), `None`, and Unicode/multi-byte characters including right-to-left languages.
+
+### Example 3: Auditing a signup form
+For a form with first name, last name, email, and date of birth, list inputs that could break it: empty strings, missing request parameters, 10,000-character strings, Unicode names like `José` and `O'Connor`, impossible dates (`3000`, `-1700`, `40/15/2025`), digits inside names (`John123`), and malformed emails (`"user@"`, `"user@domain"`, `"<script>@x.com"`). This is guideline-based testing plus boundary analysis in one pass.
+
+### Example 4: Regression in a fail-fast pipeline
+After a change, run the full suite in cheap-to-expensive order: linters and static analysis (seconds), fast unit tests (seconds), integration tests (minutes), then E2E/system regression before release. A failure at any step stops the pipeline early, giving feedback in seconds rather than waiting on a slow E2E suite.
+
+### Example 5: Fuzzing a JSON API
+Define the valid JSON schema for an endpoint, then let a fuzzer mutate inputs — overflow strings, weird Unicode, null bytes, negative numbers. Run the server and monitor for crashes. Findings typically include unhandled edge cases, memory leaks, non-performant code paths, and injection vulnerabilities.
+
+### Example 6: Interpretive caution on coverage
+Suppose `oddEven` has 100% line coverage because one test called it with `4`. Every line executed, but the boundary value `0` and invalid types were never tested. Coverage is satisfied while a real bug remains — showing why coverage is an indicator, not a verdict.
+
+================================================
+EXAM FOCUS
+================================================
+1. Why is testing described as a "budget"? → Answer: Tests cost time to write, maintain, and execute, so effort should be prioritised by value — critical functionality first, then depth, then breadth.
+
+2. Distinguish unit, integration, system, and acceptance testing. → Answer: Unit tests the smallest isolated piece (with mocks); integration tests interactions between components (using stubs/drivers); system/E2E tests the whole system including security/performance/reliability; acceptance verifies business requirements from the user's perspective.
+
+3. What are stubs and drivers used for? → Answer: In integration testing — a stub provides hardcoded data to the module under test, and a driver simulates the calling module.
+
+4. Compare black-box and white-box testing. → Answer: Black-box uses no implementation knowledge and is based on specs (system/acceptance, external testers); white-box uses code knowledge to cover paths (unit/integration, written by developers).
+
+5. What is regression testing and when should it run? → Answer: It verifies that changes have not broken existing functionality; run the full suite after any code/infra/config change, and again before commit/push, with fast checks first.
+
+6. Why is brute-forcing all inputs not viable? → Answer: The input space is effectively infinite, takes far too long, and still misses concurrency, input timing, randomness, and hardware failures.
+
+7. What is fuzzing and what can it find? → Answer: Automated generation of invalid/semi-valid inputs around defined valid boundaries to reveal unhandled edge cases, non-performant code, crashes (memory leaks), and security flaws.
+
+8. Differentiate volume, load, and stress testing. → Answer: Volume tests functionality under large data/load; load tests performance under expected peak; stress tests reliability by pushing beyond normal limits.
+
+9. What are the Netflix Simian Army tools? → Answer: Chaos Monkey (disables instances), Latency Monkey (adds delay), Conformity Monkey (terminates non-conforming instances), Doctor Monkey (routes traffic from unhealthy instances), Chaos Gorilla (simulates a whole-AZ outage).
+
+10. Explain the Test Pyramid and the Ice-Cream anti-pattern. → Answer: The pyramid has many fast unit tests, fewer integration tests, and fewest E2E/acceptance tests. The Ice-Cream anti-pattern inverts this with heavy manual/E2E testing and little unit testing, causing slow, brittle builds.
+
+11. What does a linter detect? → Answer: Static, pre-execution issues — unused imports/variables, unreachable code, naming/style violations, and (with type checkers) syntax/type errors.
+
+12. Explain equivalence partitioning and boundary value analysis with an example. → Answer: Partitioning groups inputs the code treats identically (all odds, all evens) and tests one representative each; boundary analysis tests the edges (0, min/max, just above/below) where bugs concentrate.
+
+13. Why doesn't 100% code coverage guarantee bug-free code? → Answer: Coverage only shows a line executed at least once; it says nothing about assertion quality. It is an indicator, not a direct measure, of quality.
+
+14. What is defensive programming and what is its trade-off? → Answer: Designing code to prevent whole classes of bugs — validate external data, use built-in constructs (context managers) and design patterns. It adds complexity but improves availability, error isolation, and security.
+
+15. How is risk prioritised when deciding which tests to write? → Answer: Risk = (Cost of incident) × (Likelihood of occurrence) — combined with the cost/value of each test and the importance of covering acceptance criteria.
+

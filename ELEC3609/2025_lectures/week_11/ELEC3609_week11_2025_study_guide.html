@@ -1,0 +1,2416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ELEC3609 Week 11 Study Guide – CI/CD: Continuous Integration & Continuous Deployment · 2025 Session</title>
+  <meta name="description" content="This lecture explains how modern teams ship software safely and continuously. It starts with the problem CI solves (Integration Hell), then walks through the full pipeline: linting and static analysis">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for crisp mathematical formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+:root {
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Light Theme (Default) */
+      --bg-primary: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-alt: #e2e8f0;
+      
+      --border-color: #e2e8f0;
+      --border-focus: #6366f1;
+      
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-glow: rgba(79, 70, 229, 0.15);
+      
+      --accent-blue: #0284c7;
+      --accent-blue-bg: #e0f2fe;
+      --accent-emerald: #059669;
+      --accent-emerald-bg: #d1fae5;
+      --accent-amber: #d97706;
+      --accent-amber-bg: #fef3c7;
+      --accent-rose: #e11d48;
+      --accent-rose-bg: #ffe4e6;
+      --accent-purple: #7c3aed;
+      --accent-purple-bg: #ede9fe;
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --nav-width: 280px;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0b0f19;
+      --bg-surface: #131b2e;
+      --bg-subtle: #1e293b;
+      --bg-alt: #334155;
+      
+      --border-color: #1e293b;
+      --border-focus: #818cf8;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-light: #64748b;
+      
+      --primary: #6366f1;
+      --primary-hover: #818cf8;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      
+      --accent-blue: #38bdf8;
+      --accent-blue-bg: rgba(56, 189, 248, 0.15);
+      --accent-emerald: #34d399;
+      --accent-emerald-bg: rgba(52, 211, 153, 0.15);
+      --accent-amber: #fbbf24;
+      --accent-amber-bg: rgba(251, 191, 36, 0.15);
+      --accent-rose: #fb7185;
+      --accent-rose-bg: rgba(251, 113, 133, 0.15);
+      --accent-purple: #a78bfa;
+      --accent-purple-bg: rgba(167, 139, 250, 0.15);
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      --card-shadow-hover: 0 10px 20px -3px rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(19, 27, 46, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Reading Progress Bar */
+    #progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981);
+      width: 0%;
+      z-index: 1000;
+      transition: width 0.1s ease-out;
+    }
+
+    /* Top Sticky Header */
+    header.site-header {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: var(--glass-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.6rem;
+      color: var(--text-main);
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .course-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-box input {
+      padding: 0.45rem 0.75rem 0.45rem 2rem;
+      font-size: 0.85rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      width: 180px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      width: 240px;
+      background: var(--bg-surface);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 0.65rem;
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .btn-icon {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-alt);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      max-width: 1520px;
+      margin: 0 auto;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: var(--nav-width);
+      flex-shrink: 0;
+      position: sticky;
+      top: 57px;
+      height: calc(100vh - 57px);
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-primary);
+    }
+
+    .sidebar-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-light);
+      margin-bottom: 0.75rem;
+      padding-left: 0.5rem;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.65rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      line-height: 1.3;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+      background: var(--bg-subtle);
+    }
+
+    .nav-link.active {
+      color: var(--primary);
+      background: var(--primary-light);
+      font-weight: 600;
+    }
+
+    .nav-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    /* Main Content Area */
+    main.main-content {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      max-width: 1020px;
+      min-width: 0;
+    }
+
+    /* Hero Banner */
+    .hero-card {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-main);
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-overview {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      background: var(--bg-surface);
+      padding: 1.25rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      line-height: 1.7;
+    }
+
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .stat-val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Section Styling */
+    section.guide-section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 80px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .section-number {
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+    }
+
+    h2.section-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    h3.subsection-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.75rem 0;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-main);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--card-shadow);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Callout Boxes */
+    .callout {
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      margin: 1.25rem 0;
+      display: flex;
+      gap: 0.9rem;
+      align-items: flex-start;
+      border-left: 4px solid transparent;
+    }
+
+    .callout-icon {
+      font-size: 1.35rem;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .callout-content {
+      flex: 1;
+      font-size: 0.95rem;
+    }
+
+    .callout-content strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.95rem;
+    }
+
+    .callout-why {
+      background: var(--accent-amber-bg);
+      border-left-color: var(--accent-amber);
+      color: var(--text-main);
+    }
+
+    .callout-memory {
+      background: var(--accent-purple-bg);
+      border-left-color: var(--accent-purple);
+      color: var(--text-main);
+    }
+
+    .callout-tip {
+      background: var(--accent-emerald-bg);
+      border-left-color: var(--accent-emerald);
+      color: var(--text-main);
+    }
+
+    .callout-warning {
+      background: var(--accent-rose-bg);
+      border-left-color: var(--accent-rose);
+      color: var(--text-main);
+    }
+
+    .callout-info {
+      background: var(--accent-blue-bg);
+      border-left-color: var(--accent-blue);
+      color: var(--text-main);
+    }
+
+    /* Formula & Math Block */
+    .formula-block {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin: 1.25rem 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .formula-title {
+      position: absolute;
+      top: -10px;
+      left: 14px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .formula-math {
+      font-size: 1.2rem;
+      margin: 0.5rem 0;
+      color: var(--text-main);
+      overflow-x: auto;
+    }
+
+    /* ELEC3609 local: code / plain-text reference blocks render left-aligned in mono */
+    .formula-block pre.formula-math {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.55;
+      text-align: left;
+      white-space: pre;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      margin: 0;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.25rem 0;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      background: var(--bg-surface);
+    }
+
+    table.study-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    table.study-table th {
+      background: var(--bg-subtle);
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border-color);
+      letter-spacing: 0.02em;
+    }
+
+    table.study-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    table.study-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.study-table tr:hover td {
+      background: var(--bg-subtle);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .badge-recall {
+      background: var(--accent-emerald-bg);
+      color: var(--accent-emerald);
+    }
+
+    .badge-precision {
+      background: var(--accent-blue-bg);
+      color: var(--accent-blue);
+    }
+
+    .badge-f1 {
+      background: var(--accent-purple-bg);
+      color: var(--accent-purple);
+    }
+
+    .badge-danger {
+      background: var(--accent-rose-bg);
+      color: var(--accent-rose);
+    }
+
+    /* Pipeline Diagram */
+    .pipeline-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      box-shadow: var(--card-shadow);
+    }
+
+    .pipeline-flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin: 1rem 0;
+    }
+
+    .pipe-step {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .pipe-step .step-num {
+      font-size: 0.7rem;
+      color: var(--primary);
+      font-family: var(--font-mono);
+    }
+
+    .pipe-step:hover, .pipe-step.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .pipe-arrow {
+      color: var(--text-light);
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    /* Interactive Confusion Matrix Calculator Widget */
+    .calculator-card {
+      background: var(--bg-surface);
+      border: 2px solid var(--primary);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin: 2rem 0;
+      box-shadow: 0 10px 25px -5px var(--primary-glow);
+    }
+
+    .calc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .calc-presets {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .cm-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    .cm-table th, .cm-table td {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem;
+    }
+
+    .cm-table th {
+      background: var(--bg-subtle);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .cm-input-cell {
+      background: var(--bg-surface);
+    }
+
+    .cm-input-cell label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+    }
+
+    .cm-input-cell input {
+      width: 100%;
+      max-width: 90px;
+      padding: 0.4rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .cm-input-cell input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    .calc-results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .metric-card {
+      background: var(--bg-subtle);
+      border-radius: 10px;
+      padding: 0.85rem;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .metric-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--primary);
+      margin: 0.2rem 0;
+    }
+
+    .metric-formula {
+      font-size: 0.7rem;
+      color: var(--text-light);
+      font-family: var(--font-mono);
+    }
+
+    /* Key Takeaways list */
+    .takeaways-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .takeaway-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.9rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .takeaway-num {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.85rem;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    /* Terms & Glossary Section */
+    .glossary-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .filter-chip {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-chip:hover, .filter-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .terms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .term-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.1rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .term-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .term-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--primary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .term-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Exam Questions Section */
+    .exam-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .exam-progress {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .exam-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-secondary {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-alt);
+    }
+
+    .quiz-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--card-shadow);
+      transition: border-color 0.2s ease;
+    }
+
+    .quiz-card.mastered {
+      border-left: 4px solid var(--accent-emerald);
+      opacity: 0.9;
+    }
+
+    .quiz-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      cursor: pointer;
+    }
+
+    .quiz-qnum {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+
+    .quiz-question {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      flex: 1;
+      line-height: 1.5;
+    }
+
+    .quiz-status-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .quiz-answer {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+      color: var(--text-main);
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .quiz-answer.show {
+      display: block;
+    }
+
+    .quiz-toggle-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0;
+    }
+
+    .quiz-toggle-btn:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--border-color);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      background: var(--bg-surface);
+      margin-top: 4rem;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      header.site-header, aside.sidebar, #progress-bar, .calculator-card, .btn-icon, .exam-actions, .filter-chip {
+        display: none !important;
+      }
+      .app-container {
+        display: block;
+        max-width: 100%;
+      }
+      main.main-content {
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .card, .hero-card, .takeaway-item, .quiz-card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .quiz-answer {
+        display: block !important;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      aside.sidebar {
+        position: fixed;
+        left: -100%;
+        top: 57px;
+        z-index: 950;
+        background: var(--bg-surface);
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        transition: left 0.3s ease;
+      }
+      aside.sidebar.open {
+        left: 0;
+      }
+      .menu-toggle {
+        display: block;
+      }
+      main.main-content {
+        padding: 1.5rem;
+      }
+      .grid-2, .calc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="progress-bar"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-left">
+      <button class="menu-toggle" id="menu-btn" aria-label="Toggle navigation menu">&#9776;</button>
+      <span class="course-badge">ELEC3609 • Week 11</span>
+      <span class="header-title">CI/CD: Continuous Integration & Continuous Deployment · 2025 Session</span>
+    </div>
+    <div class="header-controls">
+      <div class="search-box">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" id="site-search" placeholder="Search guide..." aria-label="Search study guide">
+      </div>
+      <button class="btn-icon" id="theme-toggle" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">&#127769;</button>
+      <button class="btn-icon" onclick="window.print()" title="Print Study Guide" aria-label="Print Guide">&#128424;</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">Table of Contents</div>
+      <ul class="nav-list">
+<li><a href="#overview" class="nav-link"><span class="nav-num">00</span> Overview</a></li>
+        <li><a href="#section-1" class="nav-link"><span class="nav-num">01</span> What Is Continuous Integration?</a></li>
+        <li><a href="#section-2" class="nav-link"><span class="nav-num">02</span> Integration Hell &amp; Its Causes</a></li>
+        <li><a href="#section-3" class="nav-link"><span class="nav-num">03</span> The 7 Goals of CI</a></li>
+        <li><a href="#section-4" class="nav-link"><span class="nav-num">04</span> Four CI Considerations</a></li>
+        <li><a href="#section-5" class="nav-link"><span class="nav-num">05</span> The 3 Conflict Levels</a></li>
+        <li><a href="#section-6" class="nav-link"><span class="nav-num">06</span> Stale Branches &amp; Rebase Penalty</a></li>
+        <li><a href="#section-7" class="nav-link"><span class="nav-num">07</span> Linting vs Static Analysis</a></li>
+        <li><a href="#section-8" class="nav-link"><span class="nav-num">08</span> Building Backend &amp; Frontend</a></li>
+        <li><a href="#section-9" class="nav-link"><span class="nav-num">09</span> Testing Strategies</a></li>
+        <li><a href="#section-10" class="nav-link"><span class="nav-num">10</span> Publishing &amp; Artifacts</a></li>
+        <li><a href="#section-11" class="nav-link"><span class="nav-num">11</span> Release &amp; Deployment Types</a></li>
+        <li><a href="#section-12" class="nav-link"><span class="nav-num">12</span> Post-Deployment Monitoring</a></li>
+        <li><a href="#key-takeaways" class="nav-link"><span class="nav-num">13</span> 13 Key Takeaways</a></li>
+        <li><a href="#terms-to-know" class="nav-link"><span class="nav-num">14</span> Terms to Know (Glossary)</a></li>
+        <li><a href="#mnemonics" class="nav-link"><span class="nav-num">15</span> Mnemonics &amp; Quick Recall</a></li>
+        <li><a href="#worked-examples" class="nav-link"><span class="nav-num">16</span> Worked Scenarios &amp; Calculations</a></li>
+        <li><a href="#exam-focus" class="nav-link"><span class="nav-num">17</span> Potential Exam Focus &amp; Practice</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+<section id="overview" class="hero-card">
+  <div class="hero-tagline">📖 Official Course Notes • Week 11</div>
+  <h1 class="hero-title">CI/CD: Continuous Integration &amp; Continuous Deployment · 2025 Session</h1>
+  <p class="hero-subtitle">This lecture explains how modern teams ship software safely and continuously. It starts with the problem CI solves (Integration Hell)…</p>
+  <div class='hero-overview'><strong>Lecture Overview:</strong> This lecture explains how modern teams ship software safely and continuously. It starts with the problem CI solves (Integration Hell), then walks through the full pipeline: linting and static analysis, building, four layers of testing, publishing artifacts, releasing and deploying, and finally monitoring what you shipped. The running theme is "move fast and break nothing" — automate the boring and risky parts so you can add features with confidence.</div>
+  <div class="quick-stats">
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">⚙️</div>
+  <div>
+    <div class="stat-label">CI Goals</div>
+    <div class="stat-val">7</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-blue-bg); color: var(--accent-blue);">📊</div>
+  <div>
+    <div class="stat-label">CI Considerations</div>
+    <div class="stat-val">Speed, Reproducibility, Reliability, Clarity</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-emerald-bg); color: var(--accent-emerald);">🎯</div>
+  <div>
+    <div class="stat-label">Conflict Levels</div>
+    <div class="stat-val">Merge, Functional, Logical</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-amber-bg); color: var(--accent-amber);">📝</div>
+  <div>
+    <div class="stat-label">Test Types</div>
+    <div class="stat-val">Unit, Integration, Acceptance, Regression</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-purple-bg); color: var(--accent-purple);">🧠</div>
+  <div>
+    <div class="stat-label">Deployment Strategies</div>
+    <div class="stat-val">Rolling, Blue-Green</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="section-1" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">01</span>
+    <h2 class="section-title">What Is Continuous Integration?</h2>
+  </div>
+  <p>Continuous Integration (CI) is the practice of merging all developers' working copies into a shared mainline codebase <strong>several times a day</strong>, with automated builds and tests verifying each check-in immediately. Instead of everyone working alone for weeks and merging at the end, each developer integrates early and often.</p>
+
+<h3 class="subsection-title">The Problem It Replaces</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>The old way</strong> — Each developer builds a feature in isolation, then everything is merged together in a single painful "integration phase".</li><li><strong>The integration phase</strong> — Changes from tens or hundreds of developers land in one common codebase at once, which often fails to compile because of conflicts.</li><li><strong>Integration Hell</strong> — The resulting state where new changes cannot be integrated into the mainline codebase quickly or effectively.</li><li><strong>The cost</strong> — Developers end up spending more time checking code into the repository than actually writing it.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    CI exists so developers spend their limited time building new features, not untangling broken merges. The course motto is "move fast and break nothing".
+  </div>
+</div>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    Think of CI as paying off technical debt in tiny daily instalments instead of one bankruptcy-sized fine at the end of semester.
+  </div>
+</div>
+</section>
+
+<section id="section-2" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">02</span>
+    <h2 class="section-title">Integration Hell &amp; Its Causes</h2>
+  </div>
+  <p><strong>Integration Hell</strong> is a state where new changes cannot be integrated into the mainline codebase quickly or effectively. It has two classic causes, each with a direct engineering fix.</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Cause of Integration Hell</th><th>Direct Solution</th></tr></thead>
+<tbody><tr><td>Branches have <strong>drifted too far</strong> from master</td><td><strong>Rebase often</strong> — sync local branches with master multiple times a day</td></tr><tr><td>Changes are <strong>too large</strong> and touch too many files</td><td><strong>Small incremental changes</strong> — scope work into tiny, isolated commits</td></tr></tbody>
+  </table>
+</div>
+
+<p>Even with well-isolated components, something must still combine the separate modules into one application — this combining step is called <strong>integration</strong>. The more developers committing to a codebase, the higher the risk of conflicts.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    The cheapest conflict is the one you never have. Small, frequent merges keep the cost of resolving conflicts low.
+  </div>
+</div>
+</section>
+
+<section id="section-3" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">03</span>
+    <h2 class="section-title">The 7 Goals of CI</h2>
+  </div>
+  <ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Avoid Integration Hell</strong> — stop developers spending more time checking in code than writing it.</li><li><strong>Isolated, reproducible test environment</strong> — tests run the same way every time.</li><li><strong>Isolated, reproducible build environment</strong> — builds do not depend on one developer's laptop.</li><li><strong>Increase deployment confidence</strong> — HEAD (the main branch) is always in a deployable state.</li><li><strong>Enforce coding style and code quality</strong> — formatting and lint rules are applied automatically.</li><li><strong>Test in multiple environments</strong> — across operating systems, runtimes, and browser versions.</li><li><strong>Streamline development workflows</strong> — automate repetitive tasks and increase productivity.</li></ol>
+
+<div class="callout callout-tip">
+  <div class="callout-icon">✅</div>
+  <div class="callout-content">
+    <strong>Exam Tip::</strong>
+    A common question asks you to list CI's goals. Seven is the magic number, and "reproducible build/test environment" is the one students most often forget.
+  </div>
+</div>
+</section>
+
+<section id="section-4" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">04</span>
+    <h2 class="section-title">Four CI Considerations</h2>
+  </div>
+  <p>Every CI pipeline balances four critical trade-offs:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Speed</strong> — Feedback must be fast (minutes, not hours). If CI is too slow, developers context-switch or bypass the pipeline.</li><li><strong>Reproducibility</strong> — A build or test must give identical results on any machine, which eliminates the "it works on my machine" excuse.</li><li><strong>Reliability</strong> — Results must be trustworthy, with zero tolerance for "flaky" tests that randomly fail. A red build must strictly mean broken code.</li><li><strong>Clarity</strong> — Error messages and log output must be clear, actionable, and easy to trace.</li></ul>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>R-R-S-C</strong> — Reliability, Reproducibility, Speed, Clarity.
+  </div>
+</div>
+</section>
+
+<section id="section-5" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">05</span>
+    <h2 class="section-title">The 3 Conflict Levels</h2>
+  </div>
+  <p>Any way an application can fail during or after integration counts as a "conflict". CI recognises three levels, from easiest to hardest to detect.</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Conflict Type</th><th>Root Cause</th><th>Detected By</th></tr></thead>
+<tbody><tr><td><strong>Merge conflict</strong></td><td>Two developers edit the same file and lines concurrently</td><td>Git / version control</td></tr><tr><td><strong>Functional conflict</strong></td><td>Concurrent changes break compilation or the build</td><td>Compiler / builder</td></tr><tr><td><strong>Logical conflict</strong></td><td>Code builds but the combined behaviour is wrong</td><td>Automated test suites</td></tr></tbody>
+  </table>
+</div>
+
+<h3 class="subsection-title">Merge Conflict (Textual Level)</h3>
+
+<p>Two developers modify the exact same file and line numbers at the same time. Git automatically flags the collision, and a developer manually chooses which lines to keep.</p>
+
+<h3 class="subsection-title">Functional Conflict (Build Level)</h3>
+
+<p>Example: Developer A changes a function signature in <code>auth.js</code>, while Developer B still calls the old signature in <code>server.js</code>. Both files merge cleanly with no textual conflict, but the build fails.</p>
+
+<h3 class="subsection-title">Logical Conflict (Runtime Level)</h3>
+
+<p>Example: Developer A sets <code>timeout = 500ms</code>, but Developer B assumes <code>timeout = 5000ms</code>. The application compiles, but requests fail silently at runtime.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Each level needs a different safety net — version control, a compiler, and a test suite. CI runs all three so no conflict slips through unnoticed.
+  </div>
+</div>
+</section>
+
+<section id="section-6" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">06</span>
+    <h2 class="section-title">Stale Branches &amp; Rebase Penalty</h2>
+  </div>
+  <ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Golden rule of version control</strong> — <code>HEAD</code> (usually the master/main branch) is always expected to be in a functional state.</li><li><strong>Responsibility rule</strong> — The developer who lands their changes <strong>last</strong> is responsible for resolving all integration conflicts against HEAD.</li><li><strong>The longer a branch stays checked out</strong>, the more master drifts away, and the greater the risk of conflicts when it is reintegrated.</li><li>Before submitting, a developer must <strong>update (merge or rebase)</strong> their code to reflect everything added to the repository since they took their copy.</li><li><strong>Rebase penalty</strong> — Rebasing onto master is not fun, test results may no longer be valid after a merge or rebase, and integration can eventually take longer than it took to write the original feature.</li><li><strong>Worst case</strong> — The feature becomes so obsolete it must be discarded and redone, because its original purpose is no longer valid or needs a completely different approach.</li></ul>
+
+<h3 class="subsection-title">Why Small Incremental Changes Win</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Fast bug isolation</strong> — Small change sets make integration bugs easy to trace. This saves time and money over the project's lifespan.</li><li><strong>Cheap rollbacks</strong> — If a unit test fails or a bug emerges, reverting a small change loses only a little work, because integration happens frequently.</li></ul>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Leaving a branch open for weeks feels productive, but it silently accumulates a merge debt that must be paid all at once.
+  </div>
+</div>
+</section>
+
+<section id="section-7" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">07</span>
+    <h2 class="section-title">Linting vs Static Analysis</h2>
+  </div>
+  <p>These are the first gates in a CI pipeline. Both inspect code without running it, but at different depths.</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Linting</strong> — Running a program that analyses code for potential errors and can also enforce code style guides. It is named after <code>lint</code>, an early tool that flagged suspicious, non-portable constructs (likely bugs) in C source code.</li><li><strong>Static analysis (static code analysis)</strong> — A method of debugging that examines the code <em>without executing the program</em>. It helps you understand code structure and ensure the code adheres to industry standards.</li></ul>
+
+<p>Semantically they overlap: <strong>linting is a subset of static analysis</strong>, consisting only of rules that are fast and accurate.</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Feature</th><th>Linting</th><th>Static Analysis</th></tr></thead>
+<tbody><tr><td>Speed</td><td>Fast, rapid feedback</td><td>Slower, but comprehensive</td></tr><tr><td>Scope</td><td>File-by-file</td><td>Entire codebase</td></tr><tr><td>False positives</td><td>Zero</td><td>Some tolerance</td></tr><tr><td>Auto-fixing</td><td>Violations often fixed automatically</td><td>Usually cannot be auto-fixed</td></tr><tr><td>Rule targets</td><td>Coding style, deprecated classes/functions, inefficient constructs, naming conventions, spelling, syntax errors, unreachable code, unused variables</td><td>Cyclomatic complexity, NPath complexity, type inference, unused classes/functions, security vulnerabilities</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    Linting asks "is this <em>file</em> written correctly?"; static analysis asks "is the overall <em>architecture</em> structurally sound, complex, or vulnerable?".
+  </div>
+</div>
+</section>
+
+<section id="section-8" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">08</span>
+    <h2 class="section-title">Building Backend &amp; Frontend</h2>
+  </div>
+  <p>Traditionally, "building" means <strong>compilation</strong> — the translation of source code into object code. However, dynamic languages such as PHP, Python, and Ruby do not require compilation. In CI, "building" has grown to mean preparing everything the application needs to run.</p>
+
+<h3 class="subsection-title">Backend Build</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Optimise the autoloader</strong> — pre-index class paths and symbol maps for fast runtime lookup.</li><li><strong>Pre-populate caches</strong> — build route caches, database schemas, and configuration trees ahead of time.</li><li><strong>Pre-render templates</strong> — compile server-side views such as Jinja, EJB, or Blade.</li><li><strong>Vendor dependencies</strong> — download and lock backend libraries (<code>npm ci</code>, <code>pip install</code>).</li></ul>
+
+<h3 class="subsection-title">Frontend Build</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Bundle assets</strong> — pack many JS/CSS modules into single optimised bundles (Vite, Webpack).</li><li><strong>Minify and obfuscate</strong> — strip whitespace and comments, and shorten variable names.</li><li><strong>Optimise images</strong> — apply lossy or lossless compression.</li><li><strong>Transpile JavaScript</strong> — convert modern ES6+/TypeScript down to ES5 (e.g., with Babel) so older browsers can run it.</li><li><strong>Vendor dependencies</strong> — pull third-party web libraries into the distribution build.</li></ul>
+
+<div class="callout callout-tip">
+  <div class="callout-icon">✅</div>
+  <div class="callout-content">
+    <strong>Exam Tip::</strong>
+    Interpreted languages still have a build phase in CI — just not compilation. Say "asset bundling, transpilation, minification, cache pre-population, and dependency vendoring".
+  </div>
+</div>
+</section>
+
+<section id="section-9" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">09</span>
+    <h2 class="section-title">Testing Strategies</h2>
+  </div>
+  <p>CI tests run in a strict order, from fast and isolated to slow and broad.</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Test Type</th><th>Target</th><th>Style</th></tr></thead>
+<tbody><tr><td><strong>Unit</strong></td><td>A single function or class in isolation</td><td>White-box</td></tr><tr><td><strong>Integration</strong></td><td>Interaction between modules or services</td><td>Black-box</td></tr><tr><td><strong>Acceptance (E2E)</strong></td><td>The whole application from the user's perspective</td><td>End-to-end</td></tr><tr><td><strong>Regression</strong></td><td>Preventing previously fixed bugs from returning</td><td>Edge cases</td></tr></tbody>
+  </table>
+</div>
+
+<h3 class="subsection-title">Unit Testing</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Language-specific tools: <strong>Go</strong> <code>go test</code>, <strong>Java</strong> JUnit, <strong>Python</strong> Nosetests/Pytest, <strong>PHP</strong> PHPUnit, <strong>Ruby</strong> RSpec.</li><li>Criteria: fast to execute, one-to-one mapping with source code, zero or minimal dependencies (other code, filesystem, network), and runnable in different environments to future-proof the application.</li><li>Uses mocks and stubs to stay isolated.</li></ul>
+
+<h3 class="subsection-title">Integration Testing</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Ensures different components of the application interact in the expected manner.</li><li>Should be executed <strong>after</strong> unit tests pass.</li><li>Should focus on testing the <strong>API contract</strong> rather than implementation details.</li></ul>
+
+<h3 class="subsection-title">Acceptance Testing</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Focuses on functionality from a <strong>user perspective</strong> and tests the application end-to-end.</li><li>Very slow (relatively) but very important, and includes cross-browser testing (Selenium, Cypress, Playwright).</li></ul>
+
+<h3 class="subsection-title">Regression Testing</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Used to prevent bugs from reoccurring; regression tests often cover bizarre edge cases.</li><li>Rule of thumb: whenever a bug is found, write a regression test covering that exact case <strong>before</strong> applying the fix.</li></ul>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Integration testing is <strong>black-box</strong> and runs <strong>after</strong> unit tests — not before, and not white-box.
+  </div>
+</div>
+</section>
+
+<section id="section-10" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">10</span>
+    <h2 class="section-title">Publishing &amp; Artifacts</h2>
+  </div>
+  <p>At the completion of a CI job you typically produce one or more <strong>artifacts</strong> — the compiled, bundled, or packaged output that is ready for distribution. Which artifacts you get depends on the programming language, the tooling, and the deployment process.</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Archives</strong> — <code>.tar.gz</code>, <code>.zip</code> containing static files or backend code.</li><li><strong>Executable binaries</strong> — standard compiled binaries (e.g., Go, Rust).</li><li><strong>Mobile applications</strong> — <code>.apk</code> (Android), <code>.ipa</code> (iOS).</li><li><strong>OS packages</strong> — <code>.deb</code> (Debian/Ubuntu), <code>.rpm</code> (RedHat/CentOS).</li><li><strong>Container images</strong> — Docker images published to a registry (Docker Hub, ECR).</li></ul>
+
+<p><strong>Publishing</strong> is the process of exposing those artifacts from CI to the deployment process, usually by pushing them to a centralised artifact repository such as Nexus, Artifactory, S3, or a Docker registry.</p>
+</section>
+
+<section id="section-11" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">11</span>
+    <h2 class="section-title">Release &amp; Deployment Types</h2>
+  </div>
+  <p><strong>Deployment</strong> is the process by which the latest version of an application is delivered to users. Examples include submitting an APK to the Google Play Store, updating code on a fleet of production servers, or pushing files to an S3 bucket. Teams must decide how often to deploy, whether to reuse or build new infrastructure, what is automated versus manual, how to monitor, and how to roll back.</p>
+
+<h3 class="subsection-title">Delivery vs Deployment</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Continuous Delivery</strong> — CI automatically builds and tests code, producing a deployable artifact, but the actual production deployment requires a <strong>manual human approval</strong> step.</li><li><strong>Continuous Deployment</strong> — CI/CD automatically deploys every passed change to production with <strong>zero human intervention</strong>.</li></ul>
+
+<h3 class="subsection-title">Rolling vs Blue-Green</h3>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Strategy</th><th>Mechanism</th><th>Cost</th><th>Trade-off</th></tr></thead>
+<tbody><tr><td><strong>Rolling</strong></td><td>Update server nodes in batches (e.g., 20% at a time); drain traffic, update, restore</td><td>1x infrastructure</td><td>Users temporarily interact with a mix of old (v1) and new (v2) versions</td></tr><tr><td><strong>Blue-Green</strong></td><td>Deploy new code to a full parallel environment, smoke-test it, then flip all traffic at once</td><td>2x infrastructure during deployment</td><td>Zero version mixing and instant rollback, but double the cost</td></tr></tbody>
+  </table>
+</div>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">Rolling:    [v1][v1][v1][v1] --&gt; [v2][v1][v1][v1] --&gt; [v2][v2][v1][v1] --&gt; [v2][v2][v2][v2]
+Blue-Green:  Load Balancer/Router --switch--&gt; Blue (v1, active) | Green (v2, idle)</pre></div>
+</div>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Rolling deployment serves a mix of v1 and v2 during rollout, so database schemas must remain backward compatible.
+  </div>
+</div>
+</section>
+
+<section id="section-12" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">12</span>
+    <h2 class="section-title">Post-Deployment Monitoring</h2>
+  </div>
+  <p>Deployment is not the end of the engineering lifecycle. Once the changes are in the hands of real users, you verify that everything works as expected. As covered in Week 6, the tools are testing, logging, and real-time telemetry.</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Automated smoke testing</strong> — run high-level synthetic transactions immediately after deployment to verify basic system health.</li><li><strong>Centralised logging</strong> — aggregate server and application logs (Elasticsearch, Logstash, Kibana) to catch unhandled exceptions in real time.</li><li><strong>Real-time telemetry and APM</strong> — monitor application performance metrics such as latency, error rates, CPU utilisation, and throughput, and trigger automatic rollbacks if performance degrades.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    A deployment is a hypothesis — "this change is good". Monitoring is how you find out whether the hypothesis was true.
+  </div>
+</div>
+</section>
+
+<section id="key-takeaways" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">13</span>
+    <h2 class="section-title">13 Key Takeaways</h2>
+  </div>
+  <div class="takeaways-list">
+<div class="takeaway-item">
+  <span class="takeaway-num">1</span>
+  <div><strong><strong>CI defined</strong></strong> — merge all developers' working copies into a shared mainline several times a day, with automated builds and tests verifying each check-in.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">2</span>
+  <div><strong><strong>Integration Hell</strong></strong> — the state where new changes cannot be merged quickly; caused by branches drifting from master and by oversized change sets.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">3</span>
+  <div><strong><strong>Two fixes</strong></strong> — rebase/merge often and keep changes small and incremental.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">4</span>
+  <div><strong><strong>Seven goals</strong></strong> — avoid Integration Hell, provide reproducible build and test environments, increase deployment confidence, enforce code quality, test multiple environments, and streamline workflows.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">5</span>
+  <div><strong><strong>Four considerations</strong></strong> — Speed, Reproducibility, Reliability, and Clarity (R-R-S-C).</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">6</span>
+  <div><strong><strong>Three conflict levels</strong></strong> — Merge (textual, caught by Git), Functional (build, caught by the compiler), Logical (runtime, caught by tests).</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">7</span>
+  <div><strong><strong>Stale branches</strong></strong> — the developer who lands last resolves conflicts; long-lived branches incur a rebase penalty.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">8</span>
+  <div><strong><strong>Linting vs static analysis</strong></strong> — linting is a fast, file-level subset of static analysis, which is slower and codebase-wide.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">9</span>
+  <div><strong><strong>Building</strong></strong> — for dynamic languages it means bundling, transpiling, minifying, caching, and vendoring, not compiling.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">10</span>
+  <div><strong><strong>Four test types</strong></strong> — Unit (white-box), Integration (black-box, after unit), Acceptance (end-to-end), and Regression (prevent bugs returning).</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">11</span>
+  <div><strong><strong>Artifacts and publishing</strong></strong> — CI produces archives, binaries, packages, or container images and exposes them to the deployment process.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">12</span>
+  <div><strong><strong>Deployment strategies</strong></strong> — Rolling uses 1x infrastructure but mixes versions; Blue-Green uses 2x infrastructure but gives zero mixing and instant rollback.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">13</span>
+  <div><strong><strong>Post-deployment</strong></strong> — smoke testing, centralised logging, and real-time telemetry/APM verify that the release is healthy.</div>
+</div>
+</div>
+</section>
+
+<section id="terms-to-know" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">14</span>
+    <h2 class="section-title">Terms to Know (Glossary)</h2>
+  </div>
+  <div class="glossary-controls">
+  <button class="filter-chip active" onclick="filterTerms('all', this)">All (37)</button>
+  <button class="filter-chip" onclick="filterTerms('pipeline', this)">Architecture & Data</button>
+</div>
+<div class="terms-grid" id="terms-container">
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Continuous Integration (CI)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Practice of merging all developers' working copies into a shared mainline several times a day.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Integration Hell</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">State where new changes cannot be integrated into the mainline quickly or effectively.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Mainline / HEAD</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The shared master branch, expected always to be functional.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Rebase</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Replaying your changes on top of the latest mainline to stay up to date.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Merge conflict</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Textual collision when two developers edit the same file and lines concurrently.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Functional conflict</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Concurrent changes that break compilation or the build.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Logical conflict</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Concurrent changes that build successfully but fail at runtime.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Stale branch</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A branch left unmerged so long that master has drifted far ahead.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Rebase penalty</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The extra time spent rebasing and fixing tests when a stale branch is finally integrated.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Linting</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Fast, file-level analysis for potential errors and style violations.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Static analysis</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Examining code without executing it to assess structure, complexity, and standards.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Cyclomatic complexity</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A static-analysis metric of the number of independent paths through code.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>NPath complexity</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A static-analysis metric of the number of acyclic execution paths.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Autoloader</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Mechanism that pre-indexes class paths and symbol maps for fast runtime lookup.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Vendoring dependencies</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Downloading and locking third-party libraries into your build.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Minification</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Removing whitespace and comments from assets to reduce size.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Obfuscation</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Rewriting code (e.g., shortening names) to make it smaller and harder to read.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Transpilation</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Source-to-source compilation, e.g., ES6+/TypeScript down to ES5.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Bundling</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Packing many JS/CSS modules into a single optimised file.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Unit testing</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">White-box testing of an isolated function or class.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Integration testing</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Black-box testing of how modules or services interact via their APIs.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Acceptance testing</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">End-to-end testing from the user's perspective, including cross-browser checks.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Regression testing</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Tests that ensure fixed bugs do not reoccur.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>White-box testing</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Testing with knowledge of the internal implementation.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Black-box testing</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Testing behaviour through the public interface only.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Mock / Stub</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Stand-in objects that let unit tests run without external dependencies.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Flaky test</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A test that fails randomly without a code change; forbidden in reliable CI.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Artifact</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The compiled, bundled, or packaged output produced by a CI job.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Publishing</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">Exposing CI artifacts to the deployment process, usually via an artifact repository.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Deployment</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">Delivering the latest version of an application to users.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Continuous Delivery</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">CI produces a deployable artifact, but a human approves production deployment.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Continuous Deployment</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">Every passing change is deployed to production automatically with no human step.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Rolling deployment</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">Updating server nodes in batches, temporarily serving mixed versions.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Blue-green deployment</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">Running two identical environments and flipping all traffic at once.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Smoke testing</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">High-level checks run immediately after deployment to confirm basic health.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Telemetry / APM</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">Real-time monitoring of latency, errors, CPU, and throughput.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Golden rule of VCS</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">HEAD must always remain functional.</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="mnemonics" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">15</span>
+    <h2 class="section-title">Mnemonics &amp; Quick Recall</h2>
+  </div>
+  <div class="grid-2">
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 CI Considerations</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">R-R-S-C</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Reliability, Reproducibility, Speed, Clarity&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—  — the four trade-offs every pipeline balances.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Conflict Levels</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">M-F-L</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Merge, Functional, Logical&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—  — textual, build, then runtime failures.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Linting vs Static Analysis</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">L-S</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Linting = fast/file-level; Static = slow/codebase-wide&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">— .</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🔄 CI Pipeline Order</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">L-B-T-P-D</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Lint, Build, Test, Publish, Deploy&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—  — the path from commit to production.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🔄 Test Order</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">U-I-A-R</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Unit, Integration, Acceptance, Regression&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—  — fast and isolated to slow and broad.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Deployment Trade-offs</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">B-R</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Blue-Green = 2x cost, zero mixing; Rolling = 1x cost, mixed versions&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">— .</p>
+</div>
+</div>
+</section>
+
+<section id="worked-examples" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">16</span>
+    <h2 class="section-title">Worked Scenarios &amp; Calculations</h2>
+  </div>
+  <div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 1 &bull; Functional Conflict Across Files</div>
+  <h3 class="subsection-title" style="margin-top:0;">Functional Conflict Across Files</h3>
+<p>Developer A changes a function signature in <code>auth.js</code>. Developer B, in a different file (<code>server.js</code>), still calls the old signature. Both files merge with no textual conflict, so Git is happy. When CI runs the build, the compiler cannot resolve the call and the build fails. Detection: the compiler/builder. Fix: update the caller to the new signature.</p>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 2 &bull; Logical Conflict at Runtime</div>
+  <h3 class="subsection-title" style="margin-top:0;">Logical Conflict at Runtime</h3>
+<p>Developer A updates a shared variable to <code>timeout = 500ms</code>. Developer B writes code that assumes <code>timeout = 5000ms</code>. The code merges and compiles without errors, but requests now fail silently because they time out too early. Detection: automated integration/unit tests that assert expected behaviour.</p>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 3 &bull; The Stale Branch Rebase Penalty</div>
+  <h3 class="subsection-title" style="margin-top:0;">The Stale Branch Rebase Penalty</h3>
+<p>A developer keeps a feature branch open for three weeks. In that time master has moved on significantly. When they finally rebase, they must resolve many conflicts and re-run tests whose old results are no longer valid. Integration now takes longer than it took to write the feature — and in the worst case the feature is discarded entirely.</p>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 4 &bull; Tracing a CI Pipeline</div>
+  <h3 class="subsection-title" style="margin-top:0;">Tracing a CI Pipeline</h3>
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">1. Code Commit
+      |
+      v
+2. Lint &amp; Static Check   --&gt; fails fast on syntax/style
+      |
+      v
+3. Build &amp; Transpile     --&gt; fails on missing imports/assets
+      |
+      v
+4. Unit Tests            --&gt; fails on broken function logic
+      |
+      v
+5. Integration Tests     --&gt; fails on API contract mismatches
+      |
+      v
+6. Acceptance (E2E)      --&gt; fails on broken user flows
+      |
+      v
+7. Publish Artifacts</pre></div>
+</div>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 5 &bull; Choosing a Deployment Strategy</div>
+  <h3 class="subsection-title" style="margin-top:0;">Choosing a Deployment Strategy</h3>
+<p>A team with a tight budget and backward-compatible database changes can use <strong>rolling deployment</strong>: update a few nodes at a time, accept a short window of mixed v1/v2 responses, and pay only 1x infrastructure. A team that cannot tolerate mixed versions and wants instant rollback chooses <strong>blue-green</strong>: pay for two environments, smoke-test the new one, then flip all traffic and keep the old environment ready to switch back.</p>
+</div>
+</section>
+
+<section id="exam-focus" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">17</span>
+    <h2 class="section-title">Potential Exam Focus &amp; Practice</h2>
+  </div>
+  <div class="exam-toolbar">
+  <div class="exam-progress" id="exam-progress-tracker">Progress: 0 / 13 Mastered</div>
+  <div class="exam-actions">
+    <button class="btn-secondary" onclick="toggleAllAnswers(true)">Reveal All</button>
+    <button class="btn-secondary" onclick="toggleAllAnswers(false)">Hide All</button>
+    <button class="btn-secondary" onclick="resetExamProgress()">Reset Progress</button>
+  </div>
+</div><div class="quiz-card" id="q1">
+  <div class="quiz-header" onclick="toggleAnswer('ans-1')">
+    <span class="quiz-qnum">Q1</span>
+    <div class="quiz-question">What is Continuous Integration, and what problem does it solve?</div>
+  </div>
+  <div class='quiz-answer' id='ans-1'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>CI is the practice of merging all developers' working copies into a shared mainline several times a day with automated builds/tests. It solves Integration Hell — the state where changes can no longer be integrated quickly, forcing developers to spend more time merging than coding.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-1')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q1', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q2">
+  <div class="quiz-header" onclick="toggleAnswer('ans-2')">
+    <span class="quiz-qnum">Q2</span>
+    <div class="quiz-question">True or false: interpreted languages such as Python and JavaScript have no build phase in CI.</div>
+  </div>
+  <div class='quiz-answer' id='ans-2'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>False. They lack compilation to binary, but building includes asset bundling, transpilation, minification, cache pre-population, and dependency vendoring.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-2')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q2', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q3">
+  <div class="quiz-header" onclick="toggleAnswer('ans-3')">
+    <span class="quiz-qnum">Q3</span>
+    <div class="quiz-question">Name and explain the three levels of integration conflict.</div>
+  </div>
+  <div class='quiz-answer' id='ans-3'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Merge conflict (textual collision in the same file, caught by Git); Functional conflict (changes across files break compilation/build, caught by the compiler); Logical conflict (code builds but behaves incorrectly at runtime, caught by tests).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-3')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q3', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q4">
+  <div class="quiz-header" onclick="toggleAnswer('ans-4')">
+    <span class="quiz-qnum">Q4</span>
+    <div class="quiz-question">Why is integration testing black-box, and when should it run?</div>
+  </div>
+  <div class='quiz-answer' id='ans-4'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>It tests the API contract between components rather than internal implementation, so it is black-box; it runs after unit tests pass.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-4')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q4', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q5">
+  <div class="quiz-header" onclick="toggleAnswer('ans-5')">
+    <span class="quiz-qnum">Q5</span>
+    <div class="quiz-question">What are the four CI considerations and why does each matter?</div>
+  </div>
+  <div class='quiz-answer' id='ans-5'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Speed (slow feedback makes developers bypass CI), Reproducibility (identical results everywhere, killing "it works on my machine"), Reliability (no flaky tests; red means broken), Clarity (clear, actionable logs).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-5')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q5', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q6">
+  <div class="quiz-header" onclick="toggleAnswer('ans-6')">
+    <span class="quiz-qnum">Q6</span>
+    <div class="quiz-question">Who is responsible for resolving a conflict when a branch is merged, and why does branch age matter?</div>
+  </div>
+  <div class='quiz-answer' id='ans-6'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>The developer who lands last resolves conflicts against HEAD. The longer a branch stays open, the more master drifts, increasing conflict risk and the eventual rebase penalty.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-6')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q6', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q7">
+  <div class="quiz-header" onclick="toggleAnswer('ans-7')">
+    <span class="quiz-qnum">Q7</span>
+    <div class="quiz-question">Compare linting and static analysis.</div>
+  </div>
+  <div class='quiz-answer' id='ans-7'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Linting is a fast, file-by-file subset of static analysis with zero false positives and often automatic fixes; static analysis is slower, examines the whole codebase, tolerates some false positives, and catches structural issues such as cyclomatic complexity.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-7')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q7', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q8">
+  <div class="quiz-header" onclick="toggleAnswer('ans-8')">
+    <span class="quiz-qnum">Q8</span>
+    <div class="quiz-question">List the four testing types in the order CI runs them.</div>
+  </div>
+  <div class='quiz-answer' id='ans-8'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Unit, Integration, Acceptance (end-to-end), and Regression testing.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-8')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q8', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q9">
+  <div class="quiz-header" onclick="toggleAnswer('ans-9')">
+    <span class="quiz-qnum">Q9</span>
+    <div class="quiz-question">What is a build artifact? Give three examples.</div>
+  </div>
+  <div class='quiz-answer' id='ans-9'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A compiled, bundled, or packaged output ready for distribution; examples include archives (.tar.gz/.zip), binaries, mobile apps (.apk/.ipa), OS packages (.deb/.rpm), and container images.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-9')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q9', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q10">
+  <div class="quiz-header" onclick="toggleAnswer('ans-10')">
+    <span class="quiz-qnum">Q10</span>
+    <div class="quiz-question">Explain the difference between Continuous Delivery and Continuous Deployment.</div>
+  </div>
+  <div class='quiz-answer' id='ans-10'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Both build and test automatically; Delivery requires a manual human approval before production deployment, while Deployment releases every passing change automatically with zero human intervention.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-10')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q10', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q11">
+  <div class="quiz-header" onclick="toggleAnswer('ans-11')">
+    <span class="quiz-qnum">Q11</span>
+    <div class="quiz-question">Compare rolling and blue-green deployment.</div>
+  </div>
+  <div class='quiz-answer' id='ans-11'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Rolling updates nodes in batches on 1x infrastructure but temporarily serves mixed versions (schemas must be backward compatible). Blue-green runs two identical environments and flips all traffic at once, giving zero mixing and instant rollback at 2x infrastructure cost.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-11')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q11', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q12">
+  <div class="quiz-header" onclick="toggleAnswer('ans-12')">
+    <span class="quiz-qnum">Q12</span>
+    <div class="quiz-question">What should happen after a deployment to verify success?</div>
+  </div>
+  <div class='quiz-answer' id='ans-12'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Automated smoke testing for basic health, centralised logging to catch exceptions, and real-time telemetry/APM (latency, error rates, CPU, throughput) that can trigger automatic rollbacks.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-12')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q12', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q13">
+  <div class="quiz-header" onclick="toggleAnswer('ans-13')">
+    <span class="quiz-qnum">Q13</span>
+    <div class="quiz-question">How do small incremental changes reduce the cost of integration?</div>
+  </div>
+  <div class='quiz-answer' id='ans-13'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Small change sets make integration bugs easy to trace and fix, and if a bug slips through, reverting a small commit loses only a little work because integration happens frequently.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-13')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q13', this)"> Mastered
+    </label>
+  </div>
+</div>
+</section>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+<p><strong>ELEC3609 Engineering Study Guide</strong> &bull; Week 11: CI/CD: Continuous Integration &amp; Continuous Deployment · 2025 Session</p>
+    <p style="font-size: 0.75rem; margin-top: 0.4rem;">Generated for self-paced revision and exam preparation.</p>
+  </footer>
+
+  <!-- Interactive JavaScript -->
+  <script>
+// Theme Toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let currentTheme = localStorage.getItem('study_theme') || (prefersDark ? 'dark' : 'light');
+
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeBtn.textContent = '☀️';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        themeBtn.textContent = '🌙';
+      }
+      localStorage.setItem('study_theme', theme);
+    }
+    applyTheme(currentTheme);
+
+    themeBtn.addEventListener('click', () => {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(currentTheme);
+    });
+
+    // Mobile Menu Toggle
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    menuBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+
+    // Close sidebar when clicking links on mobile
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 1024) {
+          sidebar.classList.remove('open');
+        }
+      });
+    });
+
+    // Reading Progress & Active Nav Link Highlight
+    window.addEventListener('scroll', () => {
+      const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById('progress-bar').style.width = scrolled + '%';
+
+      // Active Section Highlighting
+      const sections = document.querySelectorAll('section.guide-section, section.hero-card');
+      let currentSecId = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 120;
+        if (winScroll >= top) {
+          currentSecId = sec.getAttribute('id');
+        }
+      });
+
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentSecId) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Interactive Confusion Matrix Calculator Logic
+    function calculateMetrics() {
+      const tp = parseFloat(document.getElementById('inp-tp').value) || 0;
+      const fn = parseFloat(document.getElementById('inp-fn').value) || 0;
+      const fp = parseFloat(document.getElementById('inp-fp').value) || 0;
+      const tn = parseFloat(document.getElementById('inp-tn').value) || 0;
+
+      const total = tp + fn + fp + tn;
+      const acc = total > 0 ? ((tp + tn) / total) * 100 : 0;
+      const prec = (tp + fp) > 0 ? (tp / (tp + fp)) * 100 : 0;
+      const rec = (tp + fn) > 0 ? (tp / (tp + fn)) * 100 : 0;
+      const f1 = (prec + rec) > 0 ? 2 * (prec * rec) / (prec + rec) / 100 : 0;
+
+      document.getElementById('res-acc').textContent = acc.toFixed(1) + '%';
+      document.getElementById('res-prec').textContent = (tp + fp) > 0 ? prec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-rec').textContent = (tp + fn) > 0 ? rec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-f1').textContent = (prec + rec) > 0 ? f1.toFixed(3) : '0.000';
+    }
+
+    function setPreset(tp, fp, tn, fn) {
+      document.getElementById('inp-tp').value = tp;
+      document.getElementById('inp-fp').value = fp;
+      document.getElementById('inp-tn').value = tn;
+      document.getElementById('inp-fn').value = fn;
+      calculateMetrics();
+    }
+
+    // Glossary Filter Logic
+    function filterTerms(category, btn) {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+
+      const cards = document.querySelectorAll('.term-card');
+      cards.forEach(card => {
+        if (category === 'all' || card.getAttribute('data-cat') === category) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // Global Search Logic
+    const searchInput = document.getElementById('site-search');
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      const termCards = document.querySelectorAll('.term-card');
+      const quizCards = document.querySelectorAll('.quiz-card');
+
+      if (!query) {
+        termCards.forEach(c => c.style.display = 'flex');
+        quizCards.forEach(c => c.style.display = 'block');
+        return;
+      }
+
+      termCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+
+      quizCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'block' : 'none';
+      });
+    });
+
+    // Exam Questions Show/Hide & Progress Tracker
+    function toggleAnswer(id) {
+      const ans = document.getElementById(id);
+      ans.classList.toggle('show');
+    }
+
+    function toggleAllAnswers(show) {
+      document.querySelectorAll('.quiz-answer').forEach(ans => {
+        if (show) ans.classList.add('show');
+        else ans.classList.remove('show');
+      });
+    }
+
+    let masteredMap = JSON.parse(localStorage.getItem('engg2112_w3_mastered') || '{}');
+
+    function updateProgressUI() {
+      const total = document.querySelectorAll('.quiz-card').length;
+      const count = Object.values(masteredMap).filter(Boolean).length;
+      document.getElementById('exam-progress-tracker').textContent = `Progress: ${count} / ${total} Mastered`;
+
+      for (let i = 1; i <= total; i++) {
+        const card = document.getElementById('q' + i);
+        const checkbox = card ? card.querySelector('input[type="checkbox"]') : null;
+        if (card && checkbox) {
+          if (masteredMap['q' + i]) {
+            card.classList.add('mastered');
+            checkbox.checked = true;
+          } else {
+            card.classList.remove('mastered');
+            checkbox.checked = false;
+          }
+        }
+      }
+    }
+
+    function toggleMastered(qid, checkbox) {
+      masteredMap[qid] = checkbox.checked;
+      localStorage.setItem('engg2112_w3_mastered', JSON.stringify(masteredMap));
+      updateProgressUI();
+    }
+
+    function resetExamProgress() {
+      if (confirm('Reset all exam progress checkboxes?')) {
+        masteredMap = {};
+        localStorage.removeItem('engg2112_w3_mastered');
+        updateProgressUI();
+      }
+    }
+
+    // Initialize state on load
+    window.addEventListener('DOMContentLoaded', () => {
+      calculateMetrics();
+      updateProgressUI();
+    });
+  </script>
+</body>
+</html>

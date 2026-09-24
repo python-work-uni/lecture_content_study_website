@@ -1,0 +1,2914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ELEC3609 Week 3 Study Guide – Web Servers & Application Architecture · 2025 Session</title>
+  <meta name="description" content="This lecture is about how real web systems are put together and how they grow. It starts with the classic LAMP and LEMP stacks and the three-tier web architecture, then compares the major web server e">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for crisp mathematical formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+:root {
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Light Theme (Default) */
+      --bg-primary: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-alt: #e2e8f0;
+      
+      --border-color: #e2e8f0;
+      --border-focus: #6366f1;
+      
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-glow: rgba(79, 70, 229, 0.15);
+      
+      --accent-blue: #0284c7;
+      --accent-blue-bg: #e0f2fe;
+      --accent-emerald: #059669;
+      --accent-emerald-bg: #d1fae5;
+      --accent-amber: #d97706;
+      --accent-amber-bg: #fef3c7;
+      --accent-rose: #e11d48;
+      --accent-rose-bg: #ffe4e6;
+      --accent-purple: #7c3aed;
+      --accent-purple-bg: #ede9fe;
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --nav-width: 280px;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0b0f19;
+      --bg-surface: #131b2e;
+      --bg-subtle: #1e293b;
+      --bg-alt: #334155;
+      
+      --border-color: #1e293b;
+      --border-focus: #818cf8;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-light: #64748b;
+      
+      --primary: #6366f1;
+      --primary-hover: #818cf8;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      
+      --accent-blue: #38bdf8;
+      --accent-blue-bg: rgba(56, 189, 248, 0.15);
+      --accent-emerald: #34d399;
+      --accent-emerald-bg: rgba(52, 211, 153, 0.15);
+      --accent-amber: #fbbf24;
+      --accent-amber-bg: rgba(251, 191, 36, 0.15);
+      --accent-rose: #fb7185;
+      --accent-rose-bg: rgba(251, 113, 133, 0.15);
+      --accent-purple: #a78bfa;
+      --accent-purple-bg: rgba(167, 139, 250, 0.15);
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      --card-shadow-hover: 0 10px 20px -3px rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(19, 27, 46, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Reading Progress Bar */
+    #progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981);
+      width: 0%;
+      z-index: 1000;
+      transition: width 0.1s ease-out;
+    }
+
+    /* Top Sticky Header */
+    header.site-header {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: var(--glass-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.6rem;
+      color: var(--text-main);
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .course-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-box input {
+      padding: 0.45rem 0.75rem 0.45rem 2rem;
+      font-size: 0.85rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      width: 180px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      width: 240px;
+      background: var(--bg-surface);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 0.65rem;
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .btn-icon {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-alt);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      max-width: 1520px;
+      margin: 0 auto;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: var(--nav-width);
+      flex-shrink: 0;
+      position: sticky;
+      top: 57px;
+      height: calc(100vh - 57px);
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-primary);
+    }
+
+    .sidebar-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-light);
+      margin-bottom: 0.75rem;
+      padding-left: 0.5rem;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.65rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      line-height: 1.3;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+      background: var(--bg-subtle);
+    }
+
+    .nav-link.active {
+      color: var(--primary);
+      background: var(--primary-light);
+      font-weight: 600;
+    }
+
+    .nav-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    /* Main Content Area */
+    main.main-content {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      max-width: 1020px;
+      min-width: 0;
+    }
+
+    /* Hero Banner */
+    .hero-card {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-main);
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-overview {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      background: var(--bg-surface);
+      padding: 1.25rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      line-height: 1.7;
+    }
+
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .stat-val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Section Styling */
+    section.guide-section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 80px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .section-number {
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+    }
+
+    h2.section-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    h3.subsection-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.75rem 0;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-main);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--card-shadow);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Callout Boxes */
+    .callout {
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      margin: 1.25rem 0;
+      display: flex;
+      gap: 0.9rem;
+      align-items: flex-start;
+      border-left: 4px solid transparent;
+    }
+
+    .callout-icon {
+      font-size: 1.35rem;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .callout-content {
+      flex: 1;
+      font-size: 0.95rem;
+    }
+
+    .callout-content strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.95rem;
+    }
+
+    .callout-why {
+      background: var(--accent-amber-bg);
+      border-left-color: var(--accent-amber);
+      color: var(--text-main);
+    }
+
+    .callout-memory {
+      background: var(--accent-purple-bg);
+      border-left-color: var(--accent-purple);
+      color: var(--text-main);
+    }
+
+    .callout-tip {
+      background: var(--accent-emerald-bg);
+      border-left-color: var(--accent-emerald);
+      color: var(--text-main);
+    }
+
+    .callout-warning {
+      background: var(--accent-rose-bg);
+      border-left-color: var(--accent-rose);
+      color: var(--text-main);
+    }
+
+    .callout-info {
+      background: var(--accent-blue-bg);
+      border-left-color: var(--accent-blue);
+      color: var(--text-main);
+    }
+
+    /* Formula & Math Block */
+    .formula-block {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin: 1.25rem 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .formula-title {
+      position: absolute;
+      top: -10px;
+      left: 14px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .formula-math {
+      font-size: 1.2rem;
+      margin: 0.5rem 0;
+      color: var(--text-main);
+      overflow-x: auto;
+    }
+
+    /* ELEC3609 local: code / plain-text reference blocks render left-aligned in mono */
+    .formula-block pre.formula-math {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.55;
+      text-align: left;
+      white-space: pre;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      margin: 0;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.25rem 0;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      background: var(--bg-surface);
+    }
+
+    table.study-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    table.study-table th {
+      background: var(--bg-subtle);
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border-color);
+      letter-spacing: 0.02em;
+    }
+
+    table.study-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    table.study-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.study-table tr:hover td {
+      background: var(--bg-subtle);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .badge-recall {
+      background: var(--accent-emerald-bg);
+      color: var(--accent-emerald);
+    }
+
+    .badge-precision {
+      background: var(--accent-blue-bg);
+      color: var(--accent-blue);
+    }
+
+    .badge-f1 {
+      background: var(--accent-purple-bg);
+      color: var(--accent-purple);
+    }
+
+    .badge-danger {
+      background: var(--accent-rose-bg);
+      color: var(--accent-rose);
+    }
+
+    /* Pipeline Diagram */
+    .pipeline-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      box-shadow: var(--card-shadow);
+    }
+
+    .pipeline-flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin: 1rem 0;
+    }
+
+    .pipe-step {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .pipe-step .step-num {
+      font-size: 0.7rem;
+      color: var(--primary);
+      font-family: var(--font-mono);
+    }
+
+    .pipe-step:hover, .pipe-step.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .pipe-arrow {
+      color: var(--text-light);
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    /* Interactive Confusion Matrix Calculator Widget */
+    .calculator-card {
+      background: var(--bg-surface);
+      border: 2px solid var(--primary);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin: 2rem 0;
+      box-shadow: 0 10px 25px -5px var(--primary-glow);
+    }
+
+    .calc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .calc-presets {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .cm-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    .cm-table th, .cm-table td {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem;
+    }
+
+    .cm-table th {
+      background: var(--bg-subtle);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .cm-input-cell {
+      background: var(--bg-surface);
+    }
+
+    .cm-input-cell label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+    }
+
+    .cm-input-cell input {
+      width: 100%;
+      max-width: 90px;
+      padding: 0.4rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .cm-input-cell input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    .calc-results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .metric-card {
+      background: var(--bg-subtle);
+      border-radius: 10px;
+      padding: 0.85rem;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .metric-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--primary);
+      margin: 0.2rem 0;
+    }
+
+    .metric-formula {
+      font-size: 0.7rem;
+      color: var(--text-light);
+      font-family: var(--font-mono);
+    }
+
+    /* Key Takeaways list */
+    .takeaways-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .takeaway-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.9rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .takeaway-num {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.85rem;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    /* Terms & Glossary Section */
+    .glossary-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .filter-chip {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-chip:hover, .filter-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .terms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .term-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.1rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .term-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .term-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--primary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .term-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Exam Questions Section */
+    .exam-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .exam-progress {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .exam-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-secondary {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-alt);
+    }
+
+    .quiz-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--card-shadow);
+      transition: border-color 0.2s ease;
+    }
+
+    .quiz-card.mastered {
+      border-left: 4px solid var(--accent-emerald);
+      opacity: 0.9;
+    }
+
+    .quiz-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      cursor: pointer;
+    }
+
+    .quiz-qnum {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+
+    .quiz-question {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      flex: 1;
+      line-height: 1.5;
+    }
+
+    .quiz-status-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .quiz-answer {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+      color: var(--text-main);
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .quiz-answer.show {
+      display: block;
+    }
+
+    .quiz-toggle-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0;
+    }
+
+    .quiz-toggle-btn:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--border-color);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      background: var(--bg-surface);
+      margin-top: 4rem;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      header.site-header, aside.sidebar, #progress-bar, .calculator-card, .btn-icon, .exam-actions, .filter-chip {
+        display: none !important;
+      }
+      .app-container {
+        display: block;
+        max-width: 100%;
+      }
+      main.main-content {
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .card, .hero-card, .takeaway-item, .quiz-card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .quiz-answer {
+        display: block !important;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      aside.sidebar {
+        position: fixed;
+        left: -100%;
+        top: 57px;
+        z-index: 950;
+        background: var(--bg-surface);
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        transition: left 0.3s ease;
+      }
+      aside.sidebar.open {
+        left: 0;
+      }
+      .menu-toggle {
+        display: block;
+      }
+      main.main-content {
+        padding: 1.5rem;
+      }
+      .grid-2, .calc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="progress-bar"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-left">
+      <button class="menu-toggle" id="menu-btn" aria-label="Toggle navigation menu">&#9776;</button>
+      <span class="course-badge">ELEC3609 • Week 3</span>
+      <span class="header-title">Web Servers & Application Architecture · 2025 Session</span>
+    </div>
+    <div class="header-controls">
+      <div class="search-box">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" id="site-search" placeholder="Search guide..." aria-label="Search study guide">
+      </div>
+      <button class="btn-icon" id="theme-toggle" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">&#127769;</button>
+      <button class="btn-icon" onclick="window.print()" title="Print Study Guide" aria-label="Print Guide">&#128424;</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">Table of Contents</div>
+      <ul class="nav-list">
+<li><a href="#overview" class="nav-link"><span class="nav-num">00</span> Overview</a></li>
+        <li><a href="#section-1" class="nav-link"><span class="nav-num">01</span> Classic Web Stacks: LAMP &amp; LEMP</a></li>
+        <li><a href="#section-2" class="nav-link"><span class="nav-num">02</span> Three-Tier Architecture &amp; Server Roles</a></li>
+        <li><a href="#section-3" class="nav-link"><span class="nav-num">03</span> Single-Server MVP &amp; Its Limits</a></li>
+        <li><a href="#section-4" class="nav-link"><span class="nav-num">04</span> Scaling the App Tier: DNS &amp; LBs</a></li>
+        <li><a href="#section-5" class="nav-link"><span class="nav-num">05</span> Web Server Engines: IIS, Apache, Nginx</a></li>
+        <li><a href="#section-6" class="nav-link"><span class="nav-num">06</span> Languages &amp; Frameworks: HTML to Python</a></li>
+        <li><a href="#section-7" class="nav-link"><span class="nav-num">07</span> Django&#x27;s Model-View-Template</a></li>
+        <li><a href="#section-8" class="nav-link"><span class="nav-num">08</span> Data Storage Media &amp; Cloud Storage</a></li>
+        <li><a href="#section-9" class="nav-link"><span class="nav-num">09</span> Relational Databases &amp; SQL</a></li>
+        <li><a href="#section-10" class="nav-link"><span class="nav-num">10</span> NoSQL Databases in Depth</a></li>
+        <li><a href="#section-11" class="nav-link"><span class="nav-num">11</span> Production Best Practices: Decoupling</a></li>
+        <li><a href="#section-12" class="nav-link"><span class="nav-num">12</span> Scalability &amp; Statelessness</a></li>
+        <li><a href="#section-13" class="nav-link"><span class="nav-num">13</span> Redundancy &amp; Reliability Terms</a></li>
+        <li><a href="#section-14" class="nav-link"><span class="nav-num">14</span> Scaling Roadmap: Step by Step</a></li>
+        <li><a href="#key-takeaways" class="nav-link"><span class="nav-num">15</span> 17 Key Takeaways</a></li>
+        <li><a href="#terms-to-know" class="nav-link"><span class="nav-num">16</span> Terms to Know (Glossary)</a></li>
+        <li><a href="#mnemonics" class="nav-link"><span class="nav-num">17</span> Mnemonics &amp; Quick Recall</a></li>
+        <li><a href="#worked-examples" class="nav-link"><span class="nav-num">18</span> Worked Scenarios &amp; Calculations</a></li>
+        <li><a href="#exam-focus" class="nav-link"><span class="nav-num">19</span> Potential Exam Focus &amp; Practice</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+<section id="overview" class="hero-card">
+  <div class="hero-tagline">📖 Official Course Notes • Week 3</div>
+  <h1 class="hero-title">Web Servers &amp; Application Architecture · 2025 Session</h1>
+  <p class="hero-subtitle">This lecture is about how real web systems are put together and how they grow. It starts with the classic LAMP and LEMP stacks and the…</p>
+  <div class='hero-overview'><strong>Lecture Overview:</strong> This lecture is about how real web systems are put together and how they grow. It starts with the classic LAMP and LEMP stacks and the three-tier web architecture, then compares the major web server engines (IIS, Apache, Nginx) and the languages and frameworks used to build the application tier — with a close look at Django's Model-View-Template pattern. It then surveys data storage, from disk and object stores to relational and NoSQL databases, and finishes with production best practices: decoupling, statelessness, redundancy, and a step-by-step roadmap for scaling a web architecture.</div>
+  <div class="quick-stats">
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">⚙️</div>
+  <div>
+    <div class="stat-label">Lectures</div>
+    <div class="stat-val">1</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-blue-bg); color: var(--accent-blue);">📊</div>
+  <div>
+    <div class="stat-label">Classic Stacks</div>
+    <div class="stat-val">LAMP, LEMP</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-emerald-bg); color: var(--accent-emerald);">🎯</div>
+  <div>
+    <div class="stat-label">Web Server Engines</div>
+    <div class="stat-val">IIS, Apache, Nginx</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-amber-bg); color: var(--accent-amber);">📝</div>
+  <div>
+    <div class="stat-label">Django Components</div>
+    <div class="stat-val">Model, View, Template</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-purple-bg); color: var(--accent-purple);">🧠</div>
+  <div>
+    <div class="stat-label">Storage Models</div>
+    <div class="stat-val">Relational, NoSQL, Cloud</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-rose-bg); color: var(--accent-rose);">🛠️</div>
+  <div>
+    <div class="stat-label">Scaling Stages</div>
+    <div class="stat-val">6</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="section-1" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">01</span>
+    <h2 class="section-title">Classic Web Stacks: LAMP &amp; LEMP</h2>
+  </div>
+  <p><strong>LAMP</strong> and <strong>LEMP</strong> stacks are the most ubiquitous stacks used for developing and deploying web applications. Because of their modular nature, the components can easily be swapped out.</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Stack</th><th>Components</th></tr></thead>
+<tbody><tr><td><strong>LAMP</strong></td><td>Linux, Apache, MySQL, PHP</td></tr><tr><td><strong>LEMP</strong></td><td>Linux, Nginx, MySQL, PHP</td></tr></tbody>
+  </table>
+</div>
+
+<p>Both share Linux, MySQL and PHP; the difference is the web server — Apache in LAMP, <strong>Nginx</strong> in LEMP (the "E" stands for "engine-x", the pronunciation of Nginx). The lecture also references the paper <em>Principled Design of the Modern Web Architecture</em> (2002), which lists the goals modern web architecture is designed to achieve:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Scalability of component interactions</li><li>Generality of interfaces</li><li>Independent deployment of components</li><li>Intermediary components to reduce interaction latency</li><li>Enforce security</li><li>Encapsulate legacy systems</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Because the stack is modular, you can swap one component without rebuilding everything — for example, replacing Apache with Nginx, or MySQL with Postgres. This is why the same architecture appears under many different acronyms.
+  </div>
+</div>
+</section>
+
+<section id="section-2" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">02</span>
+    <h2 class="section-title">Three-Tier Architecture &amp; Server Roles</h2>
+  </div>
+  <p>A refresher on the three-layer architecture: <strong>Web Server</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Takes <strong>HTTP(S) traffic only</strong>.</li><li>Uses HTTP on port 80, or HTTPS on port 443 if encrypted.</li></ul>
+
+<p><strong>Application Server</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Possibly running on HTTP (port 80) or HTTPS (port 443) if encrypted.</li><li>Or on any designated TCP ports.</li></ul>
+
+<p><strong>Web Server vs Application Server.</strong> The key distinction: a <strong>web server exclusively handles HTTP requests</strong>, whereas an <strong>application server serves business logic to application programs through any number of protocols</strong>, possibly including HTTP.</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th></th><th>Web Server</th><th>Application Server</th></tr></thead>
+<tbody><tr><td>Handles</td><td>HTTP(S) requests only</td><td>Business logic for applications</td></tr><tr><td>Protocols</td><td>HTTP / HTTPS</td><td>Any number of protocols, possibly including HTTP</td></tr><tr><td>Ports</td><td>80 (HTTP), 443 (HTTPS)</td><td>80/443 or any designated TCP ports</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Mixing up these roles leads to confused designs. The web server faces the public internet and speaks HTTP; the app server runs your logic and may speak other protocols to databases and services.
+  </div>
+</div>
+</section>
+
+<section id="section-3" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">03</span>
+    <h2 class="section-title">Single-Server MVP &amp; Its Limits</h2>
+  </div>
+  <p>The lecture builds an example website to set up a development web server and develop a sample site. Two practical rules:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Always develop on a similar system to what you intend to deploy on</strong> — for this course, that means Linux.</li><li><strong>Vagrant</strong> is software that creates and configures virtual development environments, so your development environment can match production.</li></ul>
+
+<h3 class="subsection-title">MVP: Everything on One Server</h3>
+
+<p>An <strong>MVP (Minimum Viable Product)</strong> can be built by running everything on a single server.</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Pros</th><th>Cons</th></tr></thead>
+<tbody><tr><td>Simple for debugging; usually the first iteration</td><td>Not production ready — real configuration is very different across multiple layers and compute nodes</td></tr><tr><td>Good for demo or technical validation purposes</td><td>Architecturally things are not decoupled, which is tough for troubleshooting</td></tr><tr><td></td><td>Not ready for horizontal scaling</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    A single-server MVP can feel finished because the demo works, but it has no separation of concerns and no path to scale. Treat it as a prototype, not a product.
+  </div>
+</div>
+</section>
+
+<section id="section-4" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">04</span>
+    <h2 class="section-title">Scaling the App Tier: DNS &amp; LBs</h2>
+  </div>
+  <h3 class="subsection-title">Case Study 1: Moving the App Server</h3>
+
+<p>In a single-server MVP, your web server talks to the application server over <code>localhost:8080</code>. If the application server is moved to another server, what are your options? <strong>Option A — Use the IP address</strong>, e.g. <code>10.100.0.2:8080</code>.</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Problem: if the server dies and a new server comes up with a new IP address, the old IP is <strong>hardcoded</strong> in a configuration file. The web server now points at nothing.</li></ul>
+
+<p><strong>Option B — Use DNS (an A record).</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Create an A record so <code>application.mysite.com.au</code> points to <code>10.100.0.2</code>.</li><li>The web server configuration file now says <code>application.mysite.com.au</code> instead of an IP.</li><li>If the application server dies and the new one is assigned a new IP by the DHCP server (e.g. <code>10.100.0.4</code>), you simply <strong>change the DNS record</strong> — which can be done automatically with scripts — to the new IP.</li><li>The web server needs <strong>no configuration changes</strong>.</li></ul>
+
+<h3 class="subsection-title">Case Study 2: The App Server Gets Slammed</h3>
+
+<p>Everything is fine until the application server is overloaded. Two options to improve performance:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Option 1:</strong> a bigger instance with more CPUs (or a more powerful CPU) and more memory — scale up.</li><li><strong>Option 2:</strong> more instances — scale out.</li></ul>
+
+<p>With Option 2 you now have two app servers (<code>10.100.0.2</code> and <code>10.100.0.4</code>) but only one representative DNS record (<code>application.mysite.com.au</code>). The answer is an <strong>internal load balancer</strong>: <code>application.mysite.com.au</code> points to the load balancer, which then routes traffic to one of the servers.</p>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>"DNS fixes the moving target; the load balancer fixes the crowded one."</strong> DNS handles a server changing address; a load balancer handles many servers sharing the work.
+  </div>
+</div>
+</section>
+
+<section id="section-5" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">05</span>
+    <h2 class="section-title">Web Server Engines: IIS, Apache, Nginx</h2>
+  </div>
+  <div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Server</th><th>Released</th><th>Key traits</th></tr></thead>
+<tbody><tr><td><strong>IIS</strong></td><td>1996</td><td>Microsoft's web server. Long history of security vulnerabilities — avoid if possible. Use it for ASP/ASP.NET (still consider Apache) or Windows-specific features such as AD-integration.</td></tr><tr><td><strong>Apache</strong></td><td>1995</td><td>Open source, developed by the Apache Software Foundation. Dynamically loadable module system. Can scale but can be tricky to set up. Typically spawns threads to handle requests (<code>mpm_prefork</code>), though other options exist.</td></tr><tr><td><strong>Nginx</strong></td><td>2004</td><td>Designed from the beginning to scale easily; adoption grew quickly. Spawns <strong>worker processes</strong>. Memory and CPU usage are typically relatively consistent, even under load.</td></tr></tbody>
+  </table>
+</div>
+
+<p>Once you have an Ubuntu Server environment, a <strong>LEMP</strong> stack can be set up accordingly.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    The architectural difference matters at scale — Apache's thread/process-per-request model grows heavier with load, while Nginx's worker-process model stays relatively consistent. That is why Nginx became dominant for high-traffic sites.
+  </div>
+</div>
+</section>
+
+<section id="section-6" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">06</span>
+    <h2 class="section-title">Languages &amp; Frameworks: HTML to Python</h2>
+  </div>
+  <h3 class="subsection-title">HTML</h3>
+
+<p><strong>HyperText Markup Language (HTML)</strong> is the standard markup language used to create web pages. The <strong>World Wide Web Consortium (W3C)</strong> develops HTML standards.</p>
+
+<h3 class="subsection-title">ASP and ASP.NET</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Active Server Pages (ASP)</strong> was released in 1996 and is now known as Classic ASP or ASP Classic. It was Microsoft's first server-side script engine for dynamically generated web pages.</li><li><strong>ASP.NET</strong> (released 2002) supersedes ASP. It uses a <strong>Common Language Runtime (CLR)</strong> to allow most .NET languages to be supported.</li></ul>
+
+<h3 class="subsection-title">Python</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Use a framework</strong> rather than writing everything from scratch.</li><li>Python plans its language evolution using <strong>PEPs</strong> (Python Enhancement Proposals), so you know what to expect in the next few years.</li><li>Common frameworks: <strong>Flask</strong> and <strong>Django</strong>.</li><li>These typically come with a <strong>built-in development server</strong> (a lightweight web server) for development use.</li><li>For production, they are set up with Apache and Nginx using the <strong>WSGI (Web Server Gateway Interface)</strong> specification. WSGI is the standard bridge that lets a web server hand HTTP requests to a Python application.</li></ul>
+
+<h3 class="subsection-title">PHP</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Use a framework.</strong> Without proper planning, PHP will become a mess (e.g. <strong>spaghetti code</strong>).</li><li>Common frameworks: <strong>Codeigniter</strong> and <strong>CakePHP</strong>.</li><li>PHP can be set up with either Apache or Nginx.</li></ul>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>"Python uses PEPs and WSGI; PHP risks spaghetti."</strong> Frameworks and standards are what keep web code maintainable.
+  </div>
+</div>
+</section>
+
+<section id="section-7" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">07</span>
+    <h2 class="section-title">Django&#x27;s Model-View-Template</h2>
+  </div>
+  <p>Django organises an application into three parts:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Models</strong> — represent how data is organised in the database.</li><li><strong>Views</strong> — what you see when you visit a site.</li><li><strong>Controllers</strong> — control the flow of information.</li></ul>
+
+<p>Django's actual pattern is called <strong>Model-View-Template (MVT)</strong>, and it maps onto the classic MVC idea as follows:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Model</strong> — similar to MVC's Model, it handles the data and logic part and maintains a connection with the database.</li><li><strong>View</strong> — works differently from the View layer of MVC. In Django, the <strong>view accepts requests and sends out responses</strong>.</li><li><strong>Template</strong> — the presentation layer, commonly coded in HTML or <strong>DTL (Django Template Language)</strong>.</li></ul>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Django component</th><th>Role</th></tr></thead>
+<tbody><tr><td><strong>Model</strong></td><td>Data and logic; maintains the database connection</td></tr><tr><td><strong>View</strong></td><td>Accepts requests and sends responses (the logic layer)</td></tr><tr><td><strong>Template</strong></td><td>Presentation layer in HTML or DTL</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Django's naming is misleading. Django's <strong>View</strong> is really the controller (it handles requests), and Django's <strong>Template</strong> is really the view (the presentation). Do not assume the names map one-to-one to classic MVC.
+  </div>
+</div>
+</section>
+
+<section id="section-8" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">08</span>
+    <h2 class="section-title">Data Storage Media &amp; Cloud Storage</h2>
+  </div>
+  <h3 class="subsection-title">Storage Media</h3>
+
+<p>Storage comes in many forms:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Hardware form factor</strong> — magnetic (spinning) drive versus Solid State Drive (flash) HDD.</li><li><strong>SAN storage</strong> — interconnected with Ethernet (iSCSI) or Fibre Channel.</li><li><strong>Network Attached Storage (NAS)</strong>.</li><li><strong>In-memory storage.</strong></li><li><strong>Object store</strong> — AWS S3, Google Cloud Storage.</li><li><strong>Block store</strong> — disks.</li><li><strong>File store</strong> — NFS, Samba, CephFS, HDFS (Hadoop).</li></ul>
+
+<h3 class="subsection-title">Disks</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Hold <strong>static files</strong> (HTML, images, CSS).</li><li>SSD versus spinning drives.</li><li><strong>Leverage OS RAM caching</strong> to serve frequently used files faster.</li></ul>
+
+<h3 class="subsection-title">Cloud Storage</h3>
+
+<p>Cloud storage is a model of data storage in which data is stored in <strong>logical pools</strong>, the physical storage spans <strong>multiple servers (and often locations)</strong>, and the physical environment is typically <strong>owned and managed by a third party</strong>. Offerings include Azure Storage, Google Cloud Storage and Amazon S3. <strong>Amazon S3</strong> (Simple Storage Service) is a cost-effective, simple-to-use service used to store and retrieve any amount of data, at any time, from anywhere on the web.</p>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Background::</strong>
+    Object stores like S3 are not databases — they store whole files (images, videos, backups) rather than rows and tables. Cloud storage also improves durability because data is spread across many servers and locations.
+  </div>
+</div>
+</section>
+
+<section id="section-9" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">09</span>
+    <h2 class="section-title">Relational Databases &amp; SQL</h2>
+  </div>
+  <h3 class="subsection-title">What a Relational Database Is</h3>
+
+<p>A <strong>relational database</strong> maintains and enforces relationships between data. It organises data into one or more <strong>tables of columns and rows</strong>:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Typically each <strong>table</strong> represents an entity, such as a customer or product.</li><li><strong>Rows</strong> represent instances of that entity.</li><li><strong>Columns</strong> represent values attributed to that instance, such as address or price.</li></ul>
+
+<p>A <strong>schema change often results in system downtime and planned maintenance</strong> — the structure is rigid by design.</p>
+
+<h3 class="subsection-title">SQL Standards</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>There has been an <strong>ANSI/ISO SQL standard since 1986</strong>.</li><li>Most SQL is <strong>not completely portable</strong> among RDBMS products; this typically affects only more advanced features — for example, Teradata does not support pivots.</li><li><strong>Transact-SQL (TSQL)</strong> is typically more feature rich.</li></ul>
+
+<h3 class="subsection-title">Major Relational Databases</h3>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>MySQL / MariaDB</strong> — the most popular and commonly used. Lots of third-party tools and libraries. Does <strong>not</strong> implement the full SQL standard: for example <code>'foo' || 'bar'</code> means <code>'foo' OR 'bar'</code>, whereas the standard defines <code>||</code> as string concatenation. Concurrency can be an issue.</li><li><strong>Postgres</strong> — follows ANSI/ISO SQL standards. Complete support for reliable transactions — <strong>Atomicity, Consistency, Isolation, Durability (ACID)</strong>. Great spatial extension. Replication can be tricky.</li><li><strong>Microsoft SQL Server (MSSQL)</strong> — good for the MS stack. Integrates easily into the BI/DW stack (<strong>SSIS, SSAS, SSRS</strong>). Generally cheaper than Oracle and Teradata, but consider and plan <strong>license costs</strong>, even in the cloud. Requires DBAs.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    SQL databases give you strong guarantees (ACID) and enforced relationships, which is exactly what financial and inventory data need — at the cost of rigidity and more careful scaling.
+  </div>
+</div>
+</section>
+
+<section id="section-10" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">10</span>
+    <h2 class="section-title">NoSQL Databases in Depth</h2>
+  </div>
+  <p><strong>NoSQL / NewSQL</strong> databases are non-relational: they store data more like loose pages, and do not store data in the same relational manner. Their characteristics:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>New data structures</li><li>More flexible schemas, or no schemas</li><li>Better scalability</li><li><strong>Eventually consistent</strong> rather than strictly consistent</li></ul>
+
+<p>The lecture surveys five examples: <strong>Redis — key/value based</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Written in C — blazing fast.</li><li>Protocol is Telnet-like and binary safe.</li><li>Disk-backed in-memory database, master-slave replication, automatic failover.</li><li>Stores simple values or data structures by keys.</li><li>Supports <code>INCR</code> and similar operations, bit and bitfield operations, sets, lists, hashes and sorted sets.</li><li>Values can be set to <strong>expire</strong> (as in a cache).</li><li><strong>Pub/Sub</strong> lets you implement messaging.</li></ul>
+
+<p><strong>Cassandra — column based</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Written in Java.</li><li>Main point: store huge datasets in "almost" SQL.</li><li>Protocol: <strong>CQL3</strong> and Thrift.</li><li>CQL3 is very similar to SQL, but with limitations that come from scalability — most notably <strong>no JOINs and no aggregate functions</strong>.</li><li>Querying by key, or key range (secondary indices are also available).</li><li>Data can have expiration (set on <code>INSERT</code>).</li><li>Map/reduce is possible with Apache Hadoop.</li></ul>
+
+<p><strong>MongoDB — document based</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Written in C++.</li><li>Main point: <strong>JSON document store</strong>.</li><li>Master/slave replication (auto failover with replica sets).</li><li><strong>Sharding built in.</strong></li><li>Queries are JavaScript expressions.</li><li>Geospatial queries and indexing.</li><li>Multiple storage engines with different performance characteristics.</li><li>Journaling.</li><li>Text search integrated.</li><li>Deployment would require some heavy lifting if you want HA — e.g. voting systems using ZooKeeper.</li></ul>
+
+<p><strong>ElasticSearch — document based</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Written in Java.</li><li>Main point: <strong>advanced search</strong> — stores JSON documents.</li><li>Protocol: JSON over HTTP (plugins: Thrift, memcached).</li><li>Parent and child documents with versioning and time outs.</li><li>Very versatile and sophisticated querying, scriptable.</li><li>Write consistency: <strong>one, quorum or all</strong>. Asynchronous replication.</li><li>Sorting by score or geo distance.</li><li>Fuzzy searches (approximate date, etc.).</li><li>Use cases: dynamic web search with auto-suggest; the <strong>ELK stack</strong> for log analysis.</li><li><strong>ELK = ElasticSearch, Logstash, Kibana.</strong></li></ul>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Database</th><th>Model</th><th>Written in</th><th>Standout feature</th></tr></thead>
+<tbody><tr><td><strong>Redis</strong></td><td>Key/value</td><td>C</td><td>In-memory speed, expiry, Pub/Sub</td></tr><tr><td><strong>Cassandra</strong></td><td>Column</td><td>Java</td><td>Huge datasets via CQL3, no JOINs</td></tr><tr><td><strong>MongoDB</strong></td><td>Document</td><td>C++</td><td>JSON store, built-in sharding</td></tr><tr><td><strong>ElasticSearch</strong></td><td>Document/search</td><td>Java</td><td>Full-text and fuzzy search; ELK</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>"Redis caches, Cassandra scales, Mongo documents, Elastic searches."</strong> One phrase per database.
+  </div>
+</div>
+</section>
+
+<section id="section-11" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">11</span>
+    <h2 class="section-title">Production Best Practices: Decoupling</h2>
+  </div>
+  <p><strong>Decoupling</strong> means giving different components dedicated resources:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Web servers</li><li>App servers</li><li>Database</li></ul>
+
+<p>The benefits:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>It is good to have a well-understood scope of work for each component.</li><li><strong>Reduced blast radius</strong> — a failure in one component does not take down everything.</li><li>Easier troubleshooting and incident response.</li><li>Smaller but more components — moving towards a <strong>microservices architecture</strong>.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Decoupling is the difference between one server where every problem is everyone's problem, and a system where you can isolate, diagnose and recover each part independently.
+  </div>
+</div>
+</section>
+
+<section id="section-12" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">12</span>
+    <h2 class="section-title">Scalability &amp; Statelessness</h2>
+  </div>
+  <p><strong>Statelessness is the foundation of all scalability. Stateful applications won't scale.</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Components of the same layer should <strong>not share anything</strong> between them.</li><li>The lecture points to the <strong>12 Factor App</strong> principles as a reference.</li><li><strong>Scale out vs scale up:</strong><ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Scale-out</strong> — horizontal scaling; the model supercomputing has been using. <strong>Load balancing is IMPORTANT.</strong></li><li><strong>Scale-up</strong> — bigger, bigger and bigger. Often not realistic due to the physical laws and economics.</li></ul></li><li>Scalability does not apply only to compute and memory, but also to <strong>I/O</strong>:<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>IOPS</strong> (I/O operations per second)</li><li><strong>Bandwidth</strong></li><li><strong>Latency</strong></li></ul></li></ul>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Teams often assume scalability is only about CPU and RAM. Disk I/O — IOPS, bandwidth and latency — is frequently the real bottleneck.
+  </div>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    If a server stores per-user session state locally, requests must return to that exact server. Making components stateless lets any server handle any request, which is what makes horizontal scaling possible.
+  </div>
+</div>
+</section>
+
+<section id="section-13" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">13</span>
+    <h2 class="section-title">Redundancy &amp; Reliability Terms</h2>
+  </div>
+  <p><strong>Redundancy</strong> is about removing all <strong>SPOFs (single points of failure)</strong>:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Master/Slave configurations</li><li>Replications</li></ul>
+
+<p>The lecture asks you to guess <strong>AWS S3's durability</strong> (it is famously extremely high — the secondary source cites 99.999999999%, or eleven 9s). Four terms are distinguished:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Durability</strong> — is the data stored securely in the event of failures?</li><li><strong>Availability</strong> — system uptime; the percentage of time the system is able to serve requests. (For reference, 99.99% availability is about 52.6 minutes of downtime per year.)</li><li><strong>Reliability</strong> — similar to availability, but a system can be available yet not functioning correctly.</li><li><strong>Resilience</strong> — the ability of the system to recover in the event of failures; self-healing.</li></ul>
+
+<p>Some software defects relate to <strong>performance</strong> — they cannot be replicated when the load is low. Think about <strong>avalanche or cascading effects</strong>, where one failure triggers others. Extended reading: <strong>Chaos Monkey</strong>.</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Term</th><th>Question it answers</th></tr></thead>
+<tbody><tr><td><strong>Durability</strong></td><td>Is the data safe from loss or corruption?</td></tr><tr><td><strong>Availability</strong></td><td>What percentage of time can it serve requests?</td></tr><tr><td><strong>Reliability</strong></td><td>Does it work correctly while available?</td></tr><tr><td><strong>Resilience</strong></td><td>Can it recover and self-heal after failure?</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>"D-A-R-R"</strong> = <strong>D</strong>urability, <strong>A</strong>vailability, <strong>R</strong>eliability, <strong>R</strong>esilience — four different promises, often confused.
+  </div>
+</div>
+</section>
+
+<section id="section-14" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">14</span>
+    <h2 class="section-title">Scaling Roadmap: Step by Step</h2>
+  </div>
+  <p>Web architectures evolve incrementally from a simple MVP to a multi-tiered, resilient system. The lecture walks through these stages: <strong>Stage 1 — Single Server Architecture.</strong> Everything (web server, app server, database) runs on one machine. Good for prototypes; not production ready. <strong>Stage 2 — Separate DB Server.</strong> Separate the database from the application server to <strong>eliminate resource contention</strong>, and increase security by <strong>removing the database from the DMZ or public internet</strong>. <strong>Stage 3 — Load Balancer.</strong> Add a load balancer to improve performance and reliability by <strong>distributing the workload across multiple servers</strong>. If one load-balanced server fails, the others handle incoming traffic until it becomes healthy again. Typical implementations: <strong>HAProxy, Nginx, Varnish</strong>. <strong>Stage 4 — HTTP Accelerator.</strong> An <strong>HTTP accelerator</strong> (caching HTTP reverse proxy) reduces the time to serve content through a variety of techniques. Typically the response from a web or application server is <strong>cached for a period of time in memory</strong>. Examples: <strong>Varnish, Squid, Nginx</strong>. <strong>Stage 5 — Master-Slave Database Replication.</strong> One way to improve a database that performs many reads compared to writes (such as a CMS) is master-slave replication. It requires a master and one or more slave nodes; all updates are sent to the master, and reads can be distributed across all nodes. <strong>Stage 6 — Combinations.</strong> It is possible to load balance the caching servers in addition to the application servers, and to use database replication in a single environment. The purpose of combining these techniques is to reap the benefits of each <strong>without introducing too many issues or complexity</strong>.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    You do not jump straight to a complex architecture. You add one layer at a time as a real bottleneck appears, which keeps the system as simple as it can be for the load it must handle.
+  </div>
+</div>
+</section>
+
+<section id="key-takeaways" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">15</span>
+    <h2 class="section-title">17 Key Takeaways</h2>
+  </div>
+  <div class="takeaways-list">
+<div class="takeaway-item">
+  <span class="takeaway-num">1</span>
+  <div><strong><strong>LAMP and LEMP are the classic stacks</strong></strong> — LAMP is Linux/Apache/MySQL/PHP; LEMP swaps Apache for Nginx. Their modular design lets components be swapped.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">2</span>
+  <div><strong><strong>A web server handles only HTTP(S)</strong> (ports 80/443); an <strong>application server runs business logic</strong> and may speak many protocols</strong>, possibly including HTTP.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">3</span>
+  <div><strong><strong>A single-server MVP is good for debugging and demos but not production ready</strong></strong> — it is not decoupled and cannot scale horizontally.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">4</span>
+  <div><strong><strong>DNS beats hardcoded IPs</strong></strong> — point a record like <code>application.mysite.com.au</code> at the app server and update the record when the server's IP changes.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">5</span>
+  <div><strong><strong>A load balancer solves many servers, one name</strong></strong> — it routes traffic across a pool and keeps serving if one server fails.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">6</span>
+  <div><strong>IIS (1996) is Microsoft's</strong>, best avoided<strong>; </strong>Apache (1995)<strong> is modular and thread/process-per-request; </strong>Nginx (2004) uses worker processes and stays consistent under load.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">7</span>
+  <div><strong>HTML is the W3C standard markup</strong>; ASP (1996) became ASP Classic and ASP.NET (2002) superseded it using the CLR.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">8</span>
+  <div><strong>Python uses frameworks (Flask</strong>, Django) and the WSGI specification to run behind Apache or Nginx; PHP needs a framework (Codeigniter, CakePHP) or it becomes spaghetti code.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">9</span>
+  <div><strong><strong>Django is MVT</strong></strong> — Model handles data and the database connection, View accepts requests and sends responses, Template is the HTML/DTL presentation layer.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">10</span>
+  <div><strong><strong>Storage comes in many forms</strong></strong> — disk (static files), block, file (NFS/Samba/CephFS/HDFS), in-memory, and object stores such as AWS S3; cloud storage spans multiple servers and locations.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">11</span>
+  <div><strong><strong>Relational databases enforce relationships</strong> with tables</strong>, rows and columns, and schema changes usually mean downtime; SQL has been standardised since 1986 but is not fully portable.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">12</span>
+  <div><strong>MySQL is the most popular but not fully standard</strong> (note its <code>||</code> behaviour); Postgres is ACID-compliant with great spatial support; MSSQL fits the Microsoft BI stack but has license costs.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">13</span>
+  <div><strong><strong>NoSQL trades strict consistency for flexibility and scale</strong></strong> — Redis (key/value, in-memory, expiry), Cassandra (column, CQL3, no JOINs), MongoDB (JSON documents, sharding), ElasticSearch (search, ELK).</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">14</span>
+  <div><strong><strong>Decoupling gives components dedicated resources</strong></strong> — reduced blast radius, easier troubleshooting, and a path towards microservices.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">15</span>
+  <div><strong><strong>Statelessness is the foundation of scalability</strong>; scale out (horizontal</strong>, needs load balancing) is usually more realistic than scale up; watch I/O as well as CPU and memory.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">16</span>
+  <div><strong><strong>Remove single points of failure</strong></strong> — master/slave and replication; know the difference between durability, availability, reliability and resilience.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">17</span>
+  <div><strong><strong>Scale in stages</strong></strong> — single server, separate DB, load balancer, HTTP accelerator, master-slave replication, then combinations.</div>
+</div>
+</div>
+</section>
+
+<section id="terms-to-know" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">16</span>
+    <h2 class="section-title">Terms to Know (Glossary)</h2>
+  </div>
+  <div class="glossary-controls">
+  <button class="filter-chip active" onclick="filterTerms('all', this)">All (80)</button>
+  <button class="filter-chip" onclick="filterTerms('models', this)">Core Concepts</button>
+  <button class="filter-chip" onclick="filterTerms('pipeline', this)">Architecture & Data</button>
+</div>
+<div class="terms-grid" id="terms-container">
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>LAMP</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Linux, Apache, MySQL, PHP web stack.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>LEMP</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Linux, Nginx, MySQL, PHP web stack.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Web server</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A server that exclusively handles HTTP(S) requests, on ports 80/443.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Application server</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A server that serves business logic to application programs via any number of protocols, possibly including HTTP.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>IIS</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Internet Information Services; Microsoft's web server (1996), with a history of vulnerabilities.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Apache</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Open-source web server (1995) from the Apache Software Foundation; modular, typically thread/process-per-request.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Nginx</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Web server (2004) using worker processes; consistent CPU and memory under load.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>mpm_prefork</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Apache's typical multi-processing module that spawns threads/processes per request.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>MVP</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Minimum Viable Product; a minimal first version, e.g. everything on one server.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Vagrant</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Software that creates and configures virtual development environments.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>A record</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A DNS record pointing a domain name at an IP address.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>DHCP</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Dynamic Host Configuration Protocol; assigns IP addresses to hosts on a network.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Load balancer</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Distributes workload across multiple servers and keeps serving if one fails; e.g. HAProxy, Nginx, Varnish.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>HTML</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">HyperText Markup Language; the standard markup language for web pages.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>W3C</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">World Wide Web Consortium; develops HTML standards.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ASP</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Active Server Pages (1996), Microsoft's first server-side script engine; now ASP Classic.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ASP.NET</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Microsoft's successor to ASP (2002), using the Common Language Runtime.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>CLR</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Common Language Runtime; lets ASP.NET support most .NET languages.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Python</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The course's baseline language; uses frameworks such as Flask and Django.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>PEP</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Python Enhancement Proposal; how Python plans its language evolution.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Flask</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A lightweight Python web framework.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Django</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">A Python web framework using the Model-View-Template pattern.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>WSGI</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Web Server Gateway Interface; the specification connecting Python apps to Apache/Nginx.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>PHP</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A server-side language; use a framework (Codeigniter, CakePHP) to avoid spaghetti code.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Spaghetti code</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Unstructured, tangled code that is hard to maintain.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>MVT</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Model-View-Template; Django's architecture pattern.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Model</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">In Django, the component handling data and logic and the database connection.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>View</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">In Django, the component that accepts requests and sends responses.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Template</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The presentation layer, in HTML or Django Template Language (DTL).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>DTL</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Django Template Language.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>SAN</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Storage Area Network; block storage over iSCSI or Fibre Channel.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>NAS</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Network Attached Storage.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Object store</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Storage for whole objects/files, e.g. AWS S3, Google Cloud Storage.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Block store</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Raw disk volumes.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>File store</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Shared file systems such as NFS, Samba, CephFS, HDFS.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>NFS</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Network File System.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>HDFS</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Hadoop Distributed File System.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Amazon S3</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Amazon Simple Storage Service; cost-effective storage for any amount of data.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Cloud storage</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Data stored in logical pools across multiple servers and locations, managed by a third party.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Relational database</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A database that maintains and enforces relationships between data, organised into tables of rows and columns.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Schema</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The defined structure of a database; changing it often causes downtime and planned maintenance.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>SQL</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Structured Query Language; standardised by ANSI/ISO since 1986.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>RDBMS</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Relational Database Management System.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>MySQL / MariaDB</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The most popular open-source relational database; not fully SQL-standard.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Postgres</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">An ANSI/ISO-compliant relational database with ACID support and spatial extensions.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ACID</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Atomicity, Consistency, Isolation, Durability; transaction guarantees in relational databases.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>MSSQL</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Microsoft SQL Server; integrates with the Microsoft BI/DW stack.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>TSQL</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Transact-SQL; Microsoft's more feature-rich SQL dialect.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>SSIS, SSAS, SSRS</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Microsoft BI tools (Integration, Analysis and Reporting Services).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>NoSQL</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Non-relational databases with flexible or no schemas and eventual consistency.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Eventual consistency</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Replicas converge over time rather than being strictly consistent immediately.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Redis</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Key/value, in-memory, disk-backed database written in C; supports expiry and Pub/Sub.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Cassandra</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Column-based database written in Java; stores huge datasets with CQL3, no JOINs.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>CQL3</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Cassandra Query Language 3; SQL-like but without JOINs or aggregate functions.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>MongoDB</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Document-based JSON store written in C++; built-in sharding and replica sets.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Sharding</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Splitting data across multiple machines to scale.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ElasticSearch</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Document/search database written in Java; JSON over HTTP, fuzzy search, async replication.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ELK</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">ElasticSearch, Logstash and Kibana; a log-analysis stack.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Decoupling</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Giving different components dedicated resources (web, app, database).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Blast radius</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The scope of damage when a component fails; decoupling reduces it.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Microservices</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">An architecture of small, independently deployable services.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Statelessness</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Not storing per-client state on the server; the foundation of scalability.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>12 Factor App</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A set of principles for building scalable, portable applications.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Scale-out</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Horizontal scaling by adding more nodes; needs load balancing.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Scale-up</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Vertical scaling by making a node bigger; limited by physics and economics.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>IOPS</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">I/O operations per second.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Bandwidth</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The volume of data a connection can carry.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Latency</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The delay before data transfer begins or completes.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Redundancy</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Duplicating components to remove single points of failure.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>SPOF</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Single Point of Failure; a component whose failure halts the system.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Durability</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Whether data is stored securely in the event of failures.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Availability</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">The percentage of time a system can serve requests (uptime).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Reliability</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Whether the system functions correctly while available.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Resilience</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The ability to recover and self-heal after failures.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Chaos Monkey</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A tool that deliberately injects failures to test resilience (from Netflix).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>HTTP accelerator</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A caching HTTP reverse proxy, e.g. Varnish, Squid, Nginx.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Varnish</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">An HTTP accelerator / caching reverse proxy.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>HAProxy</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A common load-balancer implementation.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Master-slave replication</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">All writes go to the master; reads are distributed across slaves.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>DMZ</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">A network zone exposed to the public internet; the database should not sit in it.</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="mnemonics" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">17</span>
+    <h2 class="section-title">Mnemonics &amp; Quick Recall</h2>
+  </div>
+  <div class="grid-2">
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Classic Stacks</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">&quot;LAMP has Apache, LEMP has Engine-X&quot;</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;LAMP has Apache, LEMP has Engine-X&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">= Linux/MySQL/PHP are shared; only the web server changes.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Server Roles</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">&quot;Web speaks HTTP; App speaks anything&quot;</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Web speaks HTTP; App speaks anything&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">= web server handles HTTP(S); app server serves business logic over any protocol.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 DNS vs Load Balancer</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">&quot;DNS for a moving server, LB for many servers&quot;</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;DNS for a moving server, LB for many servers&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">= DNS tracks IP changes; a load balancer distributes across a pool.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Django MVT</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">&quot;Model = Data, View = Logic, Template = Looks&quot;</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Model = Data, View = Logic, Template = Looks&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">= Django's View is the controller and its Template is the view.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 NoSQL Personalities</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">&quot;Redis caches, Cassandra scales, Mongo documents, Elastic searches.&quot;</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Redis caches, Cassandra scales, Mongo documents, Elastic searches.&rdquo;</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Reliability Quartet</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">D-A-R-R</div>
+<p style="font-size: 0.85rem; color: var(--text-muted);">= Durability, Availability, Reliability, Resilience.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🔄 Scaling Order</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">&quot;Server, DB, LB, Cache, Replication, Combine&quot;</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Server, DB, LB, Cache, Replication, Combine&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">= the six-stage roadmap.</p>
+</div>
+</div>
+</section>
+
+<section id="worked-examples" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">18</span>
+    <h2 class="section-title">Worked Scenarios &amp; Calculations</h2>
+  </div>
+  <div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 1 &bull; The Hardcoded-IP Failure</div>
+  <h3 class="subsection-title" style="margin-top:0;">The Hardcoded-IP Failure</h3>
+<p>A single-server MVP has the web server configured to call the app server at <code>localhost:8080</code>.</p>
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The app server is moved to a new machine at <code>10.100.0.2:8080</code>, so the config is updated to that IP.</li><li>The machine dies; DHCP assigns the replacement <code>10.100.0.4</code>.</li><li>The hardcoded <code>10.100.0.2</code> now points at nothing — the site breaks.</li><li>The fix: create an A record so <code>application.mysite.com.au</code> points to the app server, and have the web server use the name.</li><li>Next time the IP changes, update the DNS record (automatically with a script) and leave the web server untouched.</li></ol>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 2 &bull; From One App Server to a Pool</div>
+  <h3 class="subsection-title" style="margin-top:0;">From One App Server to a Pool</h3>
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Stage 1:</strong> web, app and database all on one server — fine for a demo.</li><li><strong>Stage 2:</strong> move the database to its own server to remove resource contention and take it out of the DMZ.</li><li><strong>Stage 3:</strong> the app server is overloaded, so add a second app server — now there are two IPs behind one name.</li><li>Add a <strong>load balancer</strong>: <code>application.mysite.com.au</code> points at the LB, which routes to either app server and routes around a failed one.</li><li><strong>Stage 4:</strong> add an <strong>HTTP accelerator</strong> (e.g. Varnish) so cached responses are served from memory.</li><li><strong>Stage 5:</strong> add <strong>master-slave replication</strong> so reads spread across slaves while writes go to the master.</li></ol>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 3 &bull; Choosing a Database for a CMS</div>
+  <h3 class="subsection-title" style="margin-top:0;">Choosing a Database for a CMS</h3>
+<p>A content-management system performs far more reads than writes.</p>
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>A relational database is a natural fit because content has clear relationships (articles, authors, categories) and a well-defined schema.</li><li>Because reads dominate, <strong>master-slave replication</strong> lets many slaves serve reads while the master handles writes.</li><li>If the system also needs fast lookups of cached fragments, <strong>Redis</strong> can hold short-lived values with expiry.</li><li>If it needs powerful search with auto-suggest, <strong>ElasticSearch</strong> (part of the ELK stack) is the specialised tool.</li></ul>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 4 &bull; Reading the NoSQL Table</div>
+  <h3 class="subsection-title" style="margin-top:0;">Reading the NoSQL Table</h3>
+<p>Compare two document stores from the lecture:</p>
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>MongoDB</strong> is written in C++ and stores JSON documents, with master/slave replication and built-in sharding; queries are JavaScript expressions.</li><li><strong>ElasticSearch</strong> is written in Java and specialises in advanced search over JSON documents, with JSON-over-HTTP access, fuzzy search and async replication.</li><li>Both are "document based", but MongoDB is a general-purpose data store while ElasticSearch is built for search.</li></ul>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 5 &bull; The Four Reliability Promises</div>
+  <h3 class="subsection-title" style="margin-top:0;">The Four Reliability Promises</h3>
+<p>For a photo-sharing service, distinguish the terms:</p>
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Durability</strong> — if a disk fails, are the uploaded photos still safe? (Cloud object storage spreads copies across servers and locations.)</li><li><strong>Availability</strong> — what percentage of the time can users load the site? (e.g. 99.99% ≈ 52.6 minutes downtime per year.)</li><li><strong>Reliability</strong> — when the site is up, does it actually work correctly, or does it return errors?</li><li><strong>Resilience</strong> — after a failure, can the system recover and self-heal without human intervention?</li></ul>
+</div>
+</section>
+
+<section id="exam-focus" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">19</span>
+    <h2 class="section-title">Potential Exam Focus &amp; Practice</h2>
+  </div>
+  <div class="exam-toolbar">
+  <div class="exam-progress" id="exam-progress-tracker">Progress: 0 / 18 Mastered</div>
+  <div class="exam-actions">
+    <button class="btn-secondary" onclick="toggleAllAnswers(true)">Reveal All</button>
+    <button class="btn-secondary" onclick="toggleAllAnswers(false)">Hide All</button>
+    <button class="btn-secondary" onclick="resetExamProgress()">Reset Progress</button>
+  </div>
+</div><div class="quiz-card" id="q1">
+  <div class="quiz-header" onclick="toggleAnswer('ans-1')">
+    <span class="quiz-qnum">Q1</span>
+    <div class="quiz-question">What are LAMP and LEMP, and how do they differ?</div>
+  </div>
+  <div class='quiz-answer' id='ans-1'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>LAMP is Linux, Apache, MySQL, PHP; LEMP is Linux, Nginx, MySQL, PHP. Both are ubiquitous, modular stacks; LEMP replaces Apache with Nginx (the "E" from "engine-x").</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-1')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q1', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q2">
+  <div class="quiz-header" onclick="toggleAnswer('ans-2')">
+    <span class="quiz-qnum">Q2</span>
+    <div class="quiz-question">Distinguish a web server from an application server.</div>
+  </div>
+  <div class='quiz-answer' id='ans-2'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A web server exclusively handles HTTP(S) requests (ports 80/443). An application server serves business logic to application programs through any number of protocols, possibly including HTTP.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-2')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q2', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q3">
+  <div class="quiz-header" onclick="toggleAnswer('ans-3')">
+    <span class="quiz-qnum">Q3</span>
+    <div class="quiz-question">What are the pros and cons of a single-server MVP?</div>
+  </div>
+  <div class='quiz-answer' id='ans-3'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Pros — simple to debug and good for demos or technical validation, usually the first iteration. Cons — not production ready, not decoupled (tough to troubleshoot), and not ready for horizontal scaling.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-3')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q3', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q4">
+  <div class="quiz-header" onclick="toggleAnswer('ans-4')">
+    <span class="quiz-qnum">Q4</span>
+    <div class="quiz-question">In Case Study 1, why is DNS better than a hardcoded IP for locating the app server?</div>
+  </div>
+  <div class='quiz-answer' id='ans-4'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A hardcoded IP breaks when the server dies and a replacement gets a new IP from DHCP. With an A record, you simply update the DNS record (possibly automatically by script) and the web server needs no configuration change.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-4')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q4', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q5">
+  <div class="quiz-header" onclick="toggleAnswer('ans-5')">
+    <span class="quiz-qnum">Q5</span>
+    <div class="quiz-question">In Case Study 2, how do you handle multiple app servers behind one DNS name?</div>
+  </div>
+  <div class='quiz-answer' id='ans-5'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Add an internal load balancer; the DNS name points at the load balancer, which routes traffic to one of the app servers.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-5')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q5', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q6">
+  <div class="quiz-header" onclick="toggleAnswer('ans-6')">
+    <span class="quiz-qnum">Q6</span>
+    <div class="quiz-question">Compare IIS, Apache and Nginx.</div>
+  </div>
+  <div class='quiz-answer' id='ans-6'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>IIS (1996) is Microsoft's, has a history of vulnerabilities, and is best avoided unless using ASP/ASP.NET or Windows features like AD integration. Apache (1995) is open source and modular, typically spawning threads per request, and can scale but is tricky to set up. Nginx (2004) was designed to scale easily, uses worker processes, and keeps CPU and memory relatively consistent under load.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-6')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q6', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q7">
+  <div class="quiz-header" onclick="toggleAnswer('ans-7')">
+    <span class="quiz-qnum">Q7</span>
+    <div class="quiz-question">What is WSGI and why is it needed?</div>
+  </div>
+  <div class='quiz-answer' id='ans-7'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>WSGI (Web Server Gateway Interface) is the specification that lets Python applications (such as Django and Flask) be set up behind Apache and Nginx. It bridges the web server to the Python application.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-7')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q7', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q8">
+  <div class="quiz-header" onclick="toggleAnswer('ans-8')">
+    <span class="quiz-qnum">Q8</span>
+    <div class="quiz-question">Explain Django's MVT pattern.</div>
+  </div>
+  <div class='quiz-answer' id='ans-8'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Model handles data and logic and maintains the database connection; View accepts requests and sends responses; Template is the presentation layer, coded in HTML or Django Template Language. Django's View corresponds to MVC's controller, and its Template to MVC's view.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-8')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q8', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q9">
+  <div class="quiz-header" onclick="toggleAnswer('ans-9')">
+    <span class="quiz-qnum">Q9</span>
+    <div class="quiz-question">Name the storage media types and give an example of each.</div>
+  </div>
+  <div class='quiz-answer' id='ans-9'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Hardware form factor (spinning vs SSD), SAN storage (iSCSI or Fibre Channel), NAS, in-memory storage, object store (AWS S3, Google Cloud Storage), block store (disks), and file store (NFS, Samba, CephFS, HDFS).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-9')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q9', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q10">
+  <div class="quiz-header" onclick="toggleAnswer('ans-10')">
+    <span class="quiz-qnum">Q10</span>
+    <div class="quiz-question">What is cloud storage, and what is Amazon S3?</div>
+  </div>
+  <div class='quiz-answer' id='ans-10'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Cloud storage stores data in logical pools, with physical storage spanning multiple servers and often locations, owned and managed by a third party (Azure Storage, Google Cloud Storage, Amazon S3). Amazon S3 is a cost-effective, simple service for storing and retrieving any amount of data, at any time, from anywhere on the web.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-10')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q10', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q11">
+  <div class="quiz-header" onclick="toggleAnswer('ans-11')">
+    <span class="quiz-qnum">Q11</span>
+    <div class="quiz-question">Describe the structure of a relational database and a key drawback.</div>
+  </div>
+  <div class='quiz-answer' id='ans-11'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Data is organised into tables of rows and columns; each table typically represents an entity, rows are instances and columns are attributed values. Relationships between data are enforced. A key drawback is that schema changes often require system downtime and planned maintenance.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-11')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q11', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q12">
+  <div class="quiz-header" onclick="toggleAnswer('ans-12')">
+    <span class="quiz-qnum">Q12</span>
+    <div class="quiz-question">Compare MySQL, Postgres and MSSQL.</div>
+  </div>
+  <div class='quiz-answer' id='ans-12'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>MySQL/MariaDB is the most popular with lots of tools, but does not implement the full SQL standard (e.g. <code>||</code> means OR) and concurrency can be an issue. Postgres follows ANSI/ISO standards with complete ACID support and great spatial extensions, though replication can be tricky. MSSQL fits the Microsoft stack and BI/DW tools (SSIS, SSAS, SSRS), is generally cheaper than Oracle/Teradata, but has license costs and needs DBAs.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-12')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q12', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q13">
+  <div class="quiz-header" onclick="toggleAnswer('ans-13')">
+    <span class="quiz-qnum">Q13</span>
+    <div class="quiz-question">What characterises NoSQL databases, and what are the five examples?</div>
+  </div>
+  <div class='quiz-answer' id='ans-13'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>New data structures, flexible or no schemas, better scalability, and eventual rather than strict consistency. The examples are Redis (key/value), Cassandra (column), MongoDB (document), ElasticSearch (document/search) and the general NewSQL/NoSQL category.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-13')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q13', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q14">
+  <div class="quiz-header" onclick="toggleAnswer('ans-14')">
+    <span class="quiz-qnum">Q14</span>
+    <div class="quiz-question">What is decoupling and why does it matter?</div>
+  </div>
+  <div class='quiz-answer' id='ans-14'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Giving web servers, app servers and the database dedicated resources. It gives each a well-understood scope of work, reduces blast radius, makes troubleshooting and incident response easier, and moves the architecture towards microservices.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-14')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q14', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q15">
+  <div class="quiz-header" onclick="toggleAnswer('ans-15')">
+    <span class="quiz-qnum">Q15</span>
+    <div class="quiz-question">Explain statelessness, scale-out and scale-up.</div>
+  </div>
+  <div class='quiz-answer' id='ans-15'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Statelessness means components do not hold per-client state, which is the foundation of scalability. Scale-out is horizontal scaling by adding more nodes (load balancing is important); scale-up is making one node bigger, often unrealistic due to physical laws and economics. Scalability also covers I/O (IOPS, bandwidth, latency).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-15')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q15', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q16">
+  <div class="quiz-header" onclick="toggleAnswer('ans-16')">
+    <span class="quiz-qnum">Q16</span>
+    <div class="quiz-question">Define durability, availability, reliability and resilience.</div>
+  </div>
+  <div class='quiz-answer' id='ans-16'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Durability — data stored securely in the event of failures. Availability — system uptime, the percentage of time able to serve requests. Reliability — the system functions correctly while available. Resilience — the ability to recover and self-heal after failures.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-16')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q16', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q17">
+  <div class="quiz-header" onclick="toggleAnswer('ans-17')">
+    <span class="quiz-qnum">Q17</span>
+    <div class="quiz-question">List the stages of scaling a web architecture.</div>
+  </div>
+  <div class='quiz-answer' id='ans-17'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Single server; separate database server; load balancer; HTTP accelerator; master-slave database replication; and combinations of these techniques.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-17')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q17', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q18">
+  <div class="quiz-header" onclick="toggleAnswer('ans-18')">
+    <span class="quiz-qnum">Q18</span>
+    <div class="quiz-question">What is an HTTP accelerator and what does it do?</div>
+  </div>
+  <div class='quiz-answer' id='ans-18'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A caching HTTP reverse proxy that reduces the time to serve content, typically by caching responses from web or application servers in memory for a period. Examples are Varnish, Squid and Nginx.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-18')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q18', this)"> Mastered
+    </label>
+  </div>
+</div>
+</section>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+<p><strong>ELEC3609 Engineering Study Guide</strong> &bull; Week 3: Web Servers &amp; Application Architecture · 2025 Session</p>
+    <p style="font-size: 0.75rem; margin-top: 0.4rem;">Generated for self-paced revision and exam preparation.</p>
+  </footer>
+
+  <!-- Interactive JavaScript -->
+  <script>
+// Theme Toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let currentTheme = localStorage.getItem('study_theme') || (prefersDark ? 'dark' : 'light');
+
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeBtn.textContent = '☀️';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        themeBtn.textContent = '🌙';
+      }
+      localStorage.setItem('study_theme', theme);
+    }
+    applyTheme(currentTheme);
+
+    themeBtn.addEventListener('click', () => {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(currentTheme);
+    });
+
+    // Mobile Menu Toggle
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    menuBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+
+    // Close sidebar when clicking links on mobile
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 1024) {
+          sidebar.classList.remove('open');
+        }
+      });
+    });
+
+    // Reading Progress & Active Nav Link Highlight
+    window.addEventListener('scroll', () => {
+      const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById('progress-bar').style.width = scrolled + '%';
+
+      // Active Section Highlighting
+      const sections = document.querySelectorAll('section.guide-section, section.hero-card');
+      let currentSecId = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 120;
+        if (winScroll >= top) {
+          currentSecId = sec.getAttribute('id');
+        }
+      });
+
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentSecId) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Interactive Confusion Matrix Calculator Logic
+    function calculateMetrics() {
+      const tp = parseFloat(document.getElementById('inp-tp').value) || 0;
+      const fn = parseFloat(document.getElementById('inp-fn').value) || 0;
+      const fp = parseFloat(document.getElementById('inp-fp').value) || 0;
+      const tn = parseFloat(document.getElementById('inp-tn').value) || 0;
+
+      const total = tp + fn + fp + tn;
+      const acc = total > 0 ? ((tp + tn) / total) * 100 : 0;
+      const prec = (tp + fp) > 0 ? (tp / (tp + fp)) * 100 : 0;
+      const rec = (tp + fn) > 0 ? (tp / (tp + fn)) * 100 : 0;
+      const f1 = (prec + rec) > 0 ? 2 * (prec * rec) / (prec + rec) / 100 : 0;
+
+      document.getElementById('res-acc').textContent = acc.toFixed(1) + '%';
+      document.getElementById('res-prec').textContent = (tp + fp) > 0 ? prec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-rec').textContent = (tp + fn) > 0 ? rec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-f1').textContent = (prec + rec) > 0 ? f1.toFixed(3) : '0.000';
+    }
+
+    function setPreset(tp, fp, tn, fn) {
+      document.getElementById('inp-tp').value = tp;
+      document.getElementById('inp-fp').value = fp;
+      document.getElementById('inp-tn').value = tn;
+      document.getElementById('inp-fn').value = fn;
+      calculateMetrics();
+    }
+
+    // Glossary Filter Logic
+    function filterTerms(category, btn) {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+
+      const cards = document.querySelectorAll('.term-card');
+      cards.forEach(card => {
+        if (category === 'all' || card.getAttribute('data-cat') === category) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // Global Search Logic
+    const searchInput = document.getElementById('site-search');
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      const termCards = document.querySelectorAll('.term-card');
+      const quizCards = document.querySelectorAll('.quiz-card');
+
+      if (!query) {
+        termCards.forEach(c => c.style.display = 'flex');
+        quizCards.forEach(c => c.style.display = 'block');
+        return;
+      }
+
+      termCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+
+      quizCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'block' : 'none';
+      });
+    });
+
+    // Exam Questions Show/Hide & Progress Tracker
+    function toggleAnswer(id) {
+      const ans = document.getElementById(id);
+      ans.classList.toggle('show');
+    }
+
+    function toggleAllAnswers(show) {
+      document.querySelectorAll('.quiz-answer').forEach(ans => {
+        if (show) ans.classList.add('show');
+        else ans.classList.remove('show');
+      });
+    }
+
+    let masteredMap = JSON.parse(localStorage.getItem('engg2112_w3_mastered') || '{}');
+
+    function updateProgressUI() {
+      const total = document.querySelectorAll('.quiz-card').length;
+      const count = Object.values(masteredMap).filter(Boolean).length;
+      document.getElementById('exam-progress-tracker').textContent = `Progress: ${count} / ${total} Mastered`;
+
+      for (let i = 1; i <= total; i++) {
+        const card = document.getElementById('q' + i);
+        const checkbox = card ? card.querySelector('input[type="checkbox"]') : null;
+        if (card && checkbox) {
+          if (masteredMap['q' + i]) {
+            card.classList.add('mastered');
+            checkbox.checked = true;
+          } else {
+            card.classList.remove('mastered');
+            checkbox.checked = false;
+          }
+        }
+      }
+    }
+
+    function toggleMastered(qid, checkbox) {
+      masteredMap[qid] = checkbox.checked;
+      localStorage.setItem('engg2112_w3_mastered', JSON.stringify(masteredMap));
+      updateProgressUI();
+    }
+
+    function resetExamProgress() {
+      if (confirm('Reset all exam progress checkboxes?')) {
+        masteredMap = {};
+        localStorage.removeItem('engg2112_w3_mastered');
+        updateProgressUI();
+      }
+    }
+
+    // Initialize state on load
+    window.addEventListener('DOMContentLoaded', () => {
+      calculateMetrics();
+      updateProgressUI();
+    });
+  </script>
+</body>
+</html>

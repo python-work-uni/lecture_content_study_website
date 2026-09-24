@@ -1,0 +1,939 @@
+================================================
+ELEC3609 Lab Week 3 – Study Guide
+Start Your First Django App · Lab 3
+================================================
+OVERVIEW
+--------
+This lab gets you building. You install Django, create a project and an app, and learn how Django routes a URL to a view, renders a template, and returns a response. Along the way you meet the MVT architecture, the URL dispatcher, path converters, function- and class-based views, templates, static files, and finally AJAX. The individual task is Individual Task 3 – Implement Comment Features with AJAX, based on the TIL-Lab03 (Today I Learned) project.
+------------------------------------------------
+STATS:
+------------------------------------------------
+Lab|Week 3
+Individual Task|Implement Comment Features with AJAX
+Lab Resource|TIL-Lab03 source code
+Framework|Django 5.2 LTS
+Core Topics|Projects, Apps, Views, URLs, Templates
+------------------------------------------------
+SECTION 1: What This Lab Builds
+------------------------------------------------
+This lab sets up your first Django project and app, laying the groundwork for building dynamic web applications. You learn how Django handles routing, views and template rendering through its structured framework.
+
+### Learning Objectives
+After completing this lab you should be able to:
+- Set up and run a Django project and app locally.
+- Understand the purpose of Django's project and app structure.
+- Create views and connect them with templates.
+- Configure URL routing using `urls.py`.
+- Use path converters to pass parameters through URLs.
+
+**Lab resource:** TIL-Lab03 (Today I Learned project) source code.
+💡 **Why It Matters:** Almost every later lab (models, auth, DRF, deployment) builds on the project/app structure you create here. Getting the request-to-response loop clear now makes everything after it easier.
+------------------------------------------------
+SECTION 2: Django Overview & Key Features
+------------------------------------------------
+**Django** is a Python web framework that makes web development easier with less code. It comes with a powerful set of tools out-of-the-box and follows a clean architecture pattern that encourages modular and maintainable design.
+
+### Key Features
+- Django's built-in **ORM (Object-Relational Mapper)** lets you define your data models entirely in Python. You don't need to write raw SQL — the ORM handles table creation and maintenance automatically.
+- You connect your database via a config file and manage schema changes using the `makemigrations` and `migrate` commands.
+- Django follows the **MVT architecture (Model–View–Template)** to separate business logic from presentation and data access.
+- URL routing is defined using **declarative patterns**, which decouples URLs from views and keeps routing flexible.
+
+### Built-in Security Features
+Django provides several security mechanisms by default:
+- **CSRF tokens** to protect against cross-site request forgery.
+- **XSS protection** through auto-escaping in templates.
+- **Password hashing** with salted hashes.
+- Secure cookie and session handling.
+
+These features help developers build secure web applications with minimal configuration. (Django's security features are explored in more detail in later labs.)
+
+💡 **Why It Matters:** "Batteries included" means you inherit years of security work for free — but only if you use the framework's tools (templates, forms, ORM) rather than bypassing them.
+------------------------------------------------
+SECTION 3: MVT Architecture
+------------------------------------------------
+Django encourages separating an application into three components:
+
+| Component | Type | Description |
+| --- | --- | --- |
+| **Model** | Purpose | Defines the structure of your database and relationships between data types. (**Data**) |
+| **Model** | Responsibilities | 1. Define database schema (tables, fields, relationships). 2. Manage data access and CRUD operations. 3. Provide an API for interacting with the data. |
+| **View** | Purpose | Handles how data is processed and what gets displayed to the user. (**Business Logic**) |
+| **View** | Responsibilities | 1. Handle user requests and responses. 2. Fetch or modify data from the Model. 3. Pass data to the Template. |
+| **Template** | Purpose | Presents the data to the user in HTML format. (**Presentation**) |
+| **Template** | Responsibilities | 1. Render HTML using data from the View. 2. Use Django's template language to inject dynamic content. 3. Manage layout, formatting and presentation rules. |
+
+### MVT vs MVC / MVP
+You may have heard of **MVC (Model–View–Controller)** or **MVP (Model–View–Presenter)**. Django follows a similar pattern but with different terminology, often called **MVT (Model–View–Template)**. In Django:
+- The **View** is actually the controller logic (a Python function/class handling a request).
+- The **Template** is responsible for the presentation layer (what the user sees).
+- The **Framework itself** handles the controller role, mapping URLs to views.
+
+Django's naming emphasises a clear split between data (Model), logic (View) and presentation (Template). As Django puts it: "It comes down to getting stuff done."
+
+🧠 **Memory Hook:** **MVT = Data, Logic, Presentation.** In Django, the "View" is the controller — that naming twist is the classic exam trap.
+------------------------------------------------
+SECTION 4: Request Flow Through Django
+------------------------------------------------
+The flow of a request is:
+
+**Request → URL Dispatcher → View → Model (optional) → View → Template → Response**
+
+When a user triggers a request (e.g. by clicking a button), Django:
+1. Uses the **URL dispatcher** to check if the request matches a defined route.
+2. If matched, Django calls the corresponding **View function**.
+3. The View may query data from the **Model** (optional) and pass that data to a **Template**.
+4. The Template generates an **HTML response**, which is returned to the browser.
+
+✅ **Exam Tip:** This pattern cleanly separates data access, business logic and presentation. Be ready to name each stage in order.
+------------------------------------------------
+SECTION 5: Installing Django
+------------------------------------------------
+Being a Python web framework, Django requires Python. Python includes a lightweight database called **SQLite**, so you won't need to set up a database just yet.
+
+We recommend installing Django with **pip**:
+
+```
+python3 -m pip install Django
+```
+
+⚠️ **Common Trap — Django and Python compatibility:** Course materials and TIL projects are tested with **Django 5.2 LTS**. When working with a provided TIL project, use its `requirements.txt` to maintain a consistent environment. If you choose to use **Django 6.0**, you must use **Python 3.12 or newer**, and some examples or third-party dependencies may behave differently.
+ℹ️ **Background:** Refer to the official "Quick install guide" for more information.
+------------------------------------------------
+SECTION 6: Creating the Project & App
+------------------------------------------------
+With Django installed, use its ability to create the stub of a project:
+
+```
+django-admin startproject til_project
+```
+
+This creates the following directories and files:
+
+```
+til_project/
+  til_project/
+    __init__.py
+    asgi.py
+    settings.py
+    urls.py
+    wsgi.py
+  manage.py
+```
+
+These files are:
+- The outer **til_project/** root directory is a container for your project. Its name does not matter to Django; you can rename it.
+- **manage.py** — a command-line utility that lets you interact with this Django project in various ways.
+- The inner **til_project/** directory is the actual Python package for your project. Its name is the Python package name you use to import anything inside it:
+  - **til_project/__init__.py** — an empty file telling Python this directory is a package.
+  - **til_project/settings.py** — settings/configuration for this Django project.
+  - **til_project/urls.py** — the URL declarations for this project.
+  - **til_project/asgi.py** — an entry point for ASGI-compatible web servers.
+  - **til_project/wsgi.py** — an entry point for WSGI-compatible web servers.
+
+### Create the Application
+A Django project can contain multiple applications. For now a single project and application will suffice; creating multiple apps is not recommended this semester because it can cause confusion and requires a richer understanding of Python/Django to fix import paths. To create a new application:
+
+```
+python3 manage.py startapp til_app
+```
+
+Django creates a scaffold roughly like:
+
+```
+til_project/
+  db.sqlite3
+  manage.py
+  til_app/
+    migrations/
+      __init__.py
+    __init__.py
+    admin.py
+    apps.py
+    models.py
+    tests.py
+    views.py
+  til_project/
+    __init__.py
+    settings.py
+    urls.py
+    asgi.py
+    wsgi.py
+```
+
+The **til_app/** contents:
+- **migrations/** — contains migration files to apply changes to the database schema.
+- **__init__.py** — marks the directory as a Python package.
+- **admin.py** — registers models with the Django admin site.
+- **apps.py** — configures the Django app.
+- **models.py** — defines the data models (database schema).
+- **tests.py** — contains tests for the application.
+- **views.py** — defines the views that handle web requests and return responses.
+
+ℹ️ **Background — Projects vs Apps:** A project is a collection of configuration and apps for a particular website; a project can contain multiple apps, and an app can be in multiple projects. In a bank system you might have separate apps: `accounts` for authentication, `transactions` for deposits/withdrawals, and `support` for customer service. This modular approach lets each app be developed, tested and reused independently.
+------------------------------------------------
+SECTION 7: Dev Server & settings.py
+------------------------------------------------
+### The Development Server
+Django comes with the ability to run a development server. Change into the outer **til_project** directory and run:
+
+```
+python3 manage.py runserver
+```
+
+You will see output like:
+
+```
+Watching for file changes with StatReloader
+Performing system checks...
+System check identified no issues (0 silenced).
+You have 18 unapplied migration(s). Your project may not work properly until
+you apply the migrations for app(s): admin, auth, contenttypes, sessions.
+Run 'python manage.py migrate' to apply them.
+Django version 5.1, using settings 'til_project.settings'
+Starting development server at http://127.0.0.1:8000/
+Quit the server with CONTROL-C.
+```
+
+ℹ️ **Background:** Ignore the warning about unapplied database migrations for now — you deal with the database in the next lab.
+
+Visit `localhost` in your browser and you will see a "Congratulations!" page with a rocket taking off. By default, Django binds to a local interface on port **8000**. This can be configured with extra parameters:
+
+```
+python3 manage.py runserver 8888
+python3 manage.py runserver 0:8888
+```
+
+The first binds to port 8888 instead of 8000; the second binds to port 8888 on the **public interface**.
+
+ℹ️ **Background:** Generally the development server automatically reloads on code changes. Some actions — such as DB migrations, and adding/deleting files — require a restart.
+
+### settings.py
+`settings.py` is the global configuration file where you define settings and options that control how your Django application behaves.
+
+| Setting | Purpose |
+| --- | --- |
+| **BASE_DIR** | Defines the base directory of the Django project. |
+| **SECRET_KEY** | Used for cryptographic signing; must be kept secret in production. |
+| **DEBUG** | Toggles debug mode, providing detailed error pages during development. |
+| **ALLOWED_HOSTS** | Specifies the host/domain names the Django site can serve. |
+| **INSTALLED_APPS** | Lists all the Django applications enabled in this project. |
+| **MIDDLEWARE** | Lists middleware components that process requests/responses globally. |
+| **ROOT_URLCONF** | Specifies the root URL configuration module for the project. |
+| **TEMPLATES** | Configures template loading, rendering and context processors. |
+| **DATABASES** | Defines database configurations, including engine and connection details. |
+| **STATIC_URL** | Specifies the URL path for serving static files (CSS, JavaScript, images). |
+| **STATICFILES_DIRS** | Lists additional directories for static files outside app-specific locations. |
+| **LANGUAGE_CODE** | Sets the default language code for the project. |
+| **TIME_ZONE** | Sets the default time zone for the project. |
+| **WSGI_APPLICATION** | Defines the WSGI application entry point for deployment. |
+| **ASGI_APPLICATION** | Defines the ASGI application entry point for asynchronous deployment. |
+
+⚠️ **Common Trap:** `SECRET_KEY` must never be committed or exposed in production, and `DEBUG` should be off in production — debug pages leak configuration details.
+------------------------------------------------
+SECTION 8: Writing Your First View
+------------------------------------------------
+In Django, a **view** is a function or a class that receives a web request and returns a web response. It is the core component of Django's architecture. Replace the default splash screen with your own index page by editing `til_app/views.py`:
+
+```
+# til_app/views.py
+from django.http import HttpResponse
+
+def index(request):
+    return HttpResponse("Hello, world. You're at the TIL index page.")
+```
+
+This is the most basic view possible. To access it in a browser, you must map it to a URL using a **URLconf** (URL configuration). These are defined inside each Django app in a file named `urls.py`. Create `til_app/urls.py`:
+
+```
+# til_app/urls.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path("", views.index, name="index"),
+]
+```
+
+Next, configure the global URLconf in the **til_project** project to include the URLconf defined in **til_app.urls**. Add an import for `django.urls.include` in `til_project/urls.py` and insert an `include()` in the `urlpatterns` list:
+
+```
+# til_project/urls.py
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('til_app/', include('til_app.urls')),
+]
+```
+
+ℹ️ **Background:** You have now wired an index view into the URLconf at `localhost:8000/til_app/`. If you visit `localhost:8000/` you will see a "404 Page not found" error — that is expected, because no view is set up for the root page.
+------------------------------------------------
+SECTION 9: URL Routing & the Dispatcher
+------------------------------------------------
+Django has the concept of a **URL map**, which maps URL patterns in incoming requests to individual view functions. The **URL dispatcher** is Django's mechanism for routing incoming HTTP requests to the appropriate view based on the URL.
+
+### Mechanism
+- **URL Matching** — when a request is received, Django starts at the root `urls.py` and sequentially checks each pattern using a **top-down** approach.
+- **Pattern Resolution** — each pattern is checked in order. If `path()` matches the beginning of the URL, Django passes control to the corresponding view function, or includes another `urls.py` module using `include()`.
+- **Capturing Parameters** — if the pattern includes variables (e.g. `<int:id>`), these are captured and passed as arguments to the view.
+- **No Match** — if no pattern matches, Django returns a **404 error**.
+
+### The path() Function
+`path()` defines URL patterns in Django. It maps a specific URL pattern to a corresponding view function or class-based view.
+
+```
+# path(route, view, kwargs=None, name=None)
+path(
+    route='hello/',          # URL pattern string
+    view=views.index,        # Callable view function or class-based view
+    kwargs=None,             # Optional dictionary of keyword arguments
+    name='hello'             # Optional name for the URL pattern
+)
+```
+
+### The include() Function
+`include()` lets you reference other URL configuration modules. It is typically used to include URLs from different apps, promoting a modular approach to URL management.
+
+```
+# include(module, namespace=None)
+include(
+    module='blog_app.urls',  # Module to include, typically another app's urls.py
+    namespace=None           # Optional namespace string to prevent name collisions
+)
+```
+
+💡 **Why It Matters:** Because Django checks patterns top-down, the order in `urlpatterns` matters. A broad pattern placed too early can shadow a more specific one further down.
+------------------------------------------------
+SECTION 10: Path Converters & re_path()
+------------------------------------------------
+**Path converters** capture certain parts of a URL and pass them as arguments to the view function. They are used inside `path()` to define and extract dynamic URL segments such as integers, strings and slugs.
+
+| Converter | Description |
+| --- | --- |
+| `<str:>` | Matches any non-empty string (this is the default converter). |
+| `<int:>` | Matches an integer and passes it as an integer. |
+| `<slug:>` | Matches a slug string (letters, numbers, underscores or hyphens). |
+| `<uuid:>` | Matches a universally unique identifier (UUID). |
+| `<path:>` | Matches any non-empty string, including slashes (`/`). |
+
+Example usage:
+
+```
+urlpatterns = [
+    path('post/<int:id>/', post_view, name='post_detail'),
+    path('user/<str:username>/', user_profile_view),
+]
+```
+
+The first captures an integer (a Post ID) from the URL; the second captures a string (a Username).
+
+### Regular Expressions and re_path()
+While `path()` is usually sufficient, some cases need more complex pattern matching. `re_path()` lets you define URL patterns using **regular expressions**:
+
+```
+from django.urls import path, re_path
+from . import views
+
+urlpatterns = [
+    path("articles/2003/", views.special_case_2003),
+    re_path(r"^articles/(?P<year>[0-9]{4})/$", views.year_archive),
+    re_path(r"^articles/(?P<year>[0-9]{4})/(?P<month>[0-9]{2})/$", views.month_archive),
+    re_path(r"^articles/(?P<year>[0-9]{4})/(?P<month>[0-9]{2})/(?P<slug>[\w-]+)/$", views.article_detail),
+]
+```
+
+✅ **Exam Tip:** Regular expressions are supported via `re_path()`, but they are not commonly used in modern projects. Design clearer, more structured URL patterns using `path()` with converters instead.
+------------------------------------------------
+SECTION 11: Function vs Class-Based Views
+------------------------------------------------
+Class-based views (CBVs) provide an alternative way to implement views as Python objects instead of functions. They do not replace function-based views (FBVs), but have differences and advantages.
+
+| Aspect | Function-Based Views (FBVs) | Class-Based Views (CBVs) |
+| --- | --- | --- |
+| **Definition** | A view defined as a Python function. | A view defined as a Python class. |
+| **Simplicity** | Simple and straightforward to implement. | More complex, especially for beginners. |
+| **Explicitness** | Logic is clear and contained within a single function. | Logic may be spread across multiple methods and classes. |
+| **Reusability** | Limited; requires repetition for similar views. | Highly reusable through inheritance and mixins. |
+| **Code Organisation** | Procedural style; all logic in one function. | Object-oriented; logic can be organised into methods. |
+| **Built-in Support** | No built-in support for common patterns. | Offers built-in generic views like `ListView`, `DetailView`, etc. |
+| **Flexibility** | Provides complete control over view logic. | Provides structured flexibility through class inheritance. |
+| **Use Case Example** | Simple form handling or custom logic. | Displaying lists, detail views, or handling forms using generic views. |
+
+```
+# Function-Based View
+from django.http import HttpResponse
+
+def hello_view(request):
+    return HttpResponse("Hello, World!")
+
+# Class-Based View
+from django.views import View
+from django.http import HttpResponse
+
+class HelloView(View):
+    def get(self, request):
+        return HttpResponse("Hello, World!")
+```
+
+ℹ️ **Background:** Django provides many powerful built-in class-based views that can significantly reduce boilerplate code. You are also encouraged to write your own custom class-based views when needed.
+------------------------------------------------
+SECTION 12: Templates & render()
+------------------------------------------------
+Templates are a powerful way to define the structure of your HTML pages. They let you dynamically generate HTML content based on data passed from your views.
+
+First, create a directory called **templates** inside your Django project or app directory. You can organise templates at the project level or within each app. In the demo, we create a directory under the app:
+
+```
+til_project/
+  til_app/
+    templates/
+```
+
+ℹ️ **Background:** Your project's `TEMPLATES` setting describes how Django loads and renders templates. The default settings file configures a **DjangoTemplates** backend whose `APP_DIRS` option is `True`. By convention **DjangoTemplates** looks for a "templates" subdirectory in each of the `INSTALLED_APPS`.
+
+Then add the **templates** directory to the `DIRS` option in the `TEMPLATES` setting within `settings.py`:
+
+```
+# settings.py
+import os
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [os.path.join(BASE_DIR, 'til_app/templates')],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+```
+
+⚠️ **Common Trap:** Starting from Django 5.2, the context processor `django.template.context_processors.debug` is no longer included by default in newly generated projects. This change was made for better clarity and safety.
+
+Now create an HTML file in the **templates** directory (e.g. `templates/home.html`):
+
+```
+<!-- home.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Home Page</title>
+</head>
+<body>
+    <h1>Welcome, {{ name }}!</h1>
+    <p>Now is week {{ week }}</p>
+</body>
+</html>
+```
+
+ℹ️ **Background:** Django offers a **templating system** for generating HTTP responses. Template files are a mix of HTML and conditional templating logic that injects data and modifies the page output.
+
+Now create the **home** view in `til_app/views.py` and wire `urls.py` to use the template:
+
+```
+# til_app/views.py
+from django.http import HttpResponse
+from django.template import loader
+
+def view_home(request):
+    template = loader.get_template('home.html')
+    context = {"name": "ELEC3609", "week": 3}
+    return HttpResponse(template.render(context, request))
+```
+
+```
+# til_app/urls.py
+urlpatterns = [
+    # ...
+    path("home", views.view_home, name="home"),
+    # ...
+]
+```
+
+This loads the template called `home.html` and passes it a **context** — a dictionary mapping template variable names to Python objects. Load `localhost:8000/til_app/home` and you should see *"Welcome, ELEC3609! Now is week 3"*.
+
+### Use render()
+It is a very common idiom to load a template, fill a context and return an `HttpResponse`. Django provides a shortcut, `render()`:
+
+```
+from django.shortcuts import render
+
+def view_home(request):
+    context = {"name": "ELEC9609", "week": 3}
+    return render(request, 'home.html', context)
+```
+
+💡 **Why It Matters:** `render()` bundles the loader, context and `HttpResponse` steps into one call. Almost every Django view you write will use it.
+------------------------------------------------
+SECTION 13: Static Files & Frontend Tooling
+------------------------------------------------
+Up to now the pages have relied on default browser styling. Django can serve your own CSS and JavaScript as **static files**.
+
+### Custom Static Files in Django
+Similar to templates, create a **static** directory at the project level or within each app. In the demo, statics live within the TIL app:
+
+```
+til_project/
+  til_app/
+    static/
+    templates/
+```
+
+Define the base URL for serving static files and list the directories where Django should look for them:
+
+```
+# settings.py
+# STATIC_URL is the URL prefix for serving static files.
+STATIC_URL = '/til_app/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'til_app/static')]
+```
+
+`STATIC_URL` is the URL prefix for serving static files; `STATICFILES_DIRS` lists directories Django should search for additional static files.
+
+To use static files in templates, load the **static template tag** and reference the files:
+
+```
+<!-- In a template, load the static tag first: -->
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+<script src="{% static 'js/script.js' %}"></script>
+```
+
+### Inline Styles and Scripts
+Use inline styles and scripts for simple, page-specific CSS/JS, or when quick adjustments are needed without affecting other pages:
+
+```
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Inline CSS/JS Example</title>
+    <style>
+        body { background-color: lightblue; }
+        h1 { color: white; text-align: center; margin-top: 20px; }
+        .custom-button { background-color: darkblue; color: white; padding: 10px 20px; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Welcome to Django!</h1>
+    <button class="custom-button" onclick="showMessage()">Click Me</button>
+    <script>
+        function showMessage() { alert("Hello, Django!"); }
+    </script>
+</body>
+</html>
+```
+
+### External Libraries
+You can include external CSS and JavaScript libraries like **Bootstrap** and **jQuery** by linking to them via a **CDN (Content Delivery Network)**. External libraries are ideal for quickly adding well-tested, feature-rich functionality without managing the library files yourself.
+
+```
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>External CSS/JS Example</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container text-center">
+        <h1 class="mt-5">Welcome to Django with Bootstrap!</h1>
+        <button class="btn btn-primary mt-3" id="bootstrapButton">Click Me</button>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            $('#bootstrapButton').click(function(){
+                alert("Hello, Django with Bootstrap and jQuery!");
+            });
+        });
+    </script>
+</body>
+</html>
+```
+
+### Developer Tools
+✅ **Exam Tip:** Using the browser Developer Tools (usually **F12** or **Ctrl+Shift+I** in Chrome) is one of the best ways to learn and experiment with JavaScript and CSS. It provides immediate feedback, debugging, element inspection, network analysis, mobile emulation and performance monitoring.
+
+### Modern Frontend
+While Django provides a powerful server-side templating system, many modern web applications rely on frontend libraries and frameworks such as **React** to create dynamic, interactive and responsive interfaces.
+
+| Technology | Description |
+| --- | --- |
+| **TypeScript** | A superset of JavaScript adding static typing, helping catch errors early and making code more predictable and easier to refactor. |
+| **React** | A JavaScript library for building dynamic, interactive UIs (especially single-page applications) using reusable components. |
+| **Angular** | A full-fledged JavaScript framework by Google for large-scale, complex web apps, focused on modularity and maintainability. |
+| **Vue.js** | A progressive JavaScript framework, easy to integrate, focused on simplicity and reactivity. |
+| **jQuery** | A fast, small, feature-rich library simplifying DOM manipulation, event handling and AJAX, though less common in new projects today. |
+| **Bootstrap** | A popular CSS framework providing pre-designed components and a responsive grid system for mobile-first sites. |
+| **Tailwind CSS** | A utility-first CSS framework for creating custom designs directly in HTML using pre-defined utility classes. |
+| **Vite** | A build tool and dev server giving a fast, efficient workflow optimised for frameworks like React and Vue. |
+| **Redux** | A state management library for JavaScript apps, often used with React to manage global state predictably and centrally. |
+| **Axios** | A promise-based HTTP client for making API requests, often used in JavaScript and React for fetching and posting data. |
+------------------------------------------------
+SECTION 14: Posts, Templates & AJAX Upload
+------------------------------------------------
+### View a Post (in-memory demo)
+To keep things simple, the demo defines a `Post` class and stores a few sample posts in memory in `til_app/views.py`:
+
+```
+# til_app/views.py
+class Post:
+    def __init__(self, post_id, author, title, content=None, img=None, comments=None):
+        self.post_id = post_id
+        self.author = author
+        self.title = title
+        self.content = content
+        self.img = img
+        self.comments = comments
+
+post1 = Post(1, 'Jwen', 'First Post', content='Cat', img='https://i.imgur.com/lVlPvCB.gif', comments=['Not bad', 'Cute cat'])
+post2 = Post(2, 'Chloe', 'Second Post', img='https://i.imgur.com/6MKyVS4.jpeg')
+post3 = Post(3, 'Emma', 'Third Post', img='https://i.imgur.com/PGGk9hn.jpeg')
+posts = [post1, post2, post3]
+```
+
+⚠️ **Common Trap — Bad design:** Defining a `Post` class inside the view logic and storing posts in a Python list works for demonstration, but it is considered bad design because the data is **not persistent** — it disappears every time the server restarts. In the next lab you connect Django to a database, define data models with the ORM, and store posts persistently.
+
+Then define a basic view function to return a post by ID:
+
+```
+# til_app/views.py
+def view_post(request, post_id):
+    post = next((p for p in posts if p.post_id == post_id), None)
+    if post:
+        return render(request, 'post/post.html', {'post': post})
+    return render(request, 'post/post.html', {'error': 'Post not found'}, status=404)
+```
+
+This renders the post using `til_app/templates/post/post.html`:
+
+```
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ post.title }}</title>
+</head>
+<body>
+    <h1>{{ post.title }}</h1>
+    <p>by {{ post.author }}</p>
+    <p>{{ post.content }}</p>
+    <img src="{{ post.img }}" alt="{{ post.title }}" width="300">
+
+    <h2>Comments</h2>
+    <ul id="commentList">
+        {% for comment in post.comments %}
+        <li>{{ comment }}</li>
+        {% endfor %}
+    </ul>
+
+    <h3>Upload a Comment</h3>
+    <form id="commentForm">
+        {% csrf_token %}
+        <textarea name="comment" required></textarea><br>
+        <button type="button" onclick="submitComment({{ post.post_id }})">Add Comment</button>
+    </form>
+
+    <script src="{% static 'script.js' %}"></script>
+</body>
+</html>
+```
+
+ℹ️ **Background:** `{{ post.title }}`, `{{ post.author }}`, etc. are Django's template language — variables passed from the view function are rendered using **double curly braces**. This is how Django dynamically fills HTML content based on your data.
+
+Finally, wire the route using a **path converter** in `til_app/urls.py`:
+
+```
+# til_app/urls.py
+urlpatterns = [
+    path("post/<int:post_id>", views.view_post, name="view a post"),
+    # ...
+]
+```
+
+Now visiting `localhost:8000/til_app/post/1` shows the first post rendered dynamically.
+
+### View Posts (list)
+Create a template at `til_app/templates/post/posts.html`:
+
+```
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Posts</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+<body>
+    <h1>All Posts</h1>
+    <ul id="postList">
+        {% for post in posts %}
+        <li>
+            <a href="{% url 'view a post' post.post_id %}">
+                <strong>{{ post.title }}</strong> by {{ post.author }}
+            </a>
+            <br>
+            <img src="{{ post.img }}" alt="{{ post.title }}" width="100">
+        </li>
+        {% endfor %}
+    </ul>
+    <script src="{% static 'script.js' %}"></script>
+</body>
+</html>
+```
+
+This introduces Django's **template tags** using `{% %}`:
+- `{% load static %}` loads Django's static file tag system so we can link CSS/JS.
+- `{% for post in posts %}` loops through the list of posts passed from the view.
+- `{% url 'view a post' post.post_id %}` dynamically generates the URL to view a single post based on its ID.
+
+ℹ️ **Background:** `{% %}` is used for logic and control structures (loops, loading static files). This is different from `{{ }}`, which outputs variables like `{{ post.title }}`.
+
+Define the view in `til_app/views.py` and wire it in `til_app/urls.py`:
+
+```
+# til_app/views.py
+def view_posts(request):
+    context = {"posts": posts}
+    return render(request, 'post/posts.html', context)
+```
+
+```
+# til_app/urls.py
+urlpatterns = [
+    path("posts", views.view_posts, name="view posts"),
+    # ...
+]
+```
+
+Visiting `localhost:8000/til_app/posts` shows a list of posts with titles, authors and thumbnail images, each linking to its detailed view.
+
+### Upload a Post with AJAX
+Start with an HTML form in `til_app/templates/post/posts.html`:
+
+```
+<form id="uploadForm">
+    {% csrf_token %}
+    <label for="author">Author:</label>
+    <input type="text" id="author" name="author"><br>
+    <label for="title">Title:</label>
+    <input type="text" id="title" name="title"><br>
+    <label for="content">Content:</label>
+    <textarea id="content" name="content"></textarea><br>
+    <label for="img">Image URL:</label>
+    <input type="text" id="img" name="img"><br>
+    <button type="submit">Submit Post</button>
+</form>
+
+<script src="{% static 'script.js' %}"></script>
+```
+
+⚠️ **Common Trap — CSRF token:** The `{% csrf_token %}` tag ensures the form submission is secure by including a CSRF token. This token must be included in AJAX requests to prevent cross-site request forgery.
+
+Then JavaScript submits the form via AJAX in `til_app/static/script.js`:
+
+```
+// AJAX for 'Upload a Post'
+document.getElementById('uploadForm').addEventListener('submit', function(event) {
+    event.preventDefault(); // Prevent the default form submission (page reload)
+    let formData = new FormData(this); // Create a FormData from user input
+
+    fetch('/til_app/posts/upload', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken') // Include the CSRF token in the headers
+        },
+    })
+    .then(response => response.json()) // Parse the JSON response from the server
+    .then(data => {
+        if (data.custom_error_code === 0) {
+            addPostToDOM(data); // Dynamically add the new post to the DOM
+            document.getElementById('uploadForm').reset(); // Clear the form fields
+        } else if (data.error) {
+            alert(data.error); // Display any error messages
+        }
+    })
+    .catch(error => console.error('Error:', error)); // Handle any errors in the request
+});
+```
+
+On the Django side, add a view that handles the POST request, processes the form data, and returns a JSON response — `upload_post` in `til_app/views.py`:
+
+```
+# Upload a Post
+def upload_post(request):
+    if request.method == 'POST':
+        author = request.POST.get('author')
+        title = request.POST.get('title')
+        content = request.POST.get('content')
+        img = request.POST.get('img')
+
+        # Bad Design !!!
+        post_id = len(posts) + 1
+        new_post = Post(post_id, author, title, content, img)
+        posts.append(new_post)
+
+        return JsonResponse({
+            "custom_error_code": 0,
+            "post_id": post_id,
+            "author": author,
+            "title": title,
+            "img": img
+        }, status=200)
+
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+```
+
+Finally, wire the view to the URL dispatcher in `til_app/urls.py`:
+
+```
+# til_app/urls.py
+urlpatterns = [
+    # ...
+    path("posts/upload", views.upload_post, name="upload a post"),
+]
+```
+
+### How AJAX Works in This Context
+- **Asynchronous** — the form submission is handled asynchronously, so the page does not reload. The user can keep interacting while data is processed.
+- **Data Exchange** — data (the post) is sent to the server; the server processes it, stores the post, and sends back a response indicating success or failure.
+- **User Experience** — the page stays responsive and the user gets immediate feedback (the new post appears, or an error message is shown).
+
+Access `localhost:8000/til_app/posts` to see the behaviour.
+
+💡 **Why It Matters:** AJAX turns a page that would normally reload into one that updates in place. This is the same request/response cycle you learned in Week 2 — just triggered by JavaScript instead of a full page navigation.
+================================================
+KEY TAKEAWAYS
+================================================
+1. **Django is a "batteries included" Python web framework** — built-in ORM, migrations, MVT, URL routing and security features.
+2. **MVT separates concerns** — Model (data), View (business logic), Template (presentation); Django's "View" is really the controller.
+3. **The request flow is fixed** — Request → URL Dispatcher → View → Model (optional) → View → Template → Response.
+4. **Install with pip** — `python3 -m pip install Django`; course projects use Django 5.2 LTS, and Django 6.0 needs Python 3.12+.
+5. **A project is a container; an app is a component** — `django-admin startproject til_project` then `python3 manage.py startapp til_app`.
+6. **The dev server is for development** — `python3 manage.py runserver`, defaulting to `127.0.0.1:8000`, with optional port/public-interface arguments.
+7. **settings.py is the global config** — it holds BASE_DIR, SECRET_KEY, DEBUG, INSTALLED_APPS, TEMPLATES, DATABASES, static settings and more.
+8. **A view receives a request and returns a response** — the simplest form returns `HttpResponse`.
+9. **URLs are mapped with path() and include()** — the URL dispatcher checks patterns top-down and returns 404 if none match.
+10. **Path converters capture dynamic segments** — `<str:>`, `<int:>`, `<slug:>`, `<uuid:>`, `<path:>`; `re_path()` allows regex patterns.
+11. **FBVs are simple and explicit; CBVs are reusable** — CBVs support generic views like `ListView` and `DetailView`.
+12. **Templates inject data with {{ }} and control logic with {% %}** — and `render()` is the shortcut that loads, fills and returns a template.
+13. **Static files are served via STATIC_URL and STATICFILES_DIRS** — load them with `{% load static %}`.
+14. **AJAX updates the page without reloading** — a form is submitted via `fetch`, the view returns JSON, and the DOM is updated in place.
+================================================
+TERMS TO KNOW
+================================================
+**Django**: A Python web framework that provides an ORM, migrations, MVT structure and security features out of the box.
+**ORM**: Object-Relational Mapper — lets you define data models in Python instead of raw SQL.
+**MVT**: Model–View–Template — Django's architecture separating data, business logic and presentation.
+**MVC**: Model–View–Controller — the pattern Django's MVT loosely resembles.
+**Model**: The component defining the database schema and data access.
+**View**: A function or class that receives a web request and returns a web response.
+**Template**: A file mixing HTML with Django template logic to present data to the user.
+**URLconf**: The URL configuration module (`urls.py`) that maps URL patterns to views.
+**URL dispatcher**: Django's mechanism for routing incoming requests to the correct view.
+**Project**: A collection of configuration and apps for a particular website.
+**App**: A reusable component within a project (e.g. accounts, transactions, support).
+**manage.py**: The command-line utility for interacting with a Django project.
+**settings.py**: The global configuration file controlling Django's behaviour.
+**BASE_DIR**: The base directory of the Django project, used to build absolute paths.
+**SECRET_KEY**: The key used for cryptographic signing; must stay secret in production.
+**DEBUG**: A setting toggling detailed error pages during development.
+**INSTALLED_APPS**: The list of enabled applications in a project.
+**TEMPLATES**: The setting configuring template loading, rendering and context processors.
+**DATABASES**: The setting defining database engine and connection details.
+**STATIC_URL**: The URL prefix for serving static files.
+**STATICFILES_DIRS**: Extra directories where Django looks for static files.
+**path()**: The function mapping a URL pattern to a view, with optional kwargs and name.
+**include()**: A function referencing another URLconf module, promoting modular routing.
+**re_path()**: A URL function allowing regular-expression patterns.
+**Path converter**: A `<type:name>` pattern that captures part of a URL and passes it to the view.
+**URL pattern name**: A label (e.g. `name="index"`) letting templates reference a URL by name.
+**Function-Based View (FBV)**: A view implemented as a Python function.
+**Class-Based View (CBV)**: A view implemented as a Python class, reusable via inheritance and mixins.
+**Generic view**: A built-in CBV such as `ListView` or `DetailView` that reduces boilerplate.
+**render()**: A shortcut that loads a template, fills a context and returns an `HttpResponse`.
+**HttpResponse**: The class returned by a view containing the response content.
+**JsonResponse**: A Django class for returning JSON data from a view.
+**Context**: A dictionary mapping template variable names to Python objects.
+**Template tag**: A `{% %}` construct for logic/control (loops, loading static files).
+**Template variable**: A `{{ }}` construct that outputs a value.
+**CSRF token**: A security token (`{% csrf_token %}`) preventing cross-site request forgery.
+**AJAX**: Asynchronous JavaScript and XML — updating a page without a full reload.
+**CDN**: Content Delivery Network — used to link external CSS/JS libraries such as Bootstrap and jQuery.
+**Developer Tools**: Browser tools (F12 / Ctrl+Shift+I) for inspecting, debugging and profiling pages.
+================================================
+MNEMONICS & QUICK RECALL
+================================================
+**Request Flow**: **U-V-M-V-T-R** — "URL dispatcher, View, Model (optional), View, Template, Response".
+**MVT**: **Data, Logic, Presentation** — Model, View, Template; in Django the View is the controller.
+**Path Converters**: **str, int, slug, uuid, path** — the five common converters.
+**Template Syntax**: **{{ output }} vs {% logic %}** — double curly for values, curly-percent for control.
+**Project vs App**: **Project = container, App = component**.
+**Setup Commands**: **startproject → startapp → runserver**.
+================================================
+WORKED EXAMPLES
+================================================
+### Example 1: From view to URL to browser
+1. Write `def index(request): return HttpResponse("Hello, world...")` in `til_app/views.py`.
+2. Create `til_app/urls.py` with `path("", views.index, name="index")`.
+3. In `til_project/urls.py`, add `path('til_app/', include('til_app.urls'))`.
+4. Run `python3 manage.py runserver` and visit `localhost:8000/til_app/`. Visiting `localhost:8000/` gives a 404 — expected, because no root view exists.
+
+### Example 2: Capturing a URL parameter
+The pattern `path("post/<int:post_id>", views.view_post, name="view a post")` captures the integer after `post/`. Visiting `localhost:8000/til_app/post/1` passes `post_id=1` to `view_post`, which looks it up and renders `post/post.html`. If not found, the view returns status 404.
+
+### Example 3: Rendering a template with a context
+```
+def view_home(request):
+    context = {"name": "ELEC3609", "week": 3}
+    return render(request, 'home.html', context)
+```
+With `home.html` containing `<h1>Welcome, {{ name }}!</h1>` and `<p>Now is week {{ week }}</p>`, the browser shows "Welcome, ELEC3609! Now is week 3". `render()` replaces the longer loader-plus-HttpResponse idiom.
+
+### Example 4: Looping over posts in a template
+`{% for post in posts %}` repeats the enclosed HTML for each post. Inside the loop, `{{ post.title }}` outputs the title and `{% url 'view a post' post.post_id %}` builds the link to that post's detail page. This is how the list page shows every post without hardcoding HTML.
+
+### Example 5: Tracing an AJAX upload
+1. The user fills `#uploadForm` and clicks Submit.
+2. `event.preventDefault()` stops the normal page reload.
+3. `fetch('/til_app/posts/upload', { method: 'POST', body: formData, headers: {'X-CSRFToken': ...} })` sends the data.
+4. `upload_post` reads `request.POST`, appends a new `Post`, and returns `JsonResponse({...}, status=200)`.
+5. The `.then(data => ...)` callback adds the post to the DOM and resets the form — no reload.
+================================================
+EXAM FOCUS
+================================================
+1. What is Django and what does "batteries included" mean for it? → Answer: Django is a Python web framework with a built-in ORM, migration system, MVT structure, declarative URL routing and security features (CSRF, XSS auto-escaping, password hashing, secure sessions), so you build secure apps with minimal configuration.
+2. Explain Django's MVT architecture and how it maps to MVC. → Answer: Model = data/schema, View = business logic (the controller role), Template = presentation. The framework itself handles the controller function of mapping URLs to views, so MVT loosely resembles MVC/MVP with different naming.
+3. List the steps of a request through Django. → Answer: Request → URL dispatcher → View → Model (optional) → View → Template → Response; the URL dispatcher matches a route, the view may query the model and pass data to a template, which returns HTML.
+4. What command installs Django, and what version do course projects target? → Answer: `python3 -m pip install Django`; course materials and TIL projects are tested with Django 5.2 LTS (Django 6.0 requires Python 3.12 or newer).
+5. What command creates a project and what files does it produce? → Answer: `django-admin startproject til_project`; it creates the outer project directory, `manage.py`, and the inner package with `__init__.py`, `settings.py`, `urls.py`, `asgi.py` and `wsgi.py`.
+6. What is the difference between a project and an app? → Answer: A project is the collection of configuration and apps for a website; an app is a reusable component (e.g. accounts, transactions, support). A project can contain multiple apps and an app can be in multiple projects.
+7. How do you run the development server, and how do you change the port or bind publicly? → Answer: `python3 manage.py runserver` (default 127.0.0.1:8000); `python3 manage.py runserver 8888` changes the port; `python3 manage.py runserver 0:8888` binds to port 8888 on the public interface.
+8. Name five important settings.py settings and their purposes. → Answer: Any of: BASE_DIR (project base directory), SECRET_KEY (cryptographic signing, keep secret), DEBUG (debug error pages), INSTALLED_APPS (enabled apps), TEMPLATES (template config), DATABASES (DB config), STATIC_URL / STATICFILES_DIRS (static files), ROOT_URLCONF, MIDDLEWARE, TIME_ZONE.
+9. What is a view, and what is the simplest possible view? → Answer: A function or class that receives a web request and returns a web response. The simplest is `def index(request): return HttpResponse("...")`.
+10. Describe how the URL dispatcher works. → Answer: It starts at the root `urls.py` and checks each pattern top-down; if `path()` matches the beginning of the URL, control passes to the view or to another URLconf via `include()`; captured variables are passed as arguments; if nothing matches, Django returns a 404.
+11. What are the common path converters? → Answer: `<str:>` any non-empty string (default), `<int:>` integer, `<slug:>` letters/numbers/underscores/hyphens, `<uuid:>` UUID, `<path:>` any non-empty string including slashes.
+12. When would you use re_path() instead of path()? → Answer: When you need more complex pattern matching via regular expressions; however, modern projects prefer `path()` with converters for clearer, more structured patterns.
+13. Compare function-based and class-based views. → Answer: FBVs are simple, explicit, procedural and give complete control but require repetition; CBVs are object-oriented, reusable via inheritance/mixins, and offer built-in generic views like ListView and DetailView, but are more complex for beginners.
+14. What is the difference between {{ }} and {% %} in templates? → Answer: `{{ }}` outputs a variable (e.g. `{{ post.title }}`); `{% %}` is used for logic/control such as loops and loading static files.
+15. What does render() do, and why use it? → Answer: `render(request, 'template.html', context)` loads the template, fills the context and returns an `HttpResponse` — a shortcut for the longer loader-plus-HttpResponse idiom.
+16. How are static files configured and used? → Answer: Set `STATIC_URL` (URL prefix) and `STATICFILES_DIRS` (search directories) in settings.py, place files under `static/`, then use `{% load static %}` and `{% static 'path' %}` in templates.
+17. What is AJAX and how does the TIL upload example use it? → Answer: AJAX (Asynchronous JavaScript and XML) updates a page without a full reload. The form is intercepted with `event.preventDefault()`, sent with `fetch` (including the CSRF token in `X-CSRFToken`), the view returns JSON, and the DOM is updated in place.
+18. Why is storing Post objects in a Python list described as bad design? → Answer: The data is not persistent — it disappears when the server restarts. The correct approach (next lab) is to use Django's ORM and a database.

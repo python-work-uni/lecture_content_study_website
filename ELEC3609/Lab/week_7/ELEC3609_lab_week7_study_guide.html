@@ -1,0 +1,3037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ELEC3609 Week 7 Study Guide – Django REST Framework & Django Advanced · Lab 7</title>
+  <meta name="description" content="This lab explores Django REST Framework (DRF) and several advanced topics for building scalable, modern web applications. It goes beyond basic API usage into stateless authentication with JWT, asynchr">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+
+  <!-- KaTeX for crisp mathematical formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+
+  <style>
+:root {
+      --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      /* Light Theme (Default) */
+      --bg-primary: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --bg-alt: #e2e8f0;
+      
+      --border-color: #e2e8f0;
+      --border-focus: #6366f1;
+      
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #eef2ff;
+      --primary-glow: rgba(79, 70, 229, 0.15);
+      
+      --accent-blue: #0284c7;
+      --accent-blue-bg: #e0f2fe;
+      --accent-emerald: #059669;
+      --accent-emerald-bg: #d1fae5;
+      --accent-amber: #d97706;
+      --accent-amber-bg: #fef3c7;
+      --accent-rose: #e11d48;
+      --accent-rose-bg: #ffe4e6;
+      --accent-purple: #7c3aed;
+      --accent-purple-bg: #ede9fe;
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --glass-bg: rgba(255, 255, 255, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --nav-width: 280px;
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #0b0f19;
+      --bg-surface: #131b2e;
+      --bg-subtle: #1e293b;
+      --bg-alt: #334155;
+      
+      --border-color: #1e293b;
+      --border-focus: #818cf8;
+      
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-light: #64748b;
+      
+      --primary: #6366f1;
+      --primary-hover: #818cf8;
+      --primary-light: rgba(99, 102, 241, 0.15);
+      --primary-glow: rgba(99, 102, 241, 0.25);
+      
+      --accent-blue: #38bdf8;
+      --accent-blue-bg: rgba(56, 189, 248, 0.15);
+      --accent-emerald: #34d399;
+      --accent-emerald-bg: rgba(52, 211, 153, 0.15);
+      --accent-amber: #fbbf24;
+      --accent-amber-bg: rgba(251, 191, 36, 0.15);
+      --accent-rose: #fb7185;
+      --accent-rose-bg: rgba(251, 113, 133, 0.15);
+      --accent-purple: #a78bfa;
+      --accent-purple-bg: rgba(167, 139, 250, 0.15);
+
+      --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+      --card-shadow-hover: 0 10px 20px -3px rgba(0, 0, 0, 0.5);
+      --glass-bg: rgba(19, 27, 46, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      font-size: 16px;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Reading Progress Bar */
+    #progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #4f46e5, #06b6d4, #10b981);
+      width: 0%;
+      z-index: 1000;
+      transition: width 0.1s ease-out;
+    }
+
+    /* Top Sticky Header */
+    header.site-header {
+      position: sticky;
+      top: 0;
+      z-index: 900;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: var(--glass-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.6rem;
+      color: var(--text-main);
+      cursor: pointer;
+      font-size: 1.1rem;
+    }
+
+    .course-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .header-title {
+      font-size: 1rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-box input {
+      padding: 0.45rem 0.75rem 0.45rem 2rem;
+      font-size: 0.85rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      width: 180px;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .search-box input:focus {
+      outline: none;
+      border-color: var(--primary);
+      width: 240px;
+      background: var(--bg-surface);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .search-box svg {
+      position: absolute;
+      left: 0.65rem;
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .btn-icon {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-alt);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    /* Layout */
+    .app-container {
+      display: flex;
+      max-width: 1520px;
+      margin: 0 auto;
+      min-height: calc(100vh - 60px);
+    }
+
+    /* Sidebar Navigation */
+    aside.sidebar {
+      width: var(--nav-width);
+      flex-shrink: 0;
+      position: sticky;
+      top: 57px;
+      height: calc(100vh - 57px);
+      overflow-y: auto;
+      padding: 1.5rem 1rem;
+      border-right: 1px solid var(--border-color);
+      background: var(--bg-primary);
+    }
+
+    .sidebar-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-light);
+      margin-bottom: 0.75rem;
+      padding-left: 0.5rem;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.65rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      border-radius: 8px;
+      transition: all 0.15s ease;
+      line-height: 1.3;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+      background: var(--bg-subtle);
+    }
+
+    .nav-link.active {
+      color: var(--primary);
+      background: var(--primary-light);
+      font-weight: 600;
+    }
+
+    .nav-num {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+
+    /* Main Content Area */
+    main.main-content {
+      flex: 1;
+      padding: 2.5rem 3rem;
+      max-width: 1020px;
+      min-width: 0;
+    }
+
+    /* Hero Banner */
+    .hero-card {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(6, 182, 212, 0.08) 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2.5rem;
+      margin-bottom: 2.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::before {
+      content: "";
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 700;
+      color: var(--primary);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      color: var(--text-main);
+      margin-bottom: 0.75rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-overview {
+      font-size: 0.95rem;
+      color: var(--text-main);
+      background: var(--bg-surface);
+      padding: 1.25rem;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      line-height: 1.7;
+    }
+
+    .quick-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .stat-pill {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .stat-val {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    /* Section Styling */
+    section.guide-section {
+      margin-bottom: 3.5rem;
+      scroll-margin-top: 80px;
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .section-number {
+      background: var(--primary);
+      color: #ffffff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+    }
+
+    h2.section-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    h3.subsection-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 1.75rem 0 0.75rem 0;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-main);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--card-shadow);
+      transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Callout Boxes */
+    .callout {
+      border-radius: 12px;
+      padding: 1.15rem 1.25rem;
+      margin: 1.25rem 0;
+      display: flex;
+      gap: 0.9rem;
+      align-items: flex-start;
+      border-left: 4px solid transparent;
+    }
+
+    .callout-icon {
+      font-size: 1.35rem;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    .callout-content {
+      flex: 1;
+      font-size: 0.95rem;
+    }
+
+    .callout-content strong {
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.95rem;
+    }
+
+    .callout-why {
+      background: var(--accent-amber-bg);
+      border-left-color: var(--accent-amber);
+      color: var(--text-main);
+    }
+
+    .callout-memory {
+      background: var(--accent-purple-bg);
+      border-left-color: var(--accent-purple);
+      color: var(--text-main);
+    }
+
+    .callout-tip {
+      background: var(--accent-emerald-bg);
+      border-left-color: var(--accent-emerald);
+      color: var(--text-main);
+    }
+
+    .callout-warning {
+      background: var(--accent-rose-bg);
+      border-left-color: var(--accent-rose);
+      color: var(--text-main);
+    }
+
+    .callout-info {
+      background: var(--accent-blue-bg);
+      border-left-color: var(--accent-blue);
+      color: var(--text-main);
+    }
+
+    /* Formula & Math Block */
+    .formula-block {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin: 1.25rem 0;
+      text-align: center;
+      position: relative;
+    }
+
+    .formula-title {
+      position: absolute;
+      top: -10px;
+      left: 14px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+    }
+
+    .formula-math {
+      font-size: 1.2rem;
+      margin: 0.5rem 0;
+      color: var(--text-main);
+      overflow-x: auto;
+    }
+
+    /* ELEC3609 local: code / plain-text reference blocks render left-aligned in mono */
+    .formula-block pre.formula-math {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.55;
+      text-align: left;
+      white-space: pre;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.85rem 1rem;
+      margin: 0;
+    }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      margin: 1.25rem 0;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      box-shadow: var(--card-shadow);
+      background: var(--bg-surface);
+    }
+
+    table.study-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      text-align: left;
+    }
+
+    table.study-table th {
+      background: var(--bg-subtle);
+      padding: 0.85rem 1rem;
+      font-weight: 700;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border-color);
+      letter-spacing: 0.02em;
+    }
+
+    table.study-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+
+    table.study-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    table.study-table tr:hover td {
+      background: var(--bg-subtle);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    .badge-recall {
+      background: var(--accent-emerald-bg);
+      color: var(--accent-emerald);
+    }
+
+    .badge-precision {
+      background: var(--accent-blue-bg);
+      color: var(--accent-blue);
+    }
+
+    .badge-f1 {
+      background: var(--accent-purple-bg);
+      color: var(--accent-purple);
+    }
+
+    .badge-danger {
+      background: var(--accent-rose-bg);
+      color: var(--accent-rose);
+    }
+
+    /* Pipeline Diagram */
+    .pipeline-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      box-shadow: var(--card-shadow);
+    }
+
+    .pipeline-flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      margin: 1rem 0;
+    }
+
+    .pipe-step {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+      color: var(--text-main);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    .pipe-step .step-num {
+      font-size: 0.7rem;
+      color: var(--primary);
+      font-family: var(--font-mono);
+    }
+
+    .pipe-step:hover, .pipe-step.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .pipe-arrow {
+      color: var(--text-light);
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    /* Interactive Confusion Matrix Calculator Widget */
+    .calculator-card {
+      background: var(--bg-surface);
+      border: 2px solid var(--primary);
+      border-radius: 16px;
+      padding: 1.75rem;
+      margin: 2rem 0;
+      box-shadow: 0 10px 25px -5px var(--primary-glow);
+    }
+
+    .calc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .calc-presets {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 0.3rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    .cm-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    .cm-table th, .cm-table td {
+      border: 1px solid var(--border-color);
+      padding: 0.75rem;
+    }
+
+    .cm-table th {
+      background: var(--bg-subtle);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .cm-input-cell {
+      background: var(--bg-surface);
+    }
+
+    .cm-input-cell label {
+      display: block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+    }
+
+    .cm-input-cell input {
+      width: 100%;
+      max-width: 90px;
+      padding: 0.4rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+    }
+
+    .cm-input-cell input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    .calc-results {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .metric-card {
+      background: var(--bg-subtle);
+      border-radius: 10px;
+      padding: 0.85rem;
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .metric-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--primary);
+      margin: 0.2rem 0;
+    }
+
+    .metric-formula {
+      font-size: 0.7rem;
+      color: var(--text-light);
+      font-family: var(--font-mono);
+    }
+
+    /* Key Takeaways list */
+    .takeaways-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .takeaway-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.9rem 1.25rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.9rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .takeaway-num {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.85rem;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.1rem;
+    }
+
+    /* Terms & Glossary Section */
+    .glossary-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .filter-chip {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .filter-chip:hover, .filter-chip.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .terms-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .term-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.1rem;
+      box-shadow: var(--card-shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+
+    .term-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .term-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--primary);
+      margin-bottom: 0.35rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .term-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Exam Questions Section */
+    .exam-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .exam-progress {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .exam-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-secondary {
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-alt);
+    }
+
+    .quiz-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--card-shadow);
+      transition: border-color 0.2s ease;
+    }
+
+    .quiz-card.mastered {
+      border-left: 4px solid var(--accent-emerald);
+      opacity: 0.9;
+    }
+
+    .quiz-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      cursor: pointer;
+    }
+
+    .quiz-qnum {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+
+    .quiz-question {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-main);
+      flex: 1;
+      line-height: 1.5;
+    }
+
+    .quiz-status-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--border-color);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .quiz-answer {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      font-size: 0.9rem;
+      color: var(--text-main);
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .quiz-answer.show {
+      display: block;
+    }
+
+    .quiz-toggle-btn {
+      background: none;
+      border: none;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.3rem 0;
+    }
+
+    .quiz-toggle-btn:hover {
+      text-decoration: underline;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--border-color);
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      background: var(--bg-surface);
+      margin-top: 4rem;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      header.site-header, aside.sidebar, #progress-bar, .calculator-card, .btn-icon, .exam-actions, .filter-chip {
+        display: none !important;
+      }
+      .app-container {
+        display: block;
+        max-width: 100%;
+      }
+      main.main-content {
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+      .card, .hero-card, .takeaway-item, .quiz-card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+      .quiz-answer {
+        display: block !important;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      aside.sidebar {
+        position: fixed;
+        left: -100%;
+        top: 57px;
+        z-index: 950;
+        background: var(--bg-surface);
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        transition: left 0.3s ease;
+      }
+      aside.sidebar.open {
+        left: 0;
+      }
+      .menu-toggle {
+        display: block;
+      }
+      main.main-content {
+        padding: 1.5rem;
+      }
+      .grid-2, .calc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div id="progress-bar"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-left">
+      <button class="menu-toggle" id="menu-btn" aria-label="Toggle navigation menu">&#9776;</button>
+      <span class="course-badge">ELEC3609 • Week 7</span>
+      <span class="header-title">Django REST Framework & Django Advanced · Lab 7</span>
+    </div>
+    <div class="header-controls">
+      <div class="search-box">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" id="site-search" placeholder="Search guide..." aria-label="Search study guide">
+      </div>
+      <button class="btn-icon" id="theme-toggle" title="Toggle Light/Dark Theme" aria-label="Toggle Theme">&#127769;</button>
+      <button class="btn-icon" onclick="window.print()" title="Print Study Guide" aria-label="Print Guide">&#128424;</button>
+    </div>
+  </header>
+
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">Table of Contents</div>
+      <ul class="nav-list">
+<li><a href="#overview" class="nav-link"><span class="nav-num">00</span> Overview</a></li>
+        <li><a href="#section-1" class="nav-link"><span class="nav-num">01</span> Django REST Framework Overview</a></li>
+        <li><a href="#section-2" class="nav-link"><span class="nav-num">02</span> Serialization: Models to JSON</a></li>
+        <li><a href="#section-3" class="nav-link"><span class="nav-num">03</span> Saving &amp; Validation</a></li>
+        <li><a href="#section-4" class="nav-link"><span class="nav-num">04</span> Request, Response &amp; Views</a></li>
+        <li><a href="#section-5" class="nav-link"><span class="nav-num">05</span> Views &amp; Pagination</a></li>
+        <li><a href="#section-6" class="nav-link"><span class="nav-num">06</span> Auth, Permissions &amp; Throttling</a></li>
+        <li><a href="#section-7" class="nav-link"><span class="nav-num">07</span> JWT: Structure &amp; Workflow</a></li>
+        <li><a href="#section-8" class="nav-link"><span class="nav-num">08</span> JWT vs Sessions &amp; Tokens</a></li>
+        <li><a href="#section-9" class="nav-link"><span class="nav-num">09</span> Simple JWT</a></li>
+        <li><a href="#section-10" class="nav-link"><span class="nav-num">10</span> The N+1 Query Problem</a></li>
+        <li><a href="#section-11" class="nav-link"><span class="nav-num">11</span> Fixing N+1 with QuerySets</a></li>
+        <li><a href="#section-12" class="nav-link"><span class="nav-num">12</span> Mitigating Remaining N+1</a></li>
+        <li><a href="#section-13" class="nav-link"><span class="nav-num">13</span> Async Task Queues &amp; Celery</a></li>
+        <li><a href="#section-14" class="nav-link"><span class="nav-num">14</span> WebSockets &amp; Django Channels</a></li>
+        <li><a href="#section-15" class="nav-link"><span class="nav-num">15</span> Building the Chat Room</a></li>
+        <li><a href="#key-takeaways" class="nav-link"><span class="nav-num">16</span> 15 Key Takeaways</a></li>
+        <li><a href="#terms-to-know" class="nav-link"><span class="nav-num">17</span> Terms to Know (Glossary)</a></li>
+        <li><a href="#mnemonics" class="nav-link"><span class="nav-num">18</span> Mnemonics &amp; Quick Recall</a></li>
+        <li><a href="#worked-examples" class="nav-link"><span class="nav-num">19</span> Worked Scenarios &amp; Calculations</a></li>
+        <li><a href="#exam-focus" class="nav-link"><span class="nav-num">20</span> Potential Exam Focus &amp; Practice</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+<section id="overview" class="hero-card">
+  <div class="hero-tagline">📖 Official Course Notes • Week 7</div>
+  <h1 class="hero-title">Django REST Framework &amp; Django Advanced · Lab 7</h1>
+  <p class="hero-subtitle">This lab explores Django REST Framework (DRF) and several advanced topics for building scalable, modern web applications. It goes beyond…</p>
+  <div class='hero-overview'><strong>Lecture Overview:</strong> This lab explores <strong>Django REST Framework (DRF)</strong> and several advanced topics for building scalable, modern web applications. It goes beyond basic API usage into <strong>stateless authentication with JWT</strong>, <strong>asynchronous task handling with Celery</strong>, <strong>real-time communication with WebSockets (Django Channels)</strong>, and <strong>performance work such as fixing the N+1 query problem</strong>. The individual task is to find and fix a hidden N+1 problem in the TIL-Lab06 project. The Celery and WebSocket chapters are marked <strong>optional reading and are not assessed in the final exam</strong> — but they are still worth understanding.</div>
+  <div class="quick-stats">
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);">⚙️</div>
+  <div>
+    <div class="stat-label">Chapters</div>
+    <div class="stat-val">5 (Chapters 4-5 optional)</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-blue-bg); color: var(--accent-blue);">📊</div>
+  <div>
+    <div class="stat-label">Individual task</div>
+    <div class="stat-val">Task 6 (find &amp; fix N+1)</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-emerald-bg); color: var(--accent-emerald);">🎯</div>
+  <div>
+    <div class="stat-label">Lab resource</div>
+    <div class="stat-val">TIL-Lab06 source</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-amber-bg); color: var(--accent-amber);">📝</div>
+  <div>
+    <div class="stat-label">Core API toolkit</div>
+    <div class="stat-val">Django REST Framework</div>
+  </div>
+</div>
+<div class="stat-pill">
+  <div class="stat-icon" style="background: var(--accent-purple-bg); color: var(--accent-purple);">🧠</div>
+  <div>
+    <div class="stat-label">Auth format focused</div>
+    <div class="stat-val">JWT (Simple JWT)</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="section-1" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">01</span>
+    <h2 class="section-title">Django REST Framework Overview</h2>
+  </div>
+  <p>Developers today must support <strong>web clients, native mobile apps, and business-to-business applications</strong>. <strong>Django REST Framework (DRF)</strong> is a powerful toolkit for building <strong>Web APIs</strong> in Django. It provides a flexible, powerful system for building and consuming <strong>RESTful APIs</strong> with strong authentication and authorization. In the TIL project, a new application <strong>til_api</strong> holds all contexts for RESTful APIs; the file <strong>api_endpoints.json</strong> is provided to play with the TIL APIs.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    The same backend must serve many clients. A well-structured REST API lets a browser, a phone app and a partner system all use one set of endpoints.
+  </div>
+</div>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Background::</strong>
+    A common gotcha — <strong>"RESTful" is not just "returns JSON."</strong> REST is about using HTTP semantics (methods, status codes, resources) correctly, which is why the rest of this chapter is about serializers, requests/responses, views, permissions and throttling.
+  </div>
+</div>
+</section>
+
+<section id="section-2" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">02</span>
+    <h2 class="section-title">Serialization: Models to JSON</h2>
+  </div>
+  <p><strong>Serialization</strong> in DRF converts complex data types — Django (<strong>ORM</strong>) model instances and <strong>querysets</strong> — into <strong>native Python data types</strong> that can be easily rendered into <strong>JSON</strong> or other content types. Serializers also provide <strong>deserialization</strong>, converting parsed data back into complex types. Serializers work very similarly to Django's <strong>Form</strong> and <strong>ModelForm</strong> classes; this is the real "magic" DRF provides. A <strong>ModelSerializer</strong> is a shortcut: by inheriting from it, fields are generated automatically from the model, including default implementations of <strong>.create()</strong> and <strong>.update()</strong>.</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">from rest_framework import serializers
+from til_app.models import Post
+class PostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Post
+        fields = [&#x27;id&#x27;, &#x27;subject&#x27;, &#x27;contents&#x27;, &#x27;created_at&#x27;, &#x27;visibility&#x27;, &#x27;tags&#x27;, &#x27;image&#x27;]</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>PostSerializer</strong> — defines a serializer for the Post model.</li><li><strong>class Meta</strong> — provides metadata about the serializer.<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>model = Post</strong> — specifies the model to serialize.</li><li><strong>fields = [...]</strong> — lists the fields to include in the serialized representation.</li></ul></li></ul>
+
+<p><strong>Serializing an object:</strong></p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">post = Post.objects.first()
+serializer = PostSerializer(post)   # Use PostSerializer to serialize a post.
+print(serializer.data)</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>serializer = PostSerializer(post)</strong> — creates a serializer instance for a single Post object.</li><li><strong>serializer.data</strong> — converts the Post into a dictionary format suitable for rendering into JSON. The output looks like:</li></ul>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">{
+  &quot;id&quot;: 1,
+  &quot;subject&quot;: &quot;First Post&quot;,
+  &quot;contents&quot;: &quot;This is the content of the first post.&quot;,
+  &quot;created_at&quot;: &quot;2024-09-25T16:24:38.096845+10:00&quot;,
+  &quot;visibility&quot;: true,
+  &quot;tags&quot;: [
+    { &quot;id&quot;: 1, &quot;name&quot;: &quot;tag1&quot;, &quot;creation_date&quot;: &quot;2024-09-25T16:18:22.201810+10:00&quot; }
+  ],
+  &quot;image&quot;: &quot;image_media_url&quot;
+}</pre></div>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Serializers are the translation layer between your database objects and the JSON that any client can consume.
+  </div>
+</div>
+</section>
+
+<section id="section-3" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">03</span>
+    <h2 class="section-title">Saving &amp; Validation</h2>
+  </div>
+  <p><strong>Deserializing objects</strong> means creating a serializer with raw input data, validating it, and using the validated data:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">serializer = PostSerializer(data=request.data)
+if serializer.is_valid():
+    validated_data = serializer.validated_data
+    print(validated_data)</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>serializer = PostSerializer(data=data)</strong> — creates a serializer instance with raw input data.</li><li><strong>serializer.is_valid()</strong> — validates the input against the serializer's fields and rules.</li><li><strong>serializer.validated_data</strong> — the validated data as a dictionary, which can be used to create or update a model instance.</li></ul>
+
+<p><strong>Saving instances:</strong> you can override <strong>create()</strong>, which is called when <code>serializer.save()</code> is used with no instance:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class PostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Post
+        fields = [&#x27;subject&#x27;, &#x27;contents&#x27;, &#x27;visibility&#x27;]
+    def create(self, validated_data):
+        # Custom creation logic, additional processing before saving
+        return Post.objects.create(**validated_data)
+serializer = PostSerializer(data=request.data)
+if serializer.is_valid():
+    post = serializer.save()   # Calls the create() method
+    print(post)</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>def create(self, validated_data)</strong> — called when serializer.save() is used with no instance.</li><li>The <strong>validated_data</strong> is a dictionary containing the validated input data.</li><li><strong>serializer.save()</strong> — calls create() and returns the newly created Post object.</li></ul>
+
+<p><strong>Validation</strong> has two levels:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class PostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Post
+        fields = [&#x27;subject&#x27;, &#x27;contents&#x27;, &#x27;visibility&#x27;]
+    def validate_subject(self, value):
+        if len(value) &lt; 5:
+            raise serializers.ValidationError(
+                &quot;The subject must be at least 5 characters long.&quot;)
+        return value</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Add <strong>.validate_&lt;field_name&gt;</strong> methods to a Serializer subclass for <strong>field-level validation</strong> (similar to Django forms' <code>.clean_&lt;field_name&gt;</code>). Each takes a single argument: the field value.</li></ul>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class PostSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Post
+        fields = [&#x27;subject&#x27;, &#x27;contents&#x27;, &#x27;visibility&#x27;]
+    def validate(self, data):
+        if &#x27;spam&#x27; in data[&#x27;contents&#x27;].lower():
+            raise serializers.ValidationError(&quot;The content contains prohibited words.&quot;)
+        return data</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Override <strong>validate()</strong> for <strong>object-level validation</strong>. It takes a dictionary of field values, raises <code>serializers.ValidationError</code> if necessary, or returns the validated values.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Validation at the serializer boundary keeps bad data out of your database and returns clean, structured errors to the API client.
+  </div>
+</div>
+</section>
+
+<section id="section-4" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">04</span>
+    <h2 class="section-title">Request, Response &amp; Views</h2>
+  </div>
+  <p>DRF provides enhanced <strong>Request</strong> and <strong>Response</strong> objects, making API handling easier. <strong>Request example:</strong></p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class ExampleView(APIView):
+    def post(self, request):
+        data = request.data
+        return Response({&#x27;received_data&#x27;: data})</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>request.data</strong> — contains the parsed data from the body of the request. For POST, PUT and PATCH, request.data is a dictionary-like object (<strong>QueryDict</strong>) containing the request data. It includes all parsed content, including <strong>file</strong> and <strong>non-file</strong> inputs.</li></ul>
+
+<p><strong>Response example:</strong></p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">def example_function_view(request):
+    data = {&#x27;message&#x27;: &#x27;Hello, world!&#x27;}
+    return Response(data)</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Response(data)</strong> — instantiates a response object with the given data, and DRF converts it into the appropriate content type (for example, <strong>JSON</strong>).</li></ul>
+
+<p><strong>APIView</strong> is the base class for all DRF views; it subclasses Django's View:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class HelloWorldView(APIView):
+    def get(self, request):
+        return Response({&quot;message&quot;: &quot;Hello, world!&quot;})</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>def get(self, request)</strong> — defines the behaviour for HTTP GET requests.</li></ul>
+
+<p><strong>Generic API views</strong> let you quickly build views that map closely to your database models:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class PostListView(generics.ListAPIView):
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>ListAPIView</strong> — a generic view for listing multiple objects.</li><li><strong>queryset</strong> — the set of objects to be listed.</li><li><strong>serializer_class</strong> — the serializer used to format the response data.</li></ul>
+
+<p><strong>Custom function-based views</strong> offer more control and suit simple or highly customised logic:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">@api_view([&#x27;GET&#x27;, &#x27;POST&#x27;])
+@permission_classes([IsAuthenticated])
+def post_list_create(request):
+    if request.method == &#x27;GET&#x27;:
+        posts = Post.objects.all()
+        serializer = PostSerializer(posts, many=True)
+        return Response(serializer.data)
+    elif request.method == &#x27;POST&#x27;:
+        serializer = PostSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>@api_view(['GET', 'POST'])</strong> — this view only handles GET and POST requests.</li><li><strong>@permission_classes([IsAuthenticated])</strong> — restricts access to authenticated users only.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Choose the lightest tool: APIView for full control, generic views for standard CRUD, and function-based views for simple custom logic.
+  </div>
+</div>
+</section>
+
+<section id="section-5" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">05</span>
+    <h2 class="section-title">Views &amp; Pagination</h2>
+  </div>
+  <p>DRF includes <strong>customisable pagination styles</strong>, making large datasets easier to manage. <strong>Global pagination settings</strong> in settings.py:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">REST_FRAMEWORK = {
+    &#x27;DEFAULT_PAGINATION_CLASS&#x27;: &#x27;rest_framework.pagination.PageNumberPagination&#x27;,
+    &#x27;PAGE_SIZE&#x27;: 10,
+}</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The pagination style may be set <strong>globally</strong>.</li><li>Pagination is only performed <strong>automatically</strong> if you are using <strong>generic views or viewsets</strong>.</li></ul>
+
+<p><strong>Custom pagination classes:</strong></p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">from rest_framework.pagination import PageNumberPagination
+class CustomPagination(PageNumberPagination):
+    page_size = 5
+    page_size_query_param = &#x27;page_size&#x27;
+    max_page_size = 100</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Override the pagination class to modify particular aspects of the style. Here the default page size is 5, clients may request a size via the <code>page_size</code> query parameter, up to a maximum of 100.</li></ul>
+
+<p><strong>Applying pagination to a view:</strong></p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class PostListView(generics.ListAPIView):
+    queryset = Post.objects.all()
+    serializer_class = PostSerializer
+    pagination_class = CustomPagination</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>pagination_class = CustomPagination</strong> — specifies the custom pagination class for this view.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Without pagination, a list endpoint returns everything and can time out or melt the client. Page-number pagination puts a predictable bound on each response.
+  </div>
+</div>
+</section>
+
+<section id="section-6" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">06</span>
+    <h2 class="section-title">Auth, Permissions &amp; Throttling</h2>
+  </div>
+  <p>Three distinct concerns protect an API:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Authentication</strong> — verifies <strong>the identity</strong> of the user making a request, ensuring only authorised users can access or modify resources. DRF provides several mechanisms, including</li></ul>
+
+<p><strong>session-based, token-based, and JWT-based</strong> authentication.</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Permissions</strong> — determine whether a request should be <strong>granted or denied</strong>. DRF provides a variety of permission classes, applied globally or at the view level.</li><li><strong>Throttling</strong> — controls the <strong>rate of requests</strong> a user or client can make to an API. It helps prevent abuse such as spamming or excessive usage by limiting requests within a specified time period.</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Authentication answers "who are you?", permissions answer "are you allowed to do this?", and throttling answers "how often may you ask?" Keep the three separate in your mind — and in your settings.
+  </div>
+</div>
+</section>
+
+<section id="section-7" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">07</span>
+    <h2 class="section-title">JWT: Structure &amp; Workflow</h2>
+  </div>
+  <p><strong>JWT (JSON Web Token)</strong> is a compact, <strong>URL-safe</strong> means of representing <strong>claims</strong> between two parties. It is a popular format for securely transmitting information as a JSON object, <strong>signed</strong> using a secret or a <strong>public/private key pair</strong> to ensure the <strong>integrity and authenticity</strong> of the claims. JWTs are powerful for authentication and authorization, especially in <strong>stateless and distributed environments</strong>. They offer scalability and flexibility but require careful handling to address security concerns. They are <strong>not suitable for scenarios requiring immediate revocation or one-time use</strong>, where traditional tokens stored in a database are more appropriate. <strong>Structure of a JWT:</strong> three parts separated by dots — <code>header.payload.signature</code> (<code>xxxxx.yyyyy.zzzzz</code>):</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Header</strong> — metadata about the token, such as the signing algorithm and token type:</li></ul>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">{ &quot;alg&quot;: &quot;HS256&quot;, &quot;typ&quot;: &quot;JWT&quot; }</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Payload</strong> — the <strong>claims</strong>, statements about the user or additional data. Common claims include <strong>iss</strong> (issuer), <strong>exp</strong> (expiration time), <strong>sub</strong> (subject), and <strong>aud</strong> (audience):</li></ul>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">{ &quot;sub&quot;: &quot;1234567890&quot;, &quot;name&quot;: &quot;John Doe&quot;, &quot;admin&quot;: true }</pre></div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Signature</strong> — ensures the token has not been altered. Created by encoding the header and payload, then signing with a secret key or private key:</li></ul>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">HMACSHA256(
+    base64UrlEncode(header) + &quot;.&quot; + base64UrlEncode(payload),
+    secret)</pre></div>
+</div>
+
+<p><strong>JWT workflow:</strong></p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The server <strong>generates a token</strong> upon user authentication and returns it to the client.</li><li>The client includes this token in the <strong>Authorization header</strong> of every subsequent HTTP request, using the <strong>Bearer</strong> schema.</li><li>The server <strong>validates the token</strong> by checking the signature and ensuring it has not expired. If valid, the request is processed; otherwise it is rejected.</li></ol>
+
+<p><strong>Example of a JWT:</strong></p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</pre></div>
+</div>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    A naive JWT implementation without additional measures is <strong>not good practice for authorization</strong>. One good practice is to use a <strong>token blacklist</strong> and a <strong>short-lived accessToken with a refreshToken</strong>.
+  </div>
+</div>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Background::</strong>
+    JWT alone is not sufficient for comprehensive authorization in modern applications; that is one reason <strong>OAuth 2.0</strong> (RFC 6749) is often needed. JWT itself is defined in <strong>RFC 7519</strong>.
+  </div>
+</div>
+</section>
+
+<section id="section-8" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">08</span>
+    <h2 class="section-title">JWT vs Sessions &amp; Tokens</h2>
+  </div>
+  <p><strong>JWT vs session:</strong></p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Feature</th><th>JWT</th><th>Session</th></tr></thead>
+<tbody><tr><td>Storage</td><td>Client-side (usually local storage or cookies)</td><td>Server-side (memory or database)</td></tr><tr><td>State management</td><td>Stateless — no server storage</td><td>Stateful — requires server storage and management</td></tr><tr><td>Scalability</td><td>Highly scalable; no need to synchronise state across servers</td><td>Can be challenging to scale due to centralised state</td></tr><tr><td>Performance</td><td>Less server load; verification is local</td><td>Higher server load; session lookup on each request</td></tr><tr><td>Expiration</td><td>Expiry built into the token (exp claim)</td><td>Controlled by server; can be invalidated any time</td></tr><tr><td>Revocation</td><td>Difficult without extra mechanisms (e.g. blacklists)</td><td>Easy; invalidate the session on the server</td></tr><tr><td>Security concerns</td><td>Token theft/misuse if poorly stored; hard to revoke</td><td>Easier to revoke; vulnerable to session hijacking</td></tr><tr><td>Use case</td><td>APIs, microservices, single-page applications</td><td>Traditional web apps with server-side rendering</td></tr></tbody>
+  </table>
+</div>
+
+<p><strong>JWT is not a traditional token:</strong></p>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Self-contained and stateless</strong> — unlike traditional tokens, JWTs need no server-side storage; all necessary information is embedded in the token itself.</li><li><strong>Not meant for one-time expiration</strong> — traditional tokens (email verification, password reset) are one-time-use and managed on the server; JWTs are often used for continuous sessions with a defined expiration and are not inherently one-time use.</li><li><strong>Non-revocable by default</strong> — once issued, a JWT remains valid until it expires. Traditional tokens stored in the database can be invalidated by changing their state.</li></ol>
+
+<p><strong>Use cases for traditional tokens:</strong> email verification (one-time token), password reset (temporary, expires after a few minutes), and coupon or discount codes (redeemed only once).</p>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Feature</th><th>JWT</th><th>Traditional Tokens</th></tr></thead>
+<tbody><tr><td>Storage</td><td>Client-side, no server storage needed</td><td>Server-side, in a database</td></tr><tr><td>Revocation</td><td>Difficult; needs a blacklist</td><td>Easy; change state in the database</td></tr><tr><td>Expiration</td><td>Controlled by exp claim; not one-time use</td><td>Usually one-time use or short-lived</td></tr><tr><td>Security</td><td>Token theft risk; secure storage required</td><td>Secure DB access; prevent replay attacks</td></tr><tr><td>Use case</td><td>Authentication and continuous sessions</td><td>One-time actions like email verification, password reset</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Pick the token type to match the job. Continuous API sessions suit JWT; one-shot actions with immediate revocation needs suit database-backed tokens.
+  </div>
+</div>
+</section>
+
+<section id="section-9" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">09</span>
+    <h2 class="section-title">Simple JWT</h2>
+  </div>
+  <p><strong>Simple JWT</strong> provides a <strong>JSON Web Token authentication backend for Django REST Framework</strong>. It aims to cover the most common JWT use cases with a <strong>conservative set of default features</strong>, and to be <strong>easily extensible</strong> when a desired feature is not present. In the TIL demo, <strong>til_api is integrated with Simple JWT as the authentication backend</strong>.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Rather than hand-rolling token generation and validation, Simple JWT gives you a vetted, default-secure backend you can extend.
+  </div>
+</div>
+</section>
+
+<section id="section-10" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">10</span>
+    <h2 class="section-title">The N+1 Query Problem</h2>
+  </div>
+  <p>The <strong>N+1 query problem</strong> is an ORM performance problem so common it has a name. It occurs when a query built with the ORM <strong>inadvertently causes additional queries</strong> to look up related records that were <strong>not loaded by the original query</strong>. It typically happens when a separate database query runs <strong>for each object in a set</strong>, resulting in <strong>N</strong> queries (where N is the number of objects) <strong>plus one initial query</strong> to retrieve the set — a total of <strong>N+1 queries</strong> (a loop). Example: given a list of posts, fetch comments (or creator name, or comment count) for each post:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math"># This results in N+1 trips to the database
+posts = Post.objects.all()            # 1 hit
+for post in posts:                    # N hits
+    comments = Comment.objects.filter(post=post)
+    # creator_name = post.creator.username                      # second N
+    # comment_count = Comment.objects.filter(post=post).count() # third N</pre></div>
+</div>
+
+<p><strong>Why it hurts:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Higher resource consumption</strong> — the database and application communicate many times, degrading CPU, memory and I/O.</li><li><strong>Increased latency</strong> — every query incurs <strong>Round-Trip Time (RTT)</strong> for the request to travel to the server and back.</li></ul>
+
+<p>As the number of objects (N) grows, the number of queries grows <strong>linearly</strong>, causing significant slowdowns.</p>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Common Trap::</strong>
+    Premature optimisation is bad. If your site is small or medium sized and pages load fine, it is okay to ignore the optimisation. Fix N+1 when it is actually a bottleneck.
+  </div>
+</div>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Background::</strong>
+    Modern databases with sophisticated query optimisers can handle complex queries efficiently (see the SQLite Query Optimizer Overview). <strong>Finding N+1 queries:</strong> use <strong>Django Debug Toolbar</strong> to inspect the SQL queries generated for each request. The TIL project provides two endpoints to compare:
+  </div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>(Problematic) <code>http://127.0.0.1:8000/til_app/posts_n_plus_one/</code></li><li>(Optimised) <code>http://127.0.0.1:8000/til_app/posts_optimized/</code></li></ul>
+
+<p>These are implemented in <code>til_app.views.post_comments_n_plus_one()</code> and <code>til_app.views.post_comments_optimized()</code> respectively.</p>
+</section>
+
+<section id="section-11" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">11</span>
+    <h2 class="section-title">Fixing N+1 with QuerySets</h2>
+  </div>
+  <p>Optimised QuerySets prevent the N+1 problem using <strong>select_related</strong>, <strong>prefetch_related</strong> and <strong>annotate</strong>. <strong>select_related()</strong> — use when fetching related objects via <strong>foreign key</strong> relationships. It performs an <strong>SQL JOIN</strong> to fetch related objects in a single query:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">posts = Post.objects.select_related(&#x27;creator&#x27;).all()
+for post in posts:
+    print(post)
+    print(post.creator.username)</pre></div>
+</div>
+
+<p>This returns a QuerySet for each post with its creator, via a single joined query:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">SELECT &quot;post&quot;.&quot;id&quot;, &quot;post&quot;.&quot;subject&quot;, &quot;post&quot;.&quot;contents&quot;, &quot;auth_user&quot;.&quot;username&quot;
+FROM &quot;post&quot;
+INNER JOIN &quot;auth_user&quot; ON (&quot;post&quot;.&quot;creator_id&quot; = &quot;auth_user&quot;.&quot;id&quot;)</pre></div>
+</div>
+
+<p><strong>prefetch_related()</strong> — use for <strong>many-to-many</strong> or <strong>reverse foreign key</strong> relationships. Django performs <strong>two queries</strong> and "joins" the results <strong>in Python</strong>:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">posts = Post.objects.prefetch_related(&#x27;post_comment&#x27;).all()
+for post in posts:
+    print(post)
+    for comment in post.post_comment.all():
+        print(comment)</pre></div>
+</div>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">SELECT &quot;post&quot;.&quot;id&quot;, &quot;post&quot;.&quot;subject&quot; FROM &quot;post&quot;;
+SELECT &quot;comment&quot;.&quot;id&quot;, &quot;comment&quot;.&quot;post_id&quot;, &quot;comment&quot;.&quot;content&quot;
+FROM &quot;comment&quot; WHERE &quot;comment&quot;.&quot;post_id&quot; IN (1, 2, 3, ...);  -- all post IDs from query 1</pre></div>
+</div>
+
+<p><strong>annotate()</strong> — aggregates data and performs calculations across related models without extra queries per related object:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">posts = Post.objects.annotate(comment_count=models.Count(&#x27;post_comment&#x27;)).all()
+for post in posts:
+    print(post.comment_count)</pre></div>
+</div>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">SELECT &quot;post&quot;.&quot;id&quot;, COUNT(&quot;post_comment&quot;.&quot;id&quot;) AS &quot;comment_count&quot;
+FROM &quot;post&quot;
+LEFT JOIN &quot;post_comment&quot; ON (&quot;post&quot;.&quot;id&quot; = &quot;post_comment&quot;.&quot;post_id&quot;)
+GROUP BY &quot;post&quot;.&quot;id&quot;</pre></div>
+</div>
+
+<p><strong>Raw SQL</strong> is also possible for complex cases, but ⚠️ you should be <strong>very careful</strong> whenever you write raw SQL, for both <strong>security</strong> and <strong>performance</strong> reasons.</p>
+
+<div class="callout callout-memory">
+  <div class="callout-icon">🧠</div>
+  <div class="callout-content">
+    <strong>Memory Hook::</strong>
+    <strong>select_related = one JOIN for single-valued (FK) links; prefetch_related = two queries joined in Python for many-valued links; annotate = compute the count in the database.</strong>
+  </div>
+</div>
+</section>
+
+<section id="section-12" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">12</span>
+    <h2 class="section-title">Mitigating Remaining N+1</h2>
+  </div>
+  <p>Sometimes N+1 cannot be avoided entirely. Strategies to mitigate performance:</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Pagination (infinite scroll)</strong> — load a few items at a time using Django's built-in pagination utilities:</li></ul>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">from django.core.paginator import Paginator
+paginator = Paginator(Post.objects.all(), 9)   # Show 9 posts per page
+page_number = request.GET.get(&#x27;page&#x27;)
+page_obj = paginator.get_page(page_number)</pre></div>
+</div>
+
+<p>See <code>til_app.views.posts()</code> and <code>template/post/posts.html</code> for a simple pagination with infinite scroll (read more about Django Pagination).</p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Lazy loading</strong> — load only the data needed at a given time, avoiding unnecessary fetching. Commonly used in frontend optimisation for images and videos.</li><li><strong>Caching in Django</strong> — store frequently accessed data to reduce database hits (see Django's cache framework).</li></ul>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Combined, pagination caps how much work each request does, lazy loading defers non-essential data, and caching removes repeated database hits — three independent levers.
+  </div>
+</div>
+</section>
+
+<section id="section-13" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">13</span>
+    <h2 class="section-title">Async Task Queues &amp; Celery</h2>
+  </div>
+  <div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Optional reading — NOT assessed in the final exam:</strong>
+    (Chapters 4 and 5 are provided for interest and broader topics). An <strong>asynchronous task queue</strong> executes tasks at a <strong>different time</strong> from when they were created, and possibly <strong>not in the same order</strong>. It lets you run background tasks outside the main application process, enabling <strong>non-blocking operations</strong>. <strong>Basic concepts:</strong>
+  </div>
+</div>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Task/Job</strong> — a unit of work performed asynchronously (sending an email, processing a file).</li><li><strong>Task Queue</strong> — a data structure holding tasks to be executed.</li><li><strong>Broker/Message Queue</strong> — middleware handling storage and delivery of tasks (Redis, RabbitMQ, Amazon SQS).</li><li><strong>Producer</strong> — the entity (code, web app) that creates tasks and puts them in the queue.</li><li><strong>Worker</strong> — a process that fetches tasks and executes them; multiple workers can run concurrently, and most commonly each worker runs as a <strong>daemon under supervision</strong>.</li></ol>
+
+<div class="callout callout-info">
+  <div class="callout-icon">ℹ️</div>
+  <div class="callout-content">
+    <strong>Background::</strong>
+    "Task queue" is not a traditional academic term; in Django it usually means an <strong>asynchronous</strong> task queue. The concept is closely related to message queues and message-oriented middleware, rooted in distributed systems and concurrent computing. <strong>When you need a task queue:</strong>
+  </div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Long-running tasks</strong> — sending emails, generating reports, processing large files, image processing.</li><li><strong>Resource-intensive operations</strong> — video encoding, ML model training.</li><li><strong>Scheduled tasks</strong> — backups, data synchronisation, periodic notifications.</li><li><strong>Concurrency</strong> — running tasks at controlled rates.</li></ul>
+
+<div class="table-container">
+  <table class="study-table">
+<thead><tr><th>Issue</th><th>Use Task Queue?</th><th>Reason</th></tr></thead>
+<tbody><tr><td>Sending bulk email</td><td>Yes</td><td>Each send involves network I/O; bulk sends are slow inline</td></tr><tr><td>Modifying files (including images)</td><td>Yes</td><td>File/image processing is CPU/I/O intensive</td></tr><tr><td>Fetching large data from third-party APIs</td><td>Yes</td><td>Network calls are slow and can exceed request timeouts</td></tr><tr><td>Inserting/updating many records</td><td>Yes</td><td>Bulk DB operations can be long-running; safer asynchronously</td></tr><tr><td>Time-intensive calculations</td><td>Yes</td><td>CPU-bound; should not block the main web thread</td></tr><tr><td>Updating a user profile</td><td>No</td><td>Simple DB write, completes in milliseconds</td></tr><tr><td>Adding a blog</td><td>No</td><td>One insert and maybe a few updates; fast enough inline</td></tr></tbody>
+  </table>
+</div>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Not for user-interactive tasks::</strong>
+    a task queue is <strong>not suitable for User-Interactive tasks.</strong> A task queue can add complexity but can improve user experience; arguably it comes down to whether a piece of code causes a bottleneck and can be deferred until more CPU cycles are free. <strong>Implementations in Django:</strong>
+  </div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>Celery</strong> — a robust, distributed task queue system supporting complex workflows and high concurrency. Ideal for heavy background tasks (bulk emails, large data sets, scheduled jobs). Works with multiple brokers (Redis, RabbitMQ) and offers <strong>task retry, chaining, and monitoring</strong>. In the TIL project, Celery is used for <strong>asynchronous email services</strong>.</li><li><strong>Django native asynchronous support</strong> — async views and an entirely async-enabled request stack under ASGI. Async views still work under WSGI but with performance penalties and without efficient long-running requests.</li><li><strong>Other lightweight task queues</strong> — Django Q and Huey.</li></ul>
+
+<p><strong>Where the code lives in TIL:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>til_api.views.RegisterView()</strong> — enqueues the email task during user registration.</li><li><strong>til_api.tasks</strong> — contains the Celery task(s) that actually send the email.</li></ul>
+
+<div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Settings reminder::</strong>
+    the TIL project is configured for <strong>demo purposes</strong>:
+  </div>
+</div>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The <strong>.env</strong> file uses <strong>placeholder values</strong> for email; replace them with a real email service configuration to make it work.</li><li>In settings, <strong>celery_task_always_eager = True</strong> is enabled, meaning tasks run <strong>synchronously in-process</strong>, not in a real background worker.</li></ul>
+
+<p>For true asynchronous behaviour you must change these settings and run Celery with a broker.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    celery_task_always_eager = True is a great teaching trap: the code <em>looks</em> asynchronous, but it executes inline, so you will not observe real background behaviour.
+  </div>
+</div>
+</section>
+
+<section id="section-14" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">14</span>
+    <h2 class="section-title">WebSockets &amp; Django Channels</h2>
+  </div>
+  <div class="callout callout-warning">
+  <div class="callout-icon">⚠️</div>
+  <div class="callout-content">
+    <strong>Optional reading — NOT assessed in the final exam.:</strong>
+    <strong>WebSocket</strong> is a protocol enabling <strong>real-time, two-way communication</strong> between a client (a browser) and a server over a <strong>single, persistent connection</strong>. Unlike traditional HTTP, which needs separate requests for each interaction, WebSocket allows <strong>continuous, low-latency</strong> communication. This suits <strong>chat applications, live notifications, online gaming, and collaborative tools</strong>. The latest specification is <strong>RFC 6455</strong>, supported by Chrome, Safari and Firefox. <strong>Django Channels</strong> extends Django beyond HTTP, enabling it to handle protocols that require <strong>long-running connections</strong> such as WebSocket, MQTT and more. It lets Django manage real-time functionality (chat rooms, live updates, notifications) while staying compatible with the standard Django ecosystem. <strong>Key concepts:</strong>
+  </div>
+</div>
+
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>ASGI (Asynchronous Server Gateway Interface)</strong> — Channels uses ASGI instead of WSGI to support asynchronous protocols; ASGI is the asynchronous counterpart of WSGI, enabling WebSockets and other long-lived connections.</li><li><strong>Consumers</strong> — the basic unit of Channels code; Django's equivalent of <strong>views</strong> for handling WebSocket and other asynchronous events. Consumers structure code as functions called whenever an event happens, rather than making you write an event loop, and they handle synchronous/async code plus handoffs and threading for you.</li><li><strong>Routing</strong> — like Django's URL routing for HTTP, Channels routes WebSocket connections and protocol events to specific consumers, letting you combine and stack consumers (and other valid ASGI applications).</li><li><strong>Channel Layers</strong> — a mechanism for communication between different instances of the application; a <strong>cross-process communication layer</strong> supporting group and broadcast messaging. Channel layers use backends such as <strong>Redis or in-memory storage</strong>.</li></ol>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    HTTP is request/response; chat needs a two-way pipe. ASGI + consumers + routing + channel layers are the four moving parts that turn Django into a real-time server.
+  </div>
+</div>
+</section>
+
+<section id="section-15" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">15</span>
+    <h2 class="section-title">Building the Chat Room</h2>
+  </div>
+  <p>The TIL project extends itself to support <strong>real-time chat using Django Channels</strong>, combining WebSockets, a consumer, and a simple frontend template in til_app. The chat can be tested at <code>http://127.0.0.1:8000/til_app/chat/All/</code>. <strong>1. Settings and ASGI configuration.</strong> In <strong>til_project/settings.py</strong>, add Channels and configure ASGI and channel layers:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">INSTALLED_APPS = [
+    &#x27;daphne&#x27;,
+    &#x27;channels&#x27;,
+    ...
+]
+ASGI_APPLICATION = &#x27;til_project.asgi.application&#x27;
+CHANNEL_LAYERS = {
+    &quot;default&quot;: {&quot;BACKEND&quot;: &quot;channels.layers.InMemoryChannelLayer&quot;}
+}</pre></div>
+</div>
+
+<p>In <strong>til_project/asgi.py</strong>, route HTTP to Django and WebSockets to Channels:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">websocket_urlpatterns = [
+    re_path(r&#x27;ws/chat/(?P&lt;room_name&gt;\w+)/$&#x27;, consumers.ChatConsumer.as_asgi()),
+]
+application = ProtocolTypeRouter({
+    &quot;http&quot;: django_asgi_app,
+    &quot;websocket&quot;: AllowedHostsOriginValidator(
+        AuthMiddlewareStack(URLRouter(websocket_urlpatterns))
+    ),
+})</pre></div>
+</div>
+
+<p><strong>2. Routing and consumers.</strong> In <strong>til_app/routing.py</strong>, define WebSocket URL patterns. In <strong>til_app/consumers.py</strong>, handle WebSocket connections, save messages, and broadcast:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">class ChatConsumer(WebsocketConsumer):
+    def connect(self):
+        self.room_name = self.scope[&#x27;url_route&#x27;][&#x27;kwargs&#x27;][&#x27;room_name&#x27;]
+        self.room_group_name = f&quot;chat_{self.room_name}&quot;
+        async_to_sync(self.channel_layer.group_add)(
+            self.room_group_name,
+            self.channel_name
+        )
+        self.accept()
+    def receive(self, text_data):
+        data = json.loads(text_data)
+        async_to_sync(self.channel_layer.group_send)(
+            self.room_group_name,
+            {&quot;type&quot;: &quot;chat_message&quot;, &quot;username&quot;: data[&quot;username&quot;], &quot;message&quot;: data[&quot;message&quot;]}
+        )
+    def chat_message(self, event):
+        self.send(text_data=json.dumps(event))</pre></div>
+</div>
+
+<p><strong>3. Views and URLs.</strong></p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math"># til_app/views.py
+@login_required
+def chat(request, room):
+    messages = ChatMessage.objects.filter(room_name=room).order_by(&#x27;timestamp&#x27;)[:50]
+    return render(request, &quot;chat/index.html&quot;,
+                  {&quot;room_name&quot;: room, &quot;messages&quot;: reversed(messages)})</pre></div>
+</div>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math"># til_app/urls.py
+path(&#x27;chat/&lt;str:room&gt;/&#x27;, views.chat, name=&#x27;chat&#x27;)</pre></div>
+</div>
+
+<p><strong>4. Template and frontend logic.</strong> In <strong>template/chat/index.html</strong>, connect to the WebSocket and display messages dynamically:</p>
+
+<div class="formula-block">
+  <div class="formula-title">Reference</div>
+  <div class="formula-math"><pre class="formula-math">const chatSocket = new WebSocket(
+    (window.location.protocol === &#x27;https:&#x27; ? &#x27;wss://&#x27; : &#x27;ws://&#x27;) +
+    window.location.host + &#x27;/ws/chat/&#x27; + &quot;{{ room_name }}&quot; + &#x27;/&#x27;
+);
+chatSocket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    // Append new messages to chat window
+};
+document.querySelector(&#x27;#chat-message-submit&#x27;).onclick = function() {
+    chatSocket.send(JSON.stringify({
+        &#x27;username&#x27;: &#x27;{{ user.username }}&#x27;,
+        &#x27;email&#x27;: &#x27;{{ user.email }}&#x27;,
+        &#x27;message&#x27;: messageInput.value
+    }));
+};</pre></div>
+</div>
+
+<p><strong>Summary of the structure:</strong></p>
+
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li><strong>settings.py + asgi.py</strong> → enable Channels and WebSocket support.</li><li><strong>routing.py + consumers.py</strong> → manage connections and message broadcasting.</li><li><strong>views.py + urls.py</strong> → serve chat pages and history.</li><li><strong>index.html</strong> → frontend UI and JavaScript logic for sending/receiving messages.</li></ul>
+
+<p>This structure demonstrates a minimal yet functional real-time chat system with Django Channels.</p>
+
+<div class="callout callout-why">
+  <div class="callout-icon">💡</div>
+  <div class="callout-content">
+    <strong>Why It Matters::</strong>
+    Notice the separation: ASGI wiring chooses the protocol, routing maps the URL to a consumer, the consumer manages the connection and broadcasts, and the view/template handle the ordinary HTTP page and JavaScript client.
+  </div>
+</div>
+</section>
+
+<section id="key-takeaways" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">16</span>
+    <h2 class="section-title">15 Key Takeaways</h2>
+  </div>
+  <div class="takeaways-list">
+<div class="takeaway-item">
+  <span class="takeaway-num">1</span>
+  <div><strong><strong>DRF is Django's Web API toolkit</strong></strong> — it supports web, mobile and B2B clients with serialization, auth and permissions.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">2</span>
+  <div><strong><strong>Serializers translate models to JSON and back</strong></strong> — ModelSerializer generates fields and default create()/update().</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">3</span>
+  <div><strong><strong>Validate at field and object level</strong></strong> — validate_&lt;field&gt;() for one field, validate() for the whole object.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">4</span>
+  <div><strong><strong>request.data and Response()</strong></strong> — DRF gives parsed request data and content-negotiated responses.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">5</span>
+  <div><strong><strong>Three view styles</strong></strong> — APIView for control, generic views for standard patterns, function-based views for simple custom logic.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">6</span>
+  <div><strong><strong>Pagination is configurable globally or per view</strong></strong> — and only auto-applies to generic views/viewsets.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">7</span>
+  <div><strong><strong>Authentication, permissions and throttling are separate concerns</strong></strong> — identity, authorisation, and rate limiting.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">8</span>
+  <div><strong><strong>A JWT is header.payload.signature</strong></strong> — header has alg/typ, payload holds claims (iss, exp, sub, aud), signature guards integrity.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">9</span>
+  <div><strong><strong>JWTs are stateless and scale well</strong></strong> — but they are hard to revoke and not for one-time use; use blacklists and short-lived access tokens with refresh tokens.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">10</span>
+  <div><strong><strong>Traditional DB tokens suit one-time actions</strong></strong> — email verification, password reset, single-use coupons.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">11</span>
+  <div><strong><strong>The N+1 problem is a query loop</strong></strong> — one query for the set plus N for related records, worsening linearly and adding RTT latency.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">12</span>
+  <div><strong><strong>select_related, prefetch_related, annotate fix N+1</strong></strong> — FK JOIN, many-valued two-query prefetch, and database-side aggregation respectively.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">13</span>
+  <div><strong><strong>Sometimes N+1 remains</strong></strong> — mitigate with pagination, lazy loading and caching.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">14</span>
+  <div><strong><strong>Async task queues run work out of band</strong></strong> — Celery is robust and distributed; TIL uses it for email and runs eagerly for the demo.</div>
+</div>
+<div class="takeaway-item">
+  <span class="takeaway-num">15</span>
+  <div><strong><strong>WebSocket gives persistent two-way communication</strong></strong> — Django Channels adds ASGI, consumers, routing and channel layers for real-time features.</div>
+</div>
+</div>
+</section>
+
+<section id="terms-to-know" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">17</span>
+    <h2 class="section-title">Terms to Know (Glossary)</h2>
+  </div>
+  <div class="glossary-controls">
+  <button class="filter-chip active" onclick="filterTerms('all', this)">All (40)</button>
+  <button class="filter-chip" onclick="filterTerms('models', this)">Core Concepts</button>
+  <button class="filter-chip" onclick="filterTerms('pipeline', this)">Architecture & Data</button>
+</div>
+<div class="terms-grid" id="terms-container">
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>APIView</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Base class for all DRF views; subclasses Django's View.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>annotate()</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">QuerySet method that aggregates/calculates across related models in the database.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ASGI</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Asynchronous Server Gateway Interface; Channels uses it instead of WSGI.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Authentication</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Verifying the identity of the user making a request.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Bearer schema</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">The Authorization header scheme used to send a JWT.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Broker</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Middleware that stores and delivers tasks (Redis, RabbitMQ, Amazon SQS).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Celery</strong> <span class="badge" style="background:var(--accent-emerald-bg); color:var(--accent-emerald);">Production</span></div>
+    <div class="term-desc">Robust distributed task queue system supporting workflows, retries, chaining and monitoring.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>celery_task_always_eager</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Setting that runs Celery tasks synchronously in-process for the TIL demo.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Channel Layers</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Cross-process communication layer for group/broadcast messaging; uses Redis or in-memory backends.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Channels</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Django extension that handles long-running protocols such as WebSocket and MQTT.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Claims</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Statements in a JWT payload (iss, exp, sub, aud) about the user or data.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Consumers</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Basic unit of Channels code; Django's equivalent of views for async/WebSocket events.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Django Debug Toolbar</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Tool for inspecting the SQL queries generated per request; used to find N+1.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Django Q / Huey</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Lightweight alternative task queues.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>DRF</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Django REST Framework; toolkit for building Web APIs.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>function-based views</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">DRF views using regular functions, decorated with @api_view.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>Generic API views</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Pre-built DRF views (e.g. ListAPIView) mapping closely to database models.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>JWT</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">JSON Web Token; compact URL-safe signed representation of claims (RFC 7519).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ListAPIView</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Generic DRF view for listing multiple objects.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="models">
+  <div>
+    <div class="term-title"><strong>ModelSerializer</strong> <span class="badge" style="background:var(--primary-light); color:var(--primary);">Model</span></div>
+    <div class="term-desc">Serializer shortcut that auto-generates fields and create()/update().</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>N+1 query problem</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Performance issue where one query plus N related queries run in a loop.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Pagination</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Limiting list results into pages; configurable globally or per view.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Permissions</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Rules determining whether a request is granted or denied.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>prefetch_related()</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">QuerySet method for many-to-many/reverse FK relations; two queries joined in Python.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Producer</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Entity that creates tasks and puts them in the queue.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>ProtocolTypeRouter</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">ASGI router that dispatches by protocol (http vs websocket).</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>QueryDict</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Dictionary-like object holding parsed request data in request.data.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>REST / RESTful</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Architectural style using HTTP semantics to expose resources.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Routing (Channels)</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Maps WebSocket connections/events to specific consumers.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>select_related()</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">QuerySet method for foreign keys; performs a SQL JOIN in one query.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Serializer</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">DRF class converting complex types to/from native Python types.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Simple JWT</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">JWT authentication backend for DRF with conservative defaults, used by til_api.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Task Queue</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Data structure holding async tasks to be executed by workers.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Throttling</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Limiting the rate of API requests to prevent abuse.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>token blacklist</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Mechanism to revoke JWTs, which are otherwise non-revocable until expiry.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>validate_&lt;field_name&gt;()</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Serializer field-level validation method.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>validate()</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Serializer object-level validation method taking a dictionary of field values.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>WebSocket</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Protocol (RFC 6455) for persistent, two-way, low-latency client-server communication.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>Worker</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Process that fetches tasks from a queue and executes them, often as a supervised daemon.</div>
+  </div>
+</div>
+
+  <div class="term-card" data-cat="pipeline">
+  <div>
+    <div class="term-title"><strong>WSGI</strong> <span class="badge" style="background:var(--accent-blue-bg); color:var(--accent-blue);">Pipeline</span></div>
+    <div class="term-desc">Synchronous gateway interface; the counterpart to ASGI.</div>
+  </div>
+</div>
+</div>
+</section>
+
+<section id="mnemonics" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">18</span>
+    <h2 class="section-title">Mnemonics &amp; Quick Recall</h2>
+  </div>
+  <div class="grid-2">
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 JWT Parts</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">H-P-S</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Header, Payload, Signature,&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—  separated by dots.</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 JWT Header Fields</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">A-T</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;alg (algorithm) and typ (type).&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🔄 JWT Workflow</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">G-S-V</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Generate on login, Send as Bearer, Validate signature and expiry.&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 N+1 Fixes</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">S-P-A</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Select_related (FK), Prefetch_related (M2M/reverse), Annotate (counts).&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Remaining N+1 Mitigations</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">P-L-C</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Pagination, Lazy loading, Caching.&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 DRF View Choice</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">A-G-F</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;APIView (control), Generic (standard), Function-based (simple custom).&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Task Queue Uses</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">L-R-S-C</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Long-running, Resource-intensive, Scheduled, Concurrency.&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Channels Stack</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">A-C-R-L</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;ASGI, Consumers, Routing, Channel Layers.&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+
+<div class="card">
+<h3 class="subsection-title" style="color: var(--primary); margin-top:0;">🪄 Task Queue Classes</h3>
+<div style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">P-Q-B-W</div>
+<p style="font-style: italic; color: var(--accent-purple); font-weight: 600;">&ldquo;Producer, Queue, Broker, Worker.&rdquo;</p>
+<p style="font-size: 0.85rem; color: var(--text-muted);">—</p>
+</div>
+</div>
+</section>
+
+<section id="worked-examples" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">19</span>
+    <h2 class="section-title">Worked Scenarios &amp; Calculations</h2>
+  </div>
+  <div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 1 &bull; From ModelInstance to JSON</div>
+  <h3 class="subsection-title" style="margin-top:0;">From ModelInstance to JSON</h3>
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>A <strong>ModelSerializer</strong> (<code>PostSerializer</code>) inherits from <code>serializers.ModelSerializer</code>.</li><li><code>class Meta</code> sets <code>model = Post</code> and lists the fields.</li><li>Fetch a single object: <code>post = Post.objects.first()</code>.</li><li>Serialize it: <code>serializer = PostSerializer(post)</code>.</li><li>Read <code>serializer.data</code> — a dictionary with id, subject, contents, created_at, visibility, tags (a nested list) and image, ready to render as JSON.</li></ol>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 2 &bull; Add Up the Queries in an N+1 Loop</div>
+  <h3 class="subsection-title" style="margin-top:0;">Add Up the Queries in an N+1 Loop</h3>
+<p>The lab's loop does three things per post: filter comments, read the creator username, and count comments. For N posts:</p>
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>1 query to fetch all posts.</li><li>N queries for comments, plus up to N for creator names and N for counts.</li></ul>
+<p>Those are the "N+1 trips to the database." Fix with <code>select_related('creator')</code> for the creator (one JOIN), <code>prefetch_related('post_comment')</code> for comments (two queries joined in Python), and <code>annotate(comment_count=models.Count('post_comment'))</code> for the count (computed by the database).</p>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 3 &bull; JWT vs Session</div>
+  <h3 class="subsection-title" style="margin-top:0;">JWT vs Session in a Scaling Scenario</h3>
+<p>A stateless API behind a load balancer with several app servers needs to authenticate each request. With <strong>JWT</strong>, the token is self-contained and verified locally with no shared session store, so it scales easily — but a leaked token stays valid until it expires unless you add a blacklist. With <strong>sessions</strong>, the server must look up shared state on each request and centralised state is harder to scale, but a session can be invalidated instantly. Choose based on whether you value scalability (JWT) or easy revocation (session).</p>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 4 &bull; Should This Be a Background Task?</div>
+  <h3 class="subsection-title" style="margin-top:0;">Should This Be a Background Task?</h3>
+<ul style='padding-left: 1.2rem; font-size: 0.9rem;'><li>Sending bulk email → <strong>Yes</strong> (network I/O, slow inline).</li><li>Generating an image thumbnail → <strong>Yes</strong> (CPU/I/O intensive).</li><li>Updating a user profile → <strong>No</strong> (simple millisecond DB write).</li><li>A live chat message the user is waiting to see → <strong>No</strong> (task queues are not for user-interactive tasks).</li></ul>
+</div>
+
+<div class="card">
+  <div class="badge" style="background: var(--accent-blue-bg); color: var(--accent-blue); margin-bottom: 0.5rem;">Scenario 5 &bull; Tracing a Chat</div>
+  <h3 class="subsection-title" style="margin-top:0;">Tracing a Chat Message Through Channels</h3>
+<ol style='padding-left: 1.2rem; font-size: 0.9rem;'><li>The browser opens a WebSocket to <code>/ws/chat/All/</code> using the JS <code>WebSocket</code> constructor.</li><li><strong>Routing</strong> matches the URL to <code>ChatConsumer</code>.</li><li><code>connect()</code> joins the channel layer group <code>chat_All</code> and calls <code>self.accept()</code>.</li><li>The user clicks send; the JS calls <code>chatSocket.send(JSON.stringify({...}))</code>.</li><li><code>receive()</code> parses the JSON and calls <code>group_send</code> with type <code>chat_message</code>.</li><li><code>chat_message()</code> sends the event back out to the group; each client's <code>onmessage</code> appends it.</li></ol>
+</div>
+</section>
+
+<section id="exam-focus" class="guide-section">
+  <div class="section-header">
+    <span class="section-number">20</span>
+    <h2 class="section-title">Potential Exam Focus &amp; Practice</h2>
+  </div>
+  <div class="exam-toolbar">
+  <div class="exam-progress" id="exam-progress-tracker">Progress: 0 / 20 Mastered</div>
+  <div class="exam-actions">
+    <button class="btn-secondary" onclick="toggleAllAnswers(true)">Reveal All</button>
+    <button class="btn-secondary" onclick="toggleAllAnswers(false)">Hide All</button>
+    <button class="btn-secondary" onclick="resetExamProgress()">Reset Progress</button>
+  </div>
+</div><div class="quiz-card" id="q1">
+  <div class="quiz-header" onclick="toggleAnswer('ans-1')">
+    <span class="quiz-qnum">Q1</span>
+    <div class="quiz-question">What does DRF serialization do, and how does ModelSerializer simplify it?</div>
+  </div>
+  <div class='quiz-answer' id='ans-1'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>It converts model instances/querysets into native Python types (and back via deserialization); ModelSerializer auto-generates fields from the model and provides default create() and update().</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-1')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q1', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q2">
+  <div class="quiz-header" onclick="toggleAnswer('ans-2')">
+    <span class="quiz-qnum">Q2</span>
+    <div class="quiz-question">How do you validate a single field versus the whole object in DRF?</div>
+  </div>
+  <div class='quiz-answer' id='ans-2'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Add validate_&lt;field_name&gt;() for field-level validation of one value; override validate() for object-level validation using a dictionary of field values.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-2')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q2', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q3">
+  <div class="quiz-header" onclick="toggleAnswer('ans-3')">
+    <span class="quiz-qnum">Q3</span>
+    <div class="quiz-question">What is the difference between APIView, generic views and function-based views?</div>
+  </div>
+  <div class='quiz-answer' id='ans-3'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>APIView is the base class giving full control; generic views are pre-built patterns mapping to models (e.g. ListAPIView); function-based views use @api_view for simple or highly custom logic.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-3')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q3', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q4">
+  <div class="quiz-header" onclick="toggleAnswer('ans-4')">
+    <span class="quiz-qnum">Q4</span>
+    <div class="quiz-question">How is pagination configured and when does it apply automatically?</div>
+  </div>
+  <div class='quiz-answer' id='ans-4'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Set DEFAULT_PAGINATION_CLASS and PAGE_SIZE globally, or a pagination_class per view; automatic pagination applies when using generic views or viewsets.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-4')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q4', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q5">
+  <div class="quiz-header" onclick="toggleAnswer('ans-5')">
+    <span class="quiz-qnum">Q5</span>
+    <div class="quiz-question">Distinguish authentication, permissions and throttling.</div>
+  </div>
+  <div class='quiz-answer' id='ans-5'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Authentication verifies identity; permissions decide if a request is granted or denied; throttling limits the rate of requests within a time period.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-5')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q5', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q6">
+  <div class="quiz-header" onclick="toggleAnswer('ans-6')">
+    <span class="quiz-qnum">Q6</span>
+    <div class="quiz-question">Name the three parts of a JWT and what each holds.</div>
+  </div>
+  <div class='quiz-answer' id='ans-6'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Header (metadata: alg, typ), Payload (claims such as iss, exp, sub, aud), Signature (built by signing encoded header and payload with a secret/private key).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-6')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q6', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q7">
+  <div class="quiz-header" onclick="toggleAnswer('ans-7')">
+    <span class="quiz-qnum">Q7</span>
+    <div class="quiz-question">Describe the JWT workflow from login to a protected request.</div>
+  </div>
+  <div class='quiz-answer' id='ans-7'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>The server generates the token on authentication and returns it; the client sends it in the Authorization header using the Bearer schema; the server checks the signature and expiry and processes or rejects the request.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-7')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q7', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q8">
+  <div class="quiz-header" onclick="toggleAnswer('ans-8')">
+    <span class="quiz-qnum">Q8</span>
+    <div class="quiz-question">Why are JWTs hard to revoke, and what practices mitigate this?</div>
+  </div>
+  <div class='quiz-answer' id='ans-8'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>They are non-revocable by default and valid until expiry; use a token blacklist and short-lived access tokens with refresh tokens.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-8')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q8', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q9">
+  <div class="quiz-header" onclick="toggleAnswer('ans-9')">
+    <span class="quiz-qnum">Q9</span>
+    <div class="quiz-question">When is a traditional database token better than a JWT?</div>
+  </div>
+  <div class='quiz-answer' id='ans-9'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>For one-time or immediately revocable actions like email verification, password reset, and single-use coupon codes.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-9')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q9', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q10">
+  <div class="quiz-header" onclick="toggleAnswer('ans-10')">
+    <span class="quiz-qnum">Q10</span>
+    <div class="quiz-question">What exactly is the N+1 query problem?</div>
+  </div>
+  <div class='quiz-answer' id='ans-10'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A query loop where one initial query retrieves a set and then N additional queries look up related records, giving N+1 total queries and linearly increasing cost.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-10')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q10', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q11">
+  <div class="quiz-header" onclick="toggleAnswer('ans-11')">
+    <span class="quiz-qnum">Q11</span>
+    <div class="quiz-question">Which QuerySet method fixes foreign-key lookups, and which fixes many-to-many lookups?</div>
+  </div>
+  <div class='quiz-answer' id='ans-11'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>select_related() for foreign keys (single SQL JOIN); prefetch_related() for many-to-many/reverse FK (two queries joined in Python).</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-11')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q11', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q12">
+  <div class="quiz-header" onclick="toggleAnswer('ans-12')">
+    <span class="quiz-qnum">Q12</span>
+    <div class="quiz-question">What does annotate() do in the N+1 context?</div>
+  </div>
+  <div class='quiz-answer' id='ans-12'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>It aggregates/calculates across related models (e.g. Count of comments) in the database, avoiding a query per object.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-12')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q12', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q13">
+  <div class="quiz-header" onclick="toggleAnswer('ans-13')">
+    <span class="quiz-qnum">Q13</span>
+    <div class="quiz-question">Name three ways to mitigate N+1 when it cannot be fully avoided.</div>
+  </div>
+  <div class='quiz-answer' id='ans-13'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>Pagination (load few items at a time), lazy loading, and caching.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-13')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q13', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q14">
+  <div class="quiz-header" onclick="toggleAnswer('ans-14')">
+    <span class="quiz-qnum">Q14</span>
+    <div class="quiz-question">What is an asynchronous task queue, and name its five basic concepts.</div>
+  </div>
+  <div class='quiz-answer' id='ans-14'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>It runs tasks at a different time from creation, possibly out of order; concepts are Task/Job, Task Queue, Broker/Message Queue, Producer, and Worker.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-14')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q14', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q15">
+  <div class="quiz-header" onclick="toggleAnswer('ans-15')">
+    <span class="quiz-qnum">Q15</span>
+    <div class="quiz-question">When should you NOT use a task queue?</div>
+  </div>
+  <div class='quiz-answer' id='ans-15'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>For user-interactive tasks, and for simple fast operations like updating a user profile or adding a blog.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-15')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q15', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q16">
+  <div class="quiz-header" onclick="toggleAnswer('ans-16')">
+    <span class="quiz-qnum">Q16</span>
+    <div class="quiz-question">What is Celery, and what is the demo caveat in the TIL project?</div>
+  </div>
+  <div class='quiz-answer' id='ans-16'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>A robust distributed task queue supporting workflows and high concurrency, used for async email; the TIL project sets celery_task_always_eager = True so tasks run synchronously in-process.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-16')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q16', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q17">
+  <div class="quiz-header" onclick="toggleAnswer('ans-17')">
+    <span class="quiz-qnum">Q17</span>
+    <div class="quiz-question">How does WebSocket differ from HTTP, and what does Channels add?</div>
+  </div>
+  <div class='quiz-answer' id='ans-17'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>WebSocket gives persistent, two-way, low-latency communication over a single connection; Channels adds ASGI support, consumers, routing and channel layers so Django can handle it.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-17')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q17', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q18">
+  <div class="quiz-header" onclick="toggleAnswer('ans-18')">
+    <span class="quiz-qnum">Q18</span>
+    <div class="quiz-question">What are the four key Channels concepts?</div>
+  </div>
+  <div class='quiz-answer' id='ans-18'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>ASGI, Consumers, Routing, and Channel Layers.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-18')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q18', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q19">
+  <div class="quiz-header" onclick="toggleAnswer('ans-19')">
+    <span class="quiz-qnum">Q19</span>
+    <div class="quiz-question">In the chat app, what happens in connect(), receive() and chat_message()?</div>
+  </div>
+  <div class='quiz-answer' id='ans-19'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>connect() joins the group and accepts; receive() parses incoming JSON and group_sends a chat_message; chat_message() sends the event back out to the group.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-19')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q19', this)"> Mastered
+    </label>
+  </div>
+</div>
+
+<div class="quiz-card" id="q20">
+  <div class="quiz-header" onclick="toggleAnswer('ans-20')">
+    <span class="quiz-qnum">Q20</span>
+    <div class="quiz-question">Are Celery and WebSocket assessed in the final exam?</div>
+  </div>
+  <div class='quiz-answer' id='ans-20'>
+    <strong>Answer:</strong>
+    <div style='margin-top:0.3rem;'>No — Chapters 4 and 5 are optional reading and are not assessed in the final exam.</div>
+  </div>
+  <div class="quiz-status-toggle">
+    <button class="quiz-toggle-btn" onclick="toggleAnswer('ans-20')">👁️ Show / Hide Answer</button>
+    <label style="margin-left: auto; cursor: pointer;">
+      <input type="checkbox" onchange="toggleMastered('q20', this)"> Mastered
+    </label>
+  </div>
+</div>
+</section>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+<p><strong>ELEC3609 Engineering Study Guide</strong> &bull; Week 7: Django REST Framework &amp; Django Advanced · Lab 7</p>
+    <p style="font-size: 0.75rem; margin-top: 0.4rem;">Generated for self-paced revision and exam preparation.</p>
+  </footer>
+
+  <!-- Interactive JavaScript -->
+  <script>
+// Theme Toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let currentTheme = localStorage.getItem('study_theme') || (prefersDark ? 'dark' : 'light');
+
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        themeBtn.textContent = '☀️';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        themeBtn.textContent = '🌙';
+      }
+      localStorage.setItem('study_theme', theme);
+    }
+    applyTheme(currentTheme);
+
+    themeBtn.addEventListener('click', () => {
+      currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      applyTheme(currentTheme);
+    });
+
+    // Mobile Menu Toggle
+    const menuBtn = document.getElementById('menu-btn');
+    const sidebar = document.getElementById('sidebar');
+    menuBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+    });
+
+    // Close sidebar when clicking links on mobile
+    document.querySelectorAll('.nav-link').forEach(link => {
+      link.addEventListener('click', () => {
+        if (window.innerWidth <= 1024) {
+          sidebar.classList.remove('open');
+        }
+      });
+    });
+
+    // Reading Progress & Active Nav Link Highlight
+    window.addEventListener('scroll', () => {
+      const winScroll = document.documentElement.scrollTop || document.body.scrollTop;
+      const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const scrolled = (winScroll / height) * 100;
+      document.getElementById('progress-bar').style.width = scrolled + '%';
+
+      // Active Section Highlighting
+      const sections = document.querySelectorAll('section.guide-section, section.hero-card');
+      let currentSecId = '';
+      sections.forEach(sec => {
+        const top = sec.offsetTop - 120;
+        if (winScroll >= top) {
+          currentSecId = sec.getAttribute('id');
+        }
+      });
+
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + currentSecId) {
+          link.classList.add('active');
+        }
+      });
+    });
+
+    // Interactive Confusion Matrix Calculator Logic
+    function calculateMetrics() {
+      const tp = parseFloat(document.getElementById('inp-tp').value) || 0;
+      const fn = parseFloat(document.getElementById('inp-fn').value) || 0;
+      const fp = parseFloat(document.getElementById('inp-fp').value) || 0;
+      const tn = parseFloat(document.getElementById('inp-tn').value) || 0;
+
+      const total = tp + fn + fp + tn;
+      const acc = total > 0 ? ((tp + tn) / total) * 100 : 0;
+      const prec = (tp + fp) > 0 ? (tp / (tp + fp)) * 100 : 0;
+      const rec = (tp + fn) > 0 ? (tp / (tp + fn)) * 100 : 0;
+      const f1 = (prec + rec) > 0 ? 2 * (prec * rec) / (prec + rec) / 100 : 0;
+
+      document.getElementById('res-acc').textContent = acc.toFixed(1) + '%';
+      document.getElementById('res-prec').textContent = (tp + fp) > 0 ? prec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-rec').textContent = (tp + fn) > 0 ? rec.toFixed(1) + '%' : 'Undefined';
+      document.getElementById('res-f1').textContent = (prec + rec) > 0 ? f1.toFixed(3) : '0.000';
+    }
+
+    function setPreset(tp, fp, tn, fn) {
+      document.getElementById('inp-tp').value = tp;
+      document.getElementById('inp-fp').value = fp;
+      document.getElementById('inp-tn').value = tn;
+      document.getElementById('inp-fn').value = fn;
+      calculateMetrics();
+    }
+
+    // Glossary Filter Logic
+    function filterTerms(category, btn) {
+      document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+
+      const cards = document.querySelectorAll('.term-card');
+      cards.forEach(card => {
+        if (category === 'all' || card.getAttribute('data-cat') === category) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
+
+    // Global Search Logic
+    const searchInput = document.getElementById('site-search');
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      const termCards = document.querySelectorAll('.term-card');
+      const quizCards = document.querySelectorAll('.quiz-card');
+
+      if (!query) {
+        termCards.forEach(c => c.style.display = 'flex');
+        quizCards.forEach(c => c.style.display = 'block');
+        return;
+      }
+
+      termCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+
+      quizCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        card.style.display = text.includes(query) ? 'block' : 'none';
+      });
+    });
+
+    // Exam Questions Show/Hide & Progress Tracker
+    function toggleAnswer(id) {
+      const ans = document.getElementById(id);
+      ans.classList.toggle('show');
+    }
+
+    function toggleAllAnswers(show) {
+      document.querySelectorAll('.quiz-answer').forEach(ans => {
+        if (show) ans.classList.add('show');
+        else ans.classList.remove('show');
+      });
+    }
+
+    let masteredMap = JSON.parse(localStorage.getItem('engg2112_w3_mastered') || '{}');
+
+    function updateProgressUI() {
+      const total = document.querySelectorAll('.quiz-card').length;
+      const count = Object.values(masteredMap).filter(Boolean).length;
+      document.getElementById('exam-progress-tracker').textContent = `Progress: ${count} / ${total} Mastered`;
+
+      for (let i = 1; i <= total; i++) {
+        const card = document.getElementById('q' + i);
+        const checkbox = card ? card.querySelector('input[type="checkbox"]') : null;
+        if (card && checkbox) {
+          if (masteredMap['q' + i]) {
+            card.classList.add('mastered');
+            checkbox.checked = true;
+          } else {
+            card.classList.remove('mastered');
+            checkbox.checked = false;
+          }
+        }
+      }
+    }
+
+    function toggleMastered(qid, checkbox) {
+      masteredMap[qid] = checkbox.checked;
+      localStorage.setItem('engg2112_w3_mastered', JSON.stringify(masteredMap));
+      updateProgressUI();
+    }
+
+    function resetExamProgress() {
+      if (confirm('Reset all exam progress checkboxes?')) {
+        masteredMap = {};
+        localStorage.removeItem('engg2112_w3_mastered');
+        updateProgressUI();
+      }
+    }
+
+    // Initialize state on load
+    window.addEventListener('DOMContentLoaded', () => {
+      calculateMetrics();
+      updateProgressUI();
+    });
+  </script>
+</body>
+</html>

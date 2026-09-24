@@ -1,0 +1,351 @@
+================================================
+ELEC3609 Week 11 – Study Guide
+CI/CD: Continuous Integration & Continuous Deployment · 2025 Session
+================================================
+
+OVERVIEW
+--------
+This lecture explains how modern teams ship software safely and continuously. It starts with the problem CI solves (Integration Hell), then walks through the full pipeline: linting and static analysis, building, four layers of testing, publishing artifacts, releasing and deploying, and finally monitoring what you shipped. The running theme is "move fast and break nothing" — automate the boring and risky parts so you can add features with confidence.
+
+================================================
+STATS:
+------------------------------------------------
+CI Goals|7
+CI Considerations|Speed, Reproducibility, Reliability, Clarity
+Conflict Levels|Merge, Functional, Logical
+Test Types|Unit, Integration, Acceptance, Regression
+Deployment Strategies|Rolling, Blue-Green
+================================================
+
+------------------------------------------------
+SECTION 1: What Is Continuous Integration?
+------------------------------------------------
+Continuous Integration (CI) is the practice of merging all developers' working copies into a shared mainline codebase **several times a day**, with automated builds and tests verifying each check-in immediately. Instead of everyone working alone for weeks and merging at the end, each developer integrates early and often.
+
+### The Problem It Replaces
+- **The old way** — Each developer builds a feature in isolation, then everything is merged together in a single painful "integration phase".
+- **The integration phase** — Changes from tens or hundreds of developers land in one common codebase at once, which often fails to compile because of conflicts.
+- **Integration Hell** — The resulting state where new changes cannot be integrated into the mainline codebase quickly or effectively.
+- **The cost** — Developers end up spending more time checking code into the repository than actually writing it.
+
+💡 **Why It Matters:** CI exists so developers spend their limited time building new features, not untangling broken merges. The course motto is "move fast and break nothing".
+🧠 **Memory Hook:** Think of CI as paying off technical debt in tiny daily instalments instead of one bankruptcy-sized fine at the end of semester.
+
+------------------------------------------------
+SECTION 2: Integration Hell & Its Causes
+------------------------------------------------
+**Integration Hell** is a state where new changes cannot be integrated into the mainline codebase quickly or effectively. It has two classic causes, each with a direct engineering fix.
+
+| Cause of Integration Hell | Direct Solution |
+| --- | --- |
+| Branches have **drifted too far** from master | **Rebase often** — sync local branches with master multiple times a day |
+| Changes are **too large** and touch too many files | **Small incremental changes** — scope work into tiny, isolated commits |
+
+Even with well-isolated components, something must still combine the separate modules into one application — this combining step is called **integration**. The more developers committing to a codebase, the higher the risk of conflicts.
+
+💡 **Why It Matters:** The cheapest conflict is the one you never have. Small, frequent merges keep the cost of resolving conflicts low.
+
+------------------------------------------------
+SECTION 3: The 7 Goals of CI
+------------------------------------------------
+1. **Avoid Integration Hell** — stop developers spending more time checking in code than writing it.
+2. **Isolated, reproducible test environment** — tests run the same way every time.
+3. **Isolated, reproducible build environment** — builds do not depend on one developer's laptop.
+4. **Increase deployment confidence** — HEAD (the main branch) is always in a deployable state.
+5. **Enforce coding style and code quality** — formatting and lint rules are applied automatically.
+6. **Test in multiple environments** — across operating systems, runtimes, and browser versions.
+7. **Streamline development workflows** — automate repetitive tasks and increase productivity.
+
+✅ **Exam Tip:** A common question asks you to list CI's goals. Seven is the magic number, and "reproducible build/test environment" is the one students most often forget.
+
+------------------------------------------------
+SECTION 4: Four CI Considerations
+------------------------------------------------
+Every CI pipeline balances four critical trade-offs:
+
+- **Speed** — Feedback must be fast (minutes, not hours). If CI is too slow, developers context-switch or bypass the pipeline.
+- **Reproducibility** — A build or test must give identical results on any machine, which eliminates the "it works on my machine" excuse.
+- **Reliability** — Results must be trustworthy, with zero tolerance for "flaky" tests that randomly fail. A red build must strictly mean broken code.
+- **Clarity** — Error messages and log output must be clear, actionable, and easy to trace.
+
+🧠 **Memory Hook:** **R-R-S-C** — Reliability, Reproducibility, Speed, Clarity.
+
+------------------------------------------------
+SECTION 5: The 3 Conflict Levels
+------------------------------------------------
+Any way an application can fail during or after integration counts as a "conflict". CI recognises three levels, from easiest to hardest to detect.
+
+| Conflict Type | Root Cause | Detected By |
+| --- | --- | --- |
+| **Merge conflict** | Two developers edit the same file and lines concurrently | Git / version control |
+| **Functional conflict** | Concurrent changes break compilation or the build | Compiler / builder |
+| **Logical conflict** | Code builds but the combined behaviour is wrong | Automated test suites |
+
+### Merge Conflict (Textual Level)
+Two developers modify the exact same file and line numbers at the same time. Git automatically flags the collision, and a developer manually chooses which lines to keep.
+
+### Functional Conflict (Build Level)
+Example: Developer A changes a function signature in `auth.js`, while Developer B still calls the old signature in `server.js`. Both files merge cleanly with no textual conflict, but the build fails.
+
+### Logical Conflict (Runtime Level)
+Example: Developer A sets `timeout = 500ms`, but Developer B assumes `timeout = 5000ms`. The application compiles, but requests fail silently at runtime.
+
+💡 **Why It Matters:** Each level needs a different safety net — version control, a compiler, and a test suite. CI runs all three so no conflict slips through unnoticed.
+
+------------------------------------------------
+SECTION 6: Stale Branches & Rebase Penalty
+------------------------------------------------
+- **Golden rule of version control** — `HEAD` (usually the master/main branch) is always expected to be in a functional state.
+- **Responsibility rule** — The developer who lands their changes **last** is responsible for resolving all integration conflicts against HEAD.
+- **The longer a branch stays checked out**, the more master drifts away, and the greater the risk of conflicts when it is reintegrated.
+- Before submitting, a developer must **update (merge or rebase)** their code to reflect everything added to the repository since they took their copy.
+- **Rebase penalty** — Rebasing onto master is not fun, test results may no longer be valid after a merge or rebase, and integration can eventually take longer than it took to write the original feature.
+- **Worst case** — The feature becomes so obsolete it must be discarded and redone, because its original purpose is no longer valid or needs a completely different approach.
+
+### Why Small Incremental Changes Win
+- **Fast bug isolation** — Small change sets make integration bugs easy to trace. This saves time and money over the project's lifespan.
+- **Cheap rollbacks** — If a unit test fails or a bug emerges, reverting a small change loses only a little work, because integration happens frequently.
+
+⚠️ **Common Trap:** Leaving a branch open for weeks feels productive, but it silently accumulates a merge debt that must be paid all at once.
+
+------------------------------------------------
+SECTION 7: Linting vs Static Analysis
+------------------------------------------------
+These are the first gates in a CI pipeline. Both inspect code without running it, but at different depths.
+
+- **Linting** — Running a program that analyses code for potential errors and can also enforce code style guides. It is named after `lint`, an early tool that flagged suspicious, non-portable constructs (likely bugs) in C source code.
+- **Static analysis (static code analysis)** — A method of debugging that examines the code *without executing the program*. It helps you understand code structure and ensure the code adheres to industry standards.
+
+Semantically they overlap: **linting is a subset of static analysis**, consisting only of rules that are fast and accurate.
+
+| Feature | Linting | Static Analysis |
+| --- | --- | --- |
+| Speed | Fast, rapid feedback | Slower, but comprehensive |
+| Scope | File-by-file | Entire codebase |
+| False positives | Zero | Some tolerance |
+| Auto-fixing | Violations often fixed automatically | Usually cannot be auto-fixed |
+| Rule targets | Coding style, deprecated classes/functions, inefficient constructs, naming conventions, spelling, syntax errors, unreachable code, unused variables | Cyclomatic complexity, NPath complexity, type inference, unused classes/functions, security vulnerabilities |
+
+🧠 **Memory Hook:** Linting asks "is this *file* written correctly?"; static analysis asks "is the overall *architecture* structurally sound, complex, or vulnerable?".
+
+------------------------------------------------
+SECTION 8: Building Backend & Frontend
+------------------------------------------------
+Traditionally, "building" means **compilation** — the translation of source code into object code. However, dynamic languages such as PHP, Python, and Ruby do not require compilation. In CI, "building" has grown to mean preparing everything the application needs to run.
+
+### Backend Build
+- **Optimise the autoloader** — pre-index class paths and symbol maps for fast runtime lookup.
+- **Pre-populate caches** — build route caches, database schemas, and configuration trees ahead of time.
+- **Pre-render templates** — compile server-side views such as Jinja, EJB, or Blade.
+- **Vendor dependencies** — download and lock backend libraries (`npm ci`, `pip install`).
+
+### Frontend Build
+- **Bundle assets** — pack many JS/CSS modules into single optimised bundles (Vite, Webpack).
+- **Minify and obfuscate** — strip whitespace and comments, and shorten variable names.
+- **Optimise images** — apply lossy or lossless compression.
+- **Transpile JavaScript** — convert modern ES6+/TypeScript down to ES5 (e.g., with Babel) so older browsers can run it.
+- **Vendor dependencies** — pull third-party web libraries into the distribution build.
+
+✅ **Exam Tip:** Interpreted languages still have a build phase in CI — just not compilation. Say "asset bundling, transpilation, minification, cache pre-population, and dependency vendoring".
+
+------------------------------------------------
+SECTION 9: Testing Strategies
+------------------------------------------------
+CI tests run in a strict order, from fast and isolated to slow and broad.
+
+| Test Type | Target | Style |
+| --- | --- | --- |
+| **Unit** | A single function or class in isolation | White-box |
+| **Integration** | Interaction between modules or services | Black-box |
+| **Acceptance (E2E)** | The whole application from the user's perspective | End-to-end |
+| **Regression** | Preventing previously fixed bugs from returning | Edge cases |
+
+### Unit Testing
+- Language-specific tools: **Go** `go test`, **Java** JUnit, **Python** Nosetests/Pytest, **PHP** PHPUnit, **Ruby** RSpec.
+- Criteria: fast to execute, one-to-one mapping with source code, zero or minimal dependencies (other code, filesystem, network), and runnable in different environments to future-proof the application.
+- Uses mocks and stubs to stay isolated.
+
+### Integration Testing
+- Ensures different components of the application interact in the expected manner.
+- Should be executed **after** unit tests pass.
+- Should focus on testing the **API contract** rather than implementation details.
+
+### Acceptance Testing
+- Focuses on functionality from a **user perspective** and tests the application end-to-end.
+- Very slow (relatively) but very important, and includes cross-browser testing (Selenium, Cypress, Playwright).
+
+### Regression Testing
+- Used to prevent bugs from reoccurring; regression tests often cover bizarre edge cases.
+- Rule of thumb: whenever a bug is found, write a regression test covering that exact case **before** applying the fix.
+
+⚠️ **Common Trap:** Integration testing is **black-box** and runs **after** unit tests — not before, and not white-box.
+
+------------------------------------------------
+SECTION 10: Publishing & Artifacts
+------------------------------------------------
+At the completion of a CI job you typically produce one or more **artifacts** — the compiled, bundled, or packaged output that is ready for distribution. Which artifacts you get depends on the programming language, the tooling, and the deployment process.
+
+- **Archives** — `.tar.gz`, `.zip` containing static files or backend code.
+- **Executable binaries** — standard compiled binaries (e.g., Go, Rust).
+- **Mobile applications** — `.apk` (Android), `.ipa` (iOS).
+- **OS packages** — `.deb` (Debian/Ubuntu), `.rpm` (RedHat/CentOS).
+- **Container images** — Docker images published to a registry (Docker Hub, ECR).
+
+**Publishing** is the process of exposing those artifacts from CI to the deployment process, usually by pushing them to a centralised artifact repository such as Nexus, Artifactory, S3, or a Docker registry.
+
+------------------------------------------------
+SECTION 11: Release & Deployment Types
+------------------------------------------------
+**Deployment** is the process by which the latest version of an application is delivered to users. Examples include submitting an APK to the Google Play Store, updating code on a fleet of production servers, or pushing files to an S3 bucket. Teams must decide how often to deploy, whether to reuse or build new infrastructure, what is automated versus manual, how to monitor, and how to roll back.
+
+### Delivery vs Deployment
+- **Continuous Delivery** — CI automatically builds and tests code, producing a deployable artifact, but the actual production deployment requires a **manual human approval** step.
+- **Continuous Deployment** — CI/CD automatically deploys every passed change to production with **zero human intervention**.
+
+### Rolling vs Blue-Green
+| Strategy | Mechanism | Cost | Trade-off |
+| --- | --- | --- | --- |
+| **Rolling** | Update server nodes in batches (e.g., 20% at a time); drain traffic, update, restore | 1x infrastructure | Users temporarily interact with a mix of old (v1) and new (v2) versions |
+| **Blue-Green** | Deploy new code to a full parallel environment, smoke-test it, then flip all traffic at once | 2x infrastructure during deployment | Zero version mixing and instant rollback, but double the cost |
+
+```
+Rolling:    [v1][v1][v1][v1] --> [v2][v1][v1][v1] --> [v2][v2][v1][v1] --> [v2][v2][v2][v2]
+
+Blue-Green:  Load Balancer/Router --switch--> Blue (v1, active) | Green (v2, idle)
+```
+
+⚠️ **Common Trap:** Rolling deployment serves a mix of v1 and v2 during rollout, so database schemas must remain backward compatible.
+
+------------------------------------------------
+SECTION 12: Post-Deployment Monitoring
+------------------------------------------------
+Deployment is not the end of the engineering lifecycle. Once the changes are in the hands of real users, you verify that everything works as expected. As covered in Week 6, the tools are testing, logging, and real-time telemetry.
+
+- **Automated smoke testing** — run high-level synthetic transactions immediately after deployment to verify basic system health.
+- **Centralised logging** — aggregate server and application logs (Elasticsearch, Logstash, Kibana) to catch unhandled exceptions in real time.
+- **Real-time telemetry and APM** — monitor application performance metrics such as latency, error rates, CPU utilisation, and throughput, and trigger automatic rollbacks if performance degrades.
+
+💡 **Why It Matters:** A deployment is a hypothesis — "this change is good". Monitoring is how you find out whether the hypothesis was true.
+
+================================================
+KEY TAKEAWAYS
+================================================
+1. **CI defined** — merge all developers' working copies into a shared mainline several times a day, with automated builds and tests verifying each check-in.
+2. **Integration Hell** — the state where new changes cannot be merged quickly; caused by branches drifting from master and by oversized change sets.
+3. **Two fixes** — rebase/merge often and keep changes small and incremental.
+4. **Seven goals** — avoid Integration Hell, provide reproducible build and test environments, increase deployment confidence, enforce code quality, test multiple environments, and streamline workflows.
+5. **Four considerations** — Speed, Reproducibility, Reliability, and Clarity (R-R-S-C).
+6. **Three conflict levels** — Merge (textual, caught by Git), Functional (build, caught by the compiler), Logical (runtime, caught by tests).
+7. **Stale branches** — the developer who lands last resolves conflicts; long-lived branches incur a rebase penalty.
+8. **Linting vs static analysis** — linting is a fast, file-level subset of static analysis, which is slower and codebase-wide.
+9. **Building** — for dynamic languages it means bundling, transpiling, minifying, caching, and vendoring, not compiling.
+10. **Four test types** — Unit (white-box), Integration (black-box, after unit), Acceptance (end-to-end), and Regression (prevent bugs returning).
+11. **Artifacts and publishing** — CI produces archives, binaries, packages, or container images and exposes them to the deployment process.
+12. **Deployment strategies** — Rolling uses 1x infrastructure but mixes versions; Blue-Green uses 2x infrastructure but gives zero mixing and instant rollback.
+13. **Post-deployment** — smoke testing, centralised logging, and real-time telemetry/APM verify that the release is healthy.
+
+================================================
+TERMS TO KNOW
+================================================
+**Continuous Integration (CI)**: Practice of merging all developers' working copies into a shared mainline several times a day.
+**Integration Hell**: State where new changes cannot be integrated into the mainline quickly or effectively.
+**Mainline / HEAD**: The shared master branch, expected always to be functional.
+**Rebase**: Replaying your changes on top of the latest mainline to stay up to date.
+**Merge conflict**: Textual collision when two developers edit the same file and lines concurrently.
+**Functional conflict**: Concurrent changes that break compilation or the build.
+**Logical conflict**: Concurrent changes that build successfully but fail at runtime.
+**Stale branch**: A branch left unmerged so long that master has drifted far ahead.
+**Rebase penalty**: The extra time spent rebasing and fixing tests when a stale branch is finally integrated.
+**Linting**: Fast, file-level analysis for potential errors and style violations.
+**Static analysis**: Examining code without executing it to assess structure, complexity, and standards.
+**Cyclomatic complexity**: A static-analysis metric of the number of independent paths through code.
+**NPath complexity**: A static-analysis metric of the number of acyclic execution paths.
+**Autoloader**: Mechanism that pre-indexes class paths and symbol maps for fast runtime lookup.
+**Vendoring dependencies**: Downloading and locking third-party libraries into your build.
+**Minification**: Removing whitespace and comments from assets to reduce size.
+**Obfuscation**: Rewriting code (e.g., shortening names) to make it smaller and harder to read.
+**Transpilation**: Source-to-source compilation, e.g., ES6+/TypeScript down to ES5.
+**Bundling**: Packing many JS/CSS modules into a single optimised file.
+**Unit testing**: White-box testing of an isolated function or class.
+**Integration testing**: Black-box testing of how modules or services interact via their APIs.
+**Acceptance testing**: End-to-end testing from the user's perspective, including cross-browser checks.
+**Regression testing**: Tests that ensure fixed bugs do not reoccur.
+**White-box testing**: Testing with knowledge of the internal implementation.
+**Black-box testing**: Testing behaviour through the public interface only.
+**Mock / Stub**: Stand-in objects that let unit tests run without external dependencies.
+**Flaky test**: A test that fails randomly without a code change; forbidden in reliable CI.
+**Artifact**: The compiled, bundled, or packaged output produced by a CI job.
+**Publishing**: Exposing CI artifacts to the deployment process, usually via an artifact repository.
+**Deployment**: Delivering the latest version of an application to users.
+**Continuous Delivery**: CI produces a deployable artifact, but a human approves production deployment.
+**Continuous Deployment**: Every passing change is deployed to production automatically with no human step.
+**Rolling deployment**: Updating server nodes in batches, temporarily serving mixed versions.
+**Blue-green deployment**: Running two identical environments and flipping all traffic at once.
+**Smoke testing**: High-level checks run immediately after deployment to confirm basic health.
+**Telemetry / APM**: Real-time monitoring of latency, errors, CPU, and throughput.
+**Golden rule of VCS**: HEAD must always remain functional.
+
+================================================
+MNEMONICS & QUICK RECALL
+================================================
+**CI Considerations**: **R-R-S-C** — "Reliability, Reproducibility, Speed, Clarity" — the four trade-offs every pipeline balances.
+**Conflict Levels**: **M-F-L** — "Merge, Functional, Logical" — textual, build, then runtime failures.
+**Linting vs Static Analysis**: **L-S** — "Linting = fast/file-level; Static = slow/codebase-wide".
+**CI Pipeline Order**: **L-B-T-P-D** — "Lint, Build, Test, Publish, Deploy" — the path from commit to production.
+**Test Order**: **U-I-A-R** — "Unit, Integration, Acceptance, Regression" — fast and isolated to slow and broad.
+**Deployment Trade-offs**: **B-R** — "Blue-Green = 2x cost, zero mixing; Rolling = 1x cost, mixed versions".
+
+================================================
+WORKED EXAMPLES
+================================================
+### Example 1: Functional Conflict Across Files
+Developer A changes a function signature in `auth.js`. Developer B, in a different file (`server.js`), still calls the old signature. Both files merge with no textual conflict, so Git is happy. When CI runs the build, the compiler cannot resolve the call and the build fails. Detection: the compiler/builder. Fix: update the caller to the new signature.
+
+### Example 2: Logical Conflict at Runtime
+Developer A updates a shared variable to `timeout = 500ms`. Developer B writes code that assumes `timeout = 5000ms`. The code merges and compiles without errors, but requests now fail silently because they time out too early. Detection: automated integration/unit tests that assert expected behaviour.
+
+### Example 3: The Stale Branch Rebase Penalty
+A developer keeps a feature branch open for three weeks. In that time master has moved on significantly. When they finally rebase, they must resolve many conflicts and re-run tests whose old results are no longer valid. Integration now takes longer than it took to write the feature — and in the worst case the feature is discarded entirely.
+
+### Example 4: Tracing a CI Pipeline
+```
+1. Code Commit
+      |
+      v
+2. Lint & Static Check   --> fails fast on syntax/style
+      |
+      v
+3. Build & Transpile     --> fails on missing imports/assets
+      |
+      v
+4. Unit Tests            --> fails on broken function logic
+      |
+      v
+5. Integration Tests     --> fails on API contract mismatches
+      |
+      v
+6. Acceptance (E2E)      --> fails on broken user flows
+      |
+      v
+7. Publish Artifacts
+```
+
+### Example 5: Choosing a Deployment Strategy
+A team with a tight budget and backward-compatible database changes can use **rolling deployment**: update a few nodes at a time, accept a short window of mixed v1/v2 responses, and pay only 1x infrastructure. A team that cannot tolerate mixed versions and wants instant rollback chooses **blue-green**: pay for two environments, smoke-test the new one, then flip all traffic and keep the old environment ready to switch back.
+
+================================================
+EXAM FOCUS
+================================================
+1. What is Continuous Integration, and what problem does it solve? → Answer: CI is the practice of merging all developers' working copies into a shared mainline several times a day with automated builds/tests. It solves Integration Hell — the state where changes can no longer be integrated quickly, forcing developers to spend more time merging than coding.
+2. True or false: interpreted languages such as Python and JavaScript have no build phase in CI. → Answer: False. They lack compilation to binary, but building includes asset bundling, transpilation, minification, cache pre-population, and dependency vendoring.
+3. Name and explain the three levels of integration conflict. → Answer: Merge conflict (textual collision in the same file, caught by Git); Functional conflict (changes across files break compilation/build, caught by the compiler); Logical conflict (code builds but behaves incorrectly at runtime, caught by tests).
+4. Why is integration testing black-box, and when should it run? → Answer: It tests the API contract between components rather than internal implementation, so it is black-box; it runs after unit tests pass.
+5. What are the four CI considerations and why does each matter? → Answer: Speed (slow feedback makes developers bypass CI), Reproducibility (identical results everywhere, killing "it works on my machine"), Reliability (no flaky tests; red means broken), Clarity (clear, actionable logs).
+6. Who is responsible for resolving a conflict when a branch is merged, and why does branch age matter? → Answer: The developer who lands last resolves conflicts against HEAD. The longer a branch stays open, the more master drifts, increasing conflict risk and the eventual rebase penalty.
+7. Compare linting and static analysis. → Answer: Linting is a fast, file-by-file subset of static analysis with zero false positives and often automatic fixes; static analysis is slower, examines the whole codebase, tolerates some false positives, and catches structural issues such as cyclomatic complexity.
+8. List the four testing types in the order CI runs them. → Answer: Unit, Integration, Acceptance (end-to-end), and Regression testing.
+9. What is a build artifact? Give three examples. → Answer: A compiled, bundled, or packaged output ready for distribution; examples include archives (.tar.gz/.zip), binaries, mobile apps (.apk/.ipa), OS packages (.deb/.rpm), and container images.
+10. Explain the difference between Continuous Delivery and Continuous Deployment. → Answer: Both build and test automatically; Delivery requires a manual human approval before production deployment, while Deployment releases every passing change automatically with zero human intervention.
+11. Compare rolling and blue-green deployment. → Answer: Rolling updates nodes in batches on 1x infrastructure but temporarily serves mixed versions (schemas must be backward compatible). Blue-green runs two identical environments and flips all traffic at once, giving zero mixing and instant rollback at 2x infrastructure cost.
+12. What should happen after a deployment to verify success? → Answer: Automated smoke testing for basic health, centralised logging to catch exceptions, and real-time telemetry/APM (latency, error rates, CPU, throughput) that can trigger automatic rollbacks.
+13. How do small incremental changes reduce the cost of integration? → Answer: Small change sets make integration bugs easy to trace and fix, and if a bug slips through, reverting a small commit loses only a little work because integration happens frequently.
