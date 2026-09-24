@@ -3,343 +3,544 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ELEC3609 Lab 2 Study Guide – RESTful API Design &amp; Collaboration · Lab 2</title>
-<meta name="description" content="This lab has two halves. The first explains how modern web applications talk to each other through RESTful APIs: what REST is, how a request and response are structured, how…">
-<meta name="color-scheme" content="light dark">
+<meta name="description" content="This lab explains how modern web applications talk to each other through RESTful APIs — the standard HTTP methods, request and response anatomy, authentication, and the architectural constraints behin">
+<title>ELEC3609 Lab 2 — RESTful APIs and Team Collaboration: From Client Requests to GitHub Workflows</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box}
-:root{
-  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --head:'Sora','Inter',system-ui,sans-serif;
-  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-  --bg:#f4f8f7;--bg-2:#e9f1ef;--surface:#ffffff;--surface-2:#eff5f4;
-  --ink:#15282b;--muted:#587076;--faint:#89a0a3;--line:#d8e5e2;
-  --brand:#0e7c6b;--brand-2:#12a594;--brand-soft:#d6f3ec;--brand-ink:#0a5b4e;
-  --amber:#b45309;--amber-soft:#fdf0d6;
-  --rose:#b21e4b;--rose-soft:#fde4ec;
-  --sky:#0c6ea3;--sky-soft:#ddeffb;
-  --violet:#6d28d9;--violet-soft:#ece7fd;
-  --shadow:0 1px 2px rgba(16,40,43,.05),0 10px 28px -16px rgba(16,40,43,.30);
-  --shadow-lg:0 26px 60px -30px rgba(16,40,43,.45);
-  --r:16px;--r-sm:11px;--sidebar:288px;
-}
-[data-theme=dark]{
-  --bg:#07110f;--bg-2:#0b1a17;--surface:#0e1d1a;--surface-2:#122522;
-  --ink:#e6f2ef;--muted:#94ada8;--faint:#69837e;--line:#1c322e;
-  --brand:#2dd4bf;--brand-2:#5eead4;--brand-soft:rgba(45,212,191,.15);--brand-ink:#99f6e4;
-  --amber:#fbbf24;--amber-soft:rgba(251,191,36,.15);
-  --rose:#fb7185;--rose-soft:rgba(251,113,133,.15);
-  --sky:#38bdf8;--sky-soft:rgba(56,189,248,.15);
-  --violet:#a78bfa;--violet-soft:rgba(167,139,250,.17);
-  --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px -18px rgba(0,0,0,.7);
-  --shadow-lg:0 28px 70px -34px rgba(0,0,0,.85);
-}
-html{scroll-behavior:smooth}
-body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.68;-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.75;
-  background:radial-gradient(58rem 38rem at 112% -12%,var(--brand-soft),transparent 62%),
-             radial-gradient(46rem 30rem at -12% 6%,var(--sky-soft),transparent 58%)}
-h1,h2,h3,h4{font-family:var(--head);line-height:1.2;margin:0}
-p{margin:0 0 .85rem}
-a{color:var(--brand);text-decoration:none}
-a:hover{text-decoration:underline}
-strong{font-weight:650;color:var(--ink)}
-code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.08em .38em}
-.math{font-family:var(--mono);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.06em .4em;font-size:.9em}
-::selection{background:var(--brand-soft);color:var(--brand-ink)}
-/* progress */
-.progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;background:linear-gradient(90deg,var(--brand),var(--brand-2),var(--sky))}
-/* topbar */
-.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:.75rem;
-  padding:.6rem clamp(.9rem,3vw,1.6rem);background:color-mix(in srgb,var(--surface) 82%,transparent);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:.6rem;min-width:0}
-.brand-badge{flex:none;font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.28rem .6rem;white-space:nowrap}
-.brand-title{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:.45rem}
-.icon-btn{display:inline-grid;place-items:center;width:38px;height:38px;border:1px solid var(--line);
-  background:var(--surface);color:var(--ink);border-radius:10px;cursor:pointer;font-size:1rem;transition:.15s}
-.icon-btn:hover{border-color:var(--brand);color:var(--brand)}
-.menu-btn{display:none}
-.search{position:relative}
-.search input{width:min(30vw,240px);padding:.5rem .7rem;border:1px solid var(--line);border-radius:10px;
-  background:var(--surface);color:var(--ink);font:inherit;font-size:.85rem}
-.search input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.search-results{position:absolute;right:0;top:calc(100% + 8px);width:min(78vw,380px);max-height:60vh;overflow:auto;
-  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);display:none;padding:.35rem}
-.search-results.open{display:block}
-.sr-item{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;
-  padding:.5rem .6rem;border-radius:8px;cursor:pointer}
-.sr-item:hover,.sr-item.active{background:var(--surface-2)}
-.sr-item b{display:block;font-size:.84rem;color:var(--brand-ink)}
-.sr-item span{display:block;font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sr-empty{padding:.6rem;color:var(--muted);font-size:.82rem}
-/* shell */
-.shell{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);gap:0;align-items:start}
-.sidebar{position:sticky;top:57px;height:calc(100vh - 57px);overflow:auto;padding:1.3rem .9rem 3rem 1.4rem}
-.toc-title{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .7rem .5rem}
-.toc{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
-.toc-link{display:flex;gap:.55rem;align-items:baseline;padding:.36rem .5rem;border-radius:8px;color:var(--muted);
-  font-size:.82rem;line-height:1.35;transition:.13s}
-.toc-link:hover{background:var(--surface-2);color:var(--ink);text-decoration:none}
-.toc-link.active{background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
-.toc-n{font-family:var(--mono);font-size:.66rem;color:var(--faint);flex:none;padding-top:.12rem}
-.toc-link.active .toc-n{color:var(--brand)}
-.content{min-width:0;max-width:960px;padding:1.6rem clamp(1rem,3.5vw,2.6rem) 5rem}
-/* hero */
-.hero{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:var(--r);
-  padding:clamp(1.4rem,3.5vw,2.4rem);background:
-    linear-gradient(180deg,color-mix(in srgb,var(--brand-soft) 55%,var(--surface)),var(--surface) 72%);
-  box-shadow:var(--shadow);margin-bottom:2rem}
-.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:230px;height:230px;border-radius:50%;
-  background:radial-gradient(circle,var(--brand-soft),transparent 68%);opacity:.8}
-.hero-tag{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-ink);font-weight:700;margin:0 0 .55rem}
-.hero h1{font-size:clamp(1.5rem,4vw,2.15rem);letter-spacing:-.02em;margin-bottom:.5rem}
-.hero-sub{color:var(--muted);font-size:1.02rem;max-width:60ch;margin-bottom:1.1rem}
-.hero-overview{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.15rem;box-shadow:var(--shadow)}
-.ho-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .35rem}
-.hero-overview p:last-child{margin:0}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-top:1.1rem}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.7rem .85rem;box-shadow:var(--shadow)}
-.stat-val{display:block;font-family:var(--head);font-weight:800;font-size:1.25rem;color:var(--brand-ink)}
-.stat-label{display:block;font-size:.72rem;color:var(--muted);letter-spacing:.03em;text-transform:uppercase;font-weight:600}
-/* sections */
-.section{scroll-margin-top:80px;margin-bottom:2.4rem;opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
-.section.in{opacity:1;transform:none}
-.section-head{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:2px solid var(--line)}
-.section-num{flex:none;font-family:var(--head);font-weight:800;font-size:.82rem;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));
-  width:2.1rem;height:2.1rem;display:grid;place-items:center;border-radius:10px;box-shadow:0 6px 16px -8px var(--brand)}
-.section-head h2{font-size:clamp(1.15rem,2.6vw,1.5rem);letter-spacing:-.01em}
-.section-body>*+*{margin-top:.5rem}
-.section-body p{margin:0 0 .9rem}
-.subhead{font-size:.98rem;margin:1.2rem 0 .5rem;color:var(--brand-ink)}
-ul,ol{margin:0 0 .9rem;padding-left:1.25rem}
-li{margin:.22rem 0}
-li>ul,li>ol{margin:.3rem 0 .1rem}
-/* table */
-.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm);margin:1rem 0;box-shadow:var(--shadow)}
-table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:440px}
-thead th{background:var(--surface-2);text-align:left;font-weight:700;color:var(--ink);white-space:nowrap}
-th,td{padding:.6rem .8rem;border-bottom:1px solid var(--line);vertical-align:top}
-tbody tr:last-child td{border-bottom:0}
-tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
-/* code */
-.code{position:relative;margin:1rem 0}
-.code pre{margin:0;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.1rem;overflow:auto;box-shadow:var(--shadow)}
-.code code{font-family:var(--mono);font-size:.82rem;line-height:1.6;background:none;border:0;padding:0;color:var(--ink);white-space:pre}
-.copy{position:absolute;top:.55rem;right:.55rem;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;font-weight:700;
-  color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.24rem .5rem;cursor:pointer}
-.copy:hover{color:var(--brand);border-color:var(--brand)}
-.copy.done{color:var(--brand-ink);border-color:var(--brand)}
-/* formula */
-.formula{position:relative;margin:1rem 0;padding:1.1rem 1rem .9rem;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm)}
-.formula-label{position:absolute;top:-.6rem;left:.9rem;font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;font-weight:700;
-  color:#fff;background:var(--brand);border-radius:6px;padding:.14rem .5rem}
-.formula code{display:block;font-family:var(--mono);font-size:.86rem;background:none;border:0;padding:0;color:var(--ink)}
-/* flow */
-.flow{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin:1rem 0;padding:1rem;background:var(--surface);
-  border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--shadow)}
-.flow-step{display:inline-flex;align-items:center;gap:.4rem;background:var(--surface-2);border:1px solid var(--line);
-  border-radius:999px;padding:.34rem .75rem .34rem .5rem;font-size:.82rem;font-weight:600}
-.flow-n{font-family:var(--mono);font-size:.64rem;color:#fff;background:var(--brand);border-radius:999px;padding:.1rem .34rem}
-.flow-arrow{color:var(--brand);font-weight:800}
-/* callouts */
-.callout{display:flex;gap:.75rem;margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--line);border-left-width:4px;
-  border-radius:var(--r-sm);background:var(--surface);box-shadow:var(--shadow)}
-.callout-ico{flex:none;font-size:1.15rem;line-height:1.3}
-.callout-title{font-weight:700;font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;margin:0 0 .18rem}
-.callout-text{font-size:.93rem}
-.callout-text>:last-child{margin-bottom:0}
-.callout.why{border-left-color:var(--amber);background:color-mix(in srgb,var(--amber-soft) 55%,var(--surface))}
-.callout.why .callout-title{color:var(--amber)}
-.callout.memory{border-left-color:var(--violet);background:color-mix(in srgb,var(--violet-soft) 55%,var(--surface))}
-.callout.memory .callout-title{color:var(--violet)}
-.callout.warn{border-left-color:var(--rose);background:color-mix(in srgb,var(--rose-soft) 55%,var(--surface))}
-.callout.warn .callout-title{color:var(--rose)}
-.callout.info{border-left-color:var(--sky);background:color-mix(in srgb,var(--sky-soft) 55%,var(--surface))}
-.callout.info .callout-title{color:var(--sky)}
-.callout.tip{border-left-color:var(--brand);background:color-mix(in srgb,var(--brand-soft) 55%,var(--surface))}
-.callout.tip .callout-title{color:var(--brand-ink)}
-/* takeaways */
-.takeaways{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
-.takeaways li{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r-sm);padding:.75rem .9rem;box-shadow:var(--shadow)}
-.tk-n{flex:none;font-family:var(--mono);font-size:.68rem;font-weight:700;color:var(--brand-ink);background:var(--brand-soft);
-  border-radius:7px;padding:.22rem .45rem;margin-top:.15rem}
-/* glossary */
-.term-filter{display:flex;align-items:center;gap:.7rem;margin:0 0 .9rem}
-.term-filter input{flex:1;max-width:340px;padding:.55rem .75rem;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:.86rem}
-.term-filter input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.term-count{font-size:.78rem;color:var(--muted)}
-.terms{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.7rem}
-.term{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem .9rem;box-shadow:var(--shadow)}
-.term.hide{display:none}
-.term-name{font-family:var(--head);font-weight:700;font-size:.9rem;margin:0 0 .2rem;color:var(--brand-ink)}
-.term-def{font-size:.85rem;color:var(--muted);margin:0}
-/* mnemonics */
-.mnemonics{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:.8rem}
-.mnemonic{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.95rem 1rem;box-shadow:var(--shadow)}
-.mn-title{font-family:var(--head);font-weight:700;font-size:.92rem;margin:0 0 .4rem;color:var(--brand-ink)}
-.mn-code{font-family:var(--mono);font-weight:600;font-size:1.02rem;letter-spacing:.04em;margin:0 0 .35rem}
-.mn-phrase{font-style:italic;font-weight:600;color:var(--violet);margin:0 0 .35rem}
-.mn-note{font-size:.83rem;color:var(--muted);margin:0}
-/* examples */
-.example{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:1.1rem 1.2rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.example-tag{display:inline-block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.2rem .55rem;margin-bottom:.5rem}
-.example-title{font-size:1rem;margin:0 0 .6rem}
-/* exam */
-.exam-bar{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:space-between;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem 1rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.exam-count{font-size:.85rem;color:var(--muted)}
-.exam-count strong{color:var(--brand-ink)}
-.exam-track{display:block;width:170px;height:7px;border-radius:999px;background:var(--surface-2);margin-top:.4rem;overflow:hidden}
-.exam-track>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .3s}
-.exam-actions{display:flex;gap:.4rem;flex-wrap:wrap}
-.btn{font:inherit;font-size:.78rem;font-weight:600;color:var(--brand-ink);background:var(--brand-soft);border:1px solid transparent;
-  border-radius:9px;padding:.42rem .7rem;cursor:pointer}
-.btn:hover{background:var(--brand);color:#fff}
-.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted)}
-.btn.ghost:hover{border-color:var(--brand);color:var(--brand);background:transparent}
-.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);margin:0 0 .6rem;overflow:hidden;box-shadow:var(--shadow)}
-.quiz-q{display:flex;gap:.7rem;align-items:flex-start;width:100%;text-align:left;background:none;border:0;color:var(--ink);
-  font:inherit;font-weight:600;padding:.85rem .95rem;cursor:pointer}
-.quiz-n{flex:none;font-family:var(--mono);font-size:.7rem;font-weight:700;color:#fff;background:var(--brand);border-radius:7px;padding:.2rem .45rem;margin-top:.1rem}
-.quiz-text{flex:1}
-.quiz-chev{flex:none;color:var(--muted);transition:transform .2s}
-.quiz.open .quiz-chev{transform:rotate(180deg)}
-.quiz-body{display:none;padding:0 .95rem .9rem;border-top:1px dashed var(--line)}
-.quiz.open .quiz-body{display:block}
-.quiz-a{font-size:.9rem;margin:.7rem 0;padding:.7rem .85rem;background:var(--surface-2);border-radius:9px}
-.quiz-a-label{display:block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--brand);margin-bottom:.2rem}
-.quiz-a.muted{color:var(--muted);font-style:italic}
-.mastered{display:inline-flex;gap:.45rem;align-items:center;font-size:.8rem;color:var(--muted);cursor:pointer;user-select:none}
-.mastered input{accent-color:var(--brand);width:1rem;height:1rem}
-/* footer */
-.foot{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}
-/* to top */
-.totop{position:fixed;right:1.1rem;bottom:1.1rem;z-index:55;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);
-  background:var(--surface);color:var(--brand-ink);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.2s}
-.totop.show{opacity:1;pointer-events:auto}
-.scrim{display:none}
-/* responsive */
-@media (max-width:980px){
-  .shell{grid-template-columns:1fr}
-  .menu-btn{display:inline-grid}
-  .sidebar{position:fixed;top:0;left:0;z-index:70;height:100vh;width:min(86vw,320px);background:var(--surface);
-    border-right:1px solid var(--line);transform:translateX(-102%);transition:transform .25s ease;padding-top:1.4rem;box-shadow:var(--shadow-lg)}
-  .sidebar.open{transform:none}
-  .scrim{display:block;position:fixed;inset:0;z-index:65;background:rgba(6,18,16,.45);opacity:0;pointer-events:none;transition:.25s}
-  .scrim.show{opacity:1;pointer-events:auto}
-  .search input{width:40vw}
-  .brand-title{display:none}
-}
-@media (max-width:560px){
-  .search input{width:34vw}
-  .content{padding:1.1rem .9rem 4rem}
-  .stats{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
-}
-@media (prefers-reduced-motion:reduce){
-  *{scroll-behavior:auto!important}
-  .section{opacity:1;transform:none;transition:none}
-}
-@media print{
-  .topbar,.sidebar,.totop,.progress,.exam-actions,.copy,.scrim,.term-filter{display:none!important}
-  body::before{display:none}
-  .shell{display:block}
-  .content{max-width:none;padding:0}
-  .section{opacity:1;transform:none;page-break-inside:avoid}
-  .quiz-body{display:block!important}
-  .hero,.callout,.table-wrap,.code pre,.example,.quiz,.term{box-shadow:none}
-  a{color:inherit}
-}
+  /* ============================================================
+     ENGG2112 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+
+  /* ---------- Code blocks (added for ELEC3609) ---------- */
+  .code-block{position:relative;margin:1.2rem 0;}
+  .code-block pre{margin:0;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.1rem;overflow:auto;}
+  .code-block code{font-family:var(--font-mono);font-size:.84rem;line-height:1.62;background:none;padding:0;border-radius:0;color:var(--ink);white-space:pre;}
+  .code-copy{position:absolute;top:.55rem;right:.55rem;font-family:var(--font-body);font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.25rem .55rem;cursor:pointer;transition:.16s var(--ease);}
+  .code-copy:hover{color:var(--primary-deep);border-color:var(--line-strong);}
+  .code-copy.done{color:var(--primary-deep);border-color:var(--primary);}
 </style>
 </head>
 <body>
-<div class="progress" id="progress" aria-hidden="true"></div>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
 <header class="topbar">
-  <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Open navigation">☰</button>
-  <div class="brand"><span class="brand-badge">ELEC3609 · Lab 2</span><span class="brand-title">RESTful API Design &amp; Collaboration · Lab 2</span></div>
-  <div class="topbar-actions">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">ELEC3609</span>
+    <span class="brand-week">Lab 2</span>
+  </a>
+  <div class="topbar-tools">
     <div class="search">
-      <input id="searchInput" type="search" placeholder="Search this guide…" autocomplete="off" aria-label="Search this guide">
-      <div class="search-results" id="searchResults" role="listbox"></div>
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
     </div>
-    <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle light and dark theme">🌙</button>
-    <button class="icon-btn" id="printBtn" type="button" aria-label="Print this guide">🖨</button>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
   </div>
 </header>
-<div class="shell">
+
+<div class="layout">
   <aside class="sidebar" id="sidebar" aria-label="Table of contents">
-    <p class="toc-title">Contents</p>
-    <ul class="toc">
-<li><a href="#overview" class="toc-link"><span class="toc-n">00</span>Overview</a></li>
-<li><a href="#sec-1" class="toc-link"><span class="toc-n">01</span>From Messy URLs to RESTful APIs</a></li>
-<li><a href="#sec-2" class="toc-link"><span class="toc-n">02</span>How a RESTful API Works</a></li>
-<li><a href="#sec-3" class="toc-link"><span class="toc-n">03</span>Anatomy of a Client Request</a></li>
-<li><a href="#sec-4" class="toc-link"><span class="toc-n">04</span>HTTP Methods &amp; Their Semantics</a></li>
-<li><a href="#sec-5" class="toc-link"><span class="toc-n">05</span>API Authentication Methods</a></li>
-<li><a href="#sec-6" class="toc-link"><span class="toc-n">06</span>Anatomy of a Server Response</a></li>
-<li><a href="#sec-7" class="toc-link"><span class="toc-n">07</span>REST as an Architectural Style</a></li>
-<li><a href="#sec-8" class="toc-link"><span class="toc-n">08</span>RESTful API Design Principles</a></li>
-<li><a href="#sec-9" class="toc-link"><span class="toc-n">09</span>The API Contract</a></li>
-<li><a href="#sec-10" class="toc-link"><span class="toc-n">10</span>REST APIs in Django &amp; DRF</a></li>
-<li><a href="#sec-11" class="toc-link"><span class="toc-n">11</span>GitHub Collaboration: PRs &amp; Branches</a></li>
-<li><a href="#sec-12" class="toc-link"><span class="toc-n">12</span>GitHub Issues &amp; Project Tracking</a></li>
-<li><a href="#sec-13" class="toc-link"><span class="toc-n">13</span>Team Conventions &amp; USYD CI/CD</a></li>
-<li><a href="#key-takeaways" class="toc-link"><span class="toc-n">14</span>Key Takeaways</a></li>
-<li><a href="#glossary" class="toc-link"><span class="toc-n">15</span>Glossary</a></li>
-<li><a href="#mnemonics" class="toc-link"><span class="toc-n">16</span>Mnemonics &amp; Quick Recall</a></li>
-<li><a href="#worked-examples" class="toc-link"><span class="toc-n">17</span>Worked Examples &amp; Scenarios</a></li>
-<li><a href="#exam-focus" class="toc-link"><span class="toc-n">18</span>Exam Practice</a></li>
-    </ul>
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
   </aside>
-  <div class="scrim" id="scrim"></div>
+  <div class="scrim" id="scrim" hidden></div>
+
   <main class="content" id="content">
-<section class="hero" id="overview">
-<p class="hero-tag">📖 Course notes · Lab 2</p>
-<h1>RESTful API Design &amp; Collaboration · Lab 2</h1>
-<p class="hero-sub">This lab has two halves. The first explains how modern web applications talk to each other through RESTful APIs: what REST is, how a request and response…</p>
-<div class="hero-overview"><p class="ho-label">Lecture overview</p><p>This lab has two halves. The first explains how modern web applications talk to each other through RESTful APIs: what REST is, how a request and response are structured, how authentication works, and the architectural constraints behind it. The second half covers how teams collaborate using GitHub — pull requests, protected branches, issues and project tracking. The individual task is Individual Task 2 – Analyse a RESTful API, using the API Contract template.</p></div>
-<div class="stats"><div class="stat"><span class="stat-val">Week 2</span><span class="stat-label">Lab</span></div><div class="stat"><span class="stat-val">Analyse a RESTful API</span><span class="stat-label">Individual Task</span></div><div class="stat"><span class="stat-val">API Contract template</span><span class="stat-label">Lab Resource</span></div><div class="stat"><span class="stat-val">REST APIs, Authentication, GitHub</span><span class="stat-label">Core Topics</span></div><div class="stat"><span class="stat-val">Stateless, resource-based URLs</span><span class="stat-label">Key Constraint</span></div></div>
+<section class="hero" id="top">
+  <span class="hero-eyebrow">ELEC3609 · Lab 2 · RESTful API Design &amp; Collaboration</span>
+  <h1 class="hero-title">RESTful APIs and Team Collaboration: From Client Requests to GitHub Workflows</h1>
+  <p class="hero-sub">This lab explains how modern web applications talk to each other through RESTful APIs — the standard HTTP methods, request and response anatomy, authentication, and the architectural constraints behind them — and then shows how frontend and backend teams stay aligned using API contracts and GitHub collaboration habits.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> A RESTful API is a convention, not a technology. It says "treat everything as a resource with a URL, and act on it with the standard HTTP verbs GET, POST, PUT and DELETE." Once you internalise the request/response cycle and the constraints that make it work, every endpoint, status code and collaboration practice in this lab becomes predictable.</div>
+  <div class="hero-meta"><span class="meta-chip">~20 min read</span><span class="meta-chip">12 teaching sections</span><span class="meta-chip">21 practice questions</span><span class="meta-chip">24 key terms</span></div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list"><li>Explain why RESTful APIs replaced query-string script URLs and what problems they solve.</li><li>Describe the full client request / server response cycle and name every component of each.</li><li>Choose the correct HTTP method for retrieving, creating, updating and deleting resources.</li><li>Compare Basic, Bearer, API Key and OAuth authentication and state their security trade-offs.</li><li>Interpret HTTP status code ranges and the common response headers.</li><li>List and explain Roy Fielding's six architectural constraints of REST.</li><li>Redesign action-oriented endpoints (like /login) as resource-oriented ones (like /sessions).</li><li>Explain the purpose of an API contract and when to use Django REST Framework versus JsonResponse.</li><li>Apply GitHub workflows (branches, pull requests, rulesets and issues) for team collaboration.</li></ul>
+  </div>
 </section>
-<section class="section" id="sec-1"><header class="section-head"><span class="section-num">01</span><h2>From Messy URLs to RESTful APIs</h2></header><div class="section-body"><p>In the late 1990s, web URLs often directly exposed server-side scripts and included explicit arguments to indicate actions and data, for example <code>getdata.php?user=123&amp;action=fetch</code>. This approach was functional, but it tightly coupled URL structures to specific implementation details, making systems less flexible and harder to maintain. It also posed security risks by exposing methods and parameters directly in the URL.</p>
-<p>As web development evolved, the need for more scalable, secure and maintainable solutions led to <strong>RESTful APIs</strong>. RESTful architecture uses standardised HTTP methods and focuses on <strong>stateless communication</strong> and <strong>resource-based URLs</strong> (e.g. <code>GET /users/123</code>), which abstract server implementation details from the client.</p>
-<p>This shift enhances security (standardised access, modern security practices) and supports better scalability and flexibility, accommodating modern clients such as mobile apps and other web services.</p>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background:</p><div class="callout-text">A RESTful API is <strong>not</strong> a protocol, library or tool. It is a style/convention — a set of design principles for building web APIs. REST uses HTTP as the underlying protocol, applying standardised methods like GET, POST, PUT and DELETE to interact with resources identified by URLs.</div></div></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text"><code>getdata.php?action=fetch</code> tells the world how your server is built; <code>GET /users/123</code> describes the resource, not the implementation. That decoupling is what lets frontend and backend teams work independently.</div></div></div></div></section>
-<section class="section" id="sec-2"><header class="section-head"><span class="section-num">02</span><h2>How a RESTful API Works</h2></header><div class="section-body"><p>The basic function of a RESTful API is similar to browsing the internet: the client contacts the server by making a request to retrieve or manipulate a resource, and the server responds with the result.</p>
-<p>A typical RESTful API call works through these steps:</p>
-<ol><li>The client sends an <strong>HTTP request</strong> to the server.</li><li>The server <strong>authenticates</strong> the request if needed (e.g. with an API key or token).</li><li>The server <strong>processes the logic</strong> (e.g. fetch, create, update, delete data).</li><li>The server sends an <strong>HTTP response</strong> containing status and data (e.g. JSON).</li></ol>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">A RESTful API separates client and server, allowing independent development and scalability. The client never needs to know how the server is implemented — only the contract.</div></div></div></div></section>
-<section class="section" id="sec-3"><header class="section-head"><span class="section-num">03</span><h2>Anatomy of a Client Request</h2></header><div class="section-body"><p>A RESTful API request typically includes several components.</p>
-<h3 class="subhead">Unique Resource Identifier</h3>
-<p>Each resource is identified by a <strong>URL (Uniform Resource Locator)</strong>, also known as the <strong>request endpoint</strong>. Example: <code>GET https://api.example.com/posts/22</code>.</p>
-<h3 class="subhead">HTTP Method</h3>
-<p>The HTTP method tells the server what action to perform on the resource.</p>
-<div class="table-wrap"><table><thead><tr><th>Method</th><th>Description</th></tr></thead><tbody><tr><td><strong>GET</strong></td><td>Retrieve data from the server. GET requests can be cached and may include query parameters.</td></tr><tr><td><strong>POST</strong></td><td>Send new data to the server. Repeating a POST may result in multiple records.</td></tr><tr><td><strong>PUT</strong></td><td>Update an existing resource. Repeating a PUT gives the same result each time.</td></tr><tr><td><strong>DELETE</strong></td><td>Remove a resource. May fail if authentication is not valid.</td></tr></tbody></table></div>
-<h3 class="subhead">HTTP Headers</h3>
-<p>Headers provide <strong>metadata</strong> about the request and response format, authentication and caching. Example:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>Content-Type: application/json
+<section class="guide-section" id="from-query-string-scripts-to-rest" data-title="From Query-String Scripts to REST">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">From Query-String Scripts to REST</h2>
+  </div>
+  <p class="section-kicker">REST exists because exposing implementation details in URLs made early web systems fragile and insecure.</p>
+<p>In the late 1990s, web URLs often directly exposed server-side scripts and included explicit arguments that stated the action and the data. A typical URL looked like this:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>getdata.php?user=123&amp;action=fetch</code></pre></div>
+<p>This worked, but it had serious drawbacks:</p>
+<ul><li>It <strong>tightly coupled URL structure to specific implementation details</strong>, so systems became less flexible and harder to maintain.</li><li>It <strong>posed security risks</strong> by exposing methods and parameters directly in the URL.</li></ul>
+<p>As web development evolved, the need for more scalable, secure and maintainable solutions led to <strong>RESTful APIs</strong>.</p>
+<div class="def-card"><span class="dc-term">RESTful API</span> — An API design style that uses standardised HTTP methods, stateless communication, and resource-based URLs (for example <code>GET /users/123</code>) to abstract server implementation details away from the client.</div>
+<p>A <strong>RESTful API</strong> is built on three ideas:</p>
+<ol><li><strong>Standardised HTTP methods</strong> — the same verbs (GET, POST, PUT, DELETE) mean the same thing everywhere.</li><li><strong>Stateless communication</strong> — each request carries everything the server needs to understand it.</li><li><strong>Resource-based URLs</strong> — the URL names a <em>thing</em>, not an <em>action</em>.</li></ol>
+<p>This shift enhances security by standardising access and using modern security practices, and it supports better scalability and flexibility across many client types, including mobile apps and other web services.</p>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> RESTful API is <strong>not</strong> a protocol, library, or tool. It is a style, convention, or set of design principles for building web APIs. REST <em>uses</em> HTTP as the underlying protocol and applies standardised methods like GET, POST, PUT and DELETE to interact with resources identified by URLs.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Look at <code>getdata.php?user=123&amp;action=fetch</code>. What are the two pieces of information that a RESTful redesign would move out of the URL, and where would each go?</div></div>
+</section>
+<section class="guide-section" id="the-anatomy-of-a-restful-api-call" data-title="The Anatomy of a RESTful API Call">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Anatomy of a RESTful API Call</h2>
+  </div>
+  <p class="section-kicker">A RESTful API separates client and server so they can be developed and scaled independently.</p>
+<p>The basic function of a RESTful API is similar to browsing the internet: the <strong>client</strong> contacts the <strong>server</strong> by making a request to retrieve or manipulate a <strong>resource</strong>, and the server responds with the result.</p>
+<p>A typical RESTful API call works through four steps:</p>
+<ol class="steps"><li>The client sends an HTTP request to the server.</li><li>The server authenticates the request if needed (for example, with an API key or token).</li><li>The server processes the logic (for example, fetch, create, update or delete data).</li><li>The server sends an HTTP response containing status and data (for example, JSON).</li></ol>
+<div class="flow"><span class="flow-step">Client</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">HTTP Request</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Server</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Authentication</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Business Logic</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">HTTP Response (status + data)</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Client</span></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The client never needs to know how the server is implemented, and the server never stores client context. That separation is what "allows independent development and scalability" — the two sides can change, grow or be replaced without breaking the other.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> In the four steps above, at which point does the server decide <em>whether the client is allowed</em> to do what it asked? Answer before reading the authentication section.</div></div>
+</section>
+<section class="guide-section" id="building-the-client-request" data-title="Building the Client Request">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Building the Client Request</h2>
+  </div>
+  <p class="section-kicker">Every RESTful API request is assembled from five parts: URL, method, headers, body, and parameters.</p>
+<p>A RESTful API request typically includes the following components.</p>
+<h3 class="sub-title">1. Unique Resource Identifier</h3>
+<p>Each resource is identified by a <strong>URL</strong> (Uniform Resource Locator), also known as the <strong>request endpoint</strong>. Example:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>GET https://api.example.com/posts/22</code></pre></div>
+<h3 class="sub-title">2. HTTP Method</h3>
+<p>The HTTP method tells the server what action to perform on the resource (covered in the next section).</p>
+<h3 class="sub-title">3. HTTP Headers</h3>
+<p>Headers provide <strong>metadata</strong> about the request and response format, authentication, and caching. Example:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>Content-Type: application/json
 Accept: application/json
 Authorization: Bearer &lt;token&gt;</code></pre></div>
-<h3 class="subhead">Request Body (Data)</h3>
+<h3 class="sub-title">4. Request Body (Data)</h3>
 <p>For methods like <strong>POST</strong> and <strong>PUT</strong>, the client includes a <strong>data payload</strong> in the request body. Example:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>{
-  &quot;title&quot;: &quot;New Post&quot;,
-  &quot;author&quot;: &quot;User123&quot;
-}</code></pre></div>
-<h3 class="subhead">Parameters</h3>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>{ &quot;title&quot;: &quot;New Post&quot;, &quot;author&quot;: &quot;User123&quot; }</code></pre></div>
+<h3 class="sub-title">5. Parameters</h3>
 <p>Clients may send extra information through parameters to help the server process the request.</p>
-<div class="table-wrap"><table><thead><tr><th>Parameter Type</th><th>Description</th></tr></thead><tbody><tr><td><strong>Path Parameters</strong></td><td>Part of the URL to identify specific resources, e.g. <code>/posts/22</code>.</td></tr><tr><td><strong>Query Parameters</strong></td><td>Provide filtering or sorting logic, e.g. <code>/posts?author=Admin</code>.</td></tr><tr><td><strong>Cookie Parameters</strong></td><td>Sent via cookies, often for session or quick auth purposes.</td></tr></tbody></table></div>
-<h3 class="subhead">Example curl Command</h3>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>curl -X PUT https://api.imgur.com/3/account/ImgurUser/settings \
+<div class="table-wrap"><table><thead><tr><th>Parameter Type</th><th>Description</th></tr></thead><tbody><tr><td><strong>Path Parameters</strong></td><td>Part of the URL to identify specific resources. E.g. <code>/posts/22</code></td></tr><tr><td><strong>Query Parameters</strong></td><td>Provide filtering or sorting logic. E.g. <code>/posts?author=Admin</code></td></tr><tr><td><strong>Cookie Parameters</strong></td><td>Sent via cookies, often for session or quick auth purposes.</td></tr></tbody></table></div>
+<h3 class="sub-title">Worked example: a <code>curl</code> request</h3>
+<p>The following command updates an Imgur account's settings:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>curl -X PUT https://api.imgur.com/3/account/ImgurUser/settings \
   -H &quot;Authorization: Bearer YOUR_ACCESS_TOKEN&quot; \
   -H &quot;Content-Type: multipart/form-data&quot; \
   -F &quot;bio=Long time lurker...&quot; \
@@ -348,282 +549,568 @@ Authorization: Bearer &lt;token&gt;</code></pre></div>
   -F &quot;accepted_gallery_terms=true&quot; \
   -F &quot;show_mature=true&quot; \
   -F &quot;newsletter_subscribed=true&quot;</code></pre></div>
-<div class="table-wrap"><table><thead><tr><th>Part</th><th>Explanation</th></tr></thead><tbody><tr><td><code>-X PUT</code></td><td>Specifies the HTTP method as PUT, which updates a resource.</td></tr><tr><td><code>-H</code></td><td>Adds a custom HTTP header (here, two headers are used).</td></tr><tr><td><code>Authorization: Bearer ...</code></td><td>Passes the access token to authenticate the request.</td></tr><tr><td><code>Content-Type: multipart/form-data</code></td><td>Informs the server you're sending form fields, possibly in file-like format.</td></tr><tr><td><code>-F</code></td><td>Sends a form field as a key-value pair. Multiple <code>-F</code> flags send multiple fields in the body.</td></tr></tbody></table></div></div></section>
-<section class="section" id="sec-4"><header class="section-head"><span class="section-num">04</span><h2>HTTP Methods &amp; Their Semantics</h2></header><div class="section-body"><p>The four core methods each carry a meaning, and REST depends on using them consistently:</p>
-<ul><li><strong>GET</strong> — read a resource; cacheable; can carry query parameters.</li><li><strong>POST</strong> — create/send new data; repeating it may create multiple records (not idempotent).</li><li><strong>PUT</strong> — update an existing resource; repeating it gives the same result each time (idempotent).</li><li><strong>DELETE</strong> — remove a resource; may fail if authentication is not valid.</li></ul>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text"><strong>G-P-P-D</strong> = "Get, Post, Put, Delete" — read, create, replace, remove. Only POST creates a <em>new</em> record each time it is repeated.</div></div></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Using GET to change data. GET should be safe and cacheable; anything that mutates state belongs in POST, PUT or DELETE.</div></div></div></div></section>
-<section class="section" id="sec-5"><header class="section-head"><span class="section-num">05</span><h2>API Authentication Methods</h2></header><div class="section-body"><p>A RESTful web service authenticates requests before sending responses. Authentication verifies the client's identity and ensures only authorised users can access protected resources.</p>
-<div class="table-wrap"><table><thead><tr><th>Method</th><th>Description</th><th>Security Notes</th></tr></thead><tbody><tr><td><strong>Basic Authentication</strong></td><td>Sends a username and password in the HTTP header, encoded using Base64.</td><td>Easy to implement but not secure unless used over HTTPS. Susceptible to interception.</td></tr><tr><td><strong>Bearer Authentication</strong></td><td>Sends an access token (a string) in the HTTP header as proof of identity.</td><td>More secure than basic auth. Common in OAuth flows. The token should be kept secret.</td></tr><tr><td><strong>API Key</strong></td><td>A unique identifier (string) provided to each client to access resources. Included in headers or query parameters.</td><td>Simple to use but less secure. If exposed, anyone can use the key. Often rate-limited.</td></tr><tr><td><strong>OAuth</strong></td><td>A robust framework that uses both a password and a token for access. Supports scopes, refresh tokens and expiration.</td><td>Highly secure. Ideal for third-party integrations. Can be complex to implement initially.</td></tr></tbody></table></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">All authentication methods should be used over <strong>HTTPS</strong> to prevent credentials or tokens from being intercepted. Basic auth over plain HTTP is effectively a plaintext password.</div></div></div></div></section>
-<section class="section" id="sec-6"><header class="section-head"><span class="section-num">06</span><h2>Anatomy of a Server Response</h2></header><div class="section-body"><p>When a RESTful API server receives a valid request, it returns a response composed of three key parts: the status line, the message body and the response headers.</p>
-<h3 class="subhead">Status Line</h3>
+<div class="table-wrap"><table><thead><tr><th>Part</th><th>Explanation</th></tr></thead><tbody><tr><td><code>-X PUT</code></td><td>Specifies the HTTP method as <code>PUT</code>, which updates a resource.</td></tr><tr><td><code>-H</code></td><td>Adds a custom HTTP header. Here two headers are used.</td></tr><tr><td><code>Authorization: Bearer ...</code></td><td>Passes the access token to authenticate the request.</td></tr><tr><td><code>Content-Type: multipart/form-data</code></td><td>Tells the server you are sending form fields in a possibly file-like format.</td></tr><tr><td><code>-F</code></td><td>Sends a form field as a key-value pair. Multiple <code>-F</code> flags send multiple fields in the body.</td></tr></tbody></table></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>U-M-H-B-P</strong> — <strong>U</strong>RL, <strong>M</strong>ethod, <strong>H</strong>eaders, <strong>B</strong>ody, <strong>P</strong>arameters. Every request is those five, in that order of importance.</div></div>
+</section>
+<section class="guide-section" id="http-methods-the-verbs-of-rest" data-title="HTTP Methods: The Verbs of REST">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">HTTP Methods: The Verbs of REST</h2>
+  </div>
+  <p class="section-kicker">The HTTP method tells the server which standard operation to perform on the resource.</p>
+<div class="table-wrap"><table><thead><tr><th>Method</th><th>Description</th></tr></thead><tbody><tr><td><strong>GET</strong></td><td>Retrieve data from the server. GET requests can be cached and may include query parameters.</td></tr><tr><td><strong>POST</strong></td><td>Send new data to the server. Repeating a POST may result in multiple records.</td></tr><tr><td><strong>PUT</strong></td><td>Update an existing resource. Repeating a PUT gives the same result each time.</td></tr><tr><td><strong>DELETE</strong></td><td>Remove a resource. May fail if authentication is not valid.</td></tr></tbody></table></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The difference between repeating POST and repeating PUT is the whole point of predictable APIs. POST is <em>not</em> safe to repeat — two identical POSTs can create two records. PUT is <em>repeatable</em> (idempotent) — sending it twice leaves the data in the same state. This is why updates use PUT and submissions use POST.</div></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> GET requests are <strong>cacheable</strong> and frequently carry <strong>query parameters</strong> for filtering or sorting. DELETE removes a resource but will fail if the request is not authenticated correctly.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A user taps "submit feedback" twice because the network is slow. Which method was used, and what is the likely consequence?</div></div>
+</section>
+<section class="guide-section" id="authenticating-restful-requests" data-title="Authenticating RESTful Requests">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Authenticating RESTful Requests</h2>
+  </div>
+  <p class="section-kicker">A RESTful web service authenticates requests before sending responses, so only authorised users reach protected resources.</p>
+<p><strong>Authentication</strong> verifies the client's identity and ensures only authorised users can access protected resources. A RESTful web service authenticates requests <em>before</em> sending responses.</p>
+<h3 class="sub-title">Common authentication methods</h3>
+<div class="table-wrap"><table><thead><tr><th>Method</th><th>Description</th><th>Security Notes</th></tr></thead><tbody><tr><td><strong>Basic Authentication</strong></td><td>Sends a username and password in the HTTP header, encoded using Base64.</td><td>Easy to implement but not secure unless used over HTTPS. Susceptible to interception.</td></tr><tr><td><strong>Bearer Authentication</strong></td><td>Sends an access token (a string) in the HTTP header as proof of identity.</td><td>More secure than basic auth. Common in OAuth flows. The token should be kept secret.</td></tr><tr><td><strong>API Key</strong></td><td>A unique identifier (string) given to each client to access resources. Included in headers or query parameters.</td><td>Simple to use but less secure. If exposed, anyone can use the key. Often rate-limited.</td></tr><tr><td><strong>OAuth</strong></td><td>A robust framework that uses both a password and a token for access. Supports scopes, refresh tokens, and expiration.</td><td>Highly secure. Ideal for third-party integrations. Can be complex to implement initially.</td></tr></tbody></table></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap (No HTTP):</strong> All authentication methods should be used over <strong>HTTPS</strong> to prevent credentials or tokens from being intercepted. Basic auth especially is only safe on top of HTTPS.</div></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Order them by strength — <strong>Basic &lt; API Key &lt; Bearer &lt; OAuth</strong>. OAuth earns its complexity by adding scopes, refresh tokens and expiry.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> An API key appears in a URL like <code>https://api.example.com/data?key=ABC123</code>. Why is that risky, and which method would be safer for a third-party integration?</div></div>
+</section>
+<section class="guide-section" id="reading-the-server-response" data-title="Reading the Server Response">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Reading the Server Response</h2>
+  </div>
+  <p class="section-kicker">When a RESTful API server receives a valid request, it returns a response made of a status line, a message body, and response headers.</p>
+<h3 class="sub-title">1. Status Line</h3>
 <p>The <strong>status line</strong> includes a 3-digit HTTP status code that tells the client the result of the request.</p>
 <div class="table-wrap"><table><thead><tr><th>Code Range</th><th>Meaning</th><th>Examples</th></tr></thead><tbody><tr><td><strong>2xx Success</strong></td><td>The request was successfully processed.</td><td>200 OK, 201 Created</td></tr><tr><td><strong>3xx Redirection</strong></td><td>Further action is required to complete the request.</td><td>301 Moved Permanently</td></tr><tr><td><strong>4xx Client Error</strong></td><td>The request was incorrect or unauthorised.</td><td>400 Bad Request, 404 Not Found</td></tr><tr><td><strong>5xx Server Error</strong></td><td>The server encountered an error.</td><td>500 Internal Server Error</td></tr></tbody></table></div>
-<h3 class="subhead">Message Body</h3>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> First digit names the <em>culprit</em> — <strong>2</strong> = everything fine, <strong>3</strong> = go elsewhere, <strong>4</strong> = <em>you</em> (client) made a mistake, <strong>5</strong> = <em>they</em> (server) broke.</div></div>
+<h3 class="sub-title">2. Message Body</h3>
 <p>The <strong>message body</strong> contains the data returned by the server, often in JSON format. Example response body (JSON):</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>{
-  &quot;id&quot;: 102,
-  &quot;name&quot;: &quot;John&quot;,
-  &quot;age&quot;: 30,
-  &quot;email&quot;: &quot;john@example.com&quot;
-}</code></pre></div>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background:</p><div class="callout-text">The format (JSON or XML) is usually negotiated via the request header (e.g. <code>Accept: application/json</code>).</div></div></div>
-<h3 class="subhead">Response Headers</h3>
-<p>Response headers provide metadata about the response — not the main data, but useful context.</p>
-<div class="table-wrap"><table><thead><tr><th>Header</th><th>Description</th></tr></thead><tbody><tr><td>Content-Type</td><td>Format of the response body (<code>application/json</code>).</td></tr><tr><td>Content-Length</td><td>Size of the body in bytes.</td></tr><tr><td>Server</td><td>Info about the server software.</td></tr><tr><td>Date</td><td>Timestamp of the response.</td></tr><tr><td>Cache-Control</td><td>Whether/how long the response is cached.</td></tr><tr><td>Access-Control-Allow-Origin</td><td>CORS setting for cross-origin requests.</td></tr></tbody></table></div>
-<h3 class="subhead">Example Full Response</h3>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>HTTP/1.1 200 OK
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>{ &quot;id&quot;: 102, &quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 30, &quot;email&quot;: &quot;john@example.com&quot; }</code></pre></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> The format (JSON or XML) is usually negotiated via the request header, for example <code>Accept: application/json</code>.</div></div>
+<h3 class="sub-title">3. Response Headers</h3>
+<p>Response headers provide metadata about the response. They are not part of the main data but give useful context.</p>
+<div class="table-wrap"><table><thead><tr><th>Header</th><th>Description</th></tr></thead><tbody><tr><td><code>Content-Type</code></td><td>Format of the response body (<code>application/json</code>)</td></tr><tr><td><code>Content-Length</code></td><td>Size of the body in bytes</td></tr><tr><td><code>Server</code></td><td>Info about the server software</td></tr><tr><td><code>Date</code></td><td>Timestamp of the response</td></tr><tr><td><code>Cache-Control</code></td><td>Whether/how long the response is cached</td></tr><tr><td><code>Access-Control-Allow-Origin</code></td><td>CORS setting for cross-origin requests</td></tr></tbody></table></div>
+<h3 class="sub-title">Full response example (text format)</h3>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Length: 67
 Date: Tue, 22 Jul 2025 06:45:00 GMT
 Server: nginx/1.18.0
 
-{
-  &quot;id&quot;: 102,
-  &quot;name&quot;: &quot;John&quot;,
-  &quot;age&quot;: 30,
-  &quot;email&quot;: &quot;john@example.com&quot;
-}</code></pre></div>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Status families — <strong>2 = OK, 3 = go elsewhere, 4 = you broke it, 5 = we broke it</strong>.</div></div></div></div></section>
-<section class="section" id="sec-7"><header class="section-head"><span class="section-num">07</span><h2>REST as an Architectural Style</h2></header><div class="section-body"><p><strong>REST (Representational State Transfer)</strong> is not a protocol but an architectural style that guides the design of networked applications. It was introduced by <strong>Roy Fielding</strong> in his doctoral dissertation to describe a set of architectural constraints that, when applied, enable scalable, reliable and evolvable systems, especially for web services.</p>
-<p>These constraints are not exclusive to HTTP or web APIs. They are a model for designing distributed systems that emphasise clarity, separation of concerns and stateless communication. RESTful APIs are one concrete application of these principles over HTTP.</p>
-<div class="table-wrap"><table><thead><tr><th>Constraint</th><th>Description</th></tr></thead><tbody><tr><td><strong>Stateless</strong></td><td>Each client request must contain all the information necessary to understand and process it. The server should not store any client context between requests. This improves scalability and reliability.</td></tr><tr><td><strong>Cacheable</strong></td><td>Server responses should explicitly indicate whether they are cacheable. This lets clients and intermediaries reuse responses and reduces redundant requests.</td></tr><tr><td><strong>Uniform Interface</strong></td><td>REST enforces a standardised way to communicate: HTTP methods (GET, POST, PUT, DELETE), predictable URIs, and common data formats like JSON.</td></tr><tr><td><strong>Client–Server Separation</strong></td><td>The client and server operate independently. The client need not know server implementation details, and the server does not manage client state. This allows greater portability and scalability.</td></tr><tr><td><strong>Layered System</strong></td><td>REST allows intermediate layers (load balancers, proxies, security filters) between client and server. These layers should not affect the request or response but can enhance performance, scalability and security.</td></tr><tr><td><strong>Code-on-Demand (optional)</strong></td><td>Servers can temporarily extend client functionality by transferring executable code (e.g. JavaScript). This constraint is optional and less commonly used in RESTful API design.</td></tr></tbody></table></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Statelessness is what makes REST APIs easy to scale — any server can handle any request because no server holds client context. That is why load balancers can spread requests freely.</div></div></div></div></section>
-<section class="section" id="sec-8"><header class="section-head"><span class="section-num">08</span><h2>RESTful API Design Principles</h2></header><div class="section-body"><p>A good RESTful API is not just a CRUD wrapper over HTTP — it is a thoughtful, resource-oriented interface that adheres to REST principles to achieve robustness, scalability and clarity.</p>
-<h3 class="subhead">"Non-CRUD" (Resource-Oriented) Actions</h3>
-<p>Instead of calling an action, create a resource:</p>
-<ul><li>Rather than a URL like <code>/activateAccount</code>, which directly calls an action, use <code>/account-activation</code>, representing it as a resource.</li><li>Instead of "login", create a "session": instead of <code>/login</code>, use <code>/sessions</code> to create a new session.</li><li>Instead of "closing account", create a "closing": manage <code>/accountclosings</code>, perhaps by POSTing to it to request an account closure.</li></ul>
-<h3 class="subhead">Aligning with HTTP Protocol Semantics</h3>
-<p>HTTP is inherently designed to work with resources identified by <strong>URIs (Uniform Resource Identifiers)</strong>. Methods (verbs) like GET, POST, PUT and DELETE perform standard operations on those resources. Using them as the HTTP specification intends makes your API predictable and aligned with web standards, easing understanding and integration.</p>
-<h3 class="subhead">Simplifying and Standardising Endpoints</h3>
-<p>When APIs focus on resources rather than actions, the number of endpoints typically reduces and their purpose becomes clearer:</p>
-<ul><li><strong>Resource-oriented:</strong> an endpoint like <code>/sessions</code> handles all session actions — creating a session (logging in) might be <code>POST /sessions</code>, and deleting a session (logging out) a <code>DELETE</code>.</li><li><strong>Action-oriented:</strong> different actions need different endpoints, like <code>/login</code> and <code>/logout</code>, even though they relate to the same conceptual resource.</li></ul>
-<div class="callout tip"><div class="callout-ico" aria-hidden="true">✅</div><div class="callout-body"><p class="callout-title">Exam Tip:</p><div class="callout-text">This approach reduces cognitive load: developers can often guess endpoint URLs from standard practice and do not need to remember a separate endpoint for every action.</div></div></div></div></section>
-<section class="section" id="sec-9"><header class="section-head"><span class="section-num">09</span><h2>The API Contract</h2></header><div class="section-body"><p>An <strong>API contract</strong> is essential because it defines the expectations and agreements between the API providers (backend) and its consumers (frontend). With a clear contract, developers can build and integrate with the API more effectively, reducing the likelihood of misunderstandings and errors. It also serves as a reference point or verification for any updates or changes, ensuring all parties are aligned on how the API should function.</p>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background:</p><div class="callout-text">See the API Contract <strong>template on Canvas</strong> to understand what an API contract should include. This is the resource used for Individual Task 2.</div></div></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">The contract lets the frontend and backend teams build in parallel. Each side codes against the agreed endpoints and payloads, so integration is a formality rather than a surprise.</div></div></div></div></section>
-<section class="section" id="sec-10"><header class="section-head"><span class="section-num">10</span><h2>REST APIs in Django &amp; DRF</h2></header><div class="section-body"><h3 class="subhead">Traditional Django Views</h3>
-<ul><li>Traditional views return <code>HttpResponse</code> objects, often rendering HTML.</li><li>You can return JSON manually using <code>JsonResponse</code> and manually serialising data.</li><li>However, this method is not scalable or clean for building APIs, and is more suitable for server-rendered web applications.</li><li>Concerns to consider: business logic separation, scalability, and performance optimisation.</li></ul>
-<h3 class="subhead">Need for Django REST Framework (DRF)</h3>
-<ul><li>In modern web applications (e.g. React SPAs, mobile apps), the backend often acts as an <strong>API-only layer</strong>.</li><li>All frontend–backend communication happens via <strong>JSON APIs</strong>.</li><li>This is known as a <strong>headless architecture</strong>, where frontend and backend are separated.</li><li><strong>Django REST Framework (DRF)</strong> extends Django's capabilities to build web APIs. It is optimised for JSON and other content types and supports:<li>Serialisation and deserialisation.</li><li>Permissions and authentication.</li><li>Many features out of the box.</li></li></ul>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background — In assignment:</p><div class="callout-text">You may use raw <code>HttpResponse</code> and return HTML with Django's built-in view functions to meet the basic requirements. However, your project <strong>must include API endpoints that return data in JSON format</strong>. This can be implemented either with simple <code>JsonResponse</code> objects or by creating a separate set of JSON endpoints. Either is acceptable, but DRF is recommended for a cleaner, more scalable API. You will learn to build RESTful APIs with DRF in upcoming labs.</div></div></div></div></section>
-<section class="section" id="sec-11"><header class="section-head"><span class="section-num">11</span><h2>GitHub Collaboration: PRs &amp; Branches</h2></header><div class="section-body"><p>Git is a powerful version control system, but its real value and complexity become clear in team-based development. This section introduces practical GitHub collaboration habits — not Git commands — that help you avoid conflicts, stay organised and communicate effectively.</p>
-<div class="callout tip"><div class="callout-ico" aria-hidden="true">✅</div><div class="callout-body"><p class="callout-title">Exam Tip:</p><div class="callout-text">You are not expected to master every Git command now. Build the right habits so your future work becomes easier to manage and scale.</div></div></div>
-<h3 class="subhead">Getting Started with GitHub Tools</h3>
-<ul><li><strong>Git-SCM Book</strong> — comprehensive guide to Git.</li><li><strong>GitHub Getting Started</strong> — official GitHub beginner guide.</li><li><strong>GitHub Desktop</strong> — a GUI client that simplifies version control for beginners, with visualisation tools to manage changes without the command line.</li></ul>
-<h3 class="subhead">Work Together with Pull Requests</h3>
-<ul><li><strong>Protect important branches</strong> — use protected branches (e.g. <code>main</code>) to prevent accidental changes, and set conditions like requiring CI tests or code reviews before merging.</li><li><strong>Define push rules</strong> — set <strong>rulesets</strong> to control what gets pushed (e.g. file types, sizes). Useful for internal repositories or larger teams with stricter controls.</li><li><strong>Resolve merge conflicts before merging</strong> — GitHub blocks merging if there are unresolved conflicts between branches. Always check and resolve these using the file list shown above the merge button.</li></ul>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">GitHub will refuse to merge while conflicts remain. Fixing conflicts is part of the workflow, not an optional extra.</div></div></div></div></section>
-<section class="section" id="sec-12"><header class="section-head"><span class="section-num">12</span><h2>GitHub Issues &amp; Project Tracking</h2></header><div class="section-body"><p>Use <strong>GitHub Issues</strong> to:</p>
+{ &quot;id&quot;: 102, &quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 30, &quot;email&quot;: &quot;john@example.com&quot; }</code></pre></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A client forgets to send its token. Which status range should it expect, and name two specific codes that could appear.</div></div>
+</section>
+<section class="guide-section" id="rest-as-an-architectural-style" data-title="REST as an Architectural Style">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">REST as an Architectural Style</h2>
+  </div>
+  <p class="section-kicker">REST is not a protocol but an architectural style, defined by six constraints that make networked systems scalable, reliable and evolvable.</p>
+<p><strong>REST (Representational State Transfer)</strong> was introduced by <strong>Roy Fielding</strong> in his doctoral dissertation to describe a set of architectural constraints that, when applied, enable scalable, reliable, and evolvable systems — especially in web services.</p>
+<p>These constraints are <strong>not exclusive to HTTP or web APIs</strong>. They represent a general model for designing distributed systems that emphasise clarity, separation of concerns, and stateless communication. RESTful APIs happen to be one concrete application of these principles over HTTP.</p>
+<h3 class="sub-title">Architectural constraints of REST</h3>
+<div class="table-wrap"><table><thead><tr><th>Constraint</th><th>Description</th></tr></thead><tbody><tr><td><strong>Stateless</strong></td><td>Each client request must contain all the information necessary to understand and process it. The server should not store any client context between requests. This improves scalability and reliability.</td></tr><tr><td><strong>Cacheable</strong></td><td>Server responses should explicitly indicate whether they are cacheable. This enables clients and intermediaries to reuse responses and reduces redundant requests.</td></tr><tr><td><strong>Uniform Interface</strong></td><td>REST enforces a standardised way to communicate between client and server. This includes using HTTP methods (GET, POST, PUT, DELETE), predictable URIs, and common data formats like JSON.</td></tr><tr><td><strong>Client–Server Separation</strong></td><td>The client and server operate independently. The client does not need to know about server implementation details, and the server does not manage client state. This allows greater portability and scalability.</td></tr><tr><td><strong>Layered System</strong></td><td>REST allows intermediate layers (such as load balancers, proxies, or security filters) between client and server. These layers should not affect the request or response but can enhance performance, scalability, and security.</td></tr><tr><td><strong>Code-on-Demand (optional)</strong></td><td>Servers can temporarily extend client functionality by transferring executable code (for example JavaScript). This constraint is optional and less commonly used in RESTful API design.</td></tr></tbody></table></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>S-C-U-C-L-C</strong> — <strong>S</strong>tateless, <strong>C</strong>acheable, <strong>U</strong>niform interface, <strong>C</strong>lient–server, <strong>L</strong>ayered, <strong>C</strong>ode-on-demand. Only the last is optional.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A load balancer sits between client and server. Which constraint does it satisfy, and what must be true for it not to break the design?</div></div>
+</section>
+<section class="guide-section" id="designing-resource-oriented-apis" data-title="Designing Resource-Oriented APIs">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Designing Resource-Oriented APIs</h2>
+  </div>
+  <p class="section-kicker">A good RESTful API is a thoughtful, resource-oriented interface, not just a CRUD wrapper over HTTP.</p>
+<p>When we design a <strong>RESTful API</strong>, we apply the architectural constraints to HTTP-based services. Follow the design principles of RESTful APIs to reduce redundancy and create a clear, interactive, and user-friendly interface.</p>
+<h3 class="sub-title">"Non-CRUD" (resource-oriented) actions</h3>
+<p>The central move is: <strong>instead of calling an action, create a resource.</strong></p>
+<ul><li><strong>Instead of an action, create a resource.</strong> Rather than a URL like <code>/activateAccount</code> that directly calls an action, use <code>/account-activation</code>, which represents it as a resource.</li><li><strong>Instead of "login", create a "session".</strong> Instead of <code>/login</code>, use <code>/sessions</code> to create a new session. The focus shifts from the <em>act of logging in</em> to the <em>creation of a session resource</em>.</li><li><strong>Instead of "closing account", create a "closing".</strong> This rephrases the action as managing a resource, <code>/accountclosings</code>. This might involve POSTing to that resource to request an account closure.</li></ul>
+<h3 class="sub-title">Aligning with HTTP protocol semantics</h3>
+<p>HTTP is inherently designed to work with resources identified by <strong>URIs (Uniform Resource Identifiers)</strong>. Methods (verbs) like GET, POST, PUT and DELETE are designed to perform standard operations on those resources. Using these methods in the way the HTTP specification intends makes your API <strong>predictable</strong> and aligned with web standards, which makes understanding and integration easier.</p>
+<h3 class="sub-title">Simplifying and standardising endpoints</h3>
+<p>When APIs focus on resources rather than actions, the number of endpoints typically reduces and their purpose becomes clearer.</p>
+<div class="compare"><div class="compare-col a"><h3>Resource-oriented</h3><p>An endpoint like <code>/sessions</code> handles <strong>all</strong> actions related to session management. Creating a session (logging in) is a <code>POST</code> to <code>/sessions</code>; deleting a session (logging out) is a <code>DELETE</code>.</p></div><div class="compare-col b"><h3>Action-oriented</h3><p>Different actions need different endpoints, like <code>/login</code> for logging in and <code>/logout</code> for logging out — even though they relate to the same conceptual resource (user sessions).</p></div></div>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> This approach reduces the cognitive load for developers who use your API, because they can often <em>guess</em> endpoint URLs from standard practices instead of memorising multiple endpoints for related actions.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> You need an endpoint to reset a password. Write the action-oriented version, then rewrite it as a resource-oriented one.</div></div>
+</section>
+<section class="guide-section" id="api-contracts-the-team-interface" data-title="API Contracts: The Team Interface">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">API Contracts: The Team Interface</h2>
+  </div>
+  <p class="section-kicker">An API contract is the shared agreement that lets backend and frontend teams build against the same expectations.</p>
+<p>An <strong>API contract</strong> defines the expectations and agreements between the API <strong>providers</strong> (the backend) and its <strong>consumers</strong> (the frontend). It is essential because:</p>
+<ul><li>With a clear contract, developers can build and integrate with the API more effectively.</li><li>It reduces the likelihood of misunderstandings and errors.</li><li>It serves as a <strong>reference point or verification</strong> for any updates or changes, ensuring all parties stay aligned on how the API should function.</li></ul>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> In a real team, the frontend cannot see or control the backend's code. The contract is the one artefact both sides can point to when something does not match — it is what makes parallel development possible.</div></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> A template is provided on Canvas that shows exactly what an API contract should include. Use it when documenting your own endpoints.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Name three things you would expect an API contract to specify for <code>POST /sessions</code>.</div></div>
+</section>
+<section class="guide-section" id="rest-apis-in-django-and-drf" data-title="REST APIs in Django (and DRF)">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">REST APIs in Django (and DRF)</h2>
+  </div>
+  <p class="section-kicker">Django can serve JSON with plain views, but a dedicated framework makes APIs cleaner, more scalable and more feature-rich.</p>
+<h3 class="sub-title">Traditional Django views</h3>
+<ul><li>Traditional views in Django return <code>HttpResponse</code> objects, often rendering HTML.</li><li>You can return JSON manually using <code>JsonResponse</code> and manually serialising data.</li><li>However, this method:</li><li>Is <strong>not scalable or clean</strong> for building APIs.</li><li>Is more suitable for <strong>server-rendered</strong> web applications.</li><li>Concerns to consider: <strong>business logic separation</strong>, <strong>scalability</strong>, and <strong>performance optimisation</strong>.</li></ul>
+<h3 class="sub-title">The need for Django REST Framework (DRF)</h3>
+<ul><li>In modern web applications (for example React SPAs, mobile apps), the backend often acts as an <strong>API-only layer</strong>.</li><li>All frontend–backend communication happens via <strong>JSON APIs</strong>.</li><li>This is known as a <strong>headless architecture</strong>, where frontend and backend are separated.</li><li><strong>Django REST Framework (DRF)</strong>:</li><li>Extends Django's capabilities to build Web APIs.</li><li>Is optimised for JSON and other content types.</li><li>Supports <strong>serialisation and deserialisation</strong>, <strong>permissions and authentication</strong>, and many features <strong>out of the box</strong>.</li></ul>
+<div class="compare"><div class="compare-col a"><h3>JsonResponse</h3><p>A lightweight solution that returns JSON directly from any view. Requires only a small amount of code to serialise your data. Good for simple needs.</p></div><div class="compare-col b"><h3>Django REST Framework</h3><p>A cleaner, more scalable API design with serialisation, authentication and permissions built in. Recommended when you build a real API.</p></div></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Assignment requirement:</strong> You are allowed to use raw <code>HttpResponse</code> and return HTML using Django's built-in view functions to meet the basic requirements. However, your project <strong>must include API endpoints that return data in JSON format</strong>. This can be done with simple <code>JsonResponse</code> objects or by creating a separate set of endpoints dedicated to JSON output. Either is acceptable, but <strong>DRF is recommended</strong>.</div></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> You will learn how to build RESTful APIs in Django using Django REST Framework (DRF) in the upcoming labs.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Your assignment reviewer asks "where is your API?" You have built HTML pages only. What is the minimum change needed to pass?</div></div>
+</section>
+<section class="guide-section" id="github-collaboration-habits" data-title="GitHub Collaboration Habits">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">GitHub Collaboration Habits</h2>
+  </div>
+  <p class="section-kicker">Git's real value shows up in team development, so this section focuses on collaboration habits — not Git commands.</p>
+<p>Git is a powerful version control system, but its real value and complexity become clear in <strong>team-based development</strong>. The point here is practical GitHub collaboration habits that help you avoid conflicts, stay organised, and communicate effectively — not memorising Git commands.</p>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Note:</strong> You are not expected to master every Git command now. Build the right habits so your future work becomes easier to manage and scale.</div></div>
+<h3 class="sub-title">3.1 Getting started with GitHub tools</h3>
+<ul><li><strong>Git-SCM Book</strong> — a comprehensive guide to Git.</li><li><strong>GitHub Getting Started</strong> — the official GitHub beginner guide.</li><li><strong>GitHub Desktop</strong> — a GUI client for GitHub that simplifies version control for beginners.</li></ul>
+<p><strong>GitHub Desktop</strong> is beginner-friendly and includes visualisation tools to help you manage changes without using the command line.</p>
+<h3 class="sub-title">3.2 Work together with pull requests</h3>
+<ul><li><strong>Protect important branches.</strong> Use <strong>protected branches</strong> (for example <code>main</code>) to prevent accidental changes, and set conditions such as requiring <strong>CI tests or code reviews</strong> before merging.</li><li><strong>Define push rules.</strong> Set <strong>rulesets</strong> to control what gets pushed (for example file types and sizes). Useful for internal repositories or larger teams with stricter controls.</li><li><strong>Resolve merge conflicts before merging.</strong> GitHub <strong>blocks merging</strong> if there are unresolved conflicts between branches. Always check and resolve these using the file list shown above the merge button.</li></ul>
+<h3 class="sub-title">3.3 Track and plan with GitHub Issues</h3>
+<p>Use GitHub Issues to:</p>
 <ul><li>Track bugs, ideas, tasks, or any piece of work.</li><li>Link issues to pull requests for visibility and context.</li><li>Collaborate by assigning tasks to team members.</li></ul>
 <p>Helpful actions:</p>
 <ul><li>Link a PR to an issue.</li><li>Create a branch for an issue.</li><li>Assign issues and PRs.</li></ul>
-<div class="callout tip"><div class="callout-ico" aria-hidden="true">✅</div><div class="callout-body"><p class="callout-title">Exam Tip:</p><div class="callout-text">Defining a clear <strong>commit message guideline</strong> and a consistent <strong>branch naming convention</strong> helps your team organise the repository and speeds up reviews and debugging. Look at how mature open-source projects manage their GitHub repositories for real-world examples.</div></div></div></div></section>
-<section class="section" id="sec-13"><header class="section-head"><span class="section-num">13</span><h2>Team Conventions &amp; USYD CI/CD</h2></header><div class="section-body"><p>Beyond branches and issues, a few conventions keep a team repository healthy:</p>
-<ul><li>A consistent <strong>branch naming convention</strong> and <strong>commit message guideline</strong>.</li><li><strong>Protected branches</strong> and <strong>rulesets</strong> to control what reaches <code>main</code>.</li><li><strong>Pull requests</strong> with reviews before merging.</li><li><strong>Issues</strong> linked to the work they describe.</li></ul>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap — No GitHub Actions on USYD GitHub Enterprise:</p><div class="callout-text">GitHub Actions is <strong>not</strong> enabled on the USYD GitHub Enterprise Server. ICT recommends using external CI/CD tools like <strong>Jenkins</strong> or <strong>AWS CodePipeline/CodeBuild</strong> instead. Do not assume GitHub Actions is available for your assignment pipelines.</div></div></div>
-<p><strong>Further readings (REST):</strong> "What is a RESTful API?", "What Is a REST API? Examples, Uses, and Challenges", Richardson/Amundsen/Ruby <em>RESTful Web APIs</em> (2013), and Fielding's 2000 doctoral dissertation.</p>
-<p><strong>Further readings (Git):</strong> GitHub Docs, Git Collaborating Workflows, Commit Message Guidelines, and "Naming conventions for Git Branches — a Cheatsheet".</p></div></section>
-<section class="section" id="key-takeaways"><header class="section-head"><span class="section-num">14</span><h2>Key Takeaways</h2></header><div class="section-body"><ol class="takeaways"><li><span class="tk-n">1</span><div><strong>REST is a style, not a tool</strong> — it is a set of design principles that uses HTTP as its underlying protocol.</div></li><li><span class="tk-n">2</span><div><strong>Resource-based URLs beat action URLs</strong> — <code>GET /users/123</code> hides implementation details, whereas <code>getdata.php?action=fetch</code> leaks them.</div></li><li><span class="tk-n">3</span><div><strong>A REST request has five parts</strong> — the URL/endpoint, the HTTP method, headers, an optional body, and parameters (path, query or cookie).</div></li><li><span class="tk-n">4</span><div><strong>Methods have meanings</strong> — GET reads (cacheable), POST creates (repeatable → multiple records), PUT updates (idempotent), DELETE removes.</div></li><li><span class="tk-n">5</span><div><strong>Authentication verifies identity</strong> — Basic, Bearer, API Key and OAuth, and all must run over HTTPS.</div></li><li><span class="tk-n">6</span><div><strong>A response has three parts</strong> — status line (2xx/3xx/4xx/5xx), message body (often JSON) and response headers.</div></li><li><span class="tk-n">7</span><div><strong>REST's constraints</strong> — stateless, cacheable, uniform interface, client–server separation, layered system, and optional code-on-demand.</div></li><li><span class="tk-n">8</span><div><strong>Frame actions as resources</strong> — use <code>/sessions</code> instead of <code>/login</code>, <code>/account-activation</code> instead of <code>/activateAccount</code>.</div></li><li><span class="tk-n">9</span><div><strong>The API contract is the agreement</strong> — it aligns backend providers and frontend consumers and anchors change management.</div></li><li><span class="tk-n">10</span><div><strong>Django can serve JSON directly</strong> — <code>JsonResponse</code> works, but DRF is the cleaner, scalable option for API-only (headless) backends.</div></li><li><span class="tk-n">11</span><div><strong>Collaborate with pull requests</strong> — protect branches, define rulesets, and resolve merge conflicts before merging.</div></li><li><span class="tk-n">12</span><div><strong>Track work with Issues</strong> — link them to PRs, assign them, and follow clear commit-message and branch-naming conventions.</div></li><li><span class="tk-n">13</span><div><strong>No GitHub Actions on USYD Enterprise</strong> — use Jenkins or AWS CodePipeline/CodeBuild for CI/CD instead.</div></li></ol></div></section>
-<section class="section" id="glossary"><header class="section-head"><span class="section-num">15</span><h2>Glossary</h2></header><div class="section-body"><div class="term-filter"><input type="search" id="termSearch" placeholder="Filter terms…" autocomplete="off" aria-label="Filter glossary terms"><span class="term-count" id="termCount"></span></div><div class="terms" id="termsGrid"><div class="term" data-term="rest representational state transfer — an architectural style for networked applications, introduced by roy fielding."><p class="term-name">REST</p><p class="term-def">Representational State Transfer — an architectural style for networked applications, introduced by Roy Fielding.</p></div><div class="term" data-term="restful api a web api that applies rest principles over http using standardised methods and resource urls."><p class="term-name">RESTful API</p><p class="term-def">A web API that applies REST principles over HTTP using standardised methods and resource URLs.</p></div><div class="term" data-term="endpoint the url identifying a specific resource that a client requests."><p class="term-name">Endpoint</p><p class="term-def">The URL identifying a specific resource that a client requests.</p></div><div class="term" data-term="resource any entity the api exposes, identified by a uri (e.g. a post, user or session)."><p class="term-name">Resource</p><p class="term-def">Any entity the API exposes, identified by a URI (e.g. a post, user or session).</p></div><div class="term" data-term="stateless each request carries all needed information; the server stores no client context between requests."><p class="term-name">Stateless</p><p class="term-def">Each request carries all needed information; the server stores no client context between requests.</p></div><div class="term" data-term="http method the verb (get, post, put, delete) telling the server what action to take."><p class="term-name">HTTP method</p><p class="term-def">The verb (GET, POST, PUT, DELETE) telling the server what action to take.</p></div><div class="term" data-term="idempotent an operation that gives the same result when repeated (put, delete); post is not idempotent."><p class="term-name">Idempotent</p><p class="term-def">An operation that gives the same result when repeated (PUT, DELETE); POST is not idempotent.</p></div><div class="term" data-term="request body the optional data payload sent with post/put requests."><p class="term-name">Request body</p><p class="term-def">The optional data payload sent with POST/PUT requests.</p></div><div class="term" data-term="http header metadata about a request or response (format, authentication, caching)."><p class="term-name">HTTP header</p><p class="term-def">Metadata about a request or response (format, authentication, caching).</p></div><div class="term" data-term="path parameter a parameter that is part of the url path, e.g. `/posts/22`."><p class="term-name">Path parameter</p><p class="term-def">A parameter that is part of the URL path, e.g. <code>/posts/22</code>.</p></div><div class="term" data-term="query parameter a parameter for filtering/sorting, e.g. `/posts?author=admin`."><p class="term-name">Query parameter</p><p class="term-def">A parameter for filtering/sorting, e.g. <code>/posts?author=Admin</code>.</p></div><div class="term" data-term="cookie parameter a parameter sent via cookies, often for sessions or quick auth."><p class="term-name">Cookie parameter</p><p class="term-def">A parameter sent via cookies, often for sessions or quick auth.</p></div><div class="term" data-term="basic authentication username and password sent base64-encoded in a header; safe only over https."><p class="term-name">Basic Authentication</p><p class="term-def">Username and password sent Base64-encoded in a header; safe only over HTTPS.</p></div><div class="term" data-term="bearer authentication an access token sent in a header as proof of identity; common in oauth."><p class="term-name">Bearer Authentication</p><p class="term-def">An access token sent in a header as proof of identity; common in OAuth.</p></div><div class="term" data-term="api key a unique identifier given to each client, sent in a header or query parameter; simple but less secure."><p class="term-name">API Key</p><p class="term-def">A unique identifier given to each client, sent in a header or query parameter; simple but less secure.</p></div><div class="term" data-term="oauth a robust auth framework using passwords plus tokens, with scopes, refresh tokens and expiration."><p class="term-name">OAuth</p><p class="term-def">A robust auth framework using passwords plus tokens, with scopes, refresh tokens and expiration.</p></div><div class="term" data-term="status code a 3-digit number reporting the result of a request (2xx success, 3xx redirect, 4xx client error, 5xx server error)."><p class="term-name">Status code</p><p class="term-def">A 3-digit number reporting the result of a request (2xx success, 3xx redirect, 4xx client error, 5xx server error).</p></div><div class="term" data-term="cors cross-origin resource sharing — controlled by the `access-control-allow-origin` response header."><p class="term-name">CORS</p><p class="term-def">Cross-Origin Resource Sharing — controlled by the <code>Access-Control-Allow-Origin</code> response header.</p></div><div class="term" data-term="uniform interface the rest constraint requiring standardised methods, predictable uris and common data formats."><p class="term-name">Uniform Interface</p><p class="term-def">The REST constraint requiring standardised methods, predictable URIs and common data formats.</p></div><div class="term" data-term="layered system a rest constraint allowing intermediaries (load balancers, proxies) between client and server."><p class="term-name">Layered System</p><p class="term-def">A REST constraint allowing intermediaries (load balancers, proxies) between client and server.</p></div><div class="term" data-term="code-on-demand an optional rest constraint where servers send executable code (e.g. javascript) to clients."><p class="term-name">Code-on-Demand</p><p class="term-def">An optional REST constraint where servers send executable code (e.g. JavaScript) to clients.</p></div><div class="term" data-term="headless architecture a backend that is api-only, with a separate frontend communicating via json."><p class="term-name">Headless architecture</p><p class="term-def">A backend that is API-only, with a separate frontend communicating via JSON.</p></div><div class="term" data-term="drf django rest framework — a toolkit for building web apis in django, with serialisation, auth and permissions."><p class="term-name">DRF</p><p class="term-def">Django REST Framework — a toolkit for building Web APIs in Django, with serialisation, auth and permissions.</p></div><div class="term" data-term="jsonresponse a django class for returning json directly from a view without a full api framework."><p class="term-name">JsonResponse</p><p class="term-def">A Django class for returning JSON directly from a view without a full API framework.</p></div><div class="term" data-term="api contract a document defining the agreed endpoints, payloads and behaviour between api provider and consumer."><p class="term-name">API contract</p><p class="term-def">A document defining the agreed endpoints, payloads and behaviour between API provider and consumer.</p></div><div class="term" data-term="pull request (pr) a github proposal to merge a branch, enabling review and discussion before merging."><p class="term-name">Pull request (PR)</p><p class="term-def">A GitHub proposal to merge a branch, enabling review and discussion before merging.</p></div><div class="term" data-term="protected branch a branch (e.g. `main`) configured to block direct/accidental changes and require checks."><p class="term-name">Protected branch</p><p class="term-def">A branch (e.g. <code>main</code>) configured to block direct/accidental changes and require checks.</p></div><div class="term" data-term="ruleset a github rule controlling what may be pushed or merged (e.g. file types, sizes)."><p class="term-name">Ruleset</p><p class="term-def">A GitHub rule controlling what may be pushed or merged (e.g. file types, sizes).</p></div><div class="term" data-term="merge conflict a clash between branches that github blocks merging until resolved."><p class="term-name">Merge conflict</p><p class="term-def">A clash between branches that GitHub blocks merging until resolved.</p></div><div class="term" data-term="github issues github&#x27;s tracker for bugs, ideas and tasks, which can be linked to prs and assigned."><p class="term-name">GitHub Issues</p><p class="term-def">GitHub's tracker for bugs, ideas and tasks, which can be linked to PRs and assigned.</p></div><div class="term" data-term="github desktop a gui client for git/github, useful for beginners avoiding the command line."><p class="term-name">GitHub Desktop</p><p class="term-def">A GUI client for Git/GitHub, useful for beginners avoiding the command line.</p></div><div class="term" data-term="ci/cd continuous integration / continuous delivery — automated build, test and deploy pipelines."><p class="term-name">CI/CD</p><p class="term-def">Continuous Integration / Continuous Delivery — automated build, test and deploy pipelines.</p></div></div></div></section>
-<section class="section" id="mnemonics"><header class="section-head"><span class="section-num">16</span><h2>Mnemonics &amp; Quick Recall</h2></header><div class="section-body"><div class="mnemonics"><div class="mnemonic"><p class="mn-title">HTTP Methods</p><p class="mn-code">G-P-P-D</p><p class="mn-phrase">Get, Post, Put, Delete</p><p class="mn-note">read, create, update, remove; only POST is non-idempotent.</p></div><div class="mnemonic"><p class="mn-title">REST Constraints</p><p class="mn-code">S-C-U-C-L-C</p><p class="mn-phrase">Stateless, Cacheable, Uniform interface, Client–server, Layered, Code-on-demand</p><p class="mn-note">.</p></div><div class="mnemonic"><p class="mn-title">Status Families</p><p class="mn-code">2 = OK, 3 = go elsewhere, 4 = you broke it, 5 = we broke it</p><p class="mn-note">.</p></div><div class="mnemonic"><p class="mn-title">Request Parts</p><p class="mn-code">U-M-H-B-P</p><p class="mn-phrase">URL, Method, Headers, Body, Parameters</p><p class="mn-note">.</p></div><div class="mnemonic"><p class="mn-title">Response Parts</p><p class="mn-code">S-B-H</p><p class="mn-phrase">Status line, Body, Headers</p><p class="mn-note">.</p></div><div class="mnemonic"><p class="mn-title">Auth Strength</p><p class="mn-code">Basic &lt; API Key &lt; Bearer &lt; OAuth</p><p class="mn-note">roughly from least to most secure.</p></div></div></div></section>
-<section class="section" id="worked-examples"><header class="section-head"><span class="section-num">17</span><h2>Worked Examples &amp; Scenarios</h2></header><div class="section-body"><div class="example"><span class="example-tag">Example 1</span><h3 class="example-title">A complete REST request/response pair</h3><div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>REQUEST:
-GET /posts/22 HTTP/1.1
-Host: api.example.com
-Authorization: Bearer YOUR_ACCESS_TOKEN
-Accept: application/json
-
-RESPONSE:
-HTTP/1.1 200 OK
-Content-Type: application/json
-Content-Length: 67
-
-{
-  &quot;id&quot;: 22,
-  &quot;title&quot;: &quot;New Post&quot;,
-  &quot;author&quot;: &quot;User123&quot;
-}</code></pre></div>
-<p>The request identifies the resource by URL, states the method (GET), and carries auth and format headers. The response gives a status code, JSON body and metadata headers.</p></div><div class="example"><span class="example-tag">Example 2</span><h3 class="example-title">Framing actions as resources</h3><p>Instead of <code>POST /login</code>, use <code>POST /sessions</code> (create a session). Instead of <code>POST /logout</code>, use <code>DELETE /sessions</code> (delete the session). Instead of <code>POST /activateAccount</code>, use <code>POST /account-activation</code>. The endpoint count drops and the URLs become predictable.</p></div><div class="example"><span class="example-tag">Example 3</span><h3 class="example-title">Reading a curl command</h3><div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>curl -X PUT https://api.imgur.com/3/account/ImgurUser/settings \
-  -H &quot;Authorization: Bearer YOUR_ACCESS_TOKEN&quot; \
-  -H &quot;Content-Type: multipart/form-data&quot; \
-  -F &quot;public_images=false&quot; \
-  -F &quot;messaging_enabled=true&quot;</code></pre></div>
-<p><code>-X PUT</code> sets the method; <code>-H</code> adds headers (one authenticates, one declares the content type); each <code>-F</code> sends one form field in the body. This updates the account settings resource.</p></div><div class="example"><span class="example-tag">Example 4</span><h3 class="example-title">Choosing an authentication method</h3><ul><li>A public, low-risk read endpoint → <strong>API Key</strong> (simple, rate-limited).</li><li>A user-facing login flow → <strong>Bearer token</strong> (secret string in the header).</li><li>A third-party integration needing scoped access → <strong>OAuth</strong>.</li><li>A quick internal test → <strong>Basic auth</strong>, but only over HTTPS.</li></ul></div><div class="example"><span class="example-tag">Example 5</span><h3 class="example-title">Designing a headless backend</h3><p>A React single-page app needs user data. Rather than rendering HTML on the server, Django returns JSON from an endpoint such as <code>/api/users/42</code>. Because the API is stateless and resource-based, the same endpoint can also serve a mobile app — no server changes required.</p></div></div></section>
-<section class="section" id="exam-focus"><header class="section-head"><span class="section-num">18</span><h2>Exam Practice</h2></header><div class="section-body"><div class="exam-bar"><div class="exam-progress"><span class="exam-count"><strong id="examDone">0</strong> / 15 mastered</span><span class="exam-track"><span id="examFill"></span></span></div><div class="exam-actions"><button type="button" class="btn" id="revealAll">Reveal all</button><button type="button" class="btn" id="hideAll">Hide all</button><button type="button" class="btn ghost" id="resetExam">Reset</button></div></div><article class="quiz" data-q="1"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">1</span><span class="quiz-text">Why did RESTful APIs replace script-style URLs like <code>getdata.php?user=123&amp;action=fetch</code>?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Script URLs coupled URL structure to implementation details, were inflexible and hard to maintain, and exposed methods/parameters (a security risk). REST uses standardised methods and resource-based URLs, is stateless, and abstracts server implementation.</div><label class="mastered"><input type="checkbox" data-mastered="1"> Mark as mastered</label></div></article><article class="quiz" data-q="2"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">2</span><span class="quiz-text">What is REST, and is it a protocol or a tool?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>REST (Representational State Transfer) is an architectural style/design convention introduced by Roy Fielding; it is not a protocol, library or tool. It uses HTTP as its underlying protocol.</div><label class="mastered"><input type="checkbox" data-mastered="2"> Mark as mastered</label></div></article><article class="quiz" data-q="3"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">3</span><span class="quiz-text">List the four steps of a typical RESTful API call.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Client sends an HTTP request; server authenticates if needed; server processes the logic (fetch/create/update/delete); server sends an HTTP response with status and data.</div><label class="mastered"><input type="checkbox" data-mastered="3"> Mark as mastered</label></div></article><article class="quiz" data-q="4"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">4</span><span class="quiz-text">Describe the components of a RESTful request.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Unique resource identifier (URL/endpoint), HTTP method, HTTP headers, request body (for POST/PUT), and parameters (path, query, cookie).</div><label class="mastered"><input type="checkbox" data-mastered="4"> Mark as mastered</label></div></article><article class="quiz" data-q="5"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">5</span><span class="quiz-text">Compare GET, POST, PUT and DELETE.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>GET retrieves (cacheable, may include query parameters); POST sends new data and repeating it may create multiple records; PUT updates and repeating gives the same result; DELETE removes and may fail if authentication is invalid.</div><label class="mastered"><input type="checkbox" data-mastered="5"> Mark as mastered</label></div></article><article class="quiz" data-q="6"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">6</span><span class="quiz-text">Name and compare four API authentication methods.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Basic (Base64 username/password, insecure without HTTPS), Bearer (access token, common in OAuth), API Key (unique per client, simple but less secure, often rate-limited), OAuth (password + token with scopes/refresh/expiration, highly secure but complex).</div><label class="mastered"><input type="checkbox" data-mastered="6"> Mark as mastered</label></div></article><article class="quiz" data-q="7"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">7</span><span class="quiz-text">What are the three parts of a RESTful server response?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>The status line (3-digit status code), the message body (often JSON), and the response headers (metadata such as Content-Type, Content-Length, Cache-Control, CORS).</div><label class="mastered"><input type="checkbox" data-mastered="7"> Mark as mastered</label></div></article><article class="quiz" data-q="8"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">8</span><span class="quiz-text">What do the 2xx, 3xx, 4xx and 5xx status ranges mean?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>2xx success, 3xx redirection, 4xx client error, 5xx server error.</div><label class="mastered"><input type="checkbox" data-mastered="8"> Mark as mastered</label></div></article><article class="quiz" data-q="9"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">9</span><span class="quiz-text">List and explain the architectural constraints of REST.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Stateless (requests self-contained, no server client-context), Cacheable (responses declare cacheability), Uniform Interface (standard methods, predictable URIs, JSON), Client–Server Separation (independent operation), Layered System (intermediaries allowed), and optional Code-on-Demand (server sends executable code).</div><label class="mastered"><input type="checkbox" data-mastered="9"> Mark as mastered</label></div></article><article class="quiz" data-q="10"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">10</span><span class="quiz-text">Give three examples of turning an action into a resource.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span><code>/activateAccount</code> → <code>/account-activation</code>; <code>/login</code> → <code>POST /sessions</code>; "closing account" → <code>/accountclosings</code> (POST to request closure).</div><label class="mastered"><input type="checkbox" data-mastered="10"> Mark as mastered</label></div></article><article class="quiz" data-q="11"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">11</span><span class="quiz-text">Why is resource-oriented endpoint design better than action-oriented?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It reduces the number of endpoints, makes their purpose clearer, and lets developers guess URLs from standard practice, reducing cognitive load.</div><label class="mastered"><input type="checkbox" data-mastered="11"> Mark as mastered</label></div></article><article class="quiz" data-q="12"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">12</span><span class="quiz-text">What is an API contract and why does it matter?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It defines the agreed expectations between API providers (backend) and consumers (frontend), reducing misunderstandings and errors, and acting as a reference for updates and changes.</div><label class="mastered"><input type="checkbox" data-mastered="12"> Mark as mastered</label></div></article><article class="quiz" data-q="13"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">13</span><span class="quiz-text">When would you use DRF instead of plain JsonResponse?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>DRF is cleaner and more scalable for API-only/headless backends, offering serialisation/deserialisation, permissions and authentication, and many features out of the box; JsonResponse is a lightweight option for returning JSON directly from a view.</div><label class="mastered"><input type="checkbox" data-mastered="13"> Mark as mastered</label></div></article><article class="quiz" data-q="14"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">14</span><span class="quiz-text">What GitHub practices help teams collaborate?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Protect important branches, define push rules/rulesets, resolve merge conflicts before merging, use pull requests with reviews, track work with Issues, and follow commit-message and branch-naming conventions.</div><label class="mastered"><input type="checkbox" data-mastered="14"> Mark as mastered</label></div></article><article class="quiz" data-q="15"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">15</span><span class="quiz-text">What should you know about CI/CD on USYD GitHub Enterprise?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>GitHub Actions is not enabled on the USYD GitHub Enterprise Server; ICT recommends external tools such as Jenkins or AWS CodePipeline/CodeBuild.</div><label class="mastered"><input type="checkbox" data-mastered="15"> Mark as mastered</label></div></article></div></section>
-    <footer class="foot"><strong>ELEC3609 study guide</strong> · RESTful API Design &amp; Collaboration · Lab 2 · Built for self-paced revision.</footer>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> Defining a clear <strong>commit message guideline</strong> and a consistent <strong>branch naming convention</strong> helps your team organise the repository and speeds up reviews and debugging. See the further readings for suggested styles, or explore how mature open-source projects manage their repositories for real-world examples.</div></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>No GitHub Actions on USYD GitHub Enterprise:</strong> GitHub Actions is <strong>not enabled</strong> on the USYD GitHub Enterprise Server. ICT recommends using external CI/CD tools like <strong>Jenkins</strong> or <strong>AWS CodePipeline/CodeBuild</strong> instead.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A teammate's PR cannot be merged even though the code is done. Give two plausible reasons, and say where on the page they would look to diagnose it.</div></div>
+</section>
+<section class="guide-section" id="putting-it-all-together" data-title="Putting It All Together">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Putting It All Together</h2>
+  </div>
+  <p class="section-kicker">Run one mental trace from request to response, then from design to delivery, and the whole lab connects.</p>
+<p>Study the same call through every lens this lab introduced.</p>
+<div class="flow"><span class="flow-step">Problem</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">REST design</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Client request</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Authentication</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">HTTP method</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Server response</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">API contract</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Team workflow</span></div>
+<p><strong>Frame 1 — The technical call.</strong> A client sends an HTTP request with a URL, method, headers, body and parameters. The server authenticates it, processes the logic, and returns a status line, message body and response headers.</p>
+<p><strong>Frame 2 — The design decisions.</strong> Each endpoint should be a resource, not an action. HTTP methods carry the semantics: GET (cacheable retrieval), POST (create, not repeatable-safe), PUT (idempotent update), DELETE (remove, needs valid auth).</p>
+<p><strong>Frame 3 — The team layer.</strong> The API contract pins down what backend and frontend agree on. GitHub branches, protected rulesets, pull requests and issues make that collaboration safe and traceable.</p>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Further readings</strong> cover RESTful API fundamentals (including Richardson, Amundsen &amp; Ruby's <em>RESTful Web APIs</em> and Fielding's 2000 dissertation) and Git practice (GitHub Docs, collaborating workflows, commit message guidelines, and branch naming conventions). These lab materials were authored and maintained by Jiawen Wen and updated for 2026 delivery.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Pick any endpoint you have used — say <code>GET /posts?author=Admin</code>. In one sentence each, identify the resource, the method, the parameter type, and which REST constraint makes caching it possible.</div></div>
+</section>
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways"><div class="takeaway"><span class="tk-num">1</span><p>RESTful APIs replaced query-string script URLs because exposing implementation details made systems inflexible, hard to maintain and insecure.</p></div><div class="takeaway"><span class="tk-num">2</span><p>REST is a style/convention and a set of design principles — not a protocol, library or tool. It uses HTTP as its underlying protocol.</p></div><div class="takeaway"><span class="tk-num">3</span><p>A RESTful call is four steps: client sends request, server authenticates, server processes logic, server returns a response with status and data.</p></div><div class="takeaway"><span class="tk-num">4</span><p>Every request has five parts: URL/endpoint, HTTP method, headers, request body (for POST/PUT), and parameters (path, query, cookie).</p></div><div class="takeaway"><span class="tk-num">5</span><p>GET retrieves (cacheable, allows query parameters), POST creates (repeats may create multiple records), PUT updates (repeating gives the same result), DELETE removes (needs valid auth).</p></div><div class="takeaway"><span class="tk-num">6</span><p>Authentication methods ordered by strength: Basic (Base64 username/password) &lt; API Key &lt; Bearer token &lt; OAuth. All should run over HTTPS.</p></div><div class="takeaway"><span class="tk-num">7</span><p>A server response has three parts: status line (3-digit code), message body (often JSON), and response headers (Content-Type, Content-Length, Server, Date, Cache-Control, Access-Control-Allow-Origin).</p></div><div class="takeaway"><span class="tk-num">8</span><p>Status ranges: 2xx success, 3xx redirection, 4xx client error, 5xx server error.</p></div><div class="takeaway"><span class="tk-num">9</span><p>REST was introduced by Roy Fielding and defined by six constraints: Stateless, Cacheable, Uniform Interface, Client–Server Separation, Layered System, and optional Code-on-Demand.</p></div><div class="takeaway"><span class="tk-num">10</span><p>Good API design is resource-oriented: prefer <code>/sessions</code> over <code>/login</code>, <code>/account-activation</code> over <code>/activateAccount</code>, and <code>/accountclosings</code> for closures.</p></div><div class="takeaway"><span class="tk-num">11</span><p>An API contract defines backend/frontend expectations and acts as the reference for later changes.</p></div><div class="takeaway"><span class="tk-num">12</span><p>Django can return JSON with JsonResponse, but DRF is recommended for clean, scalable APIs; the assignment must include JSON API endpoints.</p></div><div class="takeaway"><span class="tk-num">13</span><p>GitHub collaboration relies on protected branches, rulesets, resolving merge conflicts before merging, and using issues linked to pull requests.</p></div><div class="takeaway"><span class="tk-num">14</span><p>GitHub Actions is not available on USYD GitHub Enterprise Server; use Jenkins or AWS CodePipeline/CodeBuild instead.</p></div></div>
+</section>
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools"><button class="chip active" type="button" data-cat="all">All</button><button class="chip" type="button" data-cat="concept">Core concepts</button><button class="chip" type="button" data-cat="tech">Technologies &amp; tools</button><button class="chip" type="button" data-cat="metric">Metrics &amp; evaluation</button></div>
+  <div class="terms"><div class="term-card" data-cat="concept"><div class="term-name">REST</div><div class="term-meaning">Representational State Transfer — an architectural style introduced by Roy Fielding describing constraints for scalable, reliable and evolvable networked systems.</div></div><div class="term-card" data-cat="tech"><div class="term-name">RESTful API</div><div class="term-meaning">An API that applies REST principles over HTTP using standardised methods and resource-based URLs.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Resource</div><div class="term-meaning">Any entity a client interacts with, identified by a URL/endpoint, such as <code>/posts/22</code>.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Stateless</div><div class="term-meaning">A constraint requiring each request to carry all information needed to process it, with no server-side client context stored between requests.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Uniform Interface</div><div class="term-meaning">A REST constraint enforcing standardised HTTP methods, predictable URIs and common data formats like JSON.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Client–Server Separation</div><div class="term-meaning">A REST constraint in which client and server operate independently, with neither managing the other's internals or state.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Layered System</div><div class="term-meaning">A REST constraint allowing intermediaries such as load balancers, proxies and security filters between client and server.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Code-on-Demand</div><div class="term-meaning">The optional REST constraint in which servers transfer executable code (e.g. JavaScript) to extend client functionality.</div></div><div class="term-card" data-cat="tech"><div class="term-name">HTTP Method</div><div class="term-meaning">The verb in a request (GET, POST, PUT, DELETE) that tells the server which standard operation to perform.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Path Parameter</div><div class="term-meaning">A value embedded in the URL path that identifies a specific resource, e.g. <code>/posts/22</code>.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Query Parameter</div><div class="term-meaning">A value appended to a URL after <code>?</code> used for filtering or sorting, e.g. <code>/posts?author=Admin</code>.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Cookie Parameter</div><div class="term-meaning">Data sent via cookies, often for session or quick authentication purposes.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Basic Authentication</div><div class="term-meaning">Sends a Base64-encoded username and password in the HTTP header; easy but insecure without HTTPS.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Bearer Authentication</div><div class="term-meaning">Sends an access token string in the HTTP header as proof of identity; common in OAuth flows.</div></div><div class="term-card" data-cat="tech"><div class="term-name">API Key</div><div class="term-meaning">A unique identifier string issued to each client for access, sent in headers or query parameters; simple but easily exposed.</div></div><div class="term-card" data-cat="tech"><div class="term-name">OAuth</div><div class="term-meaning">A robust access framework using a password plus a token, with scopes, refresh tokens and expiration; ideal for third-party integrations.</div></div><div class="term-card" data-cat="metric"><div class="term-name">HTTP Status Code</div><div class="term-meaning">A 3-digit number in the status line indicating the result of a request.</div></div><div class="term-card" data-cat="concept"><div class="term-name">API Contract</div><div class="term-meaning">The agreement defining expectations between API providers (backend) and consumers (frontend), used as a reference for changes.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Headless Architecture</div><div class="term-meaning">A design in which the backend is an API-only layer and frontend and backend are separated, communicating via JSON APIs.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Django REST Framework</div><div class="term-meaning">A Django extension for building Web APIs, optimised for JSON with serialisation, authentication and permissions built in.</div></div><div class="term-card" data-cat="tech"><div class="term-name">JsonResponse</div><div class="term-meaning">A lightweight Django class for returning JSON directly from a view with minimal serialisation code.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Pull Request</div><div class="term-meaning">A GitHub mechanism for reviewing and merging proposed branch changes, blocked automatically when merge conflicts are unresolved.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Protected Branch</div><div class="term-meaning">A branch (e.g. <code>main</code>) configured to prevent accidental changes, optionally requiring CI tests or code reviews before merging.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Ruleset</div><div class="term-meaning">A GitHub setting controlling what may be pushed, such as permitted file types or sizes.</div></div></div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+<article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">Why did the web move away from URLs like <code>getdata.php?user=123&amp;action=fetch</code> toward RESTful APIs? Give two distinct reasons.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> First, query-string script URLs tightly coupled URL structure to specific implementation details, making systems less flexible and harder to maintain. Second, exposing methods and parameters directly in the URL posed security risks. RESTful APIs solved both by abstracting implementation details behind standardised methods and resource-based URLs.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">A classmate says "our RESTful API uses HTTPS, so REST is a protocol." Correct them and explain what REST actually is.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> REST is not a protocol, library or tool. It is a style/convention or a set of design principles for building web APIs. REST <em>uses</em> HTTP as its underlying protocol, applying standardised methods like GET, POST, PUT and DELETE to resources identified by URLs.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">List the four steps of a typical RESTful API call.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) The client sends an HTTP request to the server. (2) The server authenticates the request if needed, e.g. with an API key or token. (3) The server processes the logic — fetch, create, update or delete data. (4) The server sends an HTTP response containing status and data, for example JSON.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">Name all five components of a RESTful API client request and give one example of each.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) Unique Resource Identifier — the URL/endpoint, e.g. <code>GET https://api.example.com/posts/22</code>. (2) HTTP method — e.g. PUT. (3) HTTP headers — e.g. <code>Content-Type: application/json</code>, <code>Accept: application/json</code>, <code>Authorization: Bearer &lt;token&gt;</code>. (4) Request body — for POST/PUT, e.g. <code>{ &quot;title&quot;: &quot;New Post&quot;, &quot;author&quot;: &quot;User123&quot; }</code>. (5) Parameters — path (<code>/posts/22</code>), query (<code>/posts?author=Admin</code>) or cookie.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">What is the difference between a path parameter, a query parameter and a cookie parameter?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Path parameters are part of the URL and identify specific resources, e.g. <code>/posts/22</code>. Query parameters provide filtering or sorting logic, e.g. <code>/posts?author=Admin</code>. Cookie parameters are sent via cookies, often for session or quick authentication purposes.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">In the <code>curl</code> example <code>curl -X PUT ... -H &quot;Authorization: Bearer YOUR_ACCESS_TOKEN&quot; -H &quot;Content-Type: multipart/form-data&quot; -F &quot;bio=...&quot;</code>, what does each of <code>-X</code>, <code>-H</code> and <code>-F</code> do?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> <code>-X PUT</code> specifies the HTTP method as PUT, which updates a resource. <code>-H</code> adds a custom HTTP header — here it adds an Authorization header carrying the access token and a Content-Type header declaring <code>multipart/form-data</code>. <code>-F</code> sends a form field as a key-value pair; multiple <code>-F</code> flags send multiple fields in the body.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">Contrast POST and PUT in terms of repeating the same request.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Repeating a POST may result in multiple records — it is not repeatable-safe. Repeating a PUT gives the same result each time — it is idempotent. This is why POST is used to create/submit and PUT to update.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">Match each authentication method — Basic, Bearer, API Key, OAuth — with its main security trade-off.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Basic Authentication sends a Base64 username/password in the header: easy to implement but insecure unless used over HTTPS and susceptible to interception. Bearer Authentication sends an access token in the header: more secure, common in OAuth flows, and the token must be kept secret. API Key is a unique identifier in headers or query parameters: simple but less secure (anyone can use an exposed key) and often rate-limited. OAuth uses a password plus a token with scopes, refresh tokens and expiration: highly secure and ideal for third-party integrations, but complex to implement initially.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">What is the single most important rule that applies to all four authentication methods?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> All authentication methods should be used over HTTPS, to prevent credentials or tokens from being intercepted.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">Identify the three parts of a server response and one thing found in each.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) Status line — a 3-digit HTTP status code such as 200 OK. (2) Message body — the returned data, often JSON, e.g. an object with id, name, age and email. (3) Response headers — metadata such as Content-Type, Content-Length, Server, Date, Cache-Control or Access-Control-Allow-Origin.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">What do the status code ranges 2xx, 3xx, 4xx and 5xx each mean? Give one example code per range.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> 2xx Success — the request was successfully processed (200 OK, 201 Created). 3xx Redirection — further action is required to complete the request (301 Moved Permanently). 4xx Client Error — the request was incorrect or unauthorised (400 Bad Request, 404 Not Found). 5xx Server Error — the server encountered an error (500 Internal Server Error).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">What does <code>Accept: application/json</code> control, and what does <code>Content-Type: application/json</code> describe?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> <code>Accept</code> is a request header that negotiates the response format the client wants — here JSON (XML is the other common option). <code>Content-Type</code> describes the format of the body being sent or returned — in a response it tells the client the response body is <code>application/json</code>.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">Who introduced REST, where, and name all six architectural constraints.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> REST was introduced by Roy Fielding in his doctoral dissertation. The six constraints are: Stateless, Cacheable, Uniform Interface, Client–Server Separation, Layered System, and Code-on-Demand (which is optional and less commonly used).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">Explain the Stateless constraint and why it improves scalability.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Each client request must contain all the information necessary to understand and process it, and the server must not store any client context between requests. With no per-client session state to manage, servers can handle requests independently, which improves scalability and reliability.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q15">
+    <div class="quiz-head"><span class="quiz-qnum">Q15</span><p class="quiz-q">Rewrite these three action-oriented endpoints in resource-oriented form: <code>/login</code>, <code>/logout</code>, <code>/activateAccount</code>. Explain the benefit.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> <code>/login</code> becomes <code>POST /sessions</code>; <code>/logout</code> becomes <code>DELETE /sessions</code>; <code>/activateAccount</code> becomes <code>/account-activation</code>. Framing actions as resources reduces the number of endpoints, makes purposes clearer, aligns the API with HTTP semantics, and lowers developers' cognitive load because they can often guess URLs from standard practices. (A related example is <code>/accountclosings</code>, to which a client POSTs to request an account closure.)</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q16">
+    <div class="quiz-head"><span class="quiz-qnum">Q16</span><p class="quiz-q">What is an API contract, who are the parties involved, and why does it matter across a project's life?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> An API contract defines the expectations and agreements between API providers (the backend) and consumers (the frontend). It lets developers build and integrate more effectively, reduces misunderstandings and errors, and serves as a reference point or verification for updates and changes so all parties stay aligned on how the API should function.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q17">
+    <div class="quiz-head"><span class="quiz-qnum">Q17</span><p class="quiz-q">Why might a team choose Django REST Framework over plain <code>JsonResponse</code>, and what does the assignment require regardless?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> DRF extends Django to build Web APIs, is optimised for JSON and other content types, and provides serialisation/deserialisation, permissions and authentication, and many features out of the box — making it cleaner and more scalable than manually serialising with <code>JsonResponse</code> in server-rendered views. Regardless of approach, the assignment requires the project to include API endpoints that return data in JSON format (via <code>JsonResponse</code> or dedicated JSON endpoints).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q18">
+    <div class="quiz-head"><span class="quiz-qnum">Q18</span><p class="quiz-q">What is a headless architecture, and what role does the backend play in it?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> A headless architecture separates frontend and backend, with the backend acting as an API-only layer. All frontend–backend communication happens via JSON APIs, which suits modern clients such as React SPAs and mobile apps.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q19">
+    <div class="quiz-head"><span class="quiz-qnum">Q19</span><p class="quiz-q">Describe three GitHub practices introduced for collaborating on pull requests.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) Protect important branches such as <code>main</code> to prevent accidental changes, setting conditions like required CI tests or code reviews before merging. (2) Define push rules using rulesets to control what gets pushed, e.g. file types and sizes — useful for internal repositories or larger teams. (3) Resolve merge conflicts before merging, because GitHub blocks merging when unresolved conflicts exist; the file list above the merge button shows what to fix.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q20">
+    <div class="quiz-head"><span class="quiz-qnum">Q20</span><p class="quiz-q">What are GitHub Issues used for, and what three helpful actions link them to your workflow?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Issues track bugs, ideas, tasks or any piece of work, can be linked to pull requests for visibility and context, and let you assign tasks to team members. Helpful actions include linking a PR to an issue, creating a branch for an issue, and assigning issues and PRs.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q21">
+    <div class="quiz-head"><span class="quiz-qnum">Q21</span><p class="quiz-q">What CI/CD limitation exists on USYD GitHub Enterprise, and what does ICT recommend instead?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> GitHub Actions is not enabled on the USYD GitHub Enterprise Server. ICT recommends using external CI/CD tools such as Jenkins or AWS CodePipeline/CodeBuild instead.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+</section>
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist"><label class="check-item"><input type="checkbox"> I can explain why RESTful APIs replaced query-string script URLs and the problems they solved.</label><label class="check-item"><input type="checkbox"> I can list the four steps of a RESTful API call and explain the client–server separation.</label><label class="check-item"><input type="checkbox"> I can name and give an example of all five components of a client request.</label><label class="check-item"><input type="checkbox"> I can choose the correct HTTP method for retrieve, create, update and delete operations.</label><label class="check-item"><input type="checkbox"> I can explain why PUT is repeatable but POST is not.</label><label class="check-item"><input type="checkbox"> I can compare Basic, Bearer, API Key and OAuth authentication, state their trade-offs, and explain why all authentication should run over HTTPS.</label><label class="check-item"><input type="checkbox"> I can describe the three parts of a server response and interpret 2xx, 3xx, 4xx and 5xx status codes.</label><label class="check-item"><input type="checkbox"> I can list Roy Fielding's six architectural constraints and explain Stateless and Uniform Interface.</label><label class="check-item"><input type="checkbox"> I can convert action-oriented endpoints such as /login into resource-oriented ones such as /sessions.</label><label class="check-item"><input type="checkbox"> I can explain what an API contract is and why backend and frontend teams rely on it.</label><label class="check-item"><input type="checkbox"> I can describe when to use JsonResponse versus Django REST Framework, and what a headless architecture is.</label><label class="check-item"><input type="checkbox"> I can apply GitHub collaboration practices — protected branches, rulesets, pull requests and issues — and recall the USYD GitHub Actions limitation.</label></div>
+</section>
   </main>
 </div>
-<button class="totop" id="toTop" type="button" aria-label="Back to top">↑</button>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">⌂ All guides</a>
+    <a href="../week_1/ELEC3609_lab_week1_study_guide.html">← Lab 1</a>
+    <a href="../week_3/ELEC3609_lab_week3_study_guide.html">Lab 3 →</a>
+  </div>
+  <p>ELEC3609/9609 Internet Software Platforms · Lab 2 · Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
 <script>
 (function(){
-  var GUIDE_ID = "elec3609-lab-week2-study-guide";
+  "use strict";
+
+  /* ---------- Theme ---------- */
   var root = document.documentElement;
-  /* theme */
-  var stored = null;
-  try { stored = localStorage.getItem("sg-theme"); } catch(e){}
-  var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  setTheme(stored || (prefersDark ? "dark" : "light"));
-  function setTheme(t){
-    root.setAttribute("data-theme", t);
-    var b = document.getElementById("themeBtn");
-    if (b) b.textContent = t === "dark" ? "☀️" : "🌙";
-    try { localStorage.setItem("sg-theme", t); } catch(e){}
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('elec3609-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('elec3609-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
   }
-  document.getElementById("themeBtn").addEventListener("click", function(){
-    setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
-  });
-  document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
 
-  /* mobile drawer */
-  var sidebar = document.getElementById("sidebar"), scrim = document.getElementById("scrim");
-  function closeDrawer(){ sidebar.classList.remove("open"); scrim.classList.remove("show"); }
-  document.getElementById("menuBtn").addEventListener("click", function(){
-    sidebar.classList.toggle("open"); scrim.classList.toggle("show");
-  });
-  scrim.addEventListener("click", closeDrawer);
-  sidebar.addEventListener("click", function(e){ if (e.target.closest("a")) closeDrawer(); });
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
 
-  /* progress bar + back to top */
-  var bar = document.getElementById("progress"), toTop = document.getElementById("toTop");
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
   function onScroll(){
-    var h = document.documentElement;
-    var max = h.scrollHeight - h.clientHeight;
-    var pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
-    bar.style.width = pct + "%";
-    toTop.classList.toggle("show", h.scrollTop > 600);
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
   }
-  window.addEventListener("scroll", onScroll, {passive:true});
+  window.addEventListener('scroll', onScroll, {passive:true});
   onScroll();
-  toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
 
-  /* active toc + reveal */
-  var links = Array.prototype.slice.call(document.querySelectorAll(".toc-link"));
-  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
-  if ("IntersectionObserver" in window) {
-    var rev = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){ if (en.isIntersecting) en.target.classList.add("in"); });
-    }, {rootMargin:"0px 0px -8% 0px", threshold:0.05});
-    sections.forEach(function(s){ rev.observe(s); });
-
-    var spy = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){
-        if (!en.isIntersecting) return;
-        var id = en.target.id;
-        links.forEach(function(a){ a.classList.toggle("active", a.getAttribute("href") === "#" + id); });
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
       });
-    }, {rootMargin:"-15% 0px -70% 0px", threshold:0});
-    sections.forEach(function(s){ spy.observe(s); });
-  } else {
-    sections.forEach(function(s){ s.classList.add("in"); });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
   }
 
-  /* copy buttons */
-  document.addEventListener("click", function(e){
-    var btn = e.target.closest("[data-copy]");
-    if (!btn) return;
-    var code = btn.parentElement.querySelector("code");
-    if (!code) return;
-    var text = code.innerText;
-    var done = function(){ btn.textContent = "Copied"; btn.classList.add("done"); setTimeout(function(){ btn.textContent = "Copy"; btn.classList.remove("done"); }, 1400); };
-    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
-    else { var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(err){} document.body.removeChild(ta); done(); }
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'elec3609-ELEC3609_lab_week2_study_guide-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
   });
 
-  /* glossary filter */
-  var termSearch = document.getElementById("termSearch");
-  if (termSearch) {
-    var terms = Array.prototype.slice.call(document.querySelectorAll(".term"));
-    var count = document.getElementById("termCount");
-    var update = function(){
-      var q = termSearch.value.trim().toLowerCase();
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
       var shown = 0;
-      terms.forEach(function(t){
-        var hit = !q || (t.getAttribute("data-term") || "").indexOf(q) !== -1;
-        t.classList.toggle("hide", !hit);
-        if (hit) shown++;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
       });
-      if (count) count.textContent = shown + " / " + terms.length + " shown";
-    };
-    termSearch.addEventListener("input", update);
-    update();
-  }
-
-  /* exam interactions */
-  var quizzes = Array.prototype.slice.call(document.querySelectorAll(".quiz"));
-  quizzes.forEach(function(q){
-    var head = q.querySelector(".quiz-q");
-    head.addEventListener("click", function(){
-      q.classList.toggle("open");
-      head.setAttribute("aria-expanded", q.classList.contains("open") ? "true" : "false");
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
     });
   });
-  var doneEl = document.getElementById("examDone"), fillEl = document.getElementById("examFill");
-  var boxes = Array.prototype.slice.call(document.querySelectorAll("[data-mastered]"));
-  var total = boxes.length;
-  function examKey(){ return "sg-exam-" + GUIDE_ID; }
-  function loadExam(){
-    var data = {};
-    try { data = JSON.parse(localStorage.getItem(examKey()) || "{}"); } catch(e){}
-    boxes.forEach(function(b){ b.checked = !!data[b.getAttribute("data-mastered")]; });
-  }
-  function saveExam(){
-    var data = {};
-    boxes.forEach(function(b){ if (b.checked) data[b.getAttribute("data-mastered")] = 1; });
-    try { localStorage.setItem(examKey(), JSON.stringify(data)); } catch(e){}
-  }
-  function refreshExam(){
-    var done = boxes.filter(function(b){ return b.checked; }).length;
-    if (doneEl) doneEl.textContent = done;
-    if (fillEl) fillEl.style.width = total ? (done / total) * 100 + "%" : "0%";
-  }
-  boxes.forEach(function(b){ b.addEventListener("change", function(){ saveExam(); refreshExam(); }); });
-  if (boxes.length) { loadExam(); refreshExam(); }
-  var revealAll = document.getElementById("revealAll");
-  var hideAll = document.getElementById("hideAll");
-  var resetExam = document.getElementById("resetExam");
-  if (revealAll) revealAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.add("open"); }); });
-  if (hideAll) hideAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.remove("open"); }); });
-  if (resetExam) resetExam.addEventListener("click", function(){ boxes.forEach(function(b){ b.checked = false; }); saveExam(); refreshExam(); });
 
-  /* search */
-  var input = document.getElementById("searchInput");
-  var box = document.getElementById("searchResults");
-  var index = sections.map(function(s){
-    var h = s.querySelector("h2");
-    return { id: s.id, title: h ? h.textContent : "", text: s.innerText.replace(/\s+/g, " ").trim() };
-  });
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
   function runSearch(){
-    var q = input.value.trim().toLowerCase();
-    box.innerHTML = "";
-    if (q.length < 2) { box.classList.remove("open"); return; }
-    var hits = index.filter(function(it){ return (it.title + " " + it.text).toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
-    if (!hits.length) { box.innerHTML = '<div class="sr-empty">No matches</div>'; box.classList.add("open"); return; }
-    hits.forEach(function(it){
-      var low = it.text.toLowerCase(), at = low.indexOf(q);
-      var snippet = at >= 0 ? it.text.slice(Math.max(0, at - 30), at + 70) : it.title;
-      var b = document.createElement("button");
-      b.type = "button"; b.className = "sr-item";
-      b.innerHTML = "<b></b><span></span>";
-      b.querySelector("b").textContent = it.title;
-      b.querySelector("span").textContent = "…" + snippet + "…";
-      b.addEventListener("click", function(){
-        document.getElementById(it.id).scrollIntoView({behavior:"smooth", block:"start"});
-        box.classList.remove("open"); input.blur();
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
       });
-      box.appendChild(b);
-    });
-    box.classList.add("open");
+    }
+    suggest.classList.add('open');
   }
-  if (input) {
-    input.addEventListener("input", runSearch);
-    input.addEventListener("keydown", function(e){
-      if (e.key === "Enter") { var first = box.querySelector(".sr-item"); if (first) first.click(); }
-      if (e.key === "Escape") { box.classList.remove("open"); input.blur(); }
-    });
-    document.addEventListener("click", function(e){ if (!e.target.closest(".search")) box.classList.remove("open"); });
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
   }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'elec3609-ELEC3609_lab_week2_study_guide-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
 })();
 </script>
+
+<script>
+(function(){
+  "use strict";
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.code-copy');
+    if (!btn) return;
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    var text = code.innerText;
+    var done = function(){ btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
+    else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(err){} document.body.removeChild(ta); done(); }
+  });
+})();
+</script>
+
 </body>
 </html>

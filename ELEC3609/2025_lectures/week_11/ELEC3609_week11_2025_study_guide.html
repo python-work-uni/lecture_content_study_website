@@ -3,571 +3,1051 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ELEC3609 Week 11 Study Guide – CI/CD: Continuous Integration &amp; Continuous Deployment · 2025 Session</title>
-<meta name="description" content="This lecture explains how modern teams ship software safely and continuously. It starts with the problem CI solves (Integration Hell), then walks through the full pipeline…">
-<meta name="color-scheme" content="light dark">
+<meta name="description" content="Continuous Integration (CI) is the engineering discipline of merging every developer&#x27;s work into a shared mainline several times a day, then automatically linting, building, testing, publishing and de">
+<title>ELEC3609 Week 11 — Continuous Integration and Development: Move Fast and Break Nothing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box}
-:root{
-  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --head:'Sora','Inter',system-ui,sans-serif;
-  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-  --bg:#f4f8f7;--bg-2:#e9f1ef;--surface:#ffffff;--surface-2:#eff5f4;
-  --ink:#15282b;--muted:#587076;--faint:#89a0a3;--line:#d8e5e2;
-  --brand:#0e7c6b;--brand-2:#12a594;--brand-soft:#d6f3ec;--brand-ink:#0a5b4e;
-  --amber:#b45309;--amber-soft:#fdf0d6;
-  --rose:#b21e4b;--rose-soft:#fde4ec;
-  --sky:#0c6ea3;--sky-soft:#ddeffb;
-  --violet:#6d28d9;--violet-soft:#ece7fd;
-  --shadow:0 1px 2px rgba(16,40,43,.05),0 10px 28px -16px rgba(16,40,43,.30);
-  --shadow-lg:0 26px 60px -30px rgba(16,40,43,.45);
-  --r:16px;--r-sm:11px;--sidebar:288px;
-}
-[data-theme=dark]{
-  --bg:#07110f;--bg-2:#0b1a17;--surface:#0e1d1a;--surface-2:#122522;
-  --ink:#e6f2ef;--muted:#94ada8;--faint:#69837e;--line:#1c322e;
-  --brand:#2dd4bf;--brand-2:#5eead4;--brand-soft:rgba(45,212,191,.15);--brand-ink:#99f6e4;
-  --amber:#fbbf24;--amber-soft:rgba(251,191,36,.15);
-  --rose:#fb7185;--rose-soft:rgba(251,113,133,.15);
-  --sky:#38bdf8;--sky-soft:rgba(56,189,248,.15);
-  --violet:#a78bfa;--violet-soft:rgba(167,139,250,.17);
-  --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px -18px rgba(0,0,0,.7);
-  --shadow-lg:0 28px 70px -34px rgba(0,0,0,.85);
-}
-html{scroll-behavior:smooth}
-body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.68;-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.75;
-  background:radial-gradient(58rem 38rem at 112% -12%,var(--brand-soft),transparent 62%),
-             radial-gradient(46rem 30rem at -12% 6%,var(--sky-soft),transparent 58%)}
-h1,h2,h3,h4{font-family:var(--head);line-height:1.2;margin:0}
-p{margin:0 0 .85rem}
-a{color:var(--brand);text-decoration:none}
-a:hover{text-decoration:underline}
-strong{font-weight:650;color:var(--ink)}
-code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.08em .38em}
-.math{font-family:var(--mono);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.06em .4em;font-size:.9em}
-::selection{background:var(--brand-soft);color:var(--brand-ink)}
-/* progress */
-.progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;background:linear-gradient(90deg,var(--brand),var(--brand-2),var(--sky))}
-/* topbar */
-.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:.75rem;
-  padding:.6rem clamp(.9rem,3vw,1.6rem);background:color-mix(in srgb,var(--surface) 82%,transparent);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:.6rem;min-width:0}
-.brand-badge{flex:none;font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.28rem .6rem;white-space:nowrap}
-.brand-title{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:.45rem}
-.icon-btn{display:inline-grid;place-items:center;width:38px;height:38px;border:1px solid var(--line);
-  background:var(--surface);color:var(--ink);border-radius:10px;cursor:pointer;font-size:1rem;transition:.15s}
-.icon-btn:hover{border-color:var(--brand);color:var(--brand)}
-.menu-btn{display:none}
-.search{position:relative}
-.search input{width:min(30vw,240px);padding:.5rem .7rem;border:1px solid var(--line);border-radius:10px;
-  background:var(--surface);color:var(--ink);font:inherit;font-size:.85rem}
-.search input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.search-results{position:absolute;right:0;top:calc(100% + 8px);width:min(78vw,380px);max-height:60vh;overflow:auto;
-  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);display:none;padding:.35rem}
-.search-results.open{display:block}
-.sr-item{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;
-  padding:.5rem .6rem;border-radius:8px;cursor:pointer}
-.sr-item:hover,.sr-item.active{background:var(--surface-2)}
-.sr-item b{display:block;font-size:.84rem;color:var(--brand-ink)}
-.sr-item span{display:block;font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sr-empty{padding:.6rem;color:var(--muted);font-size:.82rem}
-/* shell */
-.shell{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);gap:0;align-items:start}
-.sidebar{position:sticky;top:57px;height:calc(100vh - 57px);overflow:auto;padding:1.3rem .9rem 3rem 1.4rem}
-.toc-title{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .7rem .5rem}
-.toc{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
-.toc-link{display:flex;gap:.55rem;align-items:baseline;padding:.36rem .5rem;border-radius:8px;color:var(--muted);
-  font-size:.82rem;line-height:1.35;transition:.13s}
-.toc-link:hover{background:var(--surface-2);color:var(--ink);text-decoration:none}
-.toc-link.active{background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
-.toc-n{font-family:var(--mono);font-size:.66rem;color:var(--faint);flex:none;padding-top:.12rem}
-.toc-link.active .toc-n{color:var(--brand)}
-.content{min-width:0;max-width:960px;padding:1.6rem clamp(1rem,3.5vw,2.6rem) 5rem}
-/* hero */
-.hero{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:var(--r);
-  padding:clamp(1.4rem,3.5vw,2.4rem);background:
-    linear-gradient(180deg,color-mix(in srgb,var(--brand-soft) 55%,var(--surface)),var(--surface) 72%);
-  box-shadow:var(--shadow);margin-bottom:2rem}
-.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:230px;height:230px;border-radius:50%;
-  background:radial-gradient(circle,var(--brand-soft),transparent 68%);opacity:.8}
-.hero-tag{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-ink);font-weight:700;margin:0 0 .55rem}
-.hero h1{font-size:clamp(1.5rem,4vw,2.15rem);letter-spacing:-.02em;margin-bottom:.5rem}
-.hero-sub{color:var(--muted);font-size:1.02rem;max-width:60ch;margin-bottom:1.1rem}
-.hero-overview{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.15rem;box-shadow:var(--shadow)}
-.ho-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .35rem}
-.hero-overview p:last-child{margin:0}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-top:1.1rem}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.7rem .85rem;box-shadow:var(--shadow)}
-.stat-val{display:block;font-family:var(--head);font-weight:800;font-size:1.25rem;color:var(--brand-ink)}
-.stat-label{display:block;font-size:.72rem;color:var(--muted);letter-spacing:.03em;text-transform:uppercase;font-weight:600}
-/* sections */
-.section{scroll-margin-top:80px;margin-bottom:2.4rem;opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
-.section.in{opacity:1;transform:none}
-.section-head{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:2px solid var(--line)}
-.section-num{flex:none;font-family:var(--head);font-weight:800;font-size:.82rem;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));
-  width:2.1rem;height:2.1rem;display:grid;place-items:center;border-radius:10px;box-shadow:0 6px 16px -8px var(--brand)}
-.section-head h2{font-size:clamp(1.15rem,2.6vw,1.5rem);letter-spacing:-.01em}
-.section-body>*+*{margin-top:.5rem}
-.section-body p{margin:0 0 .9rem}
-.subhead{font-size:.98rem;margin:1.2rem 0 .5rem;color:var(--brand-ink)}
-ul,ol{margin:0 0 .9rem;padding-left:1.25rem}
-li{margin:.22rem 0}
-li>ul,li>ol{margin:.3rem 0 .1rem}
-/* table */
-.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm);margin:1rem 0;box-shadow:var(--shadow)}
-table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:440px}
-thead th{background:var(--surface-2);text-align:left;font-weight:700;color:var(--ink);white-space:nowrap}
-th,td{padding:.6rem .8rem;border-bottom:1px solid var(--line);vertical-align:top}
-tbody tr:last-child td{border-bottom:0}
-tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
-/* code */
-.code{position:relative;margin:1rem 0}
-.code pre{margin:0;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.1rem;overflow:auto;box-shadow:var(--shadow)}
-.code code{font-family:var(--mono);font-size:.82rem;line-height:1.6;background:none;border:0;padding:0;color:var(--ink);white-space:pre}
-.copy{position:absolute;top:.55rem;right:.55rem;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;font-weight:700;
-  color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.24rem .5rem;cursor:pointer}
-.copy:hover{color:var(--brand);border-color:var(--brand)}
-.copy.done{color:var(--brand-ink);border-color:var(--brand)}
-/* formula */
-.formula{position:relative;margin:1rem 0;padding:1.1rem 1rem .9rem;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm)}
-.formula-label{position:absolute;top:-.6rem;left:.9rem;font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;font-weight:700;
-  color:#fff;background:var(--brand);border-radius:6px;padding:.14rem .5rem}
-.formula code{display:block;font-family:var(--mono);font-size:.86rem;background:none;border:0;padding:0;color:var(--ink)}
-/* flow */
-.flow{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin:1rem 0;padding:1rem;background:var(--surface);
-  border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--shadow)}
-.flow-step{display:inline-flex;align-items:center;gap:.4rem;background:var(--surface-2);border:1px solid var(--line);
-  border-radius:999px;padding:.34rem .75rem .34rem .5rem;font-size:.82rem;font-weight:600}
-.flow-n{font-family:var(--mono);font-size:.64rem;color:#fff;background:var(--brand);border-radius:999px;padding:.1rem .34rem}
-.flow-arrow{color:var(--brand);font-weight:800}
-/* callouts */
-.callout{display:flex;gap:.75rem;margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--line);border-left-width:4px;
-  border-radius:var(--r-sm);background:var(--surface);box-shadow:var(--shadow)}
-.callout-ico{flex:none;font-size:1.15rem;line-height:1.3}
-.callout-title{font-weight:700;font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;margin:0 0 .18rem}
-.callout-text{font-size:.93rem}
-.callout-text>:last-child{margin-bottom:0}
-.callout.why{border-left-color:var(--amber);background:color-mix(in srgb,var(--amber-soft) 55%,var(--surface))}
-.callout.why .callout-title{color:var(--amber)}
-.callout.memory{border-left-color:var(--violet);background:color-mix(in srgb,var(--violet-soft) 55%,var(--surface))}
-.callout.memory .callout-title{color:var(--violet)}
-.callout.warn{border-left-color:var(--rose);background:color-mix(in srgb,var(--rose-soft) 55%,var(--surface))}
-.callout.warn .callout-title{color:var(--rose)}
-.callout.info{border-left-color:var(--sky);background:color-mix(in srgb,var(--sky-soft) 55%,var(--surface))}
-.callout.info .callout-title{color:var(--sky)}
-.callout.tip{border-left-color:var(--brand);background:color-mix(in srgb,var(--brand-soft) 55%,var(--surface))}
-.callout.tip .callout-title{color:var(--brand-ink)}
-/* takeaways */
-.takeaways{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
-.takeaways li{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r-sm);padding:.75rem .9rem;box-shadow:var(--shadow)}
-.tk-n{flex:none;font-family:var(--mono);font-size:.68rem;font-weight:700;color:var(--brand-ink);background:var(--brand-soft);
-  border-radius:7px;padding:.22rem .45rem;margin-top:.15rem}
-/* glossary */
-.term-filter{display:flex;align-items:center;gap:.7rem;margin:0 0 .9rem}
-.term-filter input{flex:1;max-width:340px;padding:.55rem .75rem;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:.86rem}
-.term-filter input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.term-count{font-size:.78rem;color:var(--muted)}
-.terms{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.7rem}
-.term{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem .9rem;box-shadow:var(--shadow)}
-.term.hide{display:none}
-.term-name{font-family:var(--head);font-weight:700;font-size:.9rem;margin:0 0 .2rem;color:var(--brand-ink)}
-.term-def{font-size:.85rem;color:var(--muted);margin:0}
-/* mnemonics */
-.mnemonics{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:.8rem}
-.mnemonic{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.95rem 1rem;box-shadow:var(--shadow)}
-.mn-title{font-family:var(--head);font-weight:700;font-size:.92rem;margin:0 0 .4rem;color:var(--brand-ink)}
-.mn-code{font-family:var(--mono);font-weight:600;font-size:1.02rem;letter-spacing:.04em;margin:0 0 .35rem}
-.mn-phrase{font-style:italic;font-weight:600;color:var(--violet);margin:0 0 .35rem}
-.mn-note{font-size:.83rem;color:var(--muted);margin:0}
-/* examples */
-.example{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:1.1rem 1.2rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.example-tag{display:inline-block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.2rem .55rem;margin-bottom:.5rem}
-.example-title{font-size:1rem;margin:0 0 .6rem}
-/* exam */
-.exam-bar{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:space-between;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem 1rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.exam-count{font-size:.85rem;color:var(--muted)}
-.exam-count strong{color:var(--brand-ink)}
-.exam-track{display:block;width:170px;height:7px;border-radius:999px;background:var(--surface-2);margin-top:.4rem;overflow:hidden}
-.exam-track>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .3s}
-.exam-actions{display:flex;gap:.4rem;flex-wrap:wrap}
-.btn{font:inherit;font-size:.78rem;font-weight:600;color:var(--brand-ink);background:var(--brand-soft);border:1px solid transparent;
-  border-radius:9px;padding:.42rem .7rem;cursor:pointer}
-.btn:hover{background:var(--brand);color:#fff}
-.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted)}
-.btn.ghost:hover{border-color:var(--brand);color:var(--brand);background:transparent}
-.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);margin:0 0 .6rem;overflow:hidden;box-shadow:var(--shadow)}
-.quiz-q{display:flex;gap:.7rem;align-items:flex-start;width:100%;text-align:left;background:none;border:0;color:var(--ink);
-  font:inherit;font-weight:600;padding:.85rem .95rem;cursor:pointer}
-.quiz-n{flex:none;font-family:var(--mono);font-size:.7rem;font-weight:700;color:#fff;background:var(--brand);border-radius:7px;padding:.2rem .45rem;margin-top:.1rem}
-.quiz-text{flex:1}
-.quiz-chev{flex:none;color:var(--muted);transition:transform .2s}
-.quiz.open .quiz-chev{transform:rotate(180deg)}
-.quiz-body{display:none;padding:0 .95rem .9rem;border-top:1px dashed var(--line)}
-.quiz.open .quiz-body{display:block}
-.quiz-a{font-size:.9rem;margin:.7rem 0;padding:.7rem .85rem;background:var(--surface-2);border-radius:9px}
-.quiz-a-label{display:block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--brand);margin-bottom:.2rem}
-.quiz-a.muted{color:var(--muted);font-style:italic}
-.mastered{display:inline-flex;gap:.45rem;align-items:center;font-size:.8rem;color:var(--muted);cursor:pointer;user-select:none}
-.mastered input{accent-color:var(--brand);width:1rem;height:1rem}
-/* footer */
-.foot{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}
-/* to top */
-.totop{position:fixed;right:1.1rem;bottom:1.1rem;z-index:55;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);
-  background:var(--surface);color:var(--brand-ink);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.2s}
-.totop.show{opacity:1;pointer-events:auto}
-.scrim{display:none}
-/* responsive */
-@media (max-width:980px){
-  .shell{grid-template-columns:1fr}
-  .menu-btn{display:inline-grid}
-  .sidebar{position:fixed;top:0;left:0;z-index:70;height:100vh;width:min(86vw,320px);background:var(--surface);
-    border-right:1px solid var(--line);transform:translateX(-102%);transition:transform .25s ease;padding-top:1.4rem;box-shadow:var(--shadow-lg)}
-  .sidebar.open{transform:none}
-  .scrim{display:block;position:fixed;inset:0;z-index:65;background:rgba(6,18,16,.45);opacity:0;pointer-events:none;transition:.25s}
-  .scrim.show{opacity:1;pointer-events:auto}
-  .search input{width:40vw}
-  .brand-title{display:none}
-}
-@media (max-width:560px){
-  .search input{width:34vw}
-  .content{padding:1.1rem .9rem 4rem}
-  .stats{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
-}
-@media (prefers-reduced-motion:reduce){
-  *{scroll-behavior:auto!important}
-  .section{opacity:1;transform:none;transition:none}
-}
-@media print{
-  .topbar,.sidebar,.totop,.progress,.exam-actions,.copy,.scrim,.term-filter{display:none!important}
-  body::before{display:none}
-  .shell{display:block}
-  .content{max-width:none;padding:0}
-  .section{opacity:1;transform:none;page-break-inside:avoid}
-  .quiz-body{display:block!important}
-  .hero,.callout,.table-wrap,.code pre,.example,.quiz,.term{box-shadow:none}
-  a{color:inherit}
-}
+  /* ============================================================
+     ENGG2112 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+
+  /* ---------- Code blocks (added for ELEC3609) ---------- */
+  .code-block{position:relative;margin:1.2rem 0;}
+  .code-block pre{margin:0;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.1rem;overflow:auto;}
+  .code-block code{font-family:var(--font-mono);font-size:.84rem;line-height:1.62;background:none;padding:0;border-radius:0;color:var(--ink);white-space:pre;}
+  .code-copy{position:absolute;top:.55rem;right:.55rem;font-family:var(--font-body);font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.25rem .55rem;cursor:pointer;transition:.16s var(--ease);}
+  .code-copy:hover{color:var(--primary-deep);border-color:var(--line-strong);}
+  .code-copy.done{color:var(--primary-deep);border-color:var(--primary);}
 </style>
 </head>
 <body>
-<div class="progress" id="progress" aria-hidden="true"></div>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
 <header class="topbar">
-  <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Open navigation">☰</button>
-  <div class="brand"><span class="brand-badge">ELEC3609 · Week 11</span><span class="brand-title">CI/CD: Continuous Integration &amp; Continuous Deployment · 2025 Session</span></div>
-  <div class="topbar-actions">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">ELEC3609</span>
+    <span class="brand-week">Week 11</span>
+  </a>
+  <div class="topbar-tools">
     <div class="search">
-      <input id="searchInput" type="search" placeholder="Search this guide…" autocomplete="off" aria-label="Search this guide">
-      <div class="search-results" id="searchResults" role="listbox"></div>
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
     </div>
-    <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle light and dark theme">🌙</button>
-    <button class="icon-btn" id="printBtn" type="button" aria-label="Print this guide">🖨</button>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
   </div>
 </header>
-<div class="shell">
-  <aside class="sidebar" id="sidebar" aria-label="Table of contents">
-    <p class="toc-title">Contents</p>
-    <ul class="toc">
-<li><a href="#overview" class="toc-link"><span class="toc-n">00</span>Overview</a></li>
-<li><a href="#sec-1" class="toc-link"><span class="toc-n">01</span>What Is Continuous Integration?</a></li>
-<li><a href="#sec-2" class="toc-link"><span class="toc-n">02</span>Integration Hell &amp; Its Causes</a></li>
-<li><a href="#sec-3" class="toc-link"><span class="toc-n">03</span>The 7 Goals of CI</a></li>
-<li><a href="#sec-4" class="toc-link"><span class="toc-n">04</span>Four CI Considerations</a></li>
-<li><a href="#sec-5" class="toc-link"><span class="toc-n">05</span>The 3 Conflict Levels</a></li>
-<li><a href="#sec-6" class="toc-link"><span class="toc-n">06</span>Stale Branches &amp; Rebase Penalty</a></li>
-<li><a href="#sec-7" class="toc-link"><span class="toc-n">07</span>Linting vs Static Analysis</a></li>
-<li><a href="#sec-8" class="toc-link"><span class="toc-n">08</span>Building Backend &amp; Frontend</a></li>
-<li><a href="#sec-9" class="toc-link"><span class="toc-n">09</span>Testing Strategies</a></li>
-<li><a href="#sec-10" class="toc-link"><span class="toc-n">10</span>Publishing &amp; Artifacts</a></li>
-<li><a href="#sec-11" class="toc-link"><span class="toc-n">11</span>Release &amp; Deployment Types</a></li>
-<li><a href="#sec-12" class="toc-link"><span class="toc-n">12</span>Post-Deployment Monitoring</a></li>
-<li><a href="#key-takeaways" class="toc-link"><span class="toc-n">13</span>Key Takeaways</a></li>
-<li><a href="#glossary" class="toc-link"><span class="toc-n">14</span>Glossary</a></li>
-<li><a href="#mnemonics" class="toc-link"><span class="toc-n">15</span>Mnemonics &amp; Quick Recall</a></li>
-<li><a href="#worked-examples" class="toc-link"><span class="toc-n">16</span>Worked Examples &amp; Scenarios</a></li>
-<li><a href="#exam-focus" class="toc-link"><span class="toc-n">17</span>Exam Practice</a></li>
-    </ul>
-  </aside>
-  <div class="scrim" id="scrim"></div>
-  <main class="content" id="content">
-<section class="hero" id="overview">
-<p class="hero-tag">📖 Course notes · Week 11</p>
-<h1>CI/CD: Continuous Integration &amp; Continuous Deployment · 2025 Session</h1>
-<p class="hero-sub">This lecture explains how modern teams ship software safely and continuously. It starts with the problem CI solves (Integration Hell), then walks through…</p>
-<div class="hero-overview"><p class="ho-label">Lecture overview</p><p>This lecture explains how modern teams ship software safely and continuously. It starts with the problem CI solves (Integration Hell), then walks through the full pipeline: linting and static analysis, building, four layers of testing, publishing artifacts, releasing and deploying, and finally monitoring what you shipped. The running theme is "move fast and break nothing" — automate the boring and risky parts so you can add features with confidence.</p></div>
-<div class="stats"><div class="stat"><span class="stat-val">7</span><span class="stat-label">CI Goals</span></div><div class="stat"><span class="stat-val">Speed, Reproducibility, Reliability, Clarity</span><span class="stat-label">CI Considerations</span></div><div class="stat"><span class="stat-val">Merge, Functional, Logical</span><span class="stat-label">Conflict Levels</span></div><div class="stat"><span class="stat-val">Unit, Integration, Acceptance, Regression</span><span class="stat-label">Test Types</span></div><div class="stat"><span class="stat-val">Rolling, Blue-Green</span><span class="stat-label">Deployment Strategies</span></div></div>
-</section>
-<section class="section" id="sec-1"><header class="section-head"><span class="section-num">01</span><h2>What Is Continuous Integration?</h2></header><div class="section-body"><p>Continuous Integration (CI) is the practice of merging all developers' working copies into a shared mainline codebase <strong>several times a day</strong>, with automated builds and tests verifying each check-in immediately. Instead of everyone working alone for weeks and merging at the end, each developer integrates early and often.</p>
-<h3 class="subhead">The Problem It Replaces</h3>
-<ul><li><strong>The old way</strong> — Each developer builds a feature in isolation, then everything is merged together in a single painful "integration phase".</li><li><strong>The integration phase</strong> — Changes from tens or hundreds of developers land in one common codebase at once, which often fails to compile because of conflicts.</li><li><strong>Integration Hell</strong> — The resulting state where new changes cannot be integrated into the mainline codebase quickly or effectively.</li><li><strong>The cost</strong> — Developers end up spending more time checking code into the repository than actually writing it.</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">CI exists so developers spend their limited time building new features, not untangling broken merges. The course motto is "move fast and break nothing".</div></div></div>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Think of CI as paying off technical debt in tiny daily instalments instead of one bankruptcy-sized fine at the end of semester.</div></div></div></div></section>
-<section class="section" id="sec-2"><header class="section-head"><span class="section-num">02</span><h2>Integration Hell &amp; Its Causes</h2></header><div class="section-body"><p><strong>Integration Hell</strong> is a state where new changes cannot be integrated into the mainline codebase quickly or effectively. It has two classic causes, each with a direct engineering fix.</p>
-<div class="table-wrap"><table><thead><tr><th>Cause of Integration Hell</th><th>Direct Solution</th></tr></thead><tbody><tr><td>Branches have <strong>drifted too far</strong> from master</td><td><strong>Rebase often</strong> — sync local branches with master multiple times a day</td></tr><tr><td>Changes are <strong>too large</strong> and touch too many files</td><td><strong>Small incremental changes</strong> — scope work into tiny, isolated commits</td></tr></tbody></table></div>
-<p>Even with well-isolated components, something must still combine the separate modules into one application — this combining step is called <strong>integration</strong>. The more developers committing to a codebase, the higher the risk of conflicts.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">The cheapest conflict is the one you never have. Small, frequent merges keep the cost of resolving conflicts low.</div></div></div></div></section>
-<section class="section" id="sec-3"><header class="section-head"><span class="section-num">03</span><h2>The 7 Goals of CI</h2></header><div class="section-body"><ol><li><strong>Avoid Integration Hell</strong> — stop developers spending more time checking in code than writing it.</li><li><strong>Isolated, reproducible test environment</strong> — tests run the same way every time.</li><li><strong>Isolated, reproducible build environment</strong> — builds do not depend on one developer's laptop.</li><li><strong>Increase deployment confidence</strong> — HEAD (the main branch) is always in a deployable state.</li><li><strong>Enforce coding style and code quality</strong> — formatting and lint rules are applied automatically.</li><li><strong>Test in multiple environments</strong> — across operating systems, runtimes, and browser versions.</li><li><strong>Streamline development workflows</strong> — automate repetitive tasks and increase productivity.</li></ol>
-<div class="callout tip"><div class="callout-ico" aria-hidden="true">✅</div><div class="callout-body"><p class="callout-title">Exam Tip:</p><div class="callout-text">A common question asks you to list CI's goals. Seven is the magic number, and "reproducible build/test environment" is the one students most often forget.</div></div></div></div></section>
-<section class="section" id="sec-4"><header class="section-head"><span class="section-num">04</span><h2>Four CI Considerations</h2></header><div class="section-body"><p>Every CI pipeline balances four critical trade-offs:</p>
-<ul><li><strong>Speed</strong> — Feedback must be fast (minutes, not hours). If CI is too slow, developers context-switch or bypass the pipeline.</li><li><strong>Reproducibility</strong> — A build or test must give identical results on any machine, which eliminates the "it works on my machine" excuse.</li><li><strong>Reliability</strong> — Results must be trustworthy, with zero tolerance for "flaky" tests that randomly fail. A red build must strictly mean broken code.</li><li><strong>Clarity</strong> — Error messages and log output must be clear, actionable, and easy to trace.</li></ul>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text"><strong>R-R-S-C</strong> — Reliability, Reproducibility, Speed, Clarity.</div></div></div></div></section>
-<section class="section" id="sec-5"><header class="section-head"><span class="section-num">05</span><h2>The 3 Conflict Levels</h2></header><div class="section-body"><p>Any way an application can fail during or after integration counts as a "conflict". CI recognises three levels, from easiest to hardest to detect.</p>
-<div class="table-wrap"><table><thead><tr><th>Conflict Type</th><th>Root Cause</th><th>Detected By</th></tr></thead><tbody><tr><td><strong>Merge conflict</strong></td><td>Two developers edit the same file and lines concurrently</td><td>Git / version control</td></tr><tr><td><strong>Functional conflict</strong></td><td>Concurrent changes break compilation or the build</td><td>Compiler / builder</td></tr><tr><td><strong>Logical conflict</strong></td><td>Code builds but the combined behaviour is wrong</td><td>Automated test suites</td></tr></tbody></table></div>
-<h3 class="subhead">Merge Conflict (Textual Level)</h3>
-<p>Two developers modify the exact same file and line numbers at the same time. Git automatically flags the collision, and a developer manually chooses which lines to keep.</p>
-<h3 class="subhead">Functional Conflict (Build Level)</h3>
-<p>Example: Developer A changes a function signature in <code>auth.js</code>, while Developer B still calls the old signature in <code>server.js</code>. Both files merge cleanly with no textual conflict, but the build fails.</p>
-<h3 class="subhead">Logical Conflict (Runtime Level)</h3>
-<p>Example: Developer A sets <code>timeout = 500ms</code>, but Developer B assumes <code>timeout = 5000ms</code>. The application compiles, but requests fail silently at runtime.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Each level needs a different safety net — version control, a compiler, and a test suite. CI runs all three so no conflict slips through unnoticed.</div></div></div></div></section>
-<section class="section" id="sec-6"><header class="section-head"><span class="section-num">06</span><h2>Stale Branches &amp; Rebase Penalty</h2></header><div class="section-body"><ul><li><strong>Golden rule of version control</strong> — <code>HEAD</code> (usually the master/main branch) is always expected to be in a functional state.</li><li><strong>Responsibility rule</strong> — The developer who lands their changes <strong>last</strong> is responsible for resolving all integration conflicts against HEAD.</li><li><strong>The longer a branch stays checked out</strong>, the more master drifts away, and the greater the risk of conflicts when it is reintegrated.</li><li>Before submitting, a developer must <strong>update (merge or rebase)</strong> their code to reflect everything added to the repository since they took their copy.</li><li><strong>Rebase penalty</strong> — Rebasing onto master is not fun, test results may no longer be valid after a merge or rebase, and integration can eventually take longer than it took to write the original feature.</li><li><strong>Worst case</strong> — The feature becomes so obsolete it must be discarded and redone, because its original purpose is no longer valid or needs a completely different approach.</li></ul>
-<h3 class="subhead">Why Small Incremental Changes Win</h3>
-<ul><li><strong>Fast bug isolation</strong> — Small change sets make integration bugs easy to trace. This saves time and money over the project's lifespan.</li><li><strong>Cheap rollbacks</strong> — If a unit test fails or a bug emerges, reverting a small change loses only a little work, because integration happens frequently.</li></ul>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Leaving a branch open for weeks feels productive, but it silently accumulates a merge debt that must be paid all at once.</div></div></div></div></section>
-<section class="section" id="sec-7"><header class="section-head"><span class="section-num">07</span><h2>Linting vs Static Analysis</h2></header><div class="section-body"><p>These are the first gates in a CI pipeline. Both inspect code without running it, but at different depths.</p>
-<ul><li><strong>Linting</strong> — Running a program that analyses code for potential errors and can also enforce code style guides. It is named after <code>lint</code>, an early tool that flagged suspicious, non-portable constructs (likely bugs) in C source code.</li><li><strong>Static analysis (static code analysis)</strong> — A method of debugging that examines the code <em>without executing the program</em>. It helps you understand code structure and ensure the code adheres to industry standards.</li></ul>
-<p>Semantically they overlap: <strong>linting is a subset of static analysis</strong>, consisting only of rules that are fast and accurate.</p>
-<div class="table-wrap"><table><thead><tr><th>Feature</th><th>Linting</th><th>Static Analysis</th></tr></thead><tbody><tr><td>Speed</td><td>Fast, rapid feedback</td><td>Slower, but comprehensive</td></tr><tr><td>Scope</td><td>File-by-file</td><td>Entire codebase</td></tr><tr><td>False positives</td><td>Zero</td><td>Some tolerance</td></tr><tr><td>Auto-fixing</td><td>Violations often fixed automatically</td><td>Usually cannot be auto-fixed</td></tr><tr><td>Rule targets</td><td>Coding style, deprecated classes/functions, inefficient constructs, naming conventions, spelling, syntax errors, unreachable code, unused variables</td><td>Cyclomatic complexity, NPath complexity, type inference, unused classes/functions, security vulnerabilities</td></tr></tbody></table></div>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Linting asks "is this <em>file</em> written correctly?"; static analysis asks "is the overall <em>architecture</em> structurally sound, complex, or vulnerable?".</div></div></div></div></section>
-<section class="section" id="sec-8"><header class="section-head"><span class="section-num">08</span><h2>Building Backend &amp; Frontend</h2></header><div class="section-body"><p>Traditionally, "building" means <strong>compilation</strong> — the translation of source code into object code. However, dynamic languages such as PHP, Python, and Ruby do not require compilation. In CI, "building" has grown to mean preparing everything the application needs to run.</p>
-<h3 class="subhead">Backend Build</h3>
-<ul><li><strong>Optimise the autoloader</strong> — pre-index class paths and symbol maps for fast runtime lookup.</li><li><strong>Pre-populate caches</strong> — build route caches, database schemas, and configuration trees ahead of time.</li><li><strong>Pre-render templates</strong> — compile server-side views such as Jinja, EJB, or Blade.</li><li><strong>Vendor dependencies</strong> — download and lock backend libraries (<code>npm ci</code>, <code>pip install</code>).</li></ul>
-<h3 class="subhead">Frontend Build</h3>
-<ul><li><strong>Bundle assets</strong> — pack many JS/CSS modules into single optimised bundles (Vite, Webpack).</li><li><strong>Minify and obfuscate</strong> — strip whitespace and comments, and shorten variable names.</li><li><strong>Optimise images</strong> — apply lossy or lossless compression.</li><li><strong>Transpile JavaScript</strong> — convert modern ES6+/TypeScript down to ES5 (e.g., with Babel) so older browsers can run it.</li><li><strong>Vendor dependencies</strong> — pull third-party web libraries into the distribution build.</li></ul>
-<div class="callout tip"><div class="callout-ico" aria-hidden="true">✅</div><div class="callout-body"><p class="callout-title">Exam Tip:</p><div class="callout-text">Interpreted languages still have a build phase in CI — just not compilation. Say "asset bundling, transpilation, minification, cache pre-population, and dependency vendoring".</div></div></div></div></section>
-<section class="section" id="sec-9"><header class="section-head"><span class="section-num">09</span><h2>Testing Strategies</h2></header><div class="section-body"><p>CI tests run in a strict order, from fast and isolated to slow and broad.</p>
-<div class="table-wrap"><table><thead><tr><th>Test Type</th><th>Target</th><th>Style</th></tr></thead><tbody><tr><td><strong>Unit</strong></td><td>A single function or class in isolation</td><td>White-box</td></tr><tr><td><strong>Integration</strong></td><td>Interaction between modules or services</td><td>Black-box</td></tr><tr><td><strong>Acceptance (E2E)</strong></td><td>The whole application from the user's perspective</td><td>End-to-end</td></tr><tr><td><strong>Regression</strong></td><td>Preventing previously fixed bugs from returning</td><td>Edge cases</td></tr></tbody></table></div>
-<h3 class="subhead">Unit Testing</h3>
-<ul><li>Language-specific tools: <strong>Go</strong> <code>go test</code>, <strong>Java</strong> JUnit, <strong>Python</strong> Nosetests/Pytest, <strong>PHP</strong> PHPUnit, <strong>Ruby</strong> RSpec.</li><li>Criteria: fast to execute, one-to-one mapping with source code, zero or minimal dependencies (other code, filesystem, network), and runnable in different environments to future-proof the application.</li><li>Uses mocks and stubs to stay isolated.</li></ul>
-<h3 class="subhead">Integration Testing</h3>
-<ul><li>Ensures different components of the application interact in the expected manner.</li><li>Should be executed <strong>after</strong> unit tests pass.</li><li>Should focus on testing the <strong>API contract</strong> rather than implementation details.</li></ul>
-<h3 class="subhead">Acceptance Testing</h3>
-<ul><li>Focuses on functionality from a <strong>user perspective</strong> and tests the application end-to-end.</li><li>Very slow (relatively) but very important, and includes cross-browser testing (Selenium, Cypress, Playwright).</li></ul>
-<h3 class="subhead">Regression Testing</h3>
-<ul><li>Used to prevent bugs from reoccurring; regression tests often cover bizarre edge cases.</li><li>Rule of thumb: whenever a bug is found, write a regression test covering that exact case <strong>before</strong> applying the fix.</li></ul>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Integration testing is <strong>black-box</strong> and runs <strong>after</strong> unit tests — not before, and not white-box.</div></div></div></div></section>
-<section class="section" id="sec-10"><header class="section-head"><span class="section-num">10</span><h2>Publishing &amp; Artifacts</h2></header><div class="section-body"><p>At the completion of a CI job you typically produce one or more <strong>artifacts</strong> — the compiled, bundled, or packaged output that is ready for distribution. Which artifacts you get depends on the programming language, the tooling, and the deployment process.</p>
-<ul><li><strong>Archives</strong> — <code>.tar.gz</code>, <code>.zip</code> containing static files or backend code.</li><li><strong>Executable binaries</strong> — standard compiled binaries (e.g., Go, Rust).</li><li><strong>Mobile applications</strong> — <code>.apk</code> (Android), <code>.ipa</code> (iOS).</li><li><strong>OS packages</strong> — <code>.deb</code> (Debian/Ubuntu), <code>.rpm</code> (RedHat/CentOS).</li><li><strong>Container images</strong> — Docker images published to a registry (Docker Hub, ECR).</li></ul>
-<p><strong>Publishing</strong> is the process of exposing those artifacts from CI to the deployment process, usually by pushing them to a centralised artifact repository such as Nexus, Artifactory, S3, or a Docker registry.</p></div></section>
-<section class="section" id="sec-11"><header class="section-head"><span class="section-num">11</span><h2>Release &amp; Deployment Types</h2></header><div class="section-body"><p><strong>Deployment</strong> is the process by which the latest version of an application is delivered to users. Examples include submitting an APK to the Google Play Store, updating code on a fleet of production servers, or pushing files to an S3 bucket. Teams must decide how often to deploy, whether to reuse or build new infrastructure, what is automated versus manual, how to monitor, and how to roll back.</p>
-<h3 class="subhead">Delivery vs Deployment</h3>
-<ul><li><strong>Continuous Delivery</strong> — CI automatically builds and tests code, producing a deployable artifact, but the actual production deployment requires a <strong>manual human approval</strong> step.</li><li><strong>Continuous Deployment</strong> — CI/CD automatically deploys every passed change to production with <strong>zero human intervention</strong>.</li></ul>
-<h3 class="subhead">Rolling vs Blue-Green</h3>
-<div class="table-wrap"><table><thead><tr><th>Strategy</th><th>Mechanism</th><th>Cost</th><th>Trade-off</th></tr></thead><tbody><tr><td><strong>Rolling</strong></td><td>Update server nodes in batches (e.g., 20% at a time); drain traffic, update, restore</td><td>1x infrastructure</td><td>Users temporarily interact with a mix of old (v1) and new (v2) versions</td></tr><tr><td><strong>Blue-Green</strong></td><td>Deploy new code to a full parallel environment, smoke-test it, then flip all traffic at once</td><td>2x infrastructure during deployment</td><td>Zero version mixing and instant rollback, but double the cost</td></tr></tbody></table></div>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>Rolling:    [v1][v1][v1][v1] --&gt; [v2][v1][v1][v1] --&gt; [v2][v2][v1][v1] --&gt; [v2][v2][v2][v2]
 
-Blue-Green:  Load Balancer/Router --switch--&gt; Blue (v1, active) | Green (v2, idle)</code></pre></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Rolling deployment serves a mix of v1 and v2 during rollout, so database schemas must remain backward compatible.</div></div></div></div></section>
-<section class="section" id="sec-12"><header class="section-head"><span class="section-num">12</span><h2>Post-Deployment Monitoring</h2></header><div class="section-body"><p>Deployment is not the end of the engineering lifecycle. Once the changes are in the hands of real users, you verify that everything works as expected. As covered in Week 6, the tools are testing, logging, and real-time telemetry.</p>
-<ul><li><strong>Automated smoke testing</strong> — run high-level synthetic transactions immediately after deployment to verify basic system health.</li><li><strong>Centralised logging</strong> — aggregate server and application logs (Elasticsearch, Logstash, Kibana) to catch unhandled exceptions in real time.</li><li><strong>Real-time telemetry and APM</strong> — monitor application performance metrics such as latency, error rates, CPU utilisation, and throughput, and trigger automatic rollbacks if performance degrades.</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">A deployment is a hypothesis — "this change is good". Monitoring is how you find out whether the hypothesis was true.</div></div></div></div></section>
-<section class="section" id="key-takeaways"><header class="section-head"><span class="section-num">13</span><h2>Key Takeaways</h2></header><div class="section-body"><ol class="takeaways"><li><span class="tk-n">1</span><div><strong>CI defined</strong> — merge all developers' working copies into a shared mainline several times a day, with automated builds and tests verifying each check-in.</div></li><li><span class="tk-n">2</span><div><strong>Integration Hell</strong> — the state where new changes cannot be merged quickly; caused by branches drifting from master and by oversized change sets.</div></li><li><span class="tk-n">3</span><div><strong>Two fixes</strong> — rebase/merge often and keep changes small and incremental.</div></li><li><span class="tk-n">4</span><div><strong>Seven goals</strong> — avoid Integration Hell, provide reproducible build and test environments, increase deployment confidence, enforce code quality, test multiple environments, and streamline workflows.</div></li><li><span class="tk-n">5</span><div><strong>Four considerations</strong> — Speed, Reproducibility, Reliability, and Clarity (R-R-S-C).</div></li><li><span class="tk-n">6</span><div><strong>Three conflict levels</strong> — Merge (textual, caught by Git), Functional (build, caught by the compiler), Logical (runtime, caught by tests).</div></li><li><span class="tk-n">7</span><div><strong>Stale branches</strong> — the developer who lands last resolves conflicts; long-lived branches incur a rebase penalty.</div></li><li><span class="tk-n">8</span><div><strong>Linting vs static analysis</strong> — linting is a fast, file-level subset of static analysis, which is slower and codebase-wide.</div></li><li><span class="tk-n">9</span><div><strong>Building</strong> — for dynamic languages it means bundling, transpiling, minifying, caching, and vendoring, not compiling.</div></li><li><span class="tk-n">10</span><div><strong>Four test types</strong> — Unit (white-box), Integration (black-box, after unit), Acceptance (end-to-end), and Regression (prevent bugs returning).</div></li><li><span class="tk-n">11</span><div><strong>Artifacts and publishing</strong> — CI produces archives, binaries, packages, or container images and exposes them to the deployment process.</div></li><li><span class="tk-n">12</span><div><strong>Deployment strategies</strong> — Rolling uses 1x infrastructure but mixes versions; Blue-Green uses 2x infrastructure but gives zero mixing and instant rollback.</div></li><li><span class="tk-n">13</span><div><strong>Post-deployment</strong> — smoke testing, centralised logging, and real-time telemetry/APM verify that the release is healthy.</div></li></ol></div></section>
-<section class="section" id="glossary"><header class="section-head"><span class="section-num">14</span><h2>Glossary</h2></header><div class="section-body"><div class="term-filter"><input type="search" id="termSearch" placeholder="Filter terms…" autocomplete="off" aria-label="Filter glossary terms"><span class="term-count" id="termCount"></span></div><div class="terms" id="termsGrid"><div class="term" data-term="continuous integration (ci) practice of merging all developers&#x27; working copies into a shared mainline several times a day."><p class="term-name">Continuous Integration (CI)</p><p class="term-def">Practice of merging all developers' working copies into a shared mainline several times a day.</p></div><div class="term" data-term="integration hell state where new changes cannot be integrated into the mainline quickly or effectively."><p class="term-name">Integration Hell</p><p class="term-def">State where new changes cannot be integrated into the mainline quickly or effectively.</p></div><div class="term" data-term="mainline / head the shared master branch, expected always to be functional."><p class="term-name">Mainline / HEAD</p><p class="term-def">The shared master branch, expected always to be functional.</p></div><div class="term" data-term="rebase replaying your changes on top of the latest mainline to stay up to date."><p class="term-name">Rebase</p><p class="term-def">Replaying your changes on top of the latest mainline to stay up to date.</p></div><div class="term" data-term="merge conflict textual collision when two developers edit the same file and lines concurrently."><p class="term-name">Merge conflict</p><p class="term-def">Textual collision when two developers edit the same file and lines concurrently.</p></div><div class="term" data-term="functional conflict concurrent changes that break compilation or the build."><p class="term-name">Functional conflict</p><p class="term-def">Concurrent changes that break compilation or the build.</p></div><div class="term" data-term="logical conflict concurrent changes that build successfully but fail at runtime."><p class="term-name">Logical conflict</p><p class="term-def">Concurrent changes that build successfully but fail at runtime.</p></div><div class="term" data-term="stale branch a branch left unmerged so long that master has drifted far ahead."><p class="term-name">Stale branch</p><p class="term-def">A branch left unmerged so long that master has drifted far ahead.</p></div><div class="term" data-term="rebase penalty the extra time spent rebasing and fixing tests when a stale branch is finally integrated."><p class="term-name">Rebase penalty</p><p class="term-def">The extra time spent rebasing and fixing tests when a stale branch is finally integrated.</p></div><div class="term" data-term="linting fast, file-level analysis for potential errors and style violations."><p class="term-name">Linting</p><p class="term-def">Fast, file-level analysis for potential errors and style violations.</p></div><div class="term" data-term="static analysis examining code without executing it to assess structure, complexity, and standards."><p class="term-name">Static analysis</p><p class="term-def">Examining code without executing it to assess structure, complexity, and standards.</p></div><div class="term" data-term="cyclomatic complexity a static-analysis metric of the number of independent paths through code."><p class="term-name">Cyclomatic complexity</p><p class="term-def">A static-analysis metric of the number of independent paths through code.</p></div><div class="term" data-term="npath complexity a static-analysis metric of the number of acyclic execution paths."><p class="term-name">NPath complexity</p><p class="term-def">A static-analysis metric of the number of acyclic execution paths.</p></div><div class="term" data-term="autoloader mechanism that pre-indexes class paths and symbol maps for fast runtime lookup."><p class="term-name">Autoloader</p><p class="term-def">Mechanism that pre-indexes class paths and symbol maps for fast runtime lookup.</p></div><div class="term" data-term="vendoring dependencies downloading and locking third-party libraries into your build."><p class="term-name">Vendoring dependencies</p><p class="term-def">Downloading and locking third-party libraries into your build.</p></div><div class="term" data-term="minification removing whitespace and comments from assets to reduce size."><p class="term-name">Minification</p><p class="term-def">Removing whitespace and comments from assets to reduce size.</p></div><div class="term" data-term="obfuscation rewriting code (e.g., shortening names) to make it smaller and harder to read."><p class="term-name">Obfuscation</p><p class="term-def">Rewriting code (e.g., shortening names) to make it smaller and harder to read.</p></div><div class="term" data-term="transpilation source-to-source compilation, e.g., es6+/typescript down to es5."><p class="term-name">Transpilation</p><p class="term-def">Source-to-source compilation, e.g., ES6+/TypeScript down to ES5.</p></div><div class="term" data-term="bundling packing many js/css modules into a single optimised file."><p class="term-name">Bundling</p><p class="term-def">Packing many JS/CSS modules into a single optimised file.</p></div><div class="term" data-term="unit testing white-box testing of an isolated function or class."><p class="term-name">Unit testing</p><p class="term-def">White-box testing of an isolated function or class.</p></div><div class="term" data-term="integration testing black-box testing of how modules or services interact via their apis."><p class="term-name">Integration testing</p><p class="term-def">Black-box testing of how modules or services interact via their APIs.</p></div><div class="term" data-term="acceptance testing end-to-end testing from the user&#x27;s perspective, including cross-browser checks."><p class="term-name">Acceptance testing</p><p class="term-def">End-to-end testing from the user's perspective, including cross-browser checks.</p></div><div class="term" data-term="regression testing tests that ensure fixed bugs do not reoccur."><p class="term-name">Regression testing</p><p class="term-def">Tests that ensure fixed bugs do not reoccur.</p></div><div class="term" data-term="white-box testing testing with knowledge of the internal implementation."><p class="term-name">White-box testing</p><p class="term-def">Testing with knowledge of the internal implementation.</p></div><div class="term" data-term="black-box testing testing behaviour through the public interface only."><p class="term-name">Black-box testing</p><p class="term-def">Testing behaviour through the public interface only.</p></div><div class="term" data-term="mock / stub stand-in objects that let unit tests run without external dependencies."><p class="term-name">Mock / Stub</p><p class="term-def">Stand-in objects that let unit tests run without external dependencies.</p></div><div class="term" data-term="flaky test a test that fails randomly without a code change; forbidden in reliable ci."><p class="term-name">Flaky test</p><p class="term-def">A test that fails randomly without a code change; forbidden in reliable CI.</p></div><div class="term" data-term="artifact the compiled, bundled, or packaged output produced by a ci job."><p class="term-name">Artifact</p><p class="term-def">The compiled, bundled, or packaged output produced by a CI job.</p></div><div class="term" data-term="publishing exposing ci artifacts to the deployment process, usually via an artifact repository."><p class="term-name">Publishing</p><p class="term-def">Exposing CI artifacts to the deployment process, usually via an artifact repository.</p></div><div class="term" data-term="deployment delivering the latest version of an application to users."><p class="term-name">Deployment</p><p class="term-def">Delivering the latest version of an application to users.</p></div><div class="term" data-term="continuous delivery ci produces a deployable artifact, but a human approves production deployment."><p class="term-name">Continuous Delivery</p><p class="term-def">CI produces a deployable artifact, but a human approves production deployment.</p></div><div class="term" data-term="continuous deployment every passing change is deployed to production automatically with no human step."><p class="term-name">Continuous Deployment</p><p class="term-def">Every passing change is deployed to production automatically with no human step.</p></div><div class="term" data-term="rolling deployment updating server nodes in batches, temporarily serving mixed versions."><p class="term-name">Rolling deployment</p><p class="term-def">Updating server nodes in batches, temporarily serving mixed versions.</p></div><div class="term" data-term="blue-green deployment running two identical environments and flipping all traffic at once."><p class="term-name">Blue-green deployment</p><p class="term-def">Running two identical environments and flipping all traffic at once.</p></div><div class="term" data-term="smoke testing high-level checks run immediately after deployment to confirm basic health."><p class="term-name">Smoke testing</p><p class="term-def">High-level checks run immediately after deployment to confirm basic health.</p></div><div class="term" data-term="telemetry / apm real-time monitoring of latency, errors, cpu, and throughput."><p class="term-name">Telemetry / APM</p><p class="term-def">Real-time monitoring of latency, errors, CPU, and throughput.</p></div><div class="term" data-term="golden rule of vcs head must always remain functional."><p class="term-name">Golden rule of VCS</p><p class="term-def">HEAD must always remain functional.</p></div></div></div></section>
-<section class="section" id="mnemonics"><header class="section-head"><span class="section-num">15</span><h2>Mnemonics &amp; Quick Recall</h2></header><div class="section-body"><div class="mnemonics"><div class="mnemonic"><p class="mn-title">CI Considerations</p><p class="mn-code">R-R-S-C</p><p class="mn-phrase">Reliability, Reproducibility, Speed, Clarity</p><p class="mn-note">the four trade-offs every pipeline balances.</p></div><div class="mnemonic"><p class="mn-title">Conflict Levels</p><p class="mn-code">M-F-L</p><p class="mn-phrase">Merge, Functional, Logical</p><p class="mn-note">textual, build, then runtime failures.</p></div><div class="mnemonic"><p class="mn-title">Linting vs Static Analysis</p><p class="mn-code">L-S</p><p class="mn-phrase">Linting = fast/file-level; Static = slow/codebase-wide</p><p class="mn-note">.</p></div><div class="mnemonic"><p class="mn-title">CI Pipeline Order</p><p class="mn-code">L-B-T-P-D</p><p class="mn-phrase">Lint, Build, Test, Publish, Deploy</p><p class="mn-note">the path from commit to production.</p></div><div class="mnemonic"><p class="mn-title">Test Order</p><p class="mn-code">U-I-A-R</p><p class="mn-phrase">Unit, Integration, Acceptance, Regression</p><p class="mn-note">fast and isolated to slow and broad.</p></div><div class="mnemonic"><p class="mn-title">Deployment Trade-offs</p><p class="mn-code">B-R</p><p class="mn-phrase">Blue-Green = 2x cost, zero mixing; Rolling = 1x cost, mixed versions</p><p class="mn-note">.</p></div></div></div></section>
-<section class="section" id="worked-examples"><header class="section-head"><span class="section-num">16</span><h2>Worked Examples &amp; Scenarios</h2></header><div class="section-body"><div class="example"><span class="example-tag">Example 1</span><h3 class="example-title">Functional Conflict Across Files</h3><p>Developer A changes a function signature in <code>auth.js</code>. Developer B, in a different file (<code>server.js</code>), still calls the old signature. Both files merge with no textual conflict, so Git is happy. When CI runs the build, the compiler cannot resolve the call and the build fails. Detection: the compiler/builder. Fix: update the caller to the new signature.</p></div><div class="example"><span class="example-tag">Example 2</span><h3 class="example-title">Logical Conflict at Runtime</h3><p>Developer A updates a shared variable to <code>timeout = 500ms</code>. Developer B writes code that assumes <code>timeout = 5000ms</code>. The code merges and compiles without errors, but requests now fail silently because they time out too early. Detection: automated integration/unit tests that assert expected behaviour.</p></div><div class="example"><span class="example-tag">Example 3</span><h3 class="example-title">The Stale Branch Rebase Penalty</h3><p>A developer keeps a feature branch open for three weeks. In that time master has moved on significantly. When they finally rebase, they must resolve many conflicts and re-run tests whose old results are no longer valid. Integration now takes longer than it took to write the feature — and in the worst case the feature is discarded entirely.</p></div><div class="example"><span class="example-tag">Example 4</span><h3 class="example-title">Tracing a CI Pipeline</h3><div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>1. Code Commit
-      |
-      v
-2. Lint &amp; Static Check   --&gt; fails fast on syntax/style
-      |
-      v
-3. Build &amp; Transpile     --&gt; fails on missing imports/assets
-      |
-      v
-4. Unit Tests            --&gt; fails on broken function logic
-      |
-      v
-5. Integration Tests     --&gt; fails on API contract mismatches
-      |
-      v
-6. Acceptance (E2E)      --&gt; fails on broken user flows
-      |
-      v
-7. Publish Artifacts</code></pre></div></div><div class="example"><span class="example-tag">Example 5</span><h3 class="example-title">Choosing a Deployment Strategy</h3><p>A team with a tight budget and backward-compatible database changes can use <strong>rolling deployment</strong>: update a few nodes at a time, accept a short window of mixed v1/v2 responses, and pay only 1x infrastructure. A team that cannot tolerate mixed versions and wants instant rollback chooses <strong>blue-green</strong>: pay for two environments, smoke-test the new one, then flip all traffic and keep the old environment ready to switch back.</p></div></div></section>
-<section class="section" id="exam-focus"><header class="section-head"><span class="section-num">17</span><h2>Exam Practice</h2></header><div class="section-body"><div class="exam-bar"><div class="exam-progress"><span class="exam-count"><strong id="examDone">0</strong> / 13 mastered</span><span class="exam-track"><span id="examFill"></span></span></div><div class="exam-actions"><button type="button" class="btn" id="revealAll">Reveal all</button><button type="button" class="btn" id="hideAll">Hide all</button><button type="button" class="btn ghost" id="resetExam">Reset</button></div></div><article class="quiz" data-q="1"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">1</span><span class="quiz-text">What is Continuous Integration, and what problem does it solve?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>CI is the practice of merging all developers' working copies into a shared mainline several times a day with automated builds/tests. It solves Integration Hell — the state where changes can no longer be integrated quickly, forcing developers to spend more time merging than coding.</div><label class="mastered"><input type="checkbox" data-mastered="1"> Mark as mastered</label></div></article><article class="quiz" data-q="2"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">2</span><span class="quiz-text">True or false: interpreted languages such as Python and JavaScript have no build phase in CI.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>False. They lack compilation to binary, but building includes asset bundling, transpilation, minification, cache pre-population, and dependency vendoring.</div><label class="mastered"><input type="checkbox" data-mastered="2"> Mark as mastered</label></div></article><article class="quiz" data-q="3"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">3</span><span class="quiz-text">Name and explain the three levels of integration conflict.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Merge conflict (textual collision in the same file, caught by Git); Functional conflict (changes across files break compilation/build, caught by the compiler); Logical conflict (code builds but behaves incorrectly at runtime, caught by tests).</div><label class="mastered"><input type="checkbox" data-mastered="3"> Mark as mastered</label></div></article><article class="quiz" data-q="4"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">4</span><span class="quiz-text">Why is integration testing black-box, and when should it run?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It tests the API contract between components rather than internal implementation, so it is black-box; it runs after unit tests pass.</div><label class="mastered"><input type="checkbox" data-mastered="4"> Mark as mastered</label></div></article><article class="quiz" data-q="5"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">5</span><span class="quiz-text">What are the four CI considerations and why does each matter?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Speed (slow feedback makes developers bypass CI), Reproducibility (identical results everywhere, killing "it works on my machine"), Reliability (no flaky tests; red means broken), Clarity (clear, actionable logs).</div><label class="mastered"><input type="checkbox" data-mastered="5"> Mark as mastered</label></div></article><article class="quiz" data-q="6"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">6</span><span class="quiz-text">Who is responsible for resolving a conflict when a branch is merged, and why does branch age matter?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>The developer who lands last resolves conflicts against HEAD. The longer a branch stays open, the more master drifts, increasing conflict risk and the eventual rebase penalty.</div><label class="mastered"><input type="checkbox" data-mastered="6"> Mark as mastered</label></div></article><article class="quiz" data-q="7"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">7</span><span class="quiz-text">Compare linting and static analysis.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Linting is a fast, file-by-file subset of static analysis with zero false positives and often automatic fixes; static analysis is slower, examines the whole codebase, tolerates some false positives, and catches structural issues such as cyclomatic complexity.</div><label class="mastered"><input type="checkbox" data-mastered="7"> Mark as mastered</label></div></article><article class="quiz" data-q="8"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">8</span><span class="quiz-text">List the four testing types in the order CI runs them.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Unit, Integration, Acceptance (end-to-end), and Regression testing.</div><label class="mastered"><input type="checkbox" data-mastered="8"> Mark as mastered</label></div></article><article class="quiz" data-q="9"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">9</span><span class="quiz-text">What is a build artifact? Give three examples.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>A compiled, bundled, or packaged output ready for distribution; examples include archives (.tar.gz/.zip), binaries, mobile apps (.apk/.ipa), OS packages (.deb/.rpm), and container images.</div><label class="mastered"><input type="checkbox" data-mastered="9"> Mark as mastered</label></div></article><article class="quiz" data-q="10"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">10</span><span class="quiz-text">Explain the difference between Continuous Delivery and Continuous Deployment.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Both build and test automatically; Delivery requires a manual human approval before production deployment, while Deployment releases every passing change automatically with zero human intervention.</div><label class="mastered"><input type="checkbox" data-mastered="10"> Mark as mastered</label></div></article><article class="quiz" data-q="11"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">11</span><span class="quiz-text">Compare rolling and blue-green deployment.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Rolling updates nodes in batches on 1x infrastructure but temporarily serves mixed versions (schemas must be backward compatible). Blue-green runs two identical environments and flips all traffic at once, giving zero mixing and instant rollback at 2x infrastructure cost.</div><label class="mastered"><input type="checkbox" data-mastered="11"> Mark as mastered</label></div></article><article class="quiz" data-q="12"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">12</span><span class="quiz-text">What should happen after a deployment to verify success?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Automated smoke testing for basic health, centralised logging to catch exceptions, and real-time telemetry/APM (latency, error rates, CPU, throughput) that can trigger automatic rollbacks.</div><label class="mastered"><input type="checkbox" data-mastered="12"> Mark as mastered</label></div></article><article class="quiz" data-q="13"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">13</span><span class="quiz-text">How do small incremental changes reduce the cost of integration?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Small change sets make integration bugs easy to trace and fix, and if a bug slips through, reverting a small commit loses only a little work because integration happens frequently.</div><label class="mastered"><input type="checkbox" data-mastered="13"> Mark as mastered</label></div></article></div></section>
-    <footer class="foot"><strong>ELEC3609 study guide</strong> · CI/CD: Continuous Integration &amp; Continuous Deployment · 2025 Session · Built for self-paced revision.</footer>
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Table of contents">
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+
+  <main class="content" id="content">
+<section class="hero" id="top">
+  <span class="hero-eyebrow">ELEC3609 · Week 11 · Continuous Integration and Development</span>
+  <h1 class="hero-title">Continuous Integration and Development: Move Fast and Break Nothing</h1>
+  <p class="hero-sub">Continuous Integration (CI) is the engineering discipline of merging every developer's work into a shared mainline several times a day, then automatically linting, building, testing, publishing and deploying it. This guide explains the "Integration Hell" problem CI was invented to solve, the goals and trade-offs of a CI system, the three kinds of conflict, and the full pipeline from code style checks to post-deployment telemetry.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> CI is not a tool you install — it is a <em>habit</em> of integrating small changes constantly, backed by an automated pipeline that gives you fast, trustworthy feedback. Every concept this week (conflicts, stale branches, linting, building, testing, deployment) exists to serve one goal: keep the mainline working so you spend your time building features, not untangling merges.</div>
+  <div class="hero-meta"><span class="meta-chip">~20 min read</span><span class="meta-chip">13 teaching sections</span><span class="meta-chip">15 practice questions</span><span class="meta-chip">29 key terms</span></div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list"><li>Define Continuous Integration and explain why it replaces a late, painful "integration phase".</li><li>Describe Integration Hell, its causes, and the two standard remedies.</li><li>List the seven goals of CI and the four design considerations.</li><li>Distinguish merge, functional and logical conflicts, and explain stale-branch risk.</li><li>Tell linting apart from static analysis by rules, speed and auto-fixability.</li><li>Explain what "building" means for backend versus frontend code.</li><li>Order and contrast unit, integration, acceptance and regression testing.</li><li>Describe publishing artifacts, Continuous Deployment, and rolling vs blue-green deployment.</li><li>Verify a deployment after release using testing, logging and real-time telemetry.</li></ul>
+  </div>
+</section>
+<section class="guide-section" id="the-problem-integration-hell" data-title="The Problem: Integration Hell">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Problem: Integration Hell</h2>
+  </div>
+  <p class="section-kicker">Long ago teams built features in isolation for months, then tried to merge everything at once — and the merge usually broke the build.</p>
+<p>Before Continuous Integration existed, teams of developers would each work on their own features until it was time to integrate them into a coherent product. Only then, in the <strong>Integration Phase</strong>, would the changes from tens or hundreds of developers be merged into a common codebase. Because each developer had been working against an old, private copy of the code, that merge frequently failed to compile due to conflicts.</p>
+<p>This state of paralysis has a name.</p>
+<div class="def-card"><span class="dc-term">Integration Hell</span> — A state where new changes cannot be integrated into the mainline codebase quickly or effectively. Teams effectively spend more time checking in code than writing it.</div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Integration Hell is the disease; Continuous Integration is the cure. If you understand the pain of a late mega-merge, every CI practice later in this guide will feel obviously necessary rather than bureaucratic.</div></div>
+<h3 class="sub-title">Why Integration Hell Happens</h3>
+<p>The lecture names two root causes, each with a matching remedy:</p>
+<div class="table-wrap"><table><thead><tr><th>Cause</th><th>Why it hurts</th><th>Remedy</th></tr></thead><tbody><tr><td>Changes have deviated too much from master</td><td>Your branch no longer resembles the mainline, so merging is a huge, error-prone job</td><td>Rebase often</td></tr><tr><td>The change itself is too large and touches too many files</td><td>A single integration event becomes enormous and hard to reason about</td><td>Scope changes correctly; prefer small changes over big changes</td></tr></tbody></table></div>
+<p>The emotional cost is real too — teams would sometimes emerge victorious from integration, and other times the project would fail, "causing much weeping and gnashing of teeth."</p>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Two developers each spend six weeks on separate branches and then merge on the same day. Which of the two root causes above is dominating their problem, and what single habit would have prevented it?</div></div>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> When asked "what problem does CI solve?", do not just say "merge conflicts." Name Integration Hell explicitly, give both root causes, and give the matching remedy (rebase often; prefer small changes).</div></div>
+</section>
+<section class="guide-section" id="what-continuous-integration-is" data-title="What Continuous Integration Is">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">What Continuous Integration Is</h2>
+  </div>
+  <p class="section-kicker">CI is the practice of merging all developers' working copies into a shared mainline codebase several times a day.</p>
+<p><strong>Continuous Integration (CI)</strong> is the practice of merging all developers' working copies to a shared mainline codebase <em>several times a day</em>. The word "continuous" is the key: integration stops being a phase at the end of the project and becomes a small, constant activity.</p>
+<div class="def-card"><span class="dc-term">Continuous Integration</span> — The practice of merging all developers' working copies to a shared mainline codebase several times a day.</div>
+<h3 class="sub-title">The mental model</h3>
+<p>Think of the mainline (the shared branch, usually master) as a river that must always be healthy. Every developer is a small tributary that joins the river many times a day, so each joining is small enough to verify quickly. Compare that with the old model, where dozens of tributaries all tried to join at once at the very end:</p>
+<div class="compare"><div class="compare-col a"><h3>Old: Integration Phase</h3><ul><li>Developers work alone for a long time</li><li>One giant merge at the end</li><li>Build fails; conflicts everywhere</li><li>Time is lost untangling, not building</li><li>High risk the project fails outright</li></ul></div><div class="compare-col b"><h3>CI: Continuous Integration</h3><ul><li>Developers merge several times a day</li><li>Many tiny merges, each easy to check</li><li>Failures are caught immediately</li><li>Time is spent on new features</li><li>Confidence that master always works</li></ul></div></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> "Several times a day, small changes all the way." If your integration happens once a month, it is not continuous — it is a phase.</div></div>
+</section>
+<section class="guide-section" id="goals-of-continuous-integration" data-title="Goals of Continuous Integration">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Goals of Continuous Integration</h2>
+  </div>
+  <p class="section-kicker">CI exists to prevent Integration Hell while giving every change a fast, trustworthy, reproducible verdict.</p>
+<p>The lecture lists seven goals. Together they explain <em>why</em> an organisation bothers to build CI at all.</p>
+<ol><li><strong>Avoid Integration Hell</strong> — a state in which developers spend more time checking code into the repository than writing the code itself.</li><li><strong>Provide an isolated, reproducible test environment</strong> — so a test that passes for one developer passes for everyone, every time.</li><li><strong>Provide an isolated, reproducible build environment</strong> — so the build does not depend on whatever happens to be installed on someone's laptop.</li><li><strong>Increase deployment confidence</strong> — you trust that what you ship will work, because it has already been verified.</li><li><strong>Enforce coding style and code quality</strong> — standards are checked automatically, not argued about in review.</li><li><strong>Test code in multiple environments</strong> — catch issues that only appear on a different OS, runtime or browser.</li><li><strong>Streamline development workflows and increase productivity</strong> — remove manual, repetitive, error-prone steps.</li></ol>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Notice that only goal 1 is about conflicts. The rest are about <em>confidence and reproducibility</em>. A CI system that only merges but never tests or builds in a clean environment has missed most of the point.</div></div>
+<h3 class="sub-title">Considerations: the four trade-offs</h3>
+<p>A CI setup is a design decision, and four properties are always in tension:</p>
+<div class="table-wrap"><table><thead><tr><th>Consideration</th><th>The question it answers</th></tr></thead><tbody><tr><td>Speed</td><td>How fast does a developer get feedback after pushing?</td></tr><tr><td>Reproducibility</td><td>Does the same input always produce the same result?</td></tr><tr><td>Reliability</td><td>Does the pipeline pass/fail consistently, without flaky results?</td></tr><tr><td>Clarity</td><td>Can a developer understand <em>why</em> a job failed and how to fix it?</td></tr></tbody></table></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>S-R-R-C</strong> — Speed, Reproducibility, Reliability, Clarity. If a CI system is slow or flaky, developers stop trusting it and start ignoring it.</div></div>
+</section>
+<section class="guide-section" id="conflicts-the-three-failure-modes" data-title="Conflicts: The Three Failure Modes">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Conflicts: The Three Failure Modes</h2>
+  </div>
+  <p class="section-kicker">"Conflict" is an umbrella term for every way integration can fail — and there are three distinct kinds.</p>
+<p>By encouraging small, incremental changes, adopting CI aims to <strong>minimise the cost</strong> of resolving conflicts. Crucially, the lecture broadens the word "conflict": there are different ways an application can fail during or after integration, and <em>all of them</em> count as conflicts.</p>
+<div class="table-wrap"><table><thead><tr><th>Conflict type</th><th>What has happened</th><th>How it shows up</th></tr></thead><tbody><tr><td>Merge conflict</td><td>Developers modified the same file concurrently</td><td>Git cannot combine the edits automatically</td></tr><tr><td>Functional conflict</td><td>Developers modified files concurrently such that the resulting system does not compile/build</td><td>The build breaks</td></tr><tr><td>Logical conflict</td><td>Developers modified files concurrently such that the system does not execute successfully</td><td>The build succeeds, but the program misbehaves at runtime</td></tr></tbody></table></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> A merge conflict is the <em>easy</em> one — it is loud and obvious. Functional and logical conflicts are more dangerous because each developer's change was individually valid; only the <em>combination</em> is broken. Logical conflicts in particular can slip past a build and only appear at runtime.</div></div>
+<h3 class="sub-title">Can we avoid conflicts altogether?</h3>
+<p>The best way to minimise the cost of resolving conflicts is to <strong>avoid conflicts altogether</strong> — but the lecture is honest that this is difficult.</p>
+<ul><li><strong>Ideally</strong>, components of an application would be independent, with very few dependencies between them.</li><li><strong>Practically</strong>, it makes sense to write reusable modules shared between components — which <em>creates</em> coupling.</li><li>Even with well-isolated components, some process must build all the separate modules into a single application. That process is called <strong>integration</strong>.</li><li>Naturally, the more developers committing to a codebase, the higher the risk of conflicts.</li></ul>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If two developers edit different files but their combined code makes a function return the wrong value, which conflict type is this — and would a compiler or a linter catch it?</div></div>
+</section>
+<section class="guide-section" id="stale-branches-and-the-cost-of-drift" data-title="Stale Branches and the Cost of Drift">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Stale Branches and the Cost of Drift</h2>
+  </div>
+  <p class="section-kicker">The longer a branch stays checked out, the more it drifts, and the more expensive it becomes to rejoin the mainline.</p>
+<p>There is a general expectation that <strong>HEAD</strong> (usually the master branch) is always in a functional state. As a result, conflicts are expected to be resolved by <strong>the developer who is last to land their changes</strong> — the person whose merge actually breaks something owns the fix.</p>
+<p>The central risk is <strong>branch staleness</strong>:</p>
+<ul><li>The longer a branch of code remains checked out, the greater the risk of multiple integration conflicts and failures when it is reintegrated into the mainline.</li><li>When developers submit code, they must first <strong>update (merge or rebase)</strong> their code to reflect changes made in the repository since they took their copy.</li><li>The more changes the repository has accumulated, the more work developers must do before submitting their own changes.</li></ul>
+<h3 class="sub-title">What goes wrong when branches go stale</h3>
+<ol><li>Rebasing your changes onto master is <em>not fun</em> — it is tedious and error-prone.</li><li><strong>Test results may no longer be valid</strong> after the change has been merged or rebased, because the code being tested is no longer the code that was tested.</li><li>Eventually the repository may differ so much from the developers' baselines that <strong>the time to integrate exceeds the time it took to make the original changes</strong>.</li><li>In the worst case, developers must <strong>discard their changes and completely redo the work</strong>, because the original purpose of the change may now be invalid or require a completely different approach.</li></ol>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Do not confuse staleness with laziness. A branch can be stale simply because the mainline moved fast. The remedy is mechanical: rebase often and keep branches short-lived.</div></div>
+</section>
+<section class="guide-section" id="benefits-of-small-incremental-changes" data-title="Benefits of Small Incremental Changes">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Benefits of Small Incremental Changes</h2>
+  </div>
+  <p class="section-kicker">Small change sets make bugs cheap to find, cheap to revert, and cheap to reason about.</p>
+<p>This section is the payoff of everything above. When you make incremental changes:</p>
+<ul><li><strong>Integration bugs are detected early and are easy to track down</strong> because the change sets are small. This saves both time and money over the lifespan of a project.</li><li><strong>Failures are cheap to undo.</strong> When unit tests fail or a bug emerges, if developers need to revert the codebase to a bug-free state without debugging, only a <em>small number of changes are lost</em> — precisely because integration happens frequently.</li></ul>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The value of a small change is not just "less to merge." It is that a small diff has a small <em>search space</em>. When something breaks, you know it broke in one of the last few small commits, not somewhere across six weeks of work.</div></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Small diffs = small blame radius. The commit that broke it is almost always the commit you just pushed.</div></div>
+</section>
+<section class="guide-section" id="what-ci-actually-does-the-pipeline" data-title="What CI Actually Does: The Pipeline">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">What CI Actually Does: The Pipeline</h2>
+  </div>
+  <p class="section-kicker">A CI job is a fixed sequence: lint, build, test, then publish/release/deploy.</p>
+<p>A CI system is not magic — it runs a defined sequence of stages on every change. The lecture enumerates them:</p>
+<div class="flow"><span class="flow-step">Linting &amp; static analysis</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Building</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Testing</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Publishing</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Releasing &amp; Deploying</span></div>
+<p><strong>Testing</strong> itself expands into four ordered layers:</p>
+<div class="flow"><span class="flow-step">Unit testing</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Integration testing</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Acceptance testing</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Regression testing</span></div>
+<div class="table-wrap"><table><thead><tr><th>Stage</th><th>Purpose in one line</th></tr></thead><tbody><tr><td>Linting and static analysis</td><td>Catch errors, style violations and risky constructs without running the code</td></tr><tr><td>Building</td><td>Turn source into a runnable/optimised artifact (compilation plus much more)</td></tr><tr><td>Testing</td><td>Verify behaviour from the unit level up to the end-to-end user level</td></tr><tr><td>Publishing, releasing, deploying</td><td>Expose artifacts and deliver the new version to users</td></tr></tbody></table></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> Regression testing is not strictly "fourth in line." It is a <em>category</em> of test added whenever a bug is fixed, and those tests then run as part of the suite on every future change.</div></div>
+</section>
+<section class="guide-section" id="linting-and-static-analysis" data-title="Linting and Static Analysis">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Linting and Static Analysis</h2>
+  </div>
+  <p class="section-kicker">Linting and static analysis both inspect code without running it — linting is the fast, always-trustworthy subset.</p>
+<p>Both tools analyse source code <em>without executing</em> it, but they differ in scope, speed and trustworthiness.</p>
+<div class="def-card"><span class="dc-term">Linting</span> — The process of running a program that analyses code for potential errors; it can also enforce code style guides.</div>
+<div class="def-card"><span class="dc-term">Static analysis</span> — Also called static code analysis, a method of program debugging done by examining the code without executing it. It provides an understanding of code structure and helps ensure the code adheres to industry standards.</div>
+<h3 class="sub-title">History and relationship</h3>
+<p><strong>Lint</strong> was the name originally given to a particular program that flagged suspicious and non-portable constructs (likely to be bugs) in C language source code. Semantically, linting and static analysis are very similar tools. Generally, however, <strong>linting is a subset of static analysis</strong>, consisting only of rules that are <strong>fast and accurate</strong>.</p>
+<h3 class="sub-title">Linting vs static analysis at a glance</h3>
+<div class="table-wrap"><table><thead><tr><th>Property</th><th>Linting</th><th>Static Analysis</th></tr></thead><tbody><tr><td>False positives</td><td>Zero false positives</td><td>Some tolerance for false positives</td></tr><tr><td>Auto-fix</td><td>Violations can often be automatically fixed</td><td>Violations cannot usually be auto-fixed</td></tr><tr><td>Scope</td><td>Performed on a file-by-file basis</td><td>Generally analyses the entire code base</td></tr><tr><td>Speed</td><td>Fast, rapid feedback</td><td>Slower, but comprehensive</td></tr></tbody></table></div>
+<h3 class="sub-title">Which rules belong to which?</h3>
+<div class="table-wrap"><table><thead><tr><th>Linting rules</th><th>Static analysis rules</th></tr></thead><tbody><tr><td>Coding style</td><td>Cyclomatic complexity</td></tr><tr><td>Deprecated classes/functions</td><td>Type inference</td></tr><tr><td>Inefficient language constructs</td><td>Npath complexity</td></tr><tr><td>Naming conventions</td><td>Unused classes/functions</td></tr><tr><td>Spelling mistakes</td><td></td></tr><tr><td>Syntax errors</td><td></td></tr><tr><td>Unreachable code</td><td></td></tr><tr><td>Unused variables</td><td></td></tr></tbody></table></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Linting is the <em>spell-checker</em> — instant, per-file, usually auto-correctable. Static analysis is the <em>editor's full manuscript review</em> — slower, whole-project, but catches structural problems like complexity and type errors.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A tool reports that a function has high cyclomatic complexity and that its type cannot be inferred. Is this linting or static analysis? Why would you not want it blocking every single file save?</div></div>
+</section>
+<section class="guide-section" id="building-more-than-compilation" data-title="Building: More Than Compilation">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Building: More Than Compilation</h2>
+  </div>
+  <p class="section-kicker">In CI, "building" means producing a deployable artifact — compilation is only one of many steps.</p>
+<p>Traditionally, <strong>building</strong> refers to <strong>compilation</strong>: the translation of source code into object code. However, <strong>dynamic languages (PHP, Python, Ruby) do not require compilation</strong>, so "build" must mean something broader in a CI context.</p>
+<h3 class="sub-title">Building backend code</h3>
+<p>For backend code, building usually involves more than just compilation:</p>
+<ul><li>Optimising the autoloader (if applicable) or symbol map</li><li>Pre-populating caches</li><li>Pre-rendering templates</li><li>Vendoring dependencies</li></ul>
+<h3 class="sub-title">Building frontend code</h3>
+<p>Building frontend code is a <em>different</em> process:</p>
+<ul><li>Bundling CSS/JavaScript assets</li><li>Minifying images (lossy vs lossless compression)</li><li>Minifying CSS/JavaScript assets (obfuscation, whitespace)</li><li>Transpiling JavaScript (source-to-source compilation)</li><li>Vendoring dependencies</li></ul>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> "Vendoring dependencies" appears in both lists — it means copying third-party libraries into your repository so the build is self-contained and reproducible rather than depending on an external package source that might change.</div></div>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> If asked why dynamic languages still need a build step, say: they skip compilation, but they still need caches warmed, templates pre-rendered, dependencies vendored and (for frontend) assets bundled and minified.</div></div>
+</section>
+<section class="guide-section" id="testing-the-four-layers" data-title="Testing: The Four Layers">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Testing: The Four Layers</h2>
+  </div>
+  <p class="section-kicker">Tests run from the smallest unit upward, trading speed for realism at each step.</p>
+<p>CI runs multiple <em>kinds</em> of tests, each answering a different question and running at a different cost.</p>
+<h3 class="sub-title">Unit testing</h3>
+<p>Verifies individual pieces of code in isolation.</p>
+<ul><li><strong>Language-specific tooling:</strong> Golang <code>go test</code>; Java <code>JUnit</code>; Python <code>Nosetests</code>/<code>Pytest</code>; PHP <code>PHPUnit</code>; Ruby <code>RSpec</code>.</li><li><strong>Basic criteria:</strong></li><li>Fast to execute</li><li>One-to-one mapping with source code</li><li>Zero or minimal dependencies (other code, filesystem, network, etc.)</li><li><strong>White box testing</strong> — the tester knows the internal implementation</li><li>Can be executed in different environments to help future-proof your application</li></ul>
+<h3 class="sub-title">Integration testing</h3>
+<p>Ensures that different components of your application interact in the expected manner.</p>
+<ul><li>Should be executed <strong>after</strong> unit tests</li><li>Should focus on testing the <strong>API rather than implementation details</strong></li><li><strong>Black box testing</strong> — the tester does not rely on internal knowledge</li></ul>
+<h3 class="sub-title">Acceptance testing</h3>
+<p>Focuses on functionality from a <strong>user perspective</strong>.</p>
+<ul><li>Tests the application <strong>end-to-end</strong></li><li><strong>Very slow (relatively), but very important</strong></li><li>Includes <strong>cross-browser testing</strong></li></ul>
+<h3 class="sub-title">Regression testing</h3>
+<p>Used to <strong>prevent bugs from reoccurring</strong>.</p>
+<ul><li>When fixing a bug, consider <strong>adding a regression test</strong></li><li>Regression tests often cover <strong>bizarre edge cases</strong></li></ul>
+<h3 class="sub-title">Comparison</h3>
+<div class="table-wrap"><table><thead><tr><th>Test type</th><th>Scope</th><th>Perspective</th><th>Speed</th></tr></thead><tbody><tr><td>Unit</td><td>Single unit, isolated</td><td>White box</td><td>Fastest</td></tr><tr><td>Integration</td><td>Component interactions</td><td>Black box</td><td>Moderate</td></tr><tr><td>Acceptance</td><td>End-to-end, user-facing</td><td>User / black box</td><td>Very slow</td></tr><tr><td>Regression</td><td>Previously fixed bugs</td><td>Mixed</td><td>Varies (run always)</td></tr></tbody></table></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The order is deliberate. Fast, cheap unit tests fail first so you get quick feedback; slow, realistic acceptance tests run last because they are expensive. This is the <strong>test pyramid</strong> idea in practice.</div></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Unit = one box, white. Integration = between boxes, black. Acceptance = whole product, user's eyes. Regression = the ghost of bugs past.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A developer fixes a null-pointer bug and writes a test that reproduces it. Which test layer is that test, and what happens to it on every future CI run?</div></div>
+</section>
+<section class="guide-section" id="publishing-and-continuous-deployment" data-title="Publishing and Continuous Deployment">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Publishing and Continuous Deployment</h2>
+  </div>
+  <p class="section-kicker">Publishing exposes build artifacts to the deployment process; Continuous Deployment triggers deployment automatically.</p>
+<p>At the completion of a CI job you typically produce one or more <strong>artifacts</strong>. What those artifacts are depends on the programming language, the tooling, and the deployment process.</p>
+<h3 class="sub-title">Examples of artifacts</h3>
+<ul><li>Archive (<code>tar</code>, <code>zip</code>)</li><li>Binary</li><li>Mobile application (<code>.apk</code>)</li><li>Package (<code>deb</code>, <code>rpm</code>)</li></ul>
+<p><strong>Publishing</strong> is the process that <strong>exposes artifacts from CI to the deployment process</strong> — it is the hand-off between "we built and tested something" and "we are going to ship it."</p>
+<h3 class="sub-title">Automatic deployment</h3>
+<p>If you are feeling brave, you can trigger deployments automatically at the completion of your CI job. This is referred to as <strong>Continuous Deployment</strong>.</p>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Publishing ≠ deploying. Publishing makes an artifact <em>available</em>; deployment actually delivers it to users. You can publish on every commit but still deploy manually.</div></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> Continuous Deployment means <em>every</em> passing change goes live automatically — no human gate. This is distinct from Continuous Delivery, where deployment is automatic-ready but triggered by a human decision.</div></div>
+</section>
+<section class="guide-section" id="deployment-definition-and-strategies" data-title="Deployment: Definition and Strategies">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Deployment: Definition and Strategies</h2>
+  </div>
+  <p class="section-kicker">Deployment delivers the latest version to users; the strategy you choose decides how risky that moment is.</p>
+<p><strong>Deployment</strong> is the process by which the latest version of an application is delivered to the users.</p>
+<p>Examples of deployment:</p>
+<ul><li>Submitting an APK to the Google Play Store</li><li>Updating code on a fleet of production servers</li><li>Pushing files to an S3 bucket</li></ul>
+<h3 class="sub-title">The deployment questions to answer</h3>
+<ul><li>How often to deploy?</li><li>Use existing infrastructure or new?</li><li>Automated or manual?</li><li>Monitoring</li><li>Rolling back</li></ul>
+<h3 class="sub-title">Types of deployment</h3>
+<div class="table-wrap"><table><thead><tr><th>Strategy</th><th>How it works</th><th>Key consequence</th></tr></thead><tbody><tr><td>Rolling deployment</td><td>Progressively deploy/release the new version until the entire pool has been updated</td><td>Will serve a <strong>mix of old and new assets</strong> during the rollout</td></tr><tr><td>Blue-green deployment</td><td>Spin up an entirely new set of infrastructure with the new code, then do a hard switch-over of all traffic to the new infrastructure/code</td><td>Instant cut-over; old environment remains as a fallback</td></tr></tbody></table></div>
+<div class="compare"><div class="compare-col a"><h3>Rolling deployment</h3><ul><li>Update servers a few at a time</li><li>No big-bang switch</li><li>Users may hit old and new versions</li><li>Easy to pause or halt mid-rollout</li></ul></div><div class="compare-col b"><h3>Blue-green deployment</h3><ul><li>Stand up a whole new environment</li><li>Switch all traffic at once</li><li>Users hit exactly one version</li><li>Requires double infrastructure (temporarily)</li></ul></div></div>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> The distinguishing phrase for rolling is "<strong>mix of old and new assets</strong>"; for blue-green it is "<strong>hard switch over of all traffic</strong>." Use those exact ideas in your answer.</div></div>
+</section>
+<section class="guide-section" id="post-deployment-verification" data-title="Post-Deployment Verification">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Post-Deployment Verification</h2>
+  </div>
+  <p class="section-kicker">Shipping is not the finish line — you must verify that the change works in the hands of real users.</p>
+<p>Now that our changes are in the hands of users, how do we verify that everything is working as expected? As covered in an earlier week (Week 6), this is the time to look at:</p>
+<ul><li><strong>Testing</strong> — continue validating behaviour in the live environment</li><li><strong>Logging</strong> — record what the system does so failures can be reconstructed</li><li><strong>Real-time Telemetry</strong> — stream live metrics about health and performance</li></ul>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Tests passing in CI proves the code works <em>in a controlled environment</em>. Post-deployment verification proves it works <em>in production</em>, with real traffic, real data and real users — where the consequences of failure actually matter.</div></div>
+<h3 class="sub-title">The complete lifecycle, end to end</h3>
+<div class="flow"><span class="flow-step">Write small change</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Commit often</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">CI lints</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">CI builds</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">CI tests</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Publish artifact</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Deploy (rolling/blue-green)</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Post-deploy monitoring</span></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Your blue-green deployment cut all traffic to the new environment and errors spike. What two capabilities from the deployment checklist let you recover, and why is having the old environment still running valuable?</div></div>
+</section>
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways"><div class="takeaway"><span class="tk-num">1</span><p>Continuous Integration is the practice of merging all developers' working copies to a shared mainline codebase several times a day.</p></div><div class="takeaway"><span class="tk-num">2</span><p>Integration Hell is a state where new changes cannot be integrated quickly or effectively, caused by branches deviating too far from master and by changes that are too large; the remedies are rebasing often and scoping changes small.</p></div><div class="takeaway"><span class="tk-num">3</span><p>CI has seven goals: avoid Integration Hell, provide isolated reproducible test and build environments, increase deployment confidence, enforce code style and quality, test in multiple environments, and streamline workflows.</p></div><div class="takeaway"><span class="tk-num">4</span><p>The four CI considerations are Speed, Reproducibility, Reliability and Clarity.</p></div><div class="takeaway"><span class="tk-num">5</span><p>Conflicts come in three types: merge (same file edited concurrently), functional (system will not compile/build) and logical (system will not execute successfully).</p></div><div class="takeaway"><span class="tk-num">6</span><p>The best way to reduce conflict cost is to avoid conflicts entirely by keeping components independent and changes small — though reusable modules and the need to integrate mean some coupling is unavoidable.</p></div><div class="takeaway"><span class="tk-num">7</span><p>Stale branches are dangerous: the longer a branch is checked out, the more it drifts, test results may become invalid, integration can cost more than the original work, and changes may need to be discarded and redone.</p></div><div class="takeaway"><span class="tk-num">8</span><p>Small incremental changes make bugs detected early, easy to track down, and cheap to revert because few changes are lost.</p></div><div class="takeaway"><span class="tk-num">9</span><p>Linting is the fast, zero-false-positive, per-file subset of static analysis whose violations are often auto-fixable; static analysis is slower, whole-codebase and tolerates some false positives.</p></div><div class="takeaway"><span class="tk-num">10</span><p>In CI, "building" goes beyond compilation to include cache pre-population, template pre-rendering, dependency vendoring, and frontend bundling, minification and transpilation.</p></div><div class="takeaway"><span class="tk-num">11</span><p>Testing runs in four layers: unit (white box, fast), integration (black box, API-focused), acceptance (end-to-end, user perspective, slow) and regression (prevents bugs reoccurring, often bizarre edge cases).</p></div><div class="takeaway"><span class="tk-num">12</span><p>Publishing exposes CI artifacts (tar/zip, binary, apk, deb/rpm) to the deployment process; Continuous Deployment triggers deployment automatically at the end of a CI job.</p></div><div class="takeaway"><span class="tk-num">13</span><p>Deployment types differ by blast radius: rolling updates progressively and serves a mix of old and new assets; blue-green stands up new infrastructure and hard-switches all traffic.</p></div><div class="takeaway"><span class="tk-num">14</span><p>Post-deployment, verify with testing, logging and real-time telemetry, and keep monitoring and rollback ready.</p></div></div>
+</section>
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools"><button class="chip active" type="button" data-cat="all">All</button><button class="chip" type="button" data-cat="method">Methods &amp; process</button><button class="chip" type="button" data-cat="concept">Core concepts</button><button class="chip" type="button" data-cat="tech">Technologies &amp; tools</button><button class="chip" type="button" data-cat="metric">Metrics &amp; evaluation</button></div>
+  <div class="terms"><div class="term-card" data-cat="method"><div class="term-name">Continuous Integration</div><div class="term-meaning">The practice of merging all developers' working copies to a shared mainline codebase several times a day.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Integration Hell</div><div class="term-meaning">A state where new changes cannot be integrated into the mainline codebase quickly or effectively, usually from large or long-lived changes.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Integration Phase</div><div class="term-meaning">The old practice of merging all developers' work into a common codebase in one late, large event.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Mainline</div><div class="term-meaning">The shared, canonical codebase (typically the master branch) that all developers merge into.</div></div><div class="term-card" data-cat="tech"><div class="term-name">HEAD</div><div class="term-meaning">The tip of the currently checked-out branch, generally master, which is expected to always be in a functional state.</div></div><div class="term-card" data-cat="method"><div class="term-name">Rebase</div><div class="term-meaning">Replaying your commits on top of the latest mainline so your branch reflects upstream changes; the standard remedy for drift.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Merge conflict</div><div class="term-meaning">A conflict where developers have modified the same file concurrently.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Functional conflict</div><div class="term-meaning">A conflict where concurrent modifications mean the resulting system does not compile or build.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Logical conflict</div><div class="term-meaning">A conflict where concurrent modifications mean the system does not execute successfully, even though it builds.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Stale branch</div><div class="term-meaning">A branch left checked out for a long time that has drifted from the mainline, raising integration risk.</div></div><div class="term-card" data-cat="method"><div class="term-name">Linting</div><div class="term-meaning">Running a program that analyses code for potential errors, per file, with zero false positives and often auto-fixable results; also enforces style guides.</div></div><div class="term-card" data-cat="method"><div class="term-name">Static analysis</div><div class="term-meaning">Debugging by examining code without executing it; whole-codebase, slower, comprehensive, tolerating some false positives.</div></div><div class="term-card" data-cat="metric"><div class="term-name">Cyclomatic complexity</div><div class="term-meaning">A static-analysis metric counting the number of independent paths through code.</div></div><div class="term-card" data-cat="metric"><div class="term-name">Npath complexity</div><div class="term-meaning">A static-analysis metric measuring the number of acyclic execution paths through a function.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Type inference</div><div class="term-meaning">Static analysis that determines the types of expressions without explicit annotations.</div></div><div class="term-card" data-cat="method"><div class="term-name">Build</div><div class="term-meaning">In CI, the process of producing a deployable artifact — compilation plus caching, template pre-rendering, vendoring, bundling and minification.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Vendoring dependencies</div><div class="term-meaning">Copying third-party libraries into the repository so builds are self-contained and reproducible.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Transpiling</div><div class="term-meaning">Source-to-source compilation, such as converting modern JavaScript into a form older browsers can run.</div></div><div class="term-card" data-cat="method"><div class="term-name">Unit testing</div><div class="term-meaning">Fast, white-box testing of individual code units with zero or minimal dependencies and one-to-one mapping to source.</div></div><div class="term-card" data-cat="method"><div class="term-name">Integration testing</div><div class="term-meaning">Black-box testing that components interact in the expected manner, focused on the API rather than implementation.</div></div><div class="term-card" data-cat="method"><div class="term-name">Acceptance testing</div><div class="term-meaning">Slow, end-to-end testing of functionality from a user perspective, including cross-browser testing.</div></div><div class="term-card" data-cat="method"><div class="term-name">Regression testing</div><div class="term-meaning">Tests added when a bug is fixed to prevent it reoccurring; often cover bizarre edge cases.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Artifact</div><div class="term-meaning">An output of a CI job, such as a tar/zip archive, binary, apk or deb/rpm package, that is exposed to deployment.</div></div><div class="term-card" data-cat="method"><div class="term-name">Publishing</div><div class="term-meaning">The process that exposes artifacts from CI to the deployment process.</div></div><div class="term-card" data-cat="method"><div class="term-name">Continuous Deployment</div><div class="term-meaning">Automatically triggering a deployment at the completion of a passing CI job.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Deployment</div><div class="term-meaning">The process by which the latest version of an application is delivered to users.</div></div><div class="term-card" data-cat="method"><div class="term-name">Rolling deployment</div><div class="term-meaning">Progressively deploying the new version until the entire pool is updated, serving a mix of old and new assets.</div></div><div class="term-card" data-cat="method"><div class="term-name">Blue-green deployment</div><div class="term-meaning">Spinning up entirely new infrastructure with the new code and hard-switching all traffic to it.</div></div><div class="term-card" data-cat="metric"><div class="term-name">Telemetry</div><div class="term-meaning">Real-time streaming of live health and performance data used to verify a deployment after release.</div></div></div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+<article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">Define Continuous Integration and state the frequency the lecture specifies.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> CI is the practice of merging all developers' working copies to a shared mainline codebase. The lecture specifies that this happens several times a day.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">What is Integration Hell, and what are the two root causes with their remedies?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Integration Hell is a state where new changes cannot be integrated into the mainline codebase quickly or effectively. The two causes are (1) changes have deviated too much from master — remedy: rebase often; and (2) the change is too large and touches too many files — remedy: scope changes correctly and prefer small changes over big changes.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">List the seven goals of Continuous Integration.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) Avoid Integration Hell; (2) provide an isolated, reproducible test environment; (3) provide an isolated, reproducible build environment; (4) increase deployment confidence; (5) enforce coding style and code quality; (6) test code in multiple environments; (7) streamline development workflows and increase productivity.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">What are the four considerations for a CI system?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Speed, Reproducibility, Reliability and Clarity.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">Distinguish merge, functional and logical conflicts.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> A merge conflict occurs when developers modify the same file concurrently and Git cannot combine the edits. A functional conflict occurs when concurrent modifications mean the resulting system does not compile or build. A logical conflict occurs when concurrent modifications mean the system does not execute successfully, even though it may build.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">Why are stale branches risky? Give at least three consequences.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The longer a branch stays checked out, the more it drifts from the mainline. Consequences: rebasing becomes painful; test results may no longer be valid after merge/rebase; the time to integrate may exceed the time taken to make the original changes; and in the worst case developers must discard their changes and completely redo the work because the original purpose is now invalid.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">What is the difference between linting and static analysis?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Both inspect code without executing it, but linting is a subset of static analysis consisting only of rules that are fast and accurate. Linting has zero false positives, is performed file-by-file, gives rapid feedback and violations can often be auto-fixed. Static analysis tolerates some false positives, generally analyses the entire codebase, is slower but comprehensive, and violations cannot usually be auto-fixed.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">Classify these rules as linting or static analysis: coding style, cyclomatic complexity, unused variables, type inference, unreachable code, Npath complexity.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Linting: coding style, unused variables, unreachable code. Static analysis: cyclomatic complexity, type inference, Npath complexity.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">Dynamic languages like PHP, Python and Ruby do not require compilation. What does "building" mean for them in CI?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> For backend code it means more than compilation: optimising the autoloader or symbol map, pre-populating caches, pre-rendering templates, and vendoring dependencies. For frontend code it means bundling CSS/JavaScript assets, minifying images (lossy vs lossless), minifying CSS/JavaScript assets (obfuscation, whitespace), transpiling JavaScript (source-to-source compilation), and vendoring dependencies.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">Name the four testing layers in CI and give one distinguishing property of each.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Unit testing — fast, white-box, one-to-one mapping with source, zero or minimal dependencies. Integration testing — black box, verifies components interact as expected, focuses on the API, runs after unit tests. Acceptance testing — end-to-end from a user perspective, cross-browser, very slow but very important. Regression testing — prevents bugs reoccurring, added when fixing a bug, often covers bizarre edge cases.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">What is an artifact, and what does publishing do?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> An artifact is an output produced at the completion of a CI job — for example a tar/zip archive, a binary, an apk mobile application, or a deb/rpm package. Publishing is the process that exposes artifacts from CI to the deployment process.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">What is Continuous Deployment, and how does it differ from publishing?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Continuous Deployment is automatically triggering a deployment at the completion of a CI job (if you are feeling brave). Publishing only exposes the artifact to the deployment process; it does not itself deliver the version to users.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">Define deployment and give three examples from the lecture.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Deployment is the process by which the latest version of an application is delivered to users. Examples: submitting an APK to the Google Play Store, updating code on a fleet of production servers, and pushing files to an S3 bucket.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">Compare rolling and blue-green deployment.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Rolling deployment progressively deploys/releases the new version until the entire pool has been updated, so during the rollout it serves a mix of old and new assets. Blue-green deployment spins up an entirely new set of infrastructure with the new code and does a hard switch-over of all traffic to the new infrastructure/code.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q15">
+    <div class="quiz-head"><span class="quiz-qnum">Q15</span><p class="quiz-q">After deployment, how do you verify everything is working as expected?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> By using testing, logging and real-time telemetry — the post-deployment practices introduced in Week 6.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+</section>
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist"><label class="check-item"><input type="checkbox"> I can define Continuous Integration and state that it happens several times a day.</label><label class="check-item"><input type="checkbox"> I can explain Integration Hell and give both root causes with their remedies.</label><label class="check-item"><input type="checkbox"> I can list all seven goals of Continuous Integration.</label><label class="check-item"><input type="checkbox"> I can name and explain the four considerations: Speed, Reproducibility, Reliability, Clarity.</label><label class="check-item"><input type="checkbox"> I can distinguish merge, functional and logical conflicts with examples.</label><label class="check-item"><input type="checkbox"> I can explain why stale branches are dangerous and how rebasing/merging mitigates drift.</label><label class="check-item"><input type="checkbox"> I can justify why small incremental changes save time and money.</label><label class="check-item"><input type="checkbox"> I can compare linting and static analysis by false positives, auto-fix, scope and speed, and classify their rules.</label><label class="check-item"><input type="checkbox"> I can describe what building means for backend versus frontend code.</label><label class="check-item"><input type="checkbox"> I can order unit, integration, acceptance and regression testing and explain white box vs black box.</label><label class="check-item"><input type="checkbox"> I can define artifacts, publishing and Continuous Deployment, and give artifact examples.</label><label class="check-item"><input type="checkbox"> I can compare rolling and blue-green deployment, and describe post-deployment verification using testing, logging and telemetry.</label></div>
+</section>
   </main>
 </div>
-<button class="totop" id="toTop" type="button" aria-label="Back to top">↑</button>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">⌂ All guides</a>
+    <a href="../week_10/ELEC3609_week10_2025_study_guide.html">← Week 10</a>
+    <a href="../week_12/ELEC3609_week12_2025_study_guide.html">Week 12 →</a>
+  </div>
+  <p>ELEC3609/9609 Internet Software Platforms · Week 11 · Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
 <script>
 (function(){
-  var GUIDE_ID = "elec3609-week11-2025-study-guide";
+  "use strict";
+
+  /* ---------- Theme ---------- */
   var root = document.documentElement;
-  /* theme */
-  var stored = null;
-  try { stored = localStorage.getItem("sg-theme"); } catch(e){}
-  var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  setTheme(stored || (prefersDark ? "dark" : "light"));
-  function setTheme(t){
-    root.setAttribute("data-theme", t);
-    var b = document.getElementById("themeBtn");
-    if (b) b.textContent = t === "dark" ? "☀️" : "🌙";
-    try { localStorage.setItem("sg-theme", t); } catch(e){}
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('elec3609-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('elec3609-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
   }
-  document.getElementById("themeBtn").addEventListener("click", function(){
-    setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
-  });
-  document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
 
-  /* mobile drawer */
-  var sidebar = document.getElementById("sidebar"), scrim = document.getElementById("scrim");
-  function closeDrawer(){ sidebar.classList.remove("open"); scrim.classList.remove("show"); }
-  document.getElementById("menuBtn").addEventListener("click", function(){
-    sidebar.classList.toggle("open"); scrim.classList.toggle("show");
-  });
-  scrim.addEventListener("click", closeDrawer);
-  sidebar.addEventListener("click", function(e){ if (e.target.closest("a")) closeDrawer(); });
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
 
-  /* progress bar + back to top */
-  var bar = document.getElementById("progress"), toTop = document.getElementById("toTop");
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
   function onScroll(){
-    var h = document.documentElement;
-    var max = h.scrollHeight - h.clientHeight;
-    var pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
-    bar.style.width = pct + "%";
-    toTop.classList.toggle("show", h.scrollTop > 600);
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
   }
-  window.addEventListener("scroll", onScroll, {passive:true});
+  window.addEventListener('scroll', onScroll, {passive:true});
   onScroll();
-  toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
 
-  /* active toc + reveal */
-  var links = Array.prototype.slice.call(document.querySelectorAll(".toc-link"));
-  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
-  if ("IntersectionObserver" in window) {
-    var rev = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){ if (en.isIntersecting) en.target.classList.add("in"); });
-    }, {rootMargin:"0px 0px -8% 0px", threshold:0.05});
-    sections.forEach(function(s){ rev.observe(s); });
-
-    var spy = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){
-        if (!en.isIntersecting) return;
-        var id = en.target.id;
-        links.forEach(function(a){ a.classList.toggle("active", a.getAttribute("href") === "#" + id); });
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
       });
-    }, {rootMargin:"-15% 0px -70% 0px", threshold:0});
-    sections.forEach(function(s){ spy.observe(s); });
-  } else {
-    sections.forEach(function(s){ s.classList.add("in"); });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
   }
 
-  /* copy buttons */
-  document.addEventListener("click", function(e){
-    var btn = e.target.closest("[data-copy]");
-    if (!btn) return;
-    var code = btn.parentElement.querySelector("code");
-    if (!code) return;
-    var text = code.innerText;
-    var done = function(){ btn.textContent = "Copied"; btn.classList.add("done"); setTimeout(function(){ btn.textContent = "Copy"; btn.classList.remove("done"); }, 1400); };
-    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
-    else { var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(err){} document.body.removeChild(ta); done(); }
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'elec3609-ELEC3609_week11_2025_study_guide-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
   });
 
-  /* glossary filter */
-  var termSearch = document.getElementById("termSearch");
-  if (termSearch) {
-    var terms = Array.prototype.slice.call(document.querySelectorAll(".term"));
-    var count = document.getElementById("termCount");
-    var update = function(){
-      var q = termSearch.value.trim().toLowerCase();
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
       var shown = 0;
-      terms.forEach(function(t){
-        var hit = !q || (t.getAttribute("data-term") || "").indexOf(q) !== -1;
-        t.classList.toggle("hide", !hit);
-        if (hit) shown++;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
       });
-      if (count) count.textContent = shown + " / " + terms.length + " shown";
-    };
-    termSearch.addEventListener("input", update);
-    update();
-  }
-
-  /* exam interactions */
-  var quizzes = Array.prototype.slice.call(document.querySelectorAll(".quiz"));
-  quizzes.forEach(function(q){
-    var head = q.querySelector(".quiz-q");
-    head.addEventListener("click", function(){
-      q.classList.toggle("open");
-      head.setAttribute("aria-expanded", q.classList.contains("open") ? "true" : "false");
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
     });
   });
-  var doneEl = document.getElementById("examDone"), fillEl = document.getElementById("examFill");
-  var boxes = Array.prototype.slice.call(document.querySelectorAll("[data-mastered]"));
-  var total = boxes.length;
-  function examKey(){ return "sg-exam-" + GUIDE_ID; }
-  function loadExam(){
-    var data = {};
-    try { data = JSON.parse(localStorage.getItem(examKey()) || "{}"); } catch(e){}
-    boxes.forEach(function(b){ b.checked = !!data[b.getAttribute("data-mastered")]; });
-  }
-  function saveExam(){
-    var data = {};
-    boxes.forEach(function(b){ if (b.checked) data[b.getAttribute("data-mastered")] = 1; });
-    try { localStorage.setItem(examKey(), JSON.stringify(data)); } catch(e){}
-  }
-  function refreshExam(){
-    var done = boxes.filter(function(b){ return b.checked; }).length;
-    if (doneEl) doneEl.textContent = done;
-    if (fillEl) fillEl.style.width = total ? (done / total) * 100 + "%" : "0%";
-  }
-  boxes.forEach(function(b){ b.addEventListener("change", function(){ saveExam(); refreshExam(); }); });
-  if (boxes.length) { loadExam(); refreshExam(); }
-  var revealAll = document.getElementById("revealAll");
-  var hideAll = document.getElementById("hideAll");
-  var resetExam = document.getElementById("resetExam");
-  if (revealAll) revealAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.add("open"); }); });
-  if (hideAll) hideAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.remove("open"); }); });
-  if (resetExam) resetExam.addEventListener("click", function(){ boxes.forEach(function(b){ b.checked = false; }); saveExam(); refreshExam(); });
 
-  /* search */
-  var input = document.getElementById("searchInput");
-  var box = document.getElementById("searchResults");
-  var index = sections.map(function(s){
-    var h = s.querySelector("h2");
-    return { id: s.id, title: h ? h.textContent : "", text: s.innerText.replace(/\s+/g, " ").trim() };
-  });
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
   function runSearch(){
-    var q = input.value.trim().toLowerCase();
-    box.innerHTML = "";
-    if (q.length < 2) { box.classList.remove("open"); return; }
-    var hits = index.filter(function(it){ return (it.title + " " + it.text).toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
-    if (!hits.length) { box.innerHTML = '<div class="sr-empty">No matches</div>'; box.classList.add("open"); return; }
-    hits.forEach(function(it){
-      var low = it.text.toLowerCase(), at = low.indexOf(q);
-      var snippet = at >= 0 ? it.text.slice(Math.max(0, at - 30), at + 70) : it.title;
-      var b = document.createElement("button");
-      b.type = "button"; b.className = "sr-item";
-      b.innerHTML = "<b></b><span></span>";
-      b.querySelector("b").textContent = it.title;
-      b.querySelector("span").textContent = "…" + snippet + "…";
-      b.addEventListener("click", function(){
-        document.getElementById(it.id).scrollIntoView({behavior:"smooth", block:"start"});
-        box.classList.remove("open"); input.blur();
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
       });
-      box.appendChild(b);
-    });
-    box.classList.add("open");
+    }
+    suggest.classList.add('open');
   }
-  if (input) {
-    input.addEventListener("input", runSearch);
-    input.addEventListener("keydown", function(e){
-      if (e.key === "Enter") { var first = box.querySelector(".sr-item"); if (first) first.click(); }
-      if (e.key === "Escape") { box.classList.remove("open"); input.blur(); }
-    });
-    document.addEventListener("click", function(e){ if (!e.target.closest(".search")) box.classList.remove("open"); });
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
   }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'elec3609-ELEC3609_week11_2025_study_guide-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
 })();
 </script>
+
+<script>
+(function(){
+  "use strict";
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.code-copy');
+    if (!btn) return;
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    var text = code.innerText;
+    var done = function(){ btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
+    else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(err){} document.body.removeChild(ta); done(); }
+  });
+})();
+</script>
+
 </body>
 </html>

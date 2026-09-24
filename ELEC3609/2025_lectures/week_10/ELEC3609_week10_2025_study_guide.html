@@ -3,591 +3,1049 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ELEC3609 Week 10 Study Guide – Software Quality, Testing &amp; Defensive Design · 2025 Session</title>
-<meta name="description" content="This lecture covers the fundamentals of verifying that a web application is correct: the levels of testing, the difference between black-box and white-box perspectives…">
-<meta name="color-scheme" content="light dark">
+<meta name="description" content="A practical tour of how to verify that a web application actually works — the four levels of testing, black-box vs white-box reasoning, regression and non-functional testing, fuzzing, linting, how to ">
+<title>ELEC3609 Week 10 — Quality and Testing: From Unit Tests to Defensive Design</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box}
-:root{
-  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --head:'Sora','Inter',system-ui,sans-serif;
-  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-  --bg:#f4f8f7;--bg-2:#e9f1ef;--surface:#ffffff;--surface-2:#eff5f4;
-  --ink:#15282b;--muted:#587076;--faint:#89a0a3;--line:#d8e5e2;
-  --brand:#0e7c6b;--brand-2:#12a594;--brand-soft:#d6f3ec;--brand-ink:#0a5b4e;
-  --amber:#b45309;--amber-soft:#fdf0d6;
-  --rose:#b21e4b;--rose-soft:#fde4ec;
-  --sky:#0c6ea3;--sky-soft:#ddeffb;
-  --violet:#6d28d9;--violet-soft:#ece7fd;
-  --shadow:0 1px 2px rgba(16,40,43,.05),0 10px 28px -16px rgba(16,40,43,.30);
-  --shadow-lg:0 26px 60px -30px rgba(16,40,43,.45);
-  --r:16px;--r-sm:11px;--sidebar:288px;
-}
-[data-theme=dark]{
-  --bg:#07110f;--bg-2:#0b1a17;--surface:#0e1d1a;--surface-2:#122522;
-  --ink:#e6f2ef;--muted:#94ada8;--faint:#69837e;--line:#1c322e;
-  --brand:#2dd4bf;--brand-2:#5eead4;--brand-soft:rgba(45,212,191,.15);--brand-ink:#99f6e4;
-  --amber:#fbbf24;--amber-soft:rgba(251,191,36,.15);
-  --rose:#fb7185;--rose-soft:rgba(251,113,133,.15);
-  --sky:#38bdf8;--sky-soft:rgba(56,189,248,.15);
-  --violet:#a78bfa;--violet-soft:rgba(167,139,250,.17);
-  --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px -18px rgba(0,0,0,.7);
-  --shadow-lg:0 28px 70px -34px rgba(0,0,0,.85);
-}
-html{scroll-behavior:smooth}
-body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.68;-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.75;
-  background:radial-gradient(58rem 38rem at 112% -12%,var(--brand-soft),transparent 62%),
-             radial-gradient(46rem 30rem at -12% 6%,var(--sky-soft),transparent 58%)}
-h1,h2,h3,h4{font-family:var(--head);line-height:1.2;margin:0}
-p{margin:0 0 .85rem}
-a{color:var(--brand);text-decoration:none}
-a:hover{text-decoration:underline}
-strong{font-weight:650;color:var(--ink)}
-code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.08em .38em}
-.math{font-family:var(--mono);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.06em .4em;font-size:.9em}
-::selection{background:var(--brand-soft);color:var(--brand-ink)}
-/* progress */
-.progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;background:linear-gradient(90deg,var(--brand),var(--brand-2),var(--sky))}
-/* topbar */
-.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:.75rem;
-  padding:.6rem clamp(.9rem,3vw,1.6rem);background:color-mix(in srgb,var(--surface) 82%,transparent);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:.6rem;min-width:0}
-.brand-badge{flex:none;font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.28rem .6rem;white-space:nowrap}
-.brand-title{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:.45rem}
-.icon-btn{display:inline-grid;place-items:center;width:38px;height:38px;border:1px solid var(--line);
-  background:var(--surface);color:var(--ink);border-radius:10px;cursor:pointer;font-size:1rem;transition:.15s}
-.icon-btn:hover{border-color:var(--brand);color:var(--brand)}
-.menu-btn{display:none}
-.search{position:relative}
-.search input{width:min(30vw,240px);padding:.5rem .7rem;border:1px solid var(--line);border-radius:10px;
-  background:var(--surface);color:var(--ink);font:inherit;font-size:.85rem}
-.search input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.search-results{position:absolute;right:0;top:calc(100% + 8px);width:min(78vw,380px);max-height:60vh;overflow:auto;
-  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);display:none;padding:.35rem}
-.search-results.open{display:block}
-.sr-item{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;
-  padding:.5rem .6rem;border-radius:8px;cursor:pointer}
-.sr-item:hover,.sr-item.active{background:var(--surface-2)}
-.sr-item b{display:block;font-size:.84rem;color:var(--brand-ink)}
-.sr-item span{display:block;font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sr-empty{padding:.6rem;color:var(--muted);font-size:.82rem}
-/* shell */
-.shell{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);gap:0;align-items:start}
-.sidebar{position:sticky;top:57px;height:calc(100vh - 57px);overflow:auto;padding:1.3rem .9rem 3rem 1.4rem}
-.toc-title{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .7rem .5rem}
-.toc{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
-.toc-link{display:flex;gap:.55rem;align-items:baseline;padding:.36rem .5rem;border-radius:8px;color:var(--muted);
-  font-size:.82rem;line-height:1.35;transition:.13s}
-.toc-link:hover{background:var(--surface-2);color:var(--ink);text-decoration:none}
-.toc-link.active{background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
-.toc-n{font-family:var(--mono);font-size:.66rem;color:var(--faint);flex:none;padding-top:.12rem}
-.toc-link.active .toc-n{color:var(--brand)}
-.content{min-width:0;max-width:960px;padding:1.6rem clamp(1rem,3.5vw,2.6rem) 5rem}
-/* hero */
-.hero{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:var(--r);
-  padding:clamp(1.4rem,3.5vw,2.4rem);background:
-    linear-gradient(180deg,color-mix(in srgb,var(--brand-soft) 55%,var(--surface)),var(--surface) 72%);
-  box-shadow:var(--shadow);margin-bottom:2rem}
-.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:230px;height:230px;border-radius:50%;
-  background:radial-gradient(circle,var(--brand-soft),transparent 68%);opacity:.8}
-.hero-tag{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-ink);font-weight:700;margin:0 0 .55rem}
-.hero h1{font-size:clamp(1.5rem,4vw,2.15rem);letter-spacing:-.02em;margin-bottom:.5rem}
-.hero-sub{color:var(--muted);font-size:1.02rem;max-width:60ch;margin-bottom:1.1rem}
-.hero-overview{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.15rem;box-shadow:var(--shadow)}
-.ho-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .35rem}
-.hero-overview p:last-child{margin:0}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-top:1.1rem}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.7rem .85rem;box-shadow:var(--shadow)}
-.stat-val{display:block;font-family:var(--head);font-weight:800;font-size:1.25rem;color:var(--brand-ink)}
-.stat-label{display:block;font-size:.72rem;color:var(--muted);letter-spacing:.03em;text-transform:uppercase;font-weight:600}
-/* sections */
-.section{scroll-margin-top:80px;margin-bottom:2.4rem;opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
-.section.in{opacity:1;transform:none}
-.section-head{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:2px solid var(--line)}
-.section-num{flex:none;font-family:var(--head);font-weight:800;font-size:.82rem;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));
-  width:2.1rem;height:2.1rem;display:grid;place-items:center;border-radius:10px;box-shadow:0 6px 16px -8px var(--brand)}
-.section-head h2{font-size:clamp(1.15rem,2.6vw,1.5rem);letter-spacing:-.01em}
-.section-body>*+*{margin-top:.5rem}
-.section-body p{margin:0 0 .9rem}
-.subhead{font-size:.98rem;margin:1.2rem 0 .5rem;color:var(--brand-ink)}
-ul,ol{margin:0 0 .9rem;padding-left:1.25rem}
-li{margin:.22rem 0}
-li>ul,li>ol{margin:.3rem 0 .1rem}
-/* table */
-.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm);margin:1rem 0;box-shadow:var(--shadow)}
-table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:440px}
-thead th{background:var(--surface-2);text-align:left;font-weight:700;color:var(--ink);white-space:nowrap}
-th,td{padding:.6rem .8rem;border-bottom:1px solid var(--line);vertical-align:top}
-tbody tr:last-child td{border-bottom:0}
-tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
-/* code */
-.code{position:relative;margin:1rem 0}
-.code pre{margin:0;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.1rem;overflow:auto;box-shadow:var(--shadow)}
-.code code{font-family:var(--mono);font-size:.82rem;line-height:1.6;background:none;border:0;padding:0;color:var(--ink);white-space:pre}
-.copy{position:absolute;top:.55rem;right:.55rem;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;font-weight:700;
-  color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.24rem .5rem;cursor:pointer}
-.copy:hover{color:var(--brand);border-color:var(--brand)}
-.copy.done{color:var(--brand-ink);border-color:var(--brand)}
-/* formula */
-.formula{position:relative;margin:1rem 0;padding:1.1rem 1rem .9rem;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm)}
-.formula-label{position:absolute;top:-.6rem;left:.9rem;font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;font-weight:700;
-  color:#fff;background:var(--brand);border-radius:6px;padding:.14rem .5rem}
-.formula code{display:block;font-family:var(--mono);font-size:.86rem;background:none;border:0;padding:0;color:var(--ink)}
-/* flow */
-.flow{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin:1rem 0;padding:1rem;background:var(--surface);
-  border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--shadow)}
-.flow-step{display:inline-flex;align-items:center;gap:.4rem;background:var(--surface-2);border:1px solid var(--line);
-  border-radius:999px;padding:.34rem .75rem .34rem .5rem;font-size:.82rem;font-weight:600}
-.flow-n{font-family:var(--mono);font-size:.64rem;color:#fff;background:var(--brand);border-radius:999px;padding:.1rem .34rem}
-.flow-arrow{color:var(--brand);font-weight:800}
-/* callouts */
-.callout{display:flex;gap:.75rem;margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--line);border-left-width:4px;
-  border-radius:var(--r-sm);background:var(--surface);box-shadow:var(--shadow)}
-.callout-ico{flex:none;font-size:1.15rem;line-height:1.3}
-.callout-title{font-weight:700;font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;margin:0 0 .18rem}
-.callout-text{font-size:.93rem}
-.callout-text>:last-child{margin-bottom:0}
-.callout.why{border-left-color:var(--amber);background:color-mix(in srgb,var(--amber-soft) 55%,var(--surface))}
-.callout.why .callout-title{color:var(--amber)}
-.callout.memory{border-left-color:var(--violet);background:color-mix(in srgb,var(--violet-soft) 55%,var(--surface))}
-.callout.memory .callout-title{color:var(--violet)}
-.callout.warn{border-left-color:var(--rose);background:color-mix(in srgb,var(--rose-soft) 55%,var(--surface))}
-.callout.warn .callout-title{color:var(--rose)}
-.callout.info{border-left-color:var(--sky);background:color-mix(in srgb,var(--sky-soft) 55%,var(--surface))}
-.callout.info .callout-title{color:var(--sky)}
-.callout.tip{border-left-color:var(--brand);background:color-mix(in srgb,var(--brand-soft) 55%,var(--surface))}
-.callout.tip .callout-title{color:var(--brand-ink)}
-/* takeaways */
-.takeaways{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
-.takeaways li{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r-sm);padding:.75rem .9rem;box-shadow:var(--shadow)}
-.tk-n{flex:none;font-family:var(--mono);font-size:.68rem;font-weight:700;color:var(--brand-ink);background:var(--brand-soft);
-  border-radius:7px;padding:.22rem .45rem;margin-top:.15rem}
-/* glossary */
-.term-filter{display:flex;align-items:center;gap:.7rem;margin:0 0 .9rem}
-.term-filter input{flex:1;max-width:340px;padding:.55rem .75rem;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:.86rem}
-.term-filter input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.term-count{font-size:.78rem;color:var(--muted)}
-.terms{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.7rem}
-.term{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem .9rem;box-shadow:var(--shadow)}
-.term.hide{display:none}
-.term-name{font-family:var(--head);font-weight:700;font-size:.9rem;margin:0 0 .2rem;color:var(--brand-ink)}
-.term-def{font-size:.85rem;color:var(--muted);margin:0}
-/* mnemonics */
-.mnemonics{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:.8rem}
-.mnemonic{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.95rem 1rem;box-shadow:var(--shadow)}
-.mn-title{font-family:var(--head);font-weight:700;font-size:.92rem;margin:0 0 .4rem;color:var(--brand-ink)}
-.mn-code{font-family:var(--mono);font-weight:600;font-size:1.02rem;letter-spacing:.04em;margin:0 0 .35rem}
-.mn-phrase{font-style:italic;font-weight:600;color:var(--violet);margin:0 0 .35rem}
-.mn-note{font-size:.83rem;color:var(--muted);margin:0}
-/* examples */
-.example{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:1.1rem 1.2rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.example-tag{display:inline-block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.2rem .55rem;margin-bottom:.5rem}
-.example-title{font-size:1rem;margin:0 0 .6rem}
-/* exam */
-.exam-bar{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:space-between;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem 1rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.exam-count{font-size:.85rem;color:var(--muted)}
-.exam-count strong{color:var(--brand-ink)}
-.exam-track{display:block;width:170px;height:7px;border-radius:999px;background:var(--surface-2);margin-top:.4rem;overflow:hidden}
-.exam-track>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .3s}
-.exam-actions{display:flex;gap:.4rem;flex-wrap:wrap}
-.btn{font:inherit;font-size:.78rem;font-weight:600;color:var(--brand-ink);background:var(--brand-soft);border:1px solid transparent;
-  border-radius:9px;padding:.42rem .7rem;cursor:pointer}
-.btn:hover{background:var(--brand);color:#fff}
-.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted)}
-.btn.ghost:hover{border-color:var(--brand);color:var(--brand);background:transparent}
-.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);margin:0 0 .6rem;overflow:hidden;box-shadow:var(--shadow)}
-.quiz-q{display:flex;gap:.7rem;align-items:flex-start;width:100%;text-align:left;background:none;border:0;color:var(--ink);
-  font:inherit;font-weight:600;padding:.85rem .95rem;cursor:pointer}
-.quiz-n{flex:none;font-family:var(--mono);font-size:.7rem;font-weight:700;color:#fff;background:var(--brand);border-radius:7px;padding:.2rem .45rem;margin-top:.1rem}
-.quiz-text{flex:1}
-.quiz-chev{flex:none;color:var(--muted);transition:transform .2s}
-.quiz.open .quiz-chev{transform:rotate(180deg)}
-.quiz-body{display:none;padding:0 .95rem .9rem;border-top:1px dashed var(--line)}
-.quiz.open .quiz-body{display:block}
-.quiz-a{font-size:.9rem;margin:.7rem 0;padding:.7rem .85rem;background:var(--surface-2);border-radius:9px}
-.quiz-a-label{display:block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--brand);margin-bottom:.2rem}
-.quiz-a.muted{color:var(--muted);font-style:italic}
-.mastered{display:inline-flex;gap:.45rem;align-items:center;font-size:.8rem;color:var(--muted);cursor:pointer;user-select:none}
-.mastered input{accent-color:var(--brand);width:1rem;height:1rem}
-/* footer */
-.foot{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}
-/* to top */
-.totop{position:fixed;right:1.1rem;bottom:1.1rem;z-index:55;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);
-  background:var(--surface);color:var(--brand-ink);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.2s}
-.totop.show{opacity:1;pointer-events:auto}
-.scrim{display:none}
-/* responsive */
-@media (max-width:980px){
-  .shell{grid-template-columns:1fr}
-  .menu-btn{display:inline-grid}
-  .sidebar{position:fixed;top:0;left:0;z-index:70;height:100vh;width:min(86vw,320px);background:var(--surface);
-    border-right:1px solid var(--line);transform:translateX(-102%);transition:transform .25s ease;padding-top:1.4rem;box-shadow:var(--shadow-lg)}
-  .sidebar.open{transform:none}
-  .scrim{display:block;position:fixed;inset:0;z-index:65;background:rgba(6,18,16,.45);opacity:0;pointer-events:none;transition:.25s}
-  .scrim.show{opacity:1;pointer-events:auto}
-  .search input{width:40vw}
-  .brand-title{display:none}
-}
-@media (max-width:560px){
-  .search input{width:34vw}
-  .content{padding:1.1rem .9rem 4rem}
-  .stats{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
-}
-@media (prefers-reduced-motion:reduce){
-  *{scroll-behavior:auto!important}
-  .section{opacity:1;transform:none;transition:none}
-}
-@media print{
-  .topbar,.sidebar,.totop,.progress,.exam-actions,.copy,.scrim,.term-filter{display:none!important}
-  body::before{display:none}
-  .shell{display:block}
-  .content{max-width:none;padding:0}
-  .section{opacity:1;transform:none;page-break-inside:avoid}
-  .quiz-body{display:block!important}
-  .hero,.callout,.table-wrap,.code pre,.example,.quiz,.term{box-shadow:none}
-  a{color:inherit}
-}
+  /* ============================================================
+     ENGG2112 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+
+  /* ---------- Code blocks (added for ELEC3609) ---------- */
+  .code-block{position:relative;margin:1.2rem 0;}
+  .code-block pre{margin:0;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.1rem;overflow:auto;}
+  .code-block code{font-family:var(--font-mono);font-size:.84rem;line-height:1.62;background:none;padding:0;border-radius:0;color:var(--ink);white-space:pre;}
+  .code-copy{position:absolute;top:.55rem;right:.55rem;font-family:var(--font-body);font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.25rem .55rem;cursor:pointer;transition:.16s var(--ease);}
+  .code-copy:hover{color:var(--primary-deep);border-color:var(--line-strong);}
+  .code-copy.done{color:var(--primary-deep);border-color:var(--primary);}
 </style>
 </head>
 <body>
-<div class="progress" id="progress" aria-hidden="true"></div>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
 <header class="topbar">
-  <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Open navigation">☰</button>
-  <div class="brand"><span class="brand-badge">ELEC3609 · Week 10</span><span class="brand-title">Software Quality, Testing &amp; Defensive Design · 2025 Session</span></div>
-  <div class="topbar-actions">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">ELEC3609</span>
+    <span class="brand-week">Week 10</span>
+  </a>
+  <div class="topbar-tools">
     <div class="search">
-      <input id="searchInput" type="search" placeholder="Search this guide…" autocomplete="off" aria-label="Search this guide">
-      <div class="search-results" id="searchResults" role="listbox"></div>
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
     </div>
-    <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle light and dark theme">🌙</button>
-    <button class="icon-btn" id="printBtn" type="button" aria-label="Print this guide">🖨</button>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
   </div>
 </header>
-<div class="shell">
+
+<div class="layout">
   <aside class="sidebar" id="sidebar" aria-label="Table of contents">
-    <p class="toc-title">Contents</p>
-    <ul class="toc">
-<li><a href="#overview" class="toc-link"><span class="toc-n">00</span>Overview</a></li>
-<li><a href="#sec-1" class="toc-link"><span class="toc-n">01</span>Why Testing Matters</a></li>
-<li><a href="#sec-2" class="toc-link"><span class="toc-n">02</span>The Four Levels of Testing</a></li>
-<li><a href="#sec-3" class="toc-link"><span class="toc-n">03</span>Black-Box vs White-Box Testing</a></li>
-<li><a href="#sec-4" class="toc-link"><span class="toc-n">04</span>Regression Testing</a></li>
-<li><a href="#sec-5" class="toc-link"><span class="toc-n">05</span>Brute-Forcing vs Fuzzing</a></li>
-<li><a href="#sec-6" class="toc-link"><span class="toc-n">06</span>Non-Functional Testing</a></li>
-<li><a href="#sec-7" class="toc-link"><span class="toc-n">07</span>Chaos Engineering &amp; Simian Army</a></li>
-<li><a href="#sec-8" class="toc-link"><span class="toc-n">08</span>Testing Approaches &amp; Test Pyramid</a></li>
-<li><a href="#sec-9" class="toc-link"><span class="toc-n">09</span>Linting &amp; Static Analysis</a></li>
-<li><a href="#sec-10" class="toc-link"><span class="toc-n">10</span>Designing Good Test Cases</a></li>
-<li><a href="#sec-11" class="toc-link"><span class="toc-n">11</span>Equivalence Partitioning &amp; Boundaries</a></li>
-<li><a href="#sec-12" class="toc-link"><span class="toc-n">12</span>Worked Test Case Design</a></li>
-<li><a href="#sec-13" class="toc-link"><span class="toc-n">13</span>Code Coverage Metrics</a></li>
-<li><a href="#sec-14" class="toc-link"><span class="toc-n">14</span>Defensive Programming &amp; Patterns</a></li>
-<li><a href="#key-takeaways" class="toc-link"><span class="toc-n">15</span>Key Takeaways</a></li>
-<li><a href="#glossary" class="toc-link"><span class="toc-n">16</span>Glossary</a></li>
-<li><a href="#mnemonics" class="toc-link"><span class="toc-n">17</span>Mnemonics &amp; Quick Recall</a></li>
-<li><a href="#worked-examples" class="toc-link"><span class="toc-n">18</span>Worked Examples &amp; Scenarios</a></li>
-<li><a href="#exam-focus" class="toc-link"><span class="toc-n">19</span>Exam Practice</a></li>
-    </ul>
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
   </aside>
-  <div class="scrim" id="scrim"></div>
+  <div class="scrim" id="scrim" hidden></div>
+
   <main class="content" id="content">
-<section class="hero" id="overview">
-<p class="hero-tag">📖 Course notes · Week 10</p>
-<h1>Software Quality, Testing &amp; Defensive Design · 2025 Session</h1>
-<p class="hero-sub">This lecture covers the fundamentals of verifying that a web application is correct: the levels of testing, the difference between black-box and…</p>
-<div class="hero-overview"><p class="ho-label">Lecture overview</p><p>This lecture covers the fundamentals of verifying that a web application is correct: the levels of testing, the difference between black-box and white-box perspectives, regression testing, fuzzing, non-functional testing, and chaos engineering. It then explains practical test strategy — the Test Pyramid, when to automate, and how to design high-quality test cases using equivalence partitioning and boundary analysis. Finally, it covers code coverage metrics and defensive programming with design patterns. Applying a combination of these techniques for the assignment helps ensure your application deploys successfully and meets its requirements.</p></div>
-<div class="stats"><div class="stat"><span class="stat-val">1</span><span class="stat-label">Lectures</span></div><div class="stat"><span class="stat-val">Unit, Integration, System, Acceptance</span><span class="stat-label">Testing Levels</span></div><div class="stat"><span class="stat-val">5 (Function, Line, Statement, Branch, Condition)</span><span class="stat-label">Coverage Types</span></div><div class="stat"><span class="stat-val">Many fast unit tests</span><span class="stat-label">Pyramid Base</span></div><div class="stat"><span class="stat-val">Chaos Monkey, Latency Monkey, etc.</span><span class="stat-label">Chaos Tools</span></div><div class="stat"><span class="stat-val">3 (odd/even, palindrome, signup)</span><span class="stat-label">Test Case Examples</span></div></div>
+<section class="hero" id="top">
+  <span class="hero-eyebrow">ELEC3609 · Week 10 · Quality and Testing</span>
+  <h1 class="hero-title">Quality and Testing: From Unit Tests to Defensive Design</h1>
+  <p class="hero-sub">A practical tour of how to verify that a web application actually works — the four levels of testing, black-box vs white-box reasoning, regression and non-functional testing, fuzzing, linting, how to design test cases with equivalence partitioning, code coverage metrics, and how defensive programming prevents whole classes of bugs.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> Testing is not about running every possible input; it is about spending a fixed <em>budget</em> of effort to buy the most confidence. Everything in this guide follows from two ideas — test the smallest unit that can fail in isolation, then test the interactions between units — and from choosing <em>which</em> tests give the most value for the time they cost.</div>
+  <div class="hero-meta"><span class="meta-chip">~24 min read</span><span class="meta-chip">14 teaching sections</span><span class="meta-chip">14 practice questions</span><span class="meta-chip">24 key terms</span></div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list"><li>Define unit, integration, system and acceptance testing and say what each one verifies.</li><li>Distinguish black-box from white-box testing and know which level each suits.</li><li>Explain why brute-forcing all inputs is impractical and how fuzzing fills the gap.</li><li>Describe performance, load, stress, volume, security, usability and destructive testing.</li><li>Apply equivalence partitioning and boundary analysis to design test cases.</li><li>Interpret function, statement, branch, condition and line coverage metrics.</li><li>Explain defensive programming and why design patterns reduce bug classes.</li></ul>
+  </div>
 </section>
-<section class="section" id="sec-1"><header class="section-head"><span class="section-num">01</span><h2>Why Testing Matters</h2></header><div class="section-body"><p>The quality of a web application is critical. This lecture does <strong>not</strong> cover <em>why</em> testing is important (almost every course already has) — it focuses instead on <strong>fundamental testing concepts</strong>, like verifying the correctness of a web application and systems in general.</p>
-<p><strong>The testing budget.</strong> Every test takes time to <strong>write, maintain, and execute</strong>, so each test should provide value. A useful way to think about it is that you have a <strong>budget</strong> for time spent on tests — focus your time where it will provide the <strong>most value first</strong>.</p>
-<p>When prioritising, weigh three things: <strong>breadth</strong>, <strong>depth</strong>, and <strong>critical functionality</strong>. The example given: users cannot do much unless they can <strong>log in</strong> to the website — so authentication is tested first.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Testing is an economic trade-off, not an infinite activity. Aim to catch the bugs that matter most, earliest, for the least effort.</div></div></div>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text"><strong>Critical functionality first, then depth, then breadth.</strong> If login is broken, nothing else matters.</div></div></div></div></section>
-<section class="section" id="sec-2"><header class="section-head"><span class="section-num">02</span><h2>The Four Levels of Testing</h2></header><div class="section-body"><p>Testing occurs at different levels of abstraction in the software architecture.</p>
-<div class="table-wrap"><table><thead><tr><th>Level</th><th>Scope / Target</th><th>Typical techniques</th></tr></thead><tbody><tr><td><strong>1. Unit / Functional</strong></td><td>Smallest isolated unit — a function, method, or class</td><td>Mocks, stubs, PyTest, Jest, white-box</td></tr><tr><td><strong>2. Integration</strong></td><td>Interactions and boundaries between modules/services</td><td>Stubs, drivers, API contract testing</td></tr><tr><td><strong>3. System (End-to-End)</strong></td><td>The complete system behaving as a whole (UI, DB, network)</td><td>Selenium, Cypress, Playwright, black-box under load</td></tr><tr><td><strong>4. Acceptance</strong></td><td>Verifying the system meets business requirements and user expectations</td><td>BDD, user stories, automated UAT</td></tr></tbody></table></div>
-<p><strong>1. Unit (functional) testing</strong> verifies functionality and components <strong>independently of the whole system</strong>. The aim is to test the <strong>smallest testable piece of code that can be isolated</strong> — ideally a single function, method, or subroutine. One approach is to <strong>mock out other dependencies</strong>. Example: testing the <code>validate_email</code> function. These tests run in milliseconds and pinpoint the exact failure location.</p>
-<p><strong>2. Integration testing</strong> verifies the <strong>interactions/communication between software components</strong>, where a component is usually a module or class. Helpers used at this level:</p>
-<ul><li><strong>Stub</strong> — a dummy control module providing hardcoded data to the module under test.</li><li><strong>Driver</strong> — a wrapper/invoker that simulates the calling module.</li></ul>
-<p><strong>3. System testing</strong> verifies the behaviour and functionality of the <strong>entire system</strong>, including:</p>
+<section class="guide-section" id="foundations-why-we-test-and-how-to-spend-the-effort" data-title="Foundations: Why We Test and How to Spend the Effort">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Foundations: Why We Test and How to Spend the Effort</h2>
+  </div>
+  <p class="section-kicker">Testing is an investment of a limited budget, so spend it where it buys the most confidence — critical functionality and breadth first, depth second.</p>
+<p>The quality of a web application is critical, but the interesting question is not <em>whether</em> testing matters — almost every course covers that — it is <strong>how to verify correctness</strong> of a web application and of software systems in general. Applying a combination of the techniques in this guide is what lets you confidently say an application has been deployed successfully and meets its requirements.</p>
+<h3 class="sub-title">Test 101: tests cost time</h3>
+<p>Every test you write must be <em>written</em>, then <em>maintained</em>, then <em>executed</em> — again and again. Each of those steps costs time. The practical consequence is that you should only keep tests that provide value.</p>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Think of testing as having a <strong>budget</strong> of time. You cannot test everything, so focus your time where it returns the most value first.</div></div>
+<p>When deciding where to spend that budget, weigh three competing pulls:</p>
+<ul><li><strong>Breadth</strong> — cover many features lightly.</li><li><strong>Depth</strong> — cover one feature exhaustively.</li><li><strong>Critical functionality</strong> — cover the paths everything else depends on.</li></ul>
+<p>A concrete example of critical functionality: users cannot do much of anything unless they can <strong>log in</strong>. So login deserves attention before an obscure settings toggle does.</p>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If you had only one hour to test a signup-and-login website, would you spend it trying every password length, or making sure the login flow works end-to-end for a normal user? Justify your choice in terms of the budget idea.</div></div>
+</section>
+<section class="guide-section" id="the-four-levels-of-testing" data-title="The Four Levels of Testing">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Four Levels of Testing</h2>
+  </div>
+  <p class="section-kicker">Testing is organised into levels that zoom out from a single function to the whole business need, and each level answers a different question.</p>
+<h3 class="sub-title">Unit (functional) testing</h3>
+<p><strong>Unit testing</strong> is the process of verifying functionality and components <strong>independently of the whole system</strong>. The aim is to test the <em>smallest testable piece of code that can be isolated</em> — ideally a single function, method or subroutine. To isolate it, you often <strong>mock out other dependencies</strong>. Example: testing a <code>validate_email</code> function on its own.</p>
+<h3 class="sub-title">Integration testing</h3>
+<p><strong>Integration testing</strong> is the process of verifying the <strong>interactions and communication between software components</strong>. Here a <em>component</em> is usually defined as a module or class. <strong>Stubs</strong> and <strong>drivers</strong> are commonly used to stand in for the pieces that are not yet available or that you want to control.</p>
+<h3 class="sub-title">System testing</h3>
+<p><strong>System testing</strong> verifies the <strong>behaviour and functionality of the entire system</strong>, including:</p>
 <ul><li>Security</li><li>Performance</li><li>Reliability</li><li>External interfaces</li></ul>
-<p>It is also commonly called <strong>end-to-end (E2E) testing</strong>.</p>
-<p><strong>4. Acceptance testing</strong> verifies that <strong>acceptance criteria are met from the user's perspective</strong> and that the system satisfies the <strong>business requirements</strong>. Each <strong>use case should be covered by one or more acceptance tests</strong>. While it takes a more objective, user-facing view, it <strong>can still be automated</strong>.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Each level catches a different class of bug. Unit tests catch logic errors cheaply; system and acceptance tests confirm the whole product actually works for the user.</div></div></div></div></section>
-<section class="section" id="sec-3"><header class="section-head"><span class="section-num">03</span><h2>Black-Box vs White-Box Testing</h2></header><div class="section-body"><p>Tests are categorised by how much <strong>internal knowledge of the implementation</strong> the tester has.</p>
-<div class="table-wrap"><table><thead><tr><th>Feature</th><th>Black-Box Testing</th><th>White-Box Testing</th></tr></thead><tbody><tr><td>Internal code access</td><td>None (opaque box)</td><td>Full access (transparent box)</td></tr><tr><td>Basis of test cases</td><td>Specification / design, user stories</td><td>Source-code logic, branch paths</td></tr><tr><td>Primary level</td><td>System &amp; Acceptance testing</td><td>Unit &amp; Integration testing</td></tr><tr><td>Primary tester</td><td>External tester, QA, end-users</td><td>The developer writing the code</td></tr><tr><td>Advantage</td><td>Unbiased; tests actual usage</td><td>Deep code-path and edge coverage</td></tr></tbody></table></div>
-<ul><li><strong>Black-box testing</strong> uses <strong>no programming/software/implementation knowledge</strong> — tests are based only on the specification or design. An <strong>external tester is ideal</strong> because they have no bias from knowing the implementation.</li><li><strong>White-box testing</strong> uses <strong>knowledge of the implementation</strong> to design test cases covering key paths. It is written by the <strong>developer to verify their own code</strong>.</li></ul>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Black box = <strong>"judge by the outside"</strong>; White box = <strong>"look inside the code."</strong></div></div></div></div></section>
-<section class="section" id="sec-4"><header class="section-head"><span class="section-num">04</span><h2>Regression Testing</h2></header><div class="section-body"><p><strong>Regression testing</strong> verifies that <strong>incremental changes have not broken existing functionality</strong>.</p>
-<ul><li>It makes sense to run the <strong>full suite of tests after any code, infrastructure, or configuration change</strong>.</li><li>These tests can almost immediately identify issues and help <strong>narrow down problems</strong>.</li><li>Run <strong>preemptively during development</strong>, they highlight possible errors and <strong>backwards-incompatible changes</strong>.</li></ul>
-<p>A comprehensive suite can take minutes, so you must decide <strong>where</strong> best to run it. A common approach is <strong>after any manual or unit tests</strong> as another check, and again <strong>before commit/push</strong> (continuous integration).</p>
-<p><strong>Fail-fast ordering</strong> — run the quickest, cheapest checks first so failures surface in seconds:</p>
-<div class="flow"><div class="flow-step"><span class="flow-n">01</span><span>Linters &amp; static analysis</span></div><span class="flow-arrow" aria-hidden="true">→</span><div class="flow-step"><span class="flow-n">02</span><span>Fast unit tests</span></div><span class="flow-arrow" aria-hidden="true">→</span><div class="flow-step"><span class="flow-n">03</span><span>Integration tests</span></div><span class="flow-arrow" aria-hidden="true">→</span><div class="flow-step"><span class="flow-n">04</span><span>E2E / system regression suites</span></div></div>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Build a <strong>safety net</strong> — every fixed bug should become a <strong>new regression test</strong> so it can never return silently.</div></div></div></div></section>
-<section class="section" id="sec-5"><header class="section-head"><span class="section-num">05</span><h2>Brute-Forcing vs Fuzzing</h2></header><div class="section-body"><p><strong>Can we just brute-force all possible inputs and test them all?</strong></p>
-<ul><li><strong>Yes, sometimes — but it is not a great idea and almost never worth the time.</strong></li><li>Most systems are complex enough that the <strong>sheer number of input combinations</strong> means you would be running tests for a very long period.</li><li>Illustration: a phone. Does it make sense to call <strong>every single phone number</strong> to verify call functionality? That could take weeks and waste enormous network resources.</li></ul>
-<p>Even brute force <strong>still leaves gaps</strong>:</p>
-<ul><li><strong>Concurrency</strong> (race conditions)</li><li><strong>Order of inputs or timing of requests</strong></li><li><strong>Random seeds / non-deterministic input</strong></li><li><strong>Hardware failure</strong></li></ul>
-<p><strong>Fuzzing</strong> solves this differently. A <strong>fuzzer</strong> is an automated tool that generates <strong>invalid and non-standard inputs</strong> and tests the system's behaviour. The idea is to <strong>define the valid inputs</strong> and have the fuzzer generate <strong>semi-valid input</strong> to test <strong>boundary conditions</strong>.</p>
-<p>Fuzzing flow:</p>
-<div class="flow"><div class="flow-step"><span class="flow-n">01</span><span>Define valid input boundaries</span></div><span class="flow-arrow" aria-hidden="true">→</span><div class="flow-step"><span class="flow-n">02</span><span>Fuzzer mutates input</span></div><span class="flow-arrow" aria-hidden="true">→</span><div class="flow-step"><span class="flow-n">03</span><span>Execute target program</span></div><span class="flow-arrow" aria-hidden="true">→</span><div class="flow-step"><span class="flow-n">04</span><span>Monitor for failures</span></div></div>
-<p>Fuzzing can highlight:</p>
-<ul><li><strong>Unhandled edge cases</strong></li><li><strong>Non-performant code</strong></li><li><strong>Possible crashes (memory leaks)</strong> and security concerns (injection flaws, buffer overflows, denial of service)</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">You cannot enumerate an effectively infinite input space, and timing/concurrency bugs escape simple loops. Fuzzing attacks the boundaries where real bugs hide.</div></div></div></div></section>
-<section class="section" id="sec-6"><header class="section-head"><span class="section-num">06</span><h2>Non-Functional Testing</h2></header><div class="section-body"><p>Non-functional testing checks <strong>how well</strong> the system works, not just whether features exist.</p>
-<p><strong>Performance and load testing</strong> determines how well a system performs under known workloads. By adjusting the <strong>stress factor</strong>, we simulate high load and identify <strong>bottlenecks</strong>:</p>
-<ul><li><strong>Volume testing</strong> — testing <strong>functionality</strong> under load (large quantities of data).</li><li><strong>Stress testing</strong> — testing <strong>reliability</strong> under load (pushing beyond normal limits until it breaks).</li><li><strong>Load testing</strong> — testing <strong>performance</strong> under load (expected peak traffic).</li></ul>
-<p>It is important that the simulated workload is <strong>realistic</strong>. Example: if the site must handle <strong>10,000 concurrent users</strong> at peak, test at <strong>1,000, 5,000, 10,000, and 15,000</strong> simulated users.</p>
-<p><strong>Security testing</strong> is required to ensure the system is secure — the <strong>top 10 vulnerability list</strong> (OWASP) is the reference.</p>
-<p><strong>Usability testing</strong> checks whether the website is <strong>intuitive and discoverable</strong>. Common techniques:</p>
-<ul><li><strong>Hallway testing</strong> — asking random people to perform a task</li><li><strong>Expert review</strong> — specialists analysing the workflow against heuristics</li><li><strong>A/B testing</strong> — running two UI variants concurrently and measuring conversion</li></ul>
-<p><strong>Robustness / destructive testing</strong> intentionally causes failures in components to see how the system copes. It answers:</p>
-<ul><li>Will the system <strong>recover</strong> if it fails?</li><li>Will we <strong>lose data</strong>?</li><li>How long will recovery take (MTTR)?</li><li>Do we have <strong>backups</strong>, and do they work?</li><li>Who knows how to fix it?</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">A feature can be functionally correct yet fail under load, be unusable, or lose data on crash. Non-functional testing exposes those risks.</div></div></div></div></section>
-<section class="section" id="sec-7"><header class="section-head"><span class="section-num">07</span><h2>Chaos Engineering &amp; Simian Army</h2></header><div class="section-body"><p>Netflix desires high <strong>uptime and availability</strong>, so it developed a suite of automated tools — the <strong>Simian Army</strong> — to test how production systems handle failure and abnormal scenarios.</p>
-<div class="table-wrap"><table><thead><tr><th>Tool</th><th>Action</th></tr></thead><tbody><tr><td><strong>Chaos Monkey</strong></td><td>Randomly disables/terminates production instances</td></tr><tr><td><strong>Latency Monkey</strong></td><td>Introduces artificial delay in the client-server communication layer</td></tr><tr><td><strong>Conformity Monkey</strong></td><td>Detects abnormal instances that don't follow best practices and terminates them</td></tr><tr><td><strong>Doctor Monkey</strong></td><td>Detects unhealthy instances and routes traffic away from them, allowing investigation without sacrificing stability</td></tr><tr><td><strong>Chaos Gorilla</strong></td><td>"Big Chaos Monkey" — simulates the outage of an entire availability zone</td></tr></tbody></table></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">If you never deliberately break production, you don't know whether it can recover. Chaos engineering proves resilience under realistic failure conditions.</div></div></div>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text"><strong>Monkey = small failure (one instance), Gorilla = big failure (whole AZ).</strong></div></div></div></div></section>
-<section class="section" id="sec-8"><header class="section-head"><span class="section-num">08</span><h2>Testing Approaches &amp; Test Pyramid</h2></header><div class="section-body"><p><strong>Manual vs automated testing:</strong></p>
-<ul><li><strong>Manual testing</strong> is performed directly by a human — the developer or a dedicated <strong>QA agent</strong>. Examples: <strong>exploratory testing</strong> and <strong>visual regression testing</strong>.</li><li><strong>Automated tests</strong> are tools driven by a computer. Examples: <strong>end-to-end (E2E) tests</strong>, <strong>unit tests</strong>, <strong>integration tests</strong>, and <strong>performance tests</strong>.</li></ul>
-<p><strong>Which approach?</strong> The <strong>Test Pyramid</strong> conceptualises where the majority of tests should live. It <strong>minimises time spent on tests for the most value</strong> and leads to issues being caught <strong>earlier</strong> in development.</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>        /\
-       /  \    Acceptance / E2E tests  (fewest, slowest, highest maintenance)
-      /----\
-     / Int. \  Integration tests       (moderate count, medium speed)
-    /--------\
-   /  Unit    \ Unit tests             (many, fast, isolated, low cost)
-  /------------\</code></pre></div>
-<p>Why the pyramid works:</p>
-<ul><li><strong>Unit tests</strong> catch low-level logic bugs instantly at minimal cost.</li><li><strong>High-level E2E tests</strong> are reserved for validating overall workflow wiring.</li></ul>
-<p><strong>The Ice-Cream Anti-Pattern (avoid):</strong> the inverted shape — a massive manual/E2E suite on top and almost no unit tests at the bottom. It causes <strong>slow test runs, brittle builds, high maintenance, and delayed feedback</strong>. There is also the idea of a <strong>3D Testability Polygon</strong> as an alternative way to think about strategy.</p>
-<p><strong>Key strategy guidance:</strong></p>
-<ul><li>It is <strong>more important to cover your acceptance criteria</strong> than to adhere rigidly to a testing strategy. Find an approach that fits your framework, program, and users.</li><li>Consider the <strong>cost/value</strong> of each test you write.</li><li>Consider the risk of each test you <em>don't</em> write.</li><li><strong>Risk</strong> <code>= (Cost of incident) × (Likelihood of occurrence)</code></li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">The pyramid is a heuristic, not a law. Budget your test effort where risk is highest, and make the fast tests abundant.</div></div></div></div></section>
-<section class="section" id="sec-9"><header class="section-head"><span class="section-num">09</span><h2>Linting &amp; Static Analysis</h2></header><div class="section-body"><p><strong>Linters</strong> are tools that run over your program and identify <strong>programmatic and stylistic errors</strong> — before the code ever executes (static analysis).</p>
-<p>What linters detect:</p>
-<ul><li><strong>Unused imports</strong> (and unused variables/parameters)</li><li><strong>Unreachable code</strong> (e.g. code after a <code>return</code> or <code>throw</code>)</li><li><strong>Variable/class/function names that don't conform to style guidelines</strong> (e.g. PEP 8 in Python, camelCase in JS)</li><li><strong>Syntax errors and type mismatches</strong> (when combined with static type checkers)</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Linters are the fastest, cheapest gate — they catch whole categories of defects in seconds and belong first in a fail-fast pipeline.</div></div></div></div></section>
-<section class="section" id="sec-10"><header class="section-head"><span class="section-num">10</span><h2>Designing Good Test Cases</h2></header><div class="section-body"><p><strong>How to design good test cases:</strong></p>
-<ul><li>Prefer <strong>quality of tests over quantity</strong> — eliminate duplicate tests that exercise identical logic.</li><li><strong>Diversity is key</strong> — aim to cover as many <strong>unique</strong> test cases as possible.</li><li>Cover the <strong>basic test cases first</strong>, before looking for more <strong>esoteric edge cases</strong>.</li><li>Always consider what could happen if someone was <strong>intentionally malicious</strong>.</li><li>Don't forget about possible <strong>bugs in libraries</strong> — would your code handle a dependency failing?</li></ul>
-<p><strong>Guideline-based testing</strong> targets <strong>common logic flaws</strong> that programmers repeatedly make. Buffer overflows in common programs/libraries are a prime example. Focus on issues <strong>likely to slip by a developer</strong> and draw attention to them:</p>
-<ul><li>Did you consider <strong>Unicode</strong> when handling strings (emoji, Chinese, Arabic)?</li><li>Did you <strong>free the memory</strong> you allocated?</li><li>Did you handle <strong>right-to-left (RTL)</strong> language formatting?</li><li>Did you handle <strong>exceptions when external libraries fail</strong>?</li></ul>
-<p><strong>Static analysis tools can automate this technique</strong> (e.g. flagging leaked resources and missing checks).</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Most bugs are not novel — they are known traps. A checklist of common oversights catches far more than random testing.</div></div></div></div></section>
-<section class="section" id="sec-11"><header class="section-head"><span class="section-num">11</span><h2>Equivalence Partitioning &amp; Boundaries</h2></header><div class="section-body"><p><strong>Equivalence partitioning</strong> is the technique of identifying <strong>clusters of inputs that are functionally equivalent</strong> — that the code treats similarly. Pick <strong>one representative test case per partition</strong> to minimise redundancy.</p>
-<p>In the <code>oddEven</code> example, <strong>all odd numbers are treated equally</strong>, as are all even numbers. Running many odd-number tests adds <strong>reduced value</strong> because you are not covering new failure cases. We are partitioning inputs by <strong>even-ness</strong>.</p>
-<p><strong>Boundary value analysis (BVA)</strong> complements partitioning because <strong>bugs concentrate at the edges</strong> of partitions (e.g. <code>&gt;</code> versus <code>&gt;=</code>). Always test:</p>
-<ul><li><strong>Minimum and maximum values</strong></li><li><strong>Just below and just above a boundary</strong></li><li><strong>Zero (0)</strong>, <strong>empty collections</strong>, and <strong>null/undefined</strong></li></ul>
-<p>A classic example: does <code>oddEven</code> handle <strong>0</strong> correctly? Zero is a boundary case that often reveals bugs.</p>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text"><strong>"Partition to avoid repeats, then attack the edges."</strong></div></div></div></div></section>
-<section class="section" id="sec-12"><header class="section-head"><span class="section-num">12</span><h2>Worked Test Case Design</h2></header><div class="section-body"><p>The lecture works through three examples that show how to enumerate categories.</p>
-<p><strong>Example 1 — <code>oddEven(num):</code></strong> a function returning <code>"Even"</code> if <code>num % 2 == 0</code>, else <code>"Odd"</code>. Test cases to consider:</p>
-<ul><li><strong>Odd numbers:</strong> 1, 3 (and 2 appears here in the slide list)</li><li><strong>Even numbers:</strong> 0, 2, 4, 6</li><li><strong>Negative numbers:</strong> -1, -2, -3</li><li><strong>Large numbers:</strong> max int (2^31 - 1, 2^63 - 1)</li><li><strong>Invalid data types:</strong> String, Boolean, Float (3.14)</li><li><strong>None / Null / Undefined</strong></li></ul>
-<p><strong>Example 2 — <code>isPalindrome(word):</code></strong></p>
-<ul><li><strong>Even-length</strong> words: <code>"noon"</code> → True</li><li><strong>Odd-length</strong> words: <code>"madam"</code>, <code>"12321"</code> → True</li><li>Non-palindrome: <code>"hello"</code> → False</li><li><strong>Empty string</strong> (boundary): <code>""</code></li><li>String with spaces/punctuation: <code>"Madam, in Eden, I'm Adam"</code> / <code>"Madam, I'm Adam"</code> — depends on the requirement</li><li><strong>Invalid data types:</strong> Number, Object, Boolean</li><li><strong>None / Null / Undefined</strong></li><li><strong>Unicode / multi-byte characters</strong>, including <strong>right-to-left</strong> languages</li></ul>
-<p><strong>Example 3 — User signup form / endpoint:</strong></p>
-<ul><li><strong>Empty strings:</strong> first/last name, email, date of birth</li><li><strong>Missing parameters</strong> from the request (omitted JSON fields)</li><li><strong>Long string fields:</strong> names/email (e.g. 10,000 characters)</li><li><strong>Unicode string fields:</strong> names/email (<code>José</code>, <code>O'Connor</code>)</li><li><strong>Invalid dates:</strong> year <code>3000</code>, <code>-1700</code>, <code>40/15/2025</code></li><li><strong>Numeric characters in first/last name:</strong> <code>"John123"</code></li><li><strong>Emails should match some format:</strong> reject <code>"user@"</code>, <code>"user@domain"</code>, <code>"user.domain.com"</code>, <code>"&lt;script&gt;@x.com"</code></li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">These lists are templates. For any function, ask: normal values, boundaries, wrong types, missing values, malformed formats, Unicode, and malicious input.</div></div></div></div></section>
-<section class="section" id="sec-13"><header class="section-head"><span class="section-num">13</span><h2>Code Coverage Metrics</h2></header><div class="section-body"><p><strong>Code coverage</strong> estimates which parts of your code are covered by tests. Coverage tools highlight, <strong>line by line</strong>, which code is executed by tests.</p>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Critical warning:</p><div class="callout-text"><strong>100% code coverage does NOT mean 100% bug-free code.</strong> It only guarantees that a line was <strong>executed at least once</strong> — it says nothing about the quality of your assertions. Would you be satisfied with only one test for any of the example functions? <strong>Code coverage is only an indicator — not a direct measure — of quality.</strong></div></div></div>
-<p><strong>The five types of coverage:</strong></p>
-<ul><li><strong>Function coverage</strong> — how many of the defined functions have been called?</li><li><strong>Statement coverage</strong> — how many statements have been executed?</li><li><strong>Branch coverage</strong> — how many branches of control flow (<code>if/elif/else</code>, <code>while</code>, <code>for</code>, <code>switch</code>) have been executed in both directions?</li><li><strong>Condition coverage</strong> — how many boolean sub-conditions within branches evaluated to <strong>both true and false</strong>?</li><li><strong>Line coverage</strong> — a raw metric of how many lines have been tested.</li></ul>
-<p>Approximate strength hierarchy:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>Condition Coverage &gt; Branch Coverage &gt; Statement / Line Coverage &gt; Function Coverage</code></pre></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Coverage tells you what you <em>touched</em>, not what you <em>verified</em>. Use it to find untested code, not as proof of correctness.</div></div></div></div></section>
-<section class="section" id="sec-14"><header class="section-head"><span class="section-num">14</span><h2>Defensive Programming &amp; Patterns</h2></header><div class="section-body"><p><strong>Defensive programming</strong> goes hand-in-hand with verifying quality: it <strong>eliminates entire classes of bugs through good code design</strong>. It comes at the cost of <strong>more complicated code</strong>, but ensures your application can deliver on <strong>availability and security</strong> requirements.</p>
-<p><strong>Core principles:</strong></p>
-<ol><li><strong>Never trust external data</strong> — validate and sanitise every input at entry boundaries.</li><li><strong>Use in-built language constructs (built-in design patterns)</strong> — e.g. always use a <strong>context manager</strong> (<code>with open(...)</code> in Python) or <code>try-finally</code> to guarantee resource cleanup. The lecture contrasts two programs that open a file and display its output; the defensive one takes advantage of language features.</li><li><strong>Leverage established design patterns</strong> — they represent <strong>consensus from seasoned developers</strong> that these patterns solve common problems. Use them rather than reinventing.</li><li><strong>Be aware of the trade-off</strong> — defensive code adds explicit complexity but yields immense gains in availability, error isolation, and security.</li></ol>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Defensive programming = <strong>"assume input is hostile and resources must be released."</strong></div></div></div></div></section>
-<section class="section" id="key-takeaways"><header class="section-head"><span class="section-num">15</span><h2>Key Takeaways</h2></header><div class="section-body"><ol class="takeaways"><li><span class="tk-n">1</span><div><strong>Testing is a budget</strong> — every test costs time to write, maintain, and execute, so prioritise by value: critical functionality, then depth, then breadth.</div></li><li><span class="tk-n">2</span><div><strong>Four levels build on each other</strong> — unit (isolated function), integration (interactions), system/E2E (whole system), acceptance (business requirements).</div></li><li><span class="tk-n">3</span><div><strong>Mocks isolate units; stubs and drivers enable integration testing.</strong></div></li><li><span class="tk-n">4</span><div><strong>Black-box tests the spec with no code knowledge; white-box tests code paths from the inside.</strong></div></li><li><span class="tk-n">5</span><div><strong>Regression testing protects existing functionality after any code, infra, or config change</strong> — run the full suite, fastest checks first.</div></li><li><span class="tk-n">6</span><div><strong>Don't brute-force all inputs</strong> — the space is effectively infinite and still misses concurrency, timing, and hardware failures.</div></li><li><span class="tk-n">7</span><div><strong>Fuzzing generates semi-valid, malformed inputs</strong> to find unhandled edge cases, crashes, leaks, and security flaws.</div></li><li><span class="tk-n">8</span><div><strong>Non-functional testing covers performance/load, security, usability, and robustness</strong> (volume, stress, load variants).</div></li><li><span class="tk-n">9</span><div><strong>Chaos engineering (Netflix Simian Army)</strong> deliberately breaks production: Chaos Monkey kills instances, Chaos Gorilla kills a whole AZ.</div></li><li><span class="tk-n">10</span><div><strong>Follow the Test Pyramid</strong> — many fast unit tests, fewer integration tests, fewest expensive E2E/acceptance tests; avoid the Ice-Cream anti-pattern.</div></li><li><span class="tk-n">11</span><div><strong>Linters catch static defects fast</strong> — unused imports, unreachable code, style violations — and belong first in the pipeline.</div></li><li><span class="tk-n">12</span><div><strong>Design tests for quality and diversity</strong> — basic cases first, then edges; always think like a malicious attacker.</div></li><li><span class="tk-n">13</span><div><strong>Use equivalence partitioning and boundary value analysis</strong> — one test per equivalent class, plus the boundaries (0, empty, max int).</div></li><li><span class="tk-n">14</span><div><strong>100% coverage does not mean bug-free</strong> — coverage is an indicator of what executed, not of correctness.</div></li><li><span class="tk-n">15</span><div><strong>Defensive programming prevents entire bug classes</strong> — validate all external data and use built-in constructs and design patterns.</div></li></ol></div></section>
-<section class="section" id="glossary"><header class="section-head"><span class="section-num">16</span><h2>Glossary</h2></header><div class="section-body"><div class="term-filter"><input type="search" id="termSearch" placeholder="Filter terms…" autocomplete="off" aria-label="Filter glossary terms"><span class="term-count" id="termCount"></span></div><div class="terms" id="termsGrid"><div class="term" data-term="testing budget the finite time/resources available for tests; spend it where value is highest"><p class="term-name">Testing budget</p><p class="term-def">The finite time/resources available for tests; spend it where value is highest</p></div><div class="term" data-term="unit testing verifying the smallest isolated piece of code, ideally one function/method"><p class="term-name">Unit testing</p><p class="term-def">Verifying the smallest isolated piece of code, ideally one function/method</p></div><div class="term" data-term="functional testing another name for unit testing — verifying components independently"><p class="term-name">Functional testing</p><p class="term-def">Another name for unit testing — verifying components independently</p></div><div class="term" data-term="mock a stand-in replacement for a dependency used to isolate a unit test"><p class="term-name">Mock</p><p class="term-def">A stand-in replacement for a dependency used to isolate a unit test</p></div><div class="term" data-term="integration testing verifying interactions and communication between modules/components"><p class="term-name">Integration testing</p><p class="term-def">Verifying interactions and communication between modules/components</p></div><div class="term" data-term="component a module or class used as the unit of integration testing"><p class="term-name">Component</p><p class="term-def">A module or class used as the unit of integration testing</p></div><div class="term" data-term="stub a dummy module providing hardcoded data to the module under test"><p class="term-name">Stub</p><p class="term-def">A dummy module providing hardcoded data to the module under test</p></div><div class="term" data-term="driver a wrapper that simulates the calling module in integration testing"><p class="term-name">Driver</p><p class="term-def">A wrapper that simulates the calling module in integration testing</p></div><div class="term" data-term="system testing verifying the whole system&#x27;s behaviour, including security, performance, reliability, external interfaces"><p class="term-name">System testing</p><p class="term-def">Verifying the whole system's behaviour, including security, performance, reliability, external interfaces</p></div><div class="term" data-term="end-to-end (e2e) testing another name for system testing across the full stack"><p class="term-name">End-to-end (E2E) testing</p><p class="term-def">Another name for system testing across the full stack</p></div><div class="term" data-term="acceptance testing verifying acceptance criteria and business requirements from the user&#x27;s perspective"><p class="term-name">Acceptance testing</p><p class="term-def">Verifying acceptance criteria and business requirements from the user's perspective</p></div><div class="term" data-term="use case a goal-oriented scenario that should be covered by one or more acceptance tests"><p class="term-name">Use case</p><p class="term-def">A goal-oriented scenario that should be covered by one or more acceptance tests</p></div><div class="term" data-term="black-box testing testing based only on specification/design, with no implementation knowledge"><p class="term-name">Black-box testing</p><p class="term-def">Testing based only on specification/design, with no implementation knowledge</p></div><div class="term" data-term="white-box testing testing using knowledge of the code to cover key paths and branches"><p class="term-name">White-box testing</p><p class="term-def">Testing using knowledge of the code to cover key paths and branches</p></div><div class="term" data-term="regression testing verifying that changes have not broken existing functionality"><p class="term-name">Regression testing</p><p class="term-def">Verifying that changes have not broken existing functionality</p></div><div class="term" data-term="brute-force testing attempting to test all possible inputs; usually infeasible"><p class="term-name">Brute-force testing</p><p class="term-def">Attempting to test all possible inputs; usually infeasible</p></div><div class="term" data-term="fuzzing automated generation of invalid/semi-valid inputs to find crashes, leaks, and edge cases"><p class="term-name">Fuzzing</p><p class="term-def">Automated generation of invalid/semi-valid inputs to find crashes, leaks, and edge cases</p></div><div class="term" data-term="boundary condition an input at the edge of a partition where bugs commonly occur"><p class="term-name">Boundary condition</p><p class="term-def">An input at the edge of a partition where bugs commonly occur</p></div><div class="term" data-term="volume testing testing functionality under large data/load"><p class="term-name">Volume testing</p><p class="term-def">Testing functionality under large data/load</p></div><div class="term" data-term="stress testing testing reliability by pushing beyond normal limits"><p class="term-name">Stress testing</p><p class="term-def">Testing reliability by pushing beyond normal limits</p></div><div class="term" data-term="load testing testing performance under expected peak traffic"><p class="term-name">Load testing</p><p class="term-def">Testing performance under expected peak traffic</p></div><div class="term" data-term="security testing testing that the system is secure, referencing the owasp top 10"><p class="term-name">Security testing</p><p class="term-def">Testing that the system is secure, referencing the OWASP Top 10</p></div><div class="term" data-term="usability testing testing whether the site is intuitive and discoverable"><p class="term-name">Usability testing</p><p class="term-def">Testing whether the site is intuitive and discoverable</p></div><div class="term" data-term="hallway testing usability technique using random people to perform a task"><p class="term-name">Hallway testing</p><p class="term-def">Usability technique using random people to perform a task</p></div><div class="term" data-term="expert review usability technique where specialists review against heuristics"><p class="term-name">Expert review</p><p class="term-def">Usability technique where specialists review against heuristics</p></div><div class="term" data-term="a/b testing running two ui variants concurrently and comparing outcomes"><p class="term-name">A/B testing</p><p class="term-def">Running two UI variants concurrently and comparing outcomes</p></div><div class="term" data-term="destructive/robustness testing intentionally causing failures to test recovery and data safety"><p class="term-name">Destructive/robustness testing</p><p class="term-def">Intentionally causing failures to test recovery and data safety</p></div><div class="term" data-term="mttr mean time to recovery — how long the system takes to recover from failure"><p class="term-name">MTTR</p><p class="term-def">Mean Time To Recovery — how long the system takes to recover from failure</p></div><div class="term" data-term="chaos engineering deliberately injecting failures into production to test resilience"><p class="term-name">Chaos engineering</p><p class="term-def">Deliberately injecting failures into production to test resilience</p></div><div class="term" data-term="simian army netflix&#x27;s suite of chaos tools (chaos monkey, latency monkey, etc.)"><p class="term-name">Simian Army</p><p class="term-def">Netflix's suite of chaos tools (Chaos Monkey, Latency Monkey, etc.)</p></div><div class="term" data-term="chaos monkey randomly disables production instances"><p class="term-name">Chaos Monkey</p><p class="term-def">Randomly disables production instances</p></div><div class="term" data-term="latency monkey introduces artificial client-server delay"><p class="term-name">Latency Monkey</p><p class="term-def">Introduces artificial client-server delay</p></div><div class="term" data-term="conformity monkey terminates instances that violate best practices"><p class="term-name">Conformity Monkey</p><p class="term-def">Terminates instances that violate best practices</p></div><div class="term" data-term="doctor monkey detects unhealthy instances and routes traffic away"><p class="term-name">Doctor Monkey</p><p class="term-def">Detects unhealthy instances and routes traffic away</p></div><div class="term" data-term="chaos gorilla simulates the outage of an entire availability zone"><p class="term-name">Chaos Gorilla</p><p class="term-def">Simulates the outage of an entire availability zone</p></div><div class="term" data-term="manual testing testing performed directly by a human (exploratory, visual regression)"><p class="term-name">Manual testing</p><p class="term-def">Testing performed directly by a human (exploratory, visual regression)</p></div><div class="term" data-term="automated testing tests driven by tools (unit, integration, e2e, performance)"><p class="term-name">Automated testing</p><p class="term-def">Tests driven by tools (unit, integration, E2E, performance)</p></div><div class="term" data-term="test pyramid many fast unit tests at the base, fewer integration, fewest e2e/acceptance at the top"><p class="term-name">Test Pyramid</p><p class="term-def">Many fast unit tests at the base, fewer integration, fewest E2E/acceptance at the top</p></div><div class="term" data-term="ice-cream anti-pattern inverted pyramid with heavy manual/e2e testing and little unit testing"><p class="term-name">Ice-Cream anti-pattern</p><p class="term-def">Inverted pyramid with heavy manual/E2E testing and little unit testing</p></div><div class="term" data-term="linter static analysis tool that finds programmatic and stylistic errors before execution"><p class="term-name">Linter</p><p class="term-def">Static analysis tool that finds programmatic and stylistic errors before execution</p></div><div class="term" data-term="static analysis analysing code without running it"><p class="term-name">Static analysis</p><p class="term-def">Analysing code without running it</p></div><div class="term" data-term="equivalence partitioning grouping inputs the code treats identically and testing one representative per group"><p class="term-name">Equivalence partitioning</p><p class="term-def">Grouping inputs the code treats identically and testing one representative per group</p></div><div class="term" data-term="boundary value analysis testing just inside, at, and outside partition boundaries"><p class="term-name">Boundary value analysis</p><p class="term-def">Testing just inside, at, and outside partition boundaries</p></div><div class="term" data-term="guideline-based testing targeting known common developer flaws, e.g. unicode or buffer overflows"><p class="term-name">Guideline-based testing</p><p class="term-def">Targeting known common developer flaws, e.g. Unicode or buffer overflows</p></div><div class="term" data-term="code coverage a measure of which code is executed by tests"><p class="term-name">Code coverage</p><p class="term-def">A measure of which code is executed by tests</p></div><div class="term" data-term="function coverage percentage of defined functions called by tests"><p class="term-name">Function coverage</p><p class="term-def">Percentage of defined functions called by tests</p></div><div class="term" data-term="statement coverage percentage of statements executed"><p class="term-name">Statement coverage</p><p class="term-def">Percentage of statements executed</p></div><div class="term" data-term="branch coverage percentage of control-flow branches executed in both directions"><p class="term-name">Branch coverage</p><p class="term-def">Percentage of control-flow branches executed in both directions</p></div><div class="term" data-term="condition coverage percentage of boolean sub-conditions evaluated to both true and false"><p class="term-name">Condition coverage</p><p class="term-def">Percentage of boolean sub-conditions evaluated to both true and false</p></div><div class="term" data-term="line coverage raw measure of how many lines were tested"><p class="term-name">Line coverage</p><p class="term-def">Raw measure of how many lines were tested</p></div><div class="term" data-term="defensive programming designing code to prevent entire classes of bugs before they happen"><p class="term-name">Defensive programming</p><p class="term-def">Designing code to prevent entire classes of bugs before they happen</p></div><div class="term" data-term="context manager a language construct (e.g. python `with`) guaranteeing resource cleanup"><p class="term-name">Context manager</p><p class="term-def">A language construct (e.g. Python <code>with</code>) guaranteeing resource cleanup</p></div><div class="term" data-term="design pattern a consensus solution to a recurring architecture problem"><p class="term-name">Design pattern</p><p class="term-def">A consensus solution to a recurring architecture problem</p></div></div></div></section>
-<section class="section" id="mnemonics"><header class="section-head"><span class="section-num">17</span><h2>Mnemonics &amp; Quick Recall</h2></header><div class="section-body"><div class="mnemonics"><div class="mnemonic"><p class="mn-title">Testing Levels</p><p class="mn-code">U-I-S-A</p><p class="mn-note">Unit, Integration, System, Acceptance</p></div><div class="mnemonic"><p class="mn-title">Test Priority</p><p class="mn-code">Critical functionality → Depth → Breadth</p></div><div class="mnemonic"><p class="mn-title">Coverage Order</p><p class="mn-code">Condition &gt; Branch &gt; Statement/Line &gt; Function</p></div><div class="mnemonic"><p class="mn-title">Test Pyramid</p><p class="mn-code">Many Unit, fewer Integration, fewest E2E/Acceptance</p></div><div class="mnemonic"><p class="mn-title">Chaos Tools</p><p class="mn-code">Chaos Monkey = one instance, Chaos Gorilla = one AZ</p></div><div class="mnemonic"><p class="mn-title">Box Testing</p><p class="mn-code">Black = spec, White = source</p></div><div class="mnemonic"><p class="mn-title">Input Testing</p><p class="mn-code">Partition first, then attack the boundaries</p></div><div class="mnemonic"><p class="mn-title">Fuzz Flow</p><p class="mn-code">Define valid input → Mutate → Execute → Monitor</p></div></div></div></section>
-<section class="section" id="worked-examples"><header class="section-head"><span class="section-num">18</span><h2>Worked Examples &amp; Scenarios</h2></header><div class="section-body"><div class="example"><span class="example-tag">Example 1</span><h3 class="example-title">Partitioning <code>oddEven</code></h3><p>The function returns <code>"Even"</code> when <code>num % 2 == 0</code>, otherwise <code>"Odd"</code>. Rather than testing many odd numbers, recognise that all odds behave identically (one partition) and all evens behave identically (another). Test one representative from each: <code>1</code> → <code>"Odd"</code>, <code>2</code> → <code>"Even"</code>. Then attack the boundaries: <code>0</code> (is it treated as Even?), <code>-1</code> and <code>-2</code> (negatives), max int (overflow), plus invalid types like <code>"hello"</code> and <code>None</code>.</p></div><div class="example"><span class="example-tag">Example 2</span><h3 class="example-title">Test cases for <code>isPalindrome</code></h3><p>Cover odd-length (<code>"madam"</code>), even-length (<code>"noon"</code>), and non-palindromes (<code>"hello"</code>). Add boundary cases: the empty string <code>""</code>; strings with spaces and punctuation (<code>"Madam, in Eden, I'm Adam"</code>), where the answer depends on the spec. Then invalid data types (Number, Object, Boolean), <code>None</code>, and Unicode/multi-byte characters including right-to-left languages.</p></div><div class="example"><span class="example-tag">Example 3</span><h3 class="example-title">Auditing a signup form</h3><p>For a form with first name, last name, email, and date of birth, list inputs that could break it: empty strings, missing request parameters, 10,000-character strings, Unicode names like <code>José</code> and <code>O'Connor</code>, impossible dates (<code>3000</code>, <code>-1700</code>, <code>40/15/2025</code>), digits inside names (<code>John123</code>), and malformed emails (<code>"user@"</code>, <code>"user@domain"</code>, <code>"&lt;script&gt;@x.com"</code>). This is guideline-based testing plus boundary analysis in one pass.</p></div><div class="example"><span class="example-tag">Example 4</span><h3 class="example-title">Regression in a fail-fast pipeline</h3><p>After a change, run the full suite in cheap-to-expensive order: linters and static analysis (seconds), fast unit tests (seconds), integration tests (minutes), then E2E/system regression before release. A failure at any step stops the pipeline early, giving feedback in seconds rather than waiting on a slow E2E suite.</p></div><div class="example"><span class="example-tag">Example 5</span><h3 class="example-title">Fuzzing a JSON API</h3><p>Define the valid JSON schema for an endpoint, then let a fuzzer mutate inputs — overflow strings, weird Unicode, null bytes, negative numbers. Run the server and monitor for crashes. Findings typically include unhandled edge cases, memory leaks, non-performant code paths, and injection vulnerabilities.</p></div><div class="example"><span class="example-tag">Example 6</span><h3 class="example-title">Interpretive caution on coverage</h3><p>Suppose <code>oddEven</code> has 100% line coverage because one test called it with <code>4</code>. Every line executed, but the boundary value <code>0</code> and invalid types were never tested. Coverage is satisfied while a real bug remains — showing why coverage is an indicator, not a verdict.</p></div></div></section>
-<section class="section" id="exam-focus"><header class="section-head"><span class="section-num">19</span><h2>Exam Practice</h2></header><div class="section-body"><div class="exam-bar"><div class="exam-progress"><span class="exam-count"><strong id="examDone">0</strong> / 15 mastered</span><span class="exam-track"><span id="examFill"></span></span></div><div class="exam-actions"><button type="button" class="btn" id="revealAll">Reveal all</button><button type="button" class="btn" id="hideAll">Hide all</button><button type="button" class="btn ghost" id="resetExam">Reset</button></div></div><article class="quiz" data-q="1"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">1</span><span class="quiz-text">Why is testing described as a "budget"?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Tests cost time to write, maintain, and execute, so effort should be prioritised by value — critical functionality first, then depth, then breadth.</div><label class="mastered"><input type="checkbox" data-mastered="1"> Mark as mastered</label></div></article><article class="quiz" data-q="2"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">2</span><span class="quiz-text">Distinguish unit, integration, system, and acceptance testing.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Unit tests the smallest isolated piece (with mocks); integration tests interactions between components (using stubs/drivers); system/E2E tests the whole system including security/performance/reliability; acceptance verifies business requirements from the user's perspective.</div><label class="mastered"><input type="checkbox" data-mastered="2"> Mark as mastered</label></div></article><article class="quiz" data-q="3"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">3</span><span class="quiz-text">What are stubs and drivers used for?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>In integration testing — a stub provides hardcoded data to the module under test, and a driver simulates the calling module.</div><label class="mastered"><input type="checkbox" data-mastered="3"> Mark as mastered</label></div></article><article class="quiz" data-q="4"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">4</span><span class="quiz-text">Compare black-box and white-box testing.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Black-box uses no implementation knowledge and is based on specs (system/acceptance, external testers); white-box uses code knowledge to cover paths (unit/integration, written by developers).</div><label class="mastered"><input type="checkbox" data-mastered="4"> Mark as mastered</label></div></article><article class="quiz" data-q="5"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">5</span><span class="quiz-text">What is regression testing and when should it run?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It verifies that changes have not broken existing functionality; run the full suite after any code/infra/config change, and again before commit/push, with fast checks first.</div><label class="mastered"><input type="checkbox" data-mastered="5"> Mark as mastered</label></div></article><article class="quiz" data-q="6"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">6</span><span class="quiz-text">Why is brute-forcing all inputs not viable?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>The input space is effectively infinite, takes far too long, and still misses concurrency, input timing, randomness, and hardware failures.</div><label class="mastered"><input type="checkbox" data-mastered="6"> Mark as mastered</label></div></article><article class="quiz" data-q="7"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">7</span><span class="quiz-text">What is fuzzing and what can it find?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Automated generation of invalid/semi-valid inputs around defined valid boundaries to reveal unhandled edge cases, non-performant code, crashes (memory leaks), and security flaws.</div><label class="mastered"><input type="checkbox" data-mastered="7"> Mark as mastered</label></div></article><article class="quiz" data-q="8"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">8</span><span class="quiz-text">Differentiate volume, load, and stress testing.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Volume tests functionality under large data/load; load tests performance under expected peak; stress tests reliability by pushing beyond normal limits.</div><label class="mastered"><input type="checkbox" data-mastered="8"> Mark as mastered</label></div></article><article class="quiz" data-q="9"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">9</span><span class="quiz-text">What are the Netflix Simian Army tools?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Chaos Monkey (disables instances), Latency Monkey (adds delay), Conformity Monkey (terminates non-conforming instances), Doctor Monkey (routes traffic from unhealthy instances), Chaos Gorilla (simulates a whole-AZ outage).</div><label class="mastered"><input type="checkbox" data-mastered="9"> Mark as mastered</label></div></article><article class="quiz" data-q="10"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">10</span><span class="quiz-text">Explain the Test Pyramid and the Ice-Cream anti-pattern.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>The pyramid has many fast unit tests, fewer integration tests, and fewest E2E/acceptance tests. The Ice-Cream anti-pattern inverts this with heavy manual/E2E testing and little unit testing, causing slow, brittle builds.</div><label class="mastered"><input type="checkbox" data-mastered="10"> Mark as mastered</label></div></article><article class="quiz" data-q="11"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">11</span><span class="quiz-text">What does a linter detect?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Static, pre-execution issues — unused imports/variables, unreachable code, naming/style violations, and (with type checkers) syntax/type errors.</div><label class="mastered"><input type="checkbox" data-mastered="11"> Mark as mastered</label></div></article><article class="quiz" data-q="12"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">12</span><span class="quiz-text">Explain equivalence partitioning and boundary value analysis with an example.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Partitioning groups inputs the code treats identically (all odds, all evens) and tests one representative each; boundary analysis tests the edges (0, min/max, just above/below) where bugs concentrate.</div><label class="mastered"><input type="checkbox" data-mastered="12"> Mark as mastered</label></div></article><article class="quiz" data-q="13"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">13</span><span class="quiz-text">Why doesn't 100% code coverage guarantee bug-free code?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Coverage only shows a line executed at least once; it says nothing about assertion quality. It is an indicator, not a direct measure, of quality.</div><label class="mastered"><input type="checkbox" data-mastered="13"> Mark as mastered</label></div></article><article class="quiz" data-q="14"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">14</span><span class="quiz-text">What is defensive programming and what is its trade-off?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Designing code to prevent whole classes of bugs — validate external data, use built-in constructs (context managers) and design patterns. It adds complexity but improves availability, error isolation, and security.</div><label class="mastered"><input type="checkbox" data-mastered="14"> Mark as mastered</label></div></article><article class="quiz" data-q="15"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">15</span><span class="quiz-text">How is risk prioritised when deciding which tests to write?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Risk = (Cost of incident) × (Likelihood of occurrence) — combined with the cost/value of each test and the importance of covering acceptance criteria.</div><label class="mastered"><input type="checkbox" data-mastered="15"> Mark as mastered</label></div></article></div></section>
-    <footer class="foot"><strong>ELEC3609 study guide</strong> · Software Quality, Testing &amp; Defensive Design · 2025 Session · Built for self-paced revision.</footer>
+<p>It is commonly referred to as <strong>end-to-end testing</strong>.</p>
+<h3 class="sub-title">Acceptance testing</h3>
+<p><strong>Acceptance testing</strong> verifies that the desired <strong>acceptance criteria are met from the user's perspective</strong> and that the system satisfies the <strong>business requirements</strong>. Each use-case should be covered by one or more acceptance tests. Although it takes a more objective, user-facing view, acceptance testing <strong>can still be automated</strong>.</p>
+<div class="table-wrap"><table><thead><tr><th>Level</th><th>What it verifies</th><th>Typical helper</th></tr></thead><tbody><tr><td>Unit</td><td>One isolated function/method</td><td>Mocks</td></tr><tr><td>Integration</td><td>Communication between components</td><td>Stubs and drivers</td></tr><tr><td>System</td><td>Whole system incl. security, performance, reliability, interfaces</td><td>End-to-end harness</td></tr><tr><td>Acceptance</td><td>Acceptance criteria from the user's view</td><td>Use-case tests</td></tr></tbody></table></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Zoom out in four steps — <em>one function</em> (unit) → <em>functions talking</em> (integration) → <em>whole system</em> (system) → <em>does the user accept it</em> (acceptance).</div></div>
+</section>
+<section class="guide-section" id="black-box-vs-white-box-testing" data-title="Black-box vs White-box Testing">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Black-box vs White-box Testing</h2>
+  </div>
+  <p class="section-kicker">Black-box testing ignores the implementation and tests against the specification; white-box testing uses knowledge of the code to target key paths.</p>
+<p><strong>Black-box testing</strong></p>
+<ul><li>No programming, software or implementation knowledge is required.</li><li>Tests are based <strong>only on the specification or design</strong>.</li><li>Usually used for <strong>System and Acceptance testing</strong>.</li><li>An <strong>external tester is ideal</strong> here, because they carry no bias from knowing how the code works.</li></ul>
+<p><strong>White-box testing</strong></p>
+<ul><li>Uses <strong>knowledge of the implementation</strong> to design test cases that cover <strong>key paths</strong> through the code.</li><li>Usually used for <strong>Unit and Integration testing</strong>.</li><li>Written <strong>by the developer</strong> to verify their own code.</li></ul>
+<div class="compare"><div class="compare-col a"><h3>Black-box</h3><ul><li>Driven by the spec, not the code</li><li>No implementation knowledge</li><li>External tester is ideal (no bias)</li><li>Used for System &amp; Acceptance testing</li></ul></div><div class="compare-col b"><h3>White-box</h3><ul><li>Driven by knowledge of the code</li><li>Targets key control-flow paths</li><li>Written by the developer</li><li>Used for Unit &amp; Integration testing</li></ul></div></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Because a black-box tester does not know the implementation, they are more likely to exercise the <em>unexpected</em> input that a developer unconsciously assumed away — exactly the inputs that break systems.</div></div>
+</section>
+<section class="guide-section" id="regression-testing" data-title="Regression Testing">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Regression Testing</h2>
+  </div>
+  <p class="section-kicker">Regression testing proves that new changes have not quietly broken behaviour that used to work.</p>
+<p><strong>Regression testing</strong> is the process of verifying that <strong>incremental changes have not broken existing functionality</strong>. It makes sense to run the <strong>full suite of tests after any code, infrastructure or configuration change</strong>. These tests can almost immediately identify issues and help narrow down where a problem was introduced. Run preemptively during development, they highlight possible errors and <strong>backwards-incompatible changes</strong>.</p>
+<p>A comprehensive suite can take minutes to run, so you must decide <strong>where</strong> the best place to run it is. A common approach is:</p>
+<ul><li>after any manual or unit tests, as an additional check, and</li><li>again <strong>before commit/push</strong>.</li></ul>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> Regression testing is defined by its <em>purpose</em> (catching breakage from change), not by a level. It can be run at any level and is triggered by change events, not by a phase of development.</div></div>
+</section>
+<section class="guide-section" id="why-not-brute-force-every-input-and-fuzzing" data-title="Why Not Brute-Force Every Input? And Fuzzing">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Why Not Brute-Force Every Input? And Fuzzing</h2>
+  </div>
+  <p class="section-kicker">Testing every possible input is combinatorially impossible, so we sample intelligently — and let fuzzers generate the hostile inputs we would never think of.</p>
+<h3 class="sub-title">The brute-force question</h3>
+<p><em>Can we just test all possible inputs?</em> Yes, sometimes — but it is not a great idea and is <strong>almost never worth the time</strong>. Most systems are complex enough that the sheer number of input combinations means you would be running tests for a very long period to attempt them all.</p>
+<p>Consider a phone: does it make sense to call <strong>every single phone number</strong> to verify call functionality? Even if you spent weeks, you would still have gaps, because brute force does not cover:</p>
+<ul><li><strong>Concurrency</strong> — simultaneous operations interfering with each other.</li><li><strong>Order of inputs / timing of requests</strong> — the same inputs in a different sequence behave differently.</li><li><strong>Random seeds / random input</strong> — non-determinism.</li><li><strong>Hardware failure</strong> — the environment breaking underneath the software.</li></ul>
+<h3 class="sub-title">Fuzzing</h3>
+<p><strong>Fuzzing</strong> uses automated tools that <strong>generate invalid and non-standard inputs</strong> and test the behaviour of a system. The idea is to define the <strong>valid inputs</strong>, then have the fuzzer generate <strong>semi-valid input</strong> that pushes against <strong>boundary conditions</strong>.</p>
+<p>Fuzzers can highlight:</p>
+<ul><li>Unhandled edge cases</li><li>Non-performant code</li><li>Possible crashes (including memory leaks) and security concerns</li></ul>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Passing your normal test suite tells you nothing about malformed, oversized or adversarial input. Fuzzing exists precisely because developers test the inputs they <em>expect</em>, not the inputs an attacker or a corrupted client will send.</div></div>
+</section>
+<section class="guide-section" id="non-functional-testing-performance-load-stress-and-volume" data-title="Non-Functional Testing: Performance, Load, Stress and Volume">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Non-Functional Testing: Performance, Load, Stress and Volume</h2>
+  </div>
+  <p class="section-kicker">Non-functional testing measures how the system behaves under load rather than whether a feature is correct.</p>
+<p>Performance and load testing determines <strong>how well a system performs under known workloads</strong>. By adjusting the <strong>stress factor</strong>, you simulate high load and identify <strong>bottlenecks</strong> in the system.</p>
+<p>Three closely related variants differ in <em>what</em> they probe under load:</p>
+<ul><li><strong>Volume testing</strong> — tests <strong>functionality</strong> under load.</li><li><strong>Stress testing</strong> — tests <strong>reliability</strong> under load.</li><li><strong>Load testing</strong> — tests <strong>performance</strong> under load.</li></ul>
+<p>It is important that the simulated workload is <strong>realistic</strong>. Example: if the site must handle <strong>10,000 concurrent users at peak</strong>, you test how it performs with <strong>1,000 → 5,000 → 10,000 → 15,000</strong> simulated users, so you can see where it degrades and whether it holds at and beyond the target.</p>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <em>Volume = does it still work? Stress = does it stay up? Load = is it fast enough?</em></div></div>
+</section>
+<section class="guide-section" id="security-usability-and-robustness-testing" data-title="Security, Usability and Robustness Testing">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Security, Usability and Robustness Testing</h2>
+  </div>
+  <p class="section-kicker">Beyond speed and correctness, you must test whether the system is safe, understandable, and able to survive failure.</p>
+<h3 class="sub-title">Security testing</h3>
+<p>Required to ensure that our system is secure. A useful checklist is the <strong>top 10 vulnerability list</strong> (the well-known catalogue of the most common web security flaws).</p>
+<h3 class="sub-title">Usability testing</h3>
+<p>Designed to test whether a website is <strong>intuitive and discoverable</strong> by users. Common techniques:</p>
+<ul><li><strong>Hallway testing</strong> — grabbing random people to try it.</li><li><strong>Expert review</strong> — a specialist evaluates the interface.</li><li><strong>A/B testing</strong> — showing two variants and comparing which performs better.</li></ul>
+<h3 class="sub-title">Robustness / destructive testing</h3>
+<p><strong>Destructive testing</strong> intentionally <strong>causes failures in components</strong> of the system to test how the system performs overall. It is designed to answer hard operational questions:</p>
+<ul><li>Will our system recover if it fails?</li><li>Will we lose data?</li><li>How long will it take to recover?</li><li>Do we have backups?</li><li>Do they work?</li><li>Who knows how to fix it?</li></ul>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> A system that has never failed has never been tested under failure. Destructive testing is how you discover whether recovery, backups and incident response actually work <em>before</em> a real outage forces the question.</div></div>
+</section>
+<section class="guide-section" id="the-netflix-simian-army-chaos-engineering" data-title="The Netflix Simian Army (Chaos Engineering)">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Netflix Simian Army (Chaos Engineering)</h2>
+  </div>
+  <p class="section-kicker">Netflix keeps high availability by deliberately breaking production with automated tools — the industrial version of destructive testing.</p>
+<p>Netflix desires <strong>high uptime and availability</strong>, so it developed a suite of <strong>automated tools that test how well its production systems handle particular failure and abnormal scenarios</strong>:</p>
+<ul><li><strong>Chaos Monkey</strong> — randomly disables production instances.</li><li><strong>Latency Monkey</strong> — introduces artificial delay in the client-server communication layer.</li><li><strong>Conformity Monkey</strong> — detects abnormal instances that do not adhere to best practices and terminates them.</li><li><strong>Doctor Monkey</strong> — detects unhealthy instances and routes traffic away from them, allowing time to investigate without sacrificing system stability.</li><li><strong>Chaos Gorilla</strong> — a "big Chaos Monkey" that simulates the outage of an <strong>entire availability zone</strong>.</li></ul>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Monkey = small, targeted chaos; Gorilla = zone-sized chaos. Conformity cleans up misconfigured instances; Doctor heals unhealthy ones.</div></div>
+</section>
+<section class="guide-section" id="manual-vs-automated-testing-and-choosing-an-approach" data-title="Manual vs Automated Testing, and Choosing an Approach">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Manual vs Automated Testing, and Choosing an Approach</h2>
+  </div>
+  <p class="section-kicker">There is no single correct testing strategy — cover your acceptance criteria and pick the mix that fits your framework, program and users.</p>
+<h3 class="sub-title">Manual testing</h3>
+<p><strong>Manual testing</strong> is directly performed by a human operator, whether the developer or a dedicated QA agent. Examples:</p>
+<ul><li><strong>Exploratory testing</strong> — investigating without a scripted plan.</li><li><strong>Visual regression testing</strong> — a human eyeballing whether the UI still looks right.</li></ul>
+<h3 class="sub-title">Automated testing</h3>
+<p><strong>Automated tests</strong> are comprised of many different tools driven by a computer. Examples:</p>
+<ul><li><strong>End-to-end (E2E) tests</strong></li><li><strong>Unit tests</strong></li><li><strong>Integration tests</strong></li><li><strong>Performance tests</strong></li></ul>
+<h3 class="sub-title">Which approach? The Test Pyramid</h3>
+<p>The <strong>Test Pyramid</strong> is a great way of conceptualising <strong>where the majority of your tests should go</strong>. It minimises the time spent on tests for the most value and leads to issues being caught <strong>earlier in development</strong>. Its opposite is the <strong>Ice Cream Anti-Pattern</strong> — top-heavy with slow, brittle tests. An alternative framing is the <strong>3D Testability Polygon</strong>.</p>
+<p>The guiding principles matter more than the diagram:</p>
+<ul><li>It is <strong>more important to cover your acceptance criteria than to adhere rigorously to a testing strategy</strong>. Find an approach that works for your framework, the nature of your program, and the requirements of your users.</li><li>Consider the <strong>cost/value</strong> of each test you write.</li><li>Consider the <strong>cost of issues × likelihood</strong> for each test case you <em>don't</em> write.</li></ul>
+<div class="formula"><div class="formula-label">Expected test value</div><div class="math">value = (cost of failure × probability of failure) − cost of writing and maintaining the test</div></div>
+</section>
+<section class="guide-section" id="linting" data-title="Linting">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Linting</h2>
+  </div>
+  <p class="section-kicker">Linters are cheap automated checks that catch programmatic and stylistic errors before they ever reach a test.</p>
+<p><strong>Linters</strong> are tools which run over your program and identify <strong>programmatic and stylistic errors</strong>. Typical findings:</p>
+<ul><li>Unused imports</li><li>Unreachable code</li><li>Variable, class or function names that do not conform to style guidelines</li></ul>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> Linting is not testing — it does not check whether your logic is <em>correct</em>. It catches a category of low-level mistakes cheaply, freeing your test budget for behaviour that actually matters.</div></div>
+</section>
+<section class="guide-section" id="designing-test-cases-and-equivalence-partitioning" data-title="Designing Test Cases and Equivalence Partitioning">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Designing Test Cases and Equivalence Partitioning</h2>
+  </div>
+  <p class="section-kicker">Good test cases come from partitioning inputs into groups the code treats the same, then probing the boundaries between them.</p>
+<h3 class="sub-title">How to design good test cases</h3>
+<ul><li>Prefer <strong>quality of tests over quantity</strong>.</li><li><strong>Diversity is key</strong> — aim to cover as many <strong>unique</strong> test cases as possible.</li><li>Cover the <strong>basic test cases before</strong> chasing more <strong>esoteric edge cases</strong>.</li><li>Always consider what could happen if someone were <strong>intentionally malicious</strong>.</li><li>Do not forget about <strong>possible bugs in libraries</strong> — would your code handle it if a dependency misbehaves?</li></ul>
+<h3 class="sub-title">Equivalence partitioning</h3>
+<p>When making test cases, identify <strong>clusters of inputs that are functionally equivalent</strong> — that is, treated similarly by the code. In the odd/even example, <em>all odd numbers are treated equally</em>, as are all even numbers. Writing many odd-number tests therefore adds <strong>little value</strong>, because they do not cover new failure cases. You are <strong>partitioning inputs based on even-ness</strong>.</p>
+<p><strong>Boundary cases</strong> are a common cause of issues. In the odd/even example, the sharp question is: <em>does <code>oddEven</code> handle 0 correctly?</em> Zero sits on the boundary between the two partitions and is a classic place for bugs.</p>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> One representative per equivalence class gives you the same coverage as hundreds of inputs from that class, at a fraction of the cost — and the <em>boundaries</em> between classes are where the real bugs hide.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> For a function that validates an age field accepting 0–120, name the equivalence classes and the specific boundary values you would test.</div></div>
+</section>
+<section class="guide-section" id="worked-examples-oddeven-palindromes-and-the-signup-form" data-title="Worked Examples: oddEven, Palindromes and the Signup Form">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Worked Examples: oddEven, Palindromes and the Signup Form</h2>
+  </div>
+  <p class="section-kicker">Three concrete functions show how to turn the partitioning method into a real, diverse list of test cases.</p>
+<h3 class="sub-title">Example 1: odd/even</h3>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>def oddEven(num):
+    # Number is divisible by 2 so is even
+    if num % 2 == 0:
+        return &quot;Even&quot;
+    # Number must be odd
+    return &quot;Odd&quot;</code></pre></div>
+<p>Does it work? How would we know? By designing test cases across partitions and edge types:</p>
+<ul><li>Odd numbers: 1, 3, 5</li><li>Even numbers: 0, 2, 4, 6</li><li>Negative numbers: -1, -2, -3</li><li>Large numbers: max int</li><li>Invalid data types: string, boolean, float</li><li>None / Null / Undefined</li></ul>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> In the lecture's own list, the "odd" group was written as <code>1, 2, 3</code> — but <strong>2 is even</strong>. That is exactly the kind of slip that a careful test case would catch. Always sanity-check that each value really belongs to the partition you put it in.</div></div>
+<h3 class="sub-title">Example 2: palindromes</h3>
+<p>Consider <code>isPalindrome(word)</code>, which takes a word and returns whether it is a palindrome. Motivating cases include <code>&quot;madam&quot;</code>, <code>&quot;12321&quot;</code>, and <code>&quot;Madam, in Eden, I&#x27;m Adam&quot;</code>.</p>
+<p>We should consider:</p>
+<ul><li>Even-length words</li><li>Odd-length words</li><li>Empty string: <code>&quot;&quot;</code></li><li>Invalid data types: number, object, boolean, …</li><li>None / Null / Undefined</li><li><strong>Unicode</strong> multi-byte characters</li><li><strong>Right-to-left</strong> languages and/or multi-byte characters</li></ul>
+<h3 class="sub-title">Example 3: user signup form</h3>
+<p>For a signup form, consider:</p>
+<ul><li>Empty strings: first/last name, email, date of birth</li><li>Missing parameters from the request</li><li>Long string fields: names and email</li><li>Unicode string fields: names and email</li><li>Invalid dates: <code>3000</code>, <code>-1700</code>, <code>40/15</code></li><li>Numeric characters in first/last name</li><li>Emails that should match some format</li></ul>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> For any string input, run the <strong>U.N.E.M.</strong> checklist — <strong>U</strong>nicode, <strong>N</strong>ull/None, <strong>E</strong>mpty string, <strong>M</strong>alformed/oversized.</div></div>
+</section>
+<section class="guide-section" id="code-coverage" data-title="Code Coverage">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Code Coverage</h2>
+  </div>
+  <p class="section-kicker">Coverage tells you which lines your tests touched — but it is an indicator of quality, never a guarantee of it.</p>
+<p>It is good to estimate which parts of your code are covered by tests. <strong>Code coverage tools</strong> can highlight, <strong>line by line</strong>, which parts of the code are executed by tests. However, just because code has <strong>100% coverage does not mean it is bug-free</strong> — it only means there is <em>at least one test that executes this statement</em>. Would you be satisfied with only one test for any of the example methods above? Coverage is only an <strong>indicator (not a direct measure) of quality</strong>.</p>
+<p>The main coverage metrics:</p>
+<ul><li><strong>Function coverage</strong> — how many of the functions defined have been called?</li><li><strong>Statement coverage</strong> — how many of the statements have been executed?</li><li><strong>Branch coverage</strong> — how many branches of control-flow structures have been executed? (if/elif/else, while, for, switch)</li><li><strong>Condition coverage</strong> — how many of the boolean conditions within branches evaluated to <strong>both true and false</strong>?</li><li><strong>Line coverage</strong> — the raw metric of how many lines have been tested.</li></ul>
+<div class="formula"><div class="formula-label">Coverage vs correctness</div><div class="math">100% coverage ≠ 0 bugs — it means every line ran at least once, not that every line was checked for every input.</div></div>
+</section>
+<section class="guide-section" id="defensive-programming-and-design-patterns" data-title="Defensive Programming and Design Patterns">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Defensive Programming and Design Patterns</h2>
+  </div>
+  <p class="section-kicker">Instead of only detecting bugs after the fact, design code so that entire classes of bugs cannot occur.</p>
+<h3 class="sub-title">Defensive programming</h3>
+<p>Hand in hand with verifying the quality of a web application, you can <strong>eliminate entire classes of bugs through good code design</strong>. Defensive programming comes at the cost of <strong>more complicated code</strong>, but it ensures your application can deliver on its <strong>availability and security requirements</strong>.</p>
+<p>Consider two programs that open a file and display its output. The defensive version anticipates that the file may be missing, unreadable or malformed and handles that explicitly. The guiding rule: <strong>always take advantage of language constructs</strong> (in-built design patterns) rather than hand-rolling fragile logic.</p>
+<h3 class="sub-title">Design patterns</h3>
+<p>Design patterns exist for a reason. They represent <strong>consensus from seasoned developers</strong> that these patterns will solve common problems. Reusing them means you inherit battle-tested solutions instead of rediscovering the same failure modes.</p>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> Testing and defensive design are complementary, not alternatives. Tests <em>detect</em> bugs; defensive design <em>prevents</em> whole categories of them, reducing how much of your testing budget those categories consume.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Name one concrete way a file-reading program could defensively handle the case where the file does not exist, and one bug that approach eliminates.</div></div>
+</section>
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways"><div class="takeaway"><span class="tk-num">1</span><p>Testing is a budget: every test costs time to write, maintain and execute, so spend effort on critical functionality first.</p></div><div class="takeaway"><span class="tk-num">2</span><p>Unit testing verifies the smallest isolatable piece of code, usually a single function, often by mocking dependencies.</p></div><div class="takeaway"><span class="tk-num">3</span><p>Integration testing verifies the interactions between components (modules or classes), commonly using stubs and drivers.</p></div><div class="takeaway"><span class="tk-num">4</span><p>System testing verifies the whole system including security, performance, reliability and external interfaces — also called end-to-end testing.</p></div><div class="takeaway"><span class="tk-num">5</span><p>Acceptance testing verifies acceptance criteria from the user's perspective and that business requirements are met; each use-case needs at least one acceptance test.</p></div><div class="takeaway"><span class="tk-num">6</span><p>Black-box testing uses only the specification and suits System/Acceptance testing; white-box testing uses implementation knowledge to cover key paths and suits Unit/Integration testing.</p></div><div class="takeaway"><span class="tk-num">7</span><p>Regression testing checks that incremental changes have not broken existing functionality, and is best run after any code, infrastructure or configuration change and before commit/push.</p></div><div class="takeaway"><span class="tk-num">8</span><p>Brute-forcing all inputs is impractical and still misses concurrency, ordering/timing, randomness and hardware failure.</p></div><div class="takeaway"><span class="tk-num">9</span><p>Fuzzing generates invalid and semi-valid inputs to expose unhandled edge cases, non-performant code, crashes and security issues.</p></div><div class="takeaway"><span class="tk-num">10</span><p>Volume tests functionality under load, stress tests reliability under load, and load tests performance under load — using a realistic workload.</p></div><div class="takeaway"><span class="tk-num">11</span><p>Destructive testing and the Netflix Simian Army deliberately inject failure (Chaos Monkey, Latency, Conformity, Doctor, Chaos Gorilla) to prove recovery works.</p></div><div class="takeaway"><span class="tk-num">12</span><p>Equivalence partitioning groups inputs the code treats the same, and boundary cases between groups are where bugs cluster.</p></div><div class="takeaway"><span class="tk-num">13</span><p>Coverage metrics (function, statement, branch, condition, line) are indicators of quality, not proof of correctness — 100% coverage does not mean bug-free.</p></div><div class="takeaway"><span class="tk-num">14</span><p>Defensive programming and design patterns eliminate entire bug classes at the cost of more complex code, protecting availability and security.</p></div></div>
+</section>
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools"><button class="chip active" type="button" data-cat="all">All</button><button class="chip" type="button" data-cat="method">Methods &amp; process</button><button class="chip" type="button" data-cat="concept">Core concepts</button><button class="chip" type="button" data-cat="tech">Technologies &amp; tools</button><button class="chip" type="button" data-cat="metric">Metrics &amp; evaluation</button></div>
+  <div class="terms"><div class="term-card" data-cat="method"><div class="term-name">Unit testing</div><div class="term-meaning">Verifying the functionality of the smallest isolatable piece of code, ideally a single function/method, independently of the whole system.</div></div><div class="term-card" data-cat="method"><div class="term-name">Integration testing</div><div class="term-meaning">Verifying the interactions and communication between software components such as modules or classes.</div></div><div class="term-card" data-cat="method"><div class="term-name">System testing</div><div class="term-meaning">Verifying the behaviour and functionality of the entire system, including security, performance, reliability and external interfaces; also called end-to-end testing.</div></div><div class="term-card" data-cat="method"><div class="term-name">Acceptance testing</div><div class="term-meaning">Verifying that acceptance criteria are met from the user's perspective and that business requirements are satisfied.</div></div><div class="term-card" data-cat="method"><div class="term-name">Regression testing</div><div class="term-meaning">Verifying that incremental changes have not broken existing functionality, typically by running the full suite after any change.</div></div><div class="term-card" data-cat="method"><div class="term-name">Black-box testing</div><div class="term-meaning">Testing based only on the specification or design, with no implementation knowledge; suits System and Acceptance testing.</div></div><div class="term-card" data-cat="method"><div class="term-name">White-box testing</div><div class="term-meaning">Using knowledge of the implementation to design test cases that cover key code paths; suits Unit and Integration testing.</div></div><div class="term-card" data-cat="method"><div class="term-name">Equivalence partitioning</div><div class="term-meaning">Grouping inputs into clusters the code treats equivalently, so one representative test per cluster gives the same coverage as many.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Boundary case</div><div class="term-meaning">An input sitting on the edge between equivalence classes (for example 0 for an odd/even function), a common source of bugs.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Fuzzing</div><div class="term-meaning">Automated generation of invalid and semi-valid inputs to probe boundary conditions and expose edge cases, crashes and security flaws.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Linter</div><div class="term-meaning">A tool that scans a program and reports programmatic and stylistic errors such as unused imports, unreachable code and non-conforming names.</div></div><div class="term-card" data-cat="method"><div class="term-name">Volume testing</div><div class="term-meaning">Testing functionality under load.</div></div><div class="term-card" data-cat="method"><div class="term-name">Stress testing</div><div class="term-meaning">Testing reliability under load.</div></div><div class="term-card" data-cat="method"><div class="term-name">Load testing</div><div class="term-meaning">Testing performance under load.</div></div><div class="term-card" data-cat="method"><div class="term-name">Usability testing</div><div class="term-meaning">Testing whether a website is intuitive and discoverable, using hallway testing, expert review or A/B testing.</div></div><div class="term-card" data-cat="method"><div class="term-name">Destructive testing</div><div class="term-meaning">Intentionally causing component failures to test how the whole system performs, recovers and preserves data.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Chaos Monkey</div><div class="term-meaning">A Netflix tool that randomly disables production instances to test resilience.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Stub</div><div class="term-meaning">A stand-in component used in integration testing to replace a not-yet-available or controlled dependency.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Test Pyramid</div><div class="term-meaning">A model suggesting most tests should be small and fast at the base, with fewer large slow tests at the top.</div></div><div class="term-card" data-cat="metric"><div class="term-name">Code coverage</div><div class="term-meaning">A metric estimating which parts of the code tests execute; an indicator of quality, not a measure of correctness.</div></div><div class="term-card" data-cat="metric"><div class="term-name">Branch coverage</div><div class="term-meaning">The proportion of control-flow branches (if/elif/else, while, for, switch) that tests have executed.</div></div><div class="term-card" data-cat="metric"><div class="term-name">Condition coverage</div><div class="term-meaning">The proportion of boolean conditions within branches that have evaluated to both true and false.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Defensive programming</div><div class="term-meaning">Designing code to anticipate and handle invalid states, eliminating whole classes of bugs at the cost of added complexity.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Design pattern</div><div class="term-meaning">A consensus, reusable solution from experienced developers to a recurring software problem.</div></div></div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+<article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">What is the difference between unit testing and integration testing in terms of what each verifies?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Unit testing verifies the functionality of the smallest isolatable piece of code (ideally a single function/method) independently of the whole system, often by mocking dependencies. Integration testing verifies the interactions and communication between software components such as modules or classes, commonly using stubs and drivers.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Which testing level is also called end-to-end testing, and what does it cover?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> System testing. It verifies the behaviour and functionality of the entire system, including security, performance, reliability and external interfaces.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">What does acceptance testing check, and how many acceptance tests does each use-case need?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> It verifies that desired acceptance criteria are met from the user's perspective and that the system satisfies business requirements. Each use-case should be covered by one or more acceptance tests. It can still be automated.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">Distinguish black-box from white-box testing, including which levels each usually serves.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Black-box testing requires no implementation knowledge and designs tests only from the specification or design; it is usually used for System and Acceptance testing, where an external tester is ideal because they have no implementation bias. White-box testing uses knowledge of the implementation to design tests covering key paths; it is usually used for Unit and Integration testing and is written by the developer.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">What is regression testing, and when should the full suite be run?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Regression testing verifies that incremental changes have not broken existing functionality. It makes sense to run the full suite after any code, infrastructure or configuration change — commonly after manual or unit tests as an extra check and again before commit/push — to catch issues and backwards-incompatible changes early.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">Give two reasons brute-forcing all input combinations is a bad idea, and list two categories of gaps it still leaves.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> It is not a good use of time because complex systems have a combinatorially huge number of input combinations, so exhaustive testing takes far too long and is almost never worth it. It still misses concurrency, order/timing of inputs, random seeds/input, and hardware failure.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">What is fuzzing and what three kinds of problems can it reveal?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Fuzzing uses automated tools to generate invalid and non-standard (semi-valid) inputs, testing behaviour at boundary conditions after the valid inputs are defined. It can highlight unhandled edge cases, non-performant code, and possible crashes (including memory leaks) and security concerns.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">How do volume, stress and load testing differ?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Volume testing tests functionality under load, stress testing tests reliability under load, and load testing tests performance under load. All simulate workloads, ideally realistic ones, while adjusting the stress factor to find bottlenecks.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">Describe three Netflix Simian Army tools and the failure each injects.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Chaos Monkey randomly disables production instances. Latency Monkey introduces artificial delay in the client-server communication layer. Conformity Monkey detects abnormal instances that do not follow best practices and terminates them. Doctor Monkey detects unhealthy instances and routes traffic away. Chaos Gorilla simulates the outage of an entire availability zone.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">What is destructive (robustness) testing, and name three questions it answers.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> It intentionally causes failures in components to test how the system performs. It answers questions such as: will the system recover if it fails, will we lose data, how long will recovery take, do we have backups, do the backups work, and who knows how to fix it.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">What is equivalence partitioning and why does it reduce test count without losing value?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> It identifies clusters of inputs that are functionally equivalent, i.e. treated the same by the code (for example all odd numbers). One representative test per cluster covers the same failure cases as many tests from that cluster, so writing multiple tests within one partition adds little value — while boundary cases between partitions remain important.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">What are the five code coverage metrics, and what does 100% coverage actually guarantee?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Function coverage (functions called), statement coverage (statements executed), branch coverage (control-flow branches executed), condition coverage (boolean conditions evaluated both true and false), and line coverage (raw lines tested). 100% coverage only guarantees that at least one test executes each statement — it does not mean the code is bug-free; coverage is an indicator, not a direct measure, of quality.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">What is defensive programming, what does it cost, and what does it protect?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> It is designing code so that entire classes of bugs are eliminated through good code design, for example by always using in-built language constructs and design patterns. It costs more complicated code but ensures the application can deliver on availability and security requirements.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">Why is the Ice Cream Anti-Pattern considered bad, and what does the Test Pyramid recommend instead?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The Ice Cream Anti-Pattern is a top-heavy suite dominated by slow, brittle end-to-end tests. The Test Pyramid recommends the majority of tests be small and fast at the base (unit tests), with progressively fewer integration and end-to-end tests above, minimising time spent for the most value and catching issues earlier.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+</section>
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist"><label class="check-item"><input type="checkbox"> I can define unit, integration, system and acceptance testing and state what each verifies.</label><label class="check-item"><input type="checkbox"> I can explain why testing is best treated as a limited budget focused on critical functionality.</label><label class="check-item"><input type="checkbox"> I can distinguish black-box from white-box testing and say which levels each suits.</label><label class="check-item"><input type="checkbox"> I can explain the purpose of regression testing and when to run the full suite.</label><label class="check-item"><input type="checkbox"> I can justify why brute-forcing all inputs is impractical and list the gaps it leaves.</label><label class="check-item"><input type="checkbox"> I can describe fuzzing and the problems it reveals.</label><label class="check-item"><input type="checkbox"> I can distinguish volume, stress and load testing.</label><label class="check-item"><input type="checkbox"> I can explain the Netflix Simian Army tools and the failures they inject.</label><label class="check-item"><input type="checkbox"> I can compare manual and automated testing and explain the Test Pyramid.</label><label class="check-item"><input type="checkbox"> I can apply equivalence partitioning and boundary analysis to design test cases.</label><label class="check-item"><input type="checkbox"> I can interpret function, statement, branch, condition and line coverage.</label><label class="check-item"><input type="checkbox"> I can explain defensive programming and why design patterns reduce bug classes.</label></div>
+</section>
   </main>
 </div>
-<button class="totop" id="toTop" type="button" aria-label="Back to top">↑</button>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">⌂ All guides</a>
+    <a href="../week_8/ELEC3609_week8_2025_study_guide.html">← Week 8</a>
+    <a href="../week_11/ELEC3609_week11_2025_study_guide.html">Week 11 →</a>
+  </div>
+  <p>ELEC3609/9609 Internet Software Platforms · Week 10 · Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
 <script>
 (function(){
-  var GUIDE_ID = "elec3609-week10-2025-study-guide";
+  "use strict";
+
+  /* ---------- Theme ---------- */
   var root = document.documentElement;
-  /* theme */
-  var stored = null;
-  try { stored = localStorage.getItem("sg-theme"); } catch(e){}
-  var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  setTheme(stored || (prefersDark ? "dark" : "light"));
-  function setTheme(t){
-    root.setAttribute("data-theme", t);
-    var b = document.getElementById("themeBtn");
-    if (b) b.textContent = t === "dark" ? "☀️" : "🌙";
-    try { localStorage.setItem("sg-theme", t); } catch(e){}
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('elec3609-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('elec3609-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
   }
-  document.getElementById("themeBtn").addEventListener("click", function(){
-    setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
-  });
-  document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
 
-  /* mobile drawer */
-  var sidebar = document.getElementById("sidebar"), scrim = document.getElementById("scrim");
-  function closeDrawer(){ sidebar.classList.remove("open"); scrim.classList.remove("show"); }
-  document.getElementById("menuBtn").addEventListener("click", function(){
-    sidebar.classList.toggle("open"); scrim.classList.toggle("show");
-  });
-  scrim.addEventListener("click", closeDrawer);
-  sidebar.addEventListener("click", function(e){ if (e.target.closest("a")) closeDrawer(); });
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
 
-  /* progress bar + back to top */
-  var bar = document.getElementById("progress"), toTop = document.getElementById("toTop");
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
   function onScroll(){
-    var h = document.documentElement;
-    var max = h.scrollHeight - h.clientHeight;
-    var pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
-    bar.style.width = pct + "%";
-    toTop.classList.toggle("show", h.scrollTop > 600);
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
   }
-  window.addEventListener("scroll", onScroll, {passive:true});
+  window.addEventListener('scroll', onScroll, {passive:true});
   onScroll();
-  toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
 
-  /* active toc + reveal */
-  var links = Array.prototype.slice.call(document.querySelectorAll(".toc-link"));
-  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
-  if ("IntersectionObserver" in window) {
-    var rev = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){ if (en.isIntersecting) en.target.classList.add("in"); });
-    }, {rootMargin:"0px 0px -8% 0px", threshold:0.05});
-    sections.forEach(function(s){ rev.observe(s); });
-
-    var spy = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){
-        if (!en.isIntersecting) return;
-        var id = en.target.id;
-        links.forEach(function(a){ a.classList.toggle("active", a.getAttribute("href") === "#" + id); });
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
       });
-    }, {rootMargin:"-15% 0px -70% 0px", threshold:0});
-    sections.forEach(function(s){ spy.observe(s); });
-  } else {
-    sections.forEach(function(s){ s.classList.add("in"); });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
   }
 
-  /* copy buttons */
-  document.addEventListener("click", function(e){
-    var btn = e.target.closest("[data-copy]");
-    if (!btn) return;
-    var code = btn.parentElement.querySelector("code");
-    if (!code) return;
-    var text = code.innerText;
-    var done = function(){ btn.textContent = "Copied"; btn.classList.add("done"); setTimeout(function(){ btn.textContent = "Copy"; btn.classList.remove("done"); }, 1400); };
-    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
-    else { var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(err){} document.body.removeChild(ta); done(); }
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'elec3609-ELEC3609_week10_2025_study_guide-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
   });
 
-  /* glossary filter */
-  var termSearch = document.getElementById("termSearch");
-  if (termSearch) {
-    var terms = Array.prototype.slice.call(document.querySelectorAll(".term"));
-    var count = document.getElementById("termCount");
-    var update = function(){
-      var q = termSearch.value.trim().toLowerCase();
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
       var shown = 0;
-      terms.forEach(function(t){
-        var hit = !q || (t.getAttribute("data-term") || "").indexOf(q) !== -1;
-        t.classList.toggle("hide", !hit);
-        if (hit) shown++;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
       });
-      if (count) count.textContent = shown + " / " + terms.length + " shown";
-    };
-    termSearch.addEventListener("input", update);
-    update();
-  }
-
-  /* exam interactions */
-  var quizzes = Array.prototype.slice.call(document.querySelectorAll(".quiz"));
-  quizzes.forEach(function(q){
-    var head = q.querySelector(".quiz-q");
-    head.addEventListener("click", function(){
-      q.classList.toggle("open");
-      head.setAttribute("aria-expanded", q.classList.contains("open") ? "true" : "false");
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
     });
   });
-  var doneEl = document.getElementById("examDone"), fillEl = document.getElementById("examFill");
-  var boxes = Array.prototype.slice.call(document.querySelectorAll("[data-mastered]"));
-  var total = boxes.length;
-  function examKey(){ return "sg-exam-" + GUIDE_ID; }
-  function loadExam(){
-    var data = {};
-    try { data = JSON.parse(localStorage.getItem(examKey()) || "{}"); } catch(e){}
-    boxes.forEach(function(b){ b.checked = !!data[b.getAttribute("data-mastered")]; });
-  }
-  function saveExam(){
-    var data = {};
-    boxes.forEach(function(b){ if (b.checked) data[b.getAttribute("data-mastered")] = 1; });
-    try { localStorage.setItem(examKey(), JSON.stringify(data)); } catch(e){}
-  }
-  function refreshExam(){
-    var done = boxes.filter(function(b){ return b.checked; }).length;
-    if (doneEl) doneEl.textContent = done;
-    if (fillEl) fillEl.style.width = total ? (done / total) * 100 + "%" : "0%";
-  }
-  boxes.forEach(function(b){ b.addEventListener("change", function(){ saveExam(); refreshExam(); }); });
-  if (boxes.length) { loadExam(); refreshExam(); }
-  var revealAll = document.getElementById("revealAll");
-  var hideAll = document.getElementById("hideAll");
-  var resetExam = document.getElementById("resetExam");
-  if (revealAll) revealAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.add("open"); }); });
-  if (hideAll) hideAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.remove("open"); }); });
-  if (resetExam) resetExam.addEventListener("click", function(){ boxes.forEach(function(b){ b.checked = false; }); saveExam(); refreshExam(); });
 
-  /* search */
-  var input = document.getElementById("searchInput");
-  var box = document.getElementById("searchResults");
-  var index = sections.map(function(s){
-    var h = s.querySelector("h2");
-    return { id: s.id, title: h ? h.textContent : "", text: s.innerText.replace(/\s+/g, " ").trim() };
-  });
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
   function runSearch(){
-    var q = input.value.trim().toLowerCase();
-    box.innerHTML = "";
-    if (q.length < 2) { box.classList.remove("open"); return; }
-    var hits = index.filter(function(it){ return (it.title + " " + it.text).toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
-    if (!hits.length) { box.innerHTML = '<div class="sr-empty">No matches</div>'; box.classList.add("open"); return; }
-    hits.forEach(function(it){
-      var low = it.text.toLowerCase(), at = low.indexOf(q);
-      var snippet = at >= 0 ? it.text.slice(Math.max(0, at - 30), at + 70) : it.title;
-      var b = document.createElement("button");
-      b.type = "button"; b.className = "sr-item";
-      b.innerHTML = "<b></b><span></span>";
-      b.querySelector("b").textContent = it.title;
-      b.querySelector("span").textContent = "…" + snippet + "…";
-      b.addEventListener("click", function(){
-        document.getElementById(it.id).scrollIntoView({behavior:"smooth", block:"start"});
-        box.classList.remove("open"); input.blur();
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
       });
-      box.appendChild(b);
-    });
-    box.classList.add("open");
+    }
+    suggest.classList.add('open');
   }
-  if (input) {
-    input.addEventListener("input", runSearch);
-    input.addEventListener("keydown", function(e){
-      if (e.key === "Enter") { var first = box.querySelector(".sr-item"); if (first) first.click(); }
-      if (e.key === "Escape") { box.classList.remove("open"); input.blur(); }
-    });
-    document.addEventListener("click", function(e){ if (!e.target.closest(".search")) box.classList.remove("open"); });
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
   }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'elec3609-ELEC3609_week10_2025_study_guide-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
 })();
 </script>
+
+<script>
+(function(){
+  "use strict";
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.code-copy');
+    if (!btn) return;
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    var text = code.innerText;
+    var done = function(){ btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
+    else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(err){} document.body.removeChild(ta); done(); }
+  });
+})();
+</script>
+
 </body>
 </html>

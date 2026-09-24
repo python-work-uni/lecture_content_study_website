@@ -3,348 +3,559 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ELEC3609 Lab 4 Study Guide – Django Models, ORM &amp; Admin · Lab 4</title>
-<meta name="description" content="This lab connects Django to a real database. You learn what an ORM is and why it exists, how to define data models and their relationships in Python, how Django turns those…">
-<meta name="color-scheme" content="light dark">
+<meta name="description" content="This lab shows how a Django application turns ordinary Python classes into database tables. You define models, connect them with relationships, let Django generate and apply the SQL schema through mig">
+<title>ELEC3609 Lab 4 — Django Models, the ORM and the Admin Interface</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box}
-:root{
-  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --head:'Sora','Inter',system-ui,sans-serif;
-  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-  --bg:#f4f8f7;--bg-2:#e9f1ef;--surface:#ffffff;--surface-2:#eff5f4;
-  --ink:#15282b;--muted:#587076;--faint:#89a0a3;--line:#d8e5e2;
-  --brand:#0e7c6b;--brand-2:#12a594;--brand-soft:#d6f3ec;--brand-ink:#0a5b4e;
-  --amber:#b45309;--amber-soft:#fdf0d6;
-  --rose:#b21e4b;--rose-soft:#fde4ec;
-  --sky:#0c6ea3;--sky-soft:#ddeffb;
-  --violet:#6d28d9;--violet-soft:#ece7fd;
-  --shadow:0 1px 2px rgba(16,40,43,.05),0 10px 28px -16px rgba(16,40,43,.30);
-  --shadow-lg:0 26px 60px -30px rgba(16,40,43,.45);
-  --r:16px;--r-sm:11px;--sidebar:288px;
-}
-[data-theme=dark]{
-  --bg:#07110f;--bg-2:#0b1a17;--surface:#0e1d1a;--surface-2:#122522;
-  --ink:#e6f2ef;--muted:#94ada8;--faint:#69837e;--line:#1c322e;
-  --brand:#2dd4bf;--brand-2:#5eead4;--brand-soft:rgba(45,212,191,.15);--brand-ink:#99f6e4;
-  --amber:#fbbf24;--amber-soft:rgba(251,191,36,.15);
-  --rose:#fb7185;--rose-soft:rgba(251,113,133,.15);
-  --sky:#38bdf8;--sky-soft:rgba(56,189,248,.15);
-  --violet:#a78bfa;--violet-soft:rgba(167,139,250,.17);
-  --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px -18px rgba(0,0,0,.7);
-  --shadow-lg:0 28px 70px -34px rgba(0,0,0,.85);
-}
-html{scroll-behavior:smooth}
-body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.68;-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.75;
-  background:radial-gradient(58rem 38rem at 112% -12%,var(--brand-soft),transparent 62%),
-             radial-gradient(46rem 30rem at -12% 6%,var(--sky-soft),transparent 58%)}
-h1,h2,h3,h4{font-family:var(--head);line-height:1.2;margin:0}
-p{margin:0 0 .85rem}
-a{color:var(--brand);text-decoration:none}
-a:hover{text-decoration:underline}
-strong{font-weight:650;color:var(--ink)}
-code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.08em .38em}
-.math{font-family:var(--mono);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.06em .4em;font-size:.9em}
-::selection{background:var(--brand-soft);color:var(--brand-ink)}
-/* progress */
-.progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;background:linear-gradient(90deg,var(--brand),var(--brand-2),var(--sky))}
-/* topbar */
-.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:.75rem;
-  padding:.6rem clamp(.9rem,3vw,1.6rem);background:color-mix(in srgb,var(--surface) 82%,transparent);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:.6rem;min-width:0}
-.brand-badge{flex:none;font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.28rem .6rem;white-space:nowrap}
-.brand-title{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:.45rem}
-.icon-btn{display:inline-grid;place-items:center;width:38px;height:38px;border:1px solid var(--line);
-  background:var(--surface);color:var(--ink);border-radius:10px;cursor:pointer;font-size:1rem;transition:.15s}
-.icon-btn:hover{border-color:var(--brand);color:var(--brand)}
-.menu-btn{display:none}
-.search{position:relative}
-.search input{width:min(30vw,240px);padding:.5rem .7rem;border:1px solid var(--line);border-radius:10px;
-  background:var(--surface);color:var(--ink);font:inherit;font-size:.85rem}
-.search input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.search-results{position:absolute;right:0;top:calc(100% + 8px);width:min(78vw,380px);max-height:60vh;overflow:auto;
-  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);display:none;padding:.35rem}
-.search-results.open{display:block}
-.sr-item{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;
-  padding:.5rem .6rem;border-radius:8px;cursor:pointer}
-.sr-item:hover,.sr-item.active{background:var(--surface-2)}
-.sr-item b{display:block;font-size:.84rem;color:var(--brand-ink)}
-.sr-item span{display:block;font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sr-empty{padding:.6rem;color:var(--muted);font-size:.82rem}
-/* shell */
-.shell{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);gap:0;align-items:start}
-.sidebar{position:sticky;top:57px;height:calc(100vh - 57px);overflow:auto;padding:1.3rem .9rem 3rem 1.4rem}
-.toc-title{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .7rem .5rem}
-.toc{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
-.toc-link{display:flex;gap:.55rem;align-items:baseline;padding:.36rem .5rem;border-radius:8px;color:var(--muted);
-  font-size:.82rem;line-height:1.35;transition:.13s}
-.toc-link:hover{background:var(--surface-2);color:var(--ink);text-decoration:none}
-.toc-link.active{background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
-.toc-n{font-family:var(--mono);font-size:.66rem;color:var(--faint);flex:none;padding-top:.12rem}
-.toc-link.active .toc-n{color:var(--brand)}
-.content{min-width:0;max-width:960px;padding:1.6rem clamp(1rem,3.5vw,2.6rem) 5rem}
-/* hero */
-.hero{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:var(--r);
-  padding:clamp(1.4rem,3.5vw,2.4rem);background:
-    linear-gradient(180deg,color-mix(in srgb,var(--brand-soft) 55%,var(--surface)),var(--surface) 72%);
-  box-shadow:var(--shadow);margin-bottom:2rem}
-.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:230px;height:230px;border-radius:50%;
-  background:radial-gradient(circle,var(--brand-soft),transparent 68%);opacity:.8}
-.hero-tag{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-ink);font-weight:700;margin:0 0 .55rem}
-.hero h1{font-size:clamp(1.5rem,4vw,2.15rem);letter-spacing:-.02em;margin-bottom:.5rem}
-.hero-sub{color:var(--muted);font-size:1.02rem;max-width:60ch;margin-bottom:1.1rem}
-.hero-overview{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.15rem;box-shadow:var(--shadow)}
-.ho-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .35rem}
-.hero-overview p:last-child{margin:0}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-top:1.1rem}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.7rem .85rem;box-shadow:var(--shadow)}
-.stat-val{display:block;font-family:var(--head);font-weight:800;font-size:1.25rem;color:var(--brand-ink)}
-.stat-label{display:block;font-size:.72rem;color:var(--muted);letter-spacing:.03em;text-transform:uppercase;font-weight:600}
-/* sections */
-.section{scroll-margin-top:80px;margin-bottom:2.4rem;opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
-.section.in{opacity:1;transform:none}
-.section-head{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:2px solid var(--line)}
-.section-num{flex:none;font-family:var(--head);font-weight:800;font-size:.82rem;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));
-  width:2.1rem;height:2.1rem;display:grid;place-items:center;border-radius:10px;box-shadow:0 6px 16px -8px var(--brand)}
-.section-head h2{font-size:clamp(1.15rem,2.6vw,1.5rem);letter-spacing:-.01em}
-.section-body>*+*{margin-top:.5rem}
-.section-body p{margin:0 0 .9rem}
-.subhead{font-size:.98rem;margin:1.2rem 0 .5rem;color:var(--brand-ink)}
-ul,ol{margin:0 0 .9rem;padding-left:1.25rem}
-li{margin:.22rem 0}
-li>ul,li>ol{margin:.3rem 0 .1rem}
-/* table */
-.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm);margin:1rem 0;box-shadow:var(--shadow)}
-table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:440px}
-thead th{background:var(--surface-2);text-align:left;font-weight:700;color:var(--ink);white-space:nowrap}
-th,td{padding:.6rem .8rem;border-bottom:1px solid var(--line);vertical-align:top}
-tbody tr:last-child td{border-bottom:0}
-tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
-/* code */
-.code{position:relative;margin:1rem 0}
-.code pre{margin:0;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.1rem;overflow:auto;box-shadow:var(--shadow)}
-.code code{font-family:var(--mono);font-size:.82rem;line-height:1.6;background:none;border:0;padding:0;color:var(--ink);white-space:pre}
-.copy{position:absolute;top:.55rem;right:.55rem;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;font-weight:700;
-  color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.24rem .5rem;cursor:pointer}
-.copy:hover{color:var(--brand);border-color:var(--brand)}
-.copy.done{color:var(--brand-ink);border-color:var(--brand)}
-/* formula */
-.formula{position:relative;margin:1rem 0;padding:1.1rem 1rem .9rem;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm)}
-.formula-label{position:absolute;top:-.6rem;left:.9rem;font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;font-weight:700;
-  color:#fff;background:var(--brand);border-radius:6px;padding:.14rem .5rem}
-.formula code{display:block;font-family:var(--mono);font-size:.86rem;background:none;border:0;padding:0;color:var(--ink)}
-/* flow */
-.flow{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin:1rem 0;padding:1rem;background:var(--surface);
-  border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--shadow)}
-.flow-step{display:inline-flex;align-items:center;gap:.4rem;background:var(--surface-2);border:1px solid var(--line);
-  border-radius:999px;padding:.34rem .75rem .34rem .5rem;font-size:.82rem;font-weight:600}
-.flow-n{font-family:var(--mono);font-size:.64rem;color:#fff;background:var(--brand);border-radius:999px;padding:.1rem .34rem}
-.flow-arrow{color:var(--brand);font-weight:800}
-/* callouts */
-.callout{display:flex;gap:.75rem;margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--line);border-left-width:4px;
-  border-radius:var(--r-sm);background:var(--surface);box-shadow:var(--shadow)}
-.callout-ico{flex:none;font-size:1.15rem;line-height:1.3}
-.callout-title{font-weight:700;font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;margin:0 0 .18rem}
-.callout-text{font-size:.93rem}
-.callout-text>:last-child{margin-bottom:0}
-.callout.why{border-left-color:var(--amber);background:color-mix(in srgb,var(--amber-soft) 55%,var(--surface))}
-.callout.why .callout-title{color:var(--amber)}
-.callout.memory{border-left-color:var(--violet);background:color-mix(in srgb,var(--violet-soft) 55%,var(--surface))}
-.callout.memory .callout-title{color:var(--violet)}
-.callout.warn{border-left-color:var(--rose);background:color-mix(in srgb,var(--rose-soft) 55%,var(--surface))}
-.callout.warn .callout-title{color:var(--rose)}
-.callout.info{border-left-color:var(--sky);background:color-mix(in srgb,var(--sky-soft) 55%,var(--surface))}
-.callout.info .callout-title{color:var(--sky)}
-.callout.tip{border-left-color:var(--brand);background:color-mix(in srgb,var(--brand-soft) 55%,var(--surface))}
-.callout.tip .callout-title{color:var(--brand-ink)}
-/* takeaways */
-.takeaways{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
-.takeaways li{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r-sm);padding:.75rem .9rem;box-shadow:var(--shadow)}
-.tk-n{flex:none;font-family:var(--mono);font-size:.68rem;font-weight:700;color:var(--brand-ink);background:var(--brand-soft);
-  border-radius:7px;padding:.22rem .45rem;margin-top:.15rem}
-/* glossary */
-.term-filter{display:flex;align-items:center;gap:.7rem;margin:0 0 .9rem}
-.term-filter input{flex:1;max-width:340px;padding:.55rem .75rem;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:.86rem}
-.term-filter input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.term-count{font-size:.78rem;color:var(--muted)}
-.terms{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.7rem}
-.term{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem .9rem;box-shadow:var(--shadow)}
-.term.hide{display:none}
-.term-name{font-family:var(--head);font-weight:700;font-size:.9rem;margin:0 0 .2rem;color:var(--brand-ink)}
-.term-def{font-size:.85rem;color:var(--muted);margin:0}
-/* mnemonics */
-.mnemonics{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:.8rem}
-.mnemonic{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.95rem 1rem;box-shadow:var(--shadow)}
-.mn-title{font-family:var(--head);font-weight:700;font-size:.92rem;margin:0 0 .4rem;color:var(--brand-ink)}
-.mn-code{font-family:var(--mono);font-weight:600;font-size:1.02rem;letter-spacing:.04em;margin:0 0 .35rem}
-.mn-phrase{font-style:italic;font-weight:600;color:var(--violet);margin:0 0 .35rem}
-.mn-note{font-size:.83rem;color:var(--muted);margin:0}
-/* examples */
-.example{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:1.1rem 1.2rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.example-tag{display:inline-block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.2rem .55rem;margin-bottom:.5rem}
-.example-title{font-size:1rem;margin:0 0 .6rem}
-/* exam */
-.exam-bar{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:space-between;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem 1rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.exam-count{font-size:.85rem;color:var(--muted)}
-.exam-count strong{color:var(--brand-ink)}
-.exam-track{display:block;width:170px;height:7px;border-radius:999px;background:var(--surface-2);margin-top:.4rem;overflow:hidden}
-.exam-track>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .3s}
-.exam-actions{display:flex;gap:.4rem;flex-wrap:wrap}
-.btn{font:inherit;font-size:.78rem;font-weight:600;color:var(--brand-ink);background:var(--brand-soft);border:1px solid transparent;
-  border-radius:9px;padding:.42rem .7rem;cursor:pointer}
-.btn:hover{background:var(--brand);color:#fff}
-.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted)}
-.btn.ghost:hover{border-color:var(--brand);color:var(--brand);background:transparent}
-.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);margin:0 0 .6rem;overflow:hidden;box-shadow:var(--shadow)}
-.quiz-q{display:flex;gap:.7rem;align-items:flex-start;width:100%;text-align:left;background:none;border:0;color:var(--ink);
-  font:inherit;font-weight:600;padding:.85rem .95rem;cursor:pointer}
-.quiz-n{flex:none;font-family:var(--mono);font-size:.7rem;font-weight:700;color:#fff;background:var(--brand);border-radius:7px;padding:.2rem .45rem;margin-top:.1rem}
-.quiz-text{flex:1}
-.quiz-chev{flex:none;color:var(--muted);transition:transform .2s}
-.quiz.open .quiz-chev{transform:rotate(180deg)}
-.quiz-body{display:none;padding:0 .95rem .9rem;border-top:1px dashed var(--line)}
-.quiz.open .quiz-body{display:block}
-.quiz-a{font-size:.9rem;margin:.7rem 0;padding:.7rem .85rem;background:var(--surface-2);border-radius:9px}
-.quiz-a-label{display:block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--brand);margin-bottom:.2rem}
-.quiz-a.muted{color:var(--muted);font-style:italic}
-.mastered{display:inline-flex;gap:.45rem;align-items:center;font-size:.8rem;color:var(--muted);cursor:pointer;user-select:none}
-.mastered input{accent-color:var(--brand);width:1rem;height:1rem}
-/* footer */
-.foot{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}
-/* to top */
-.totop{position:fixed;right:1.1rem;bottom:1.1rem;z-index:55;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);
-  background:var(--surface);color:var(--brand-ink);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.2s}
-.totop.show{opacity:1;pointer-events:auto}
-.scrim{display:none}
-/* responsive */
-@media (max-width:980px){
-  .shell{grid-template-columns:1fr}
-  .menu-btn{display:inline-grid}
-  .sidebar{position:fixed;top:0;left:0;z-index:70;height:100vh;width:min(86vw,320px);background:var(--surface);
-    border-right:1px solid var(--line);transform:translateX(-102%);transition:transform .25s ease;padding-top:1.4rem;box-shadow:var(--shadow-lg)}
-  .sidebar.open{transform:none}
-  .scrim{display:block;position:fixed;inset:0;z-index:65;background:rgba(6,18,16,.45);opacity:0;pointer-events:none;transition:.25s}
-  .scrim.show{opacity:1;pointer-events:auto}
-  .search input{width:40vw}
-  .brand-title{display:none}
-}
-@media (max-width:560px){
-  .search input{width:34vw}
-  .content{padding:1.1rem .9rem 4rem}
-  .stats{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
-}
-@media (prefers-reduced-motion:reduce){
-  *{scroll-behavior:auto!important}
-  .section{opacity:1;transform:none;transition:none}
-}
-@media print{
-  .topbar,.sidebar,.totop,.progress,.exam-actions,.copy,.scrim,.term-filter{display:none!important}
-  body::before{display:none}
-  .shell{display:block}
-  .content{max-width:none;padding:0}
-  .section{opacity:1;transform:none;page-break-inside:avoid}
-  .quiz-body{display:block!important}
-  .hero,.callout,.table-wrap,.code pre,.example,.quiz,.term{box-shadow:none}
-  a{color:inherit}
-}
+  /* ============================================================
+     ENGG2112 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+
+  /* ---------- Code blocks (added for ELEC3609) ---------- */
+  .code-block{position:relative;margin:1.2rem 0;}
+  .code-block pre{margin:0;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.1rem;overflow:auto;}
+  .code-block code{font-family:var(--font-mono);font-size:.84rem;line-height:1.62;background:none;padding:0;border-radius:0;color:var(--ink);white-space:pre;}
+  .code-copy{position:absolute;top:.55rem;right:.55rem;font-family:var(--font-body);font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.25rem .55rem;cursor:pointer;transition:.16s var(--ease);}
+  .code-copy:hover{color:var(--primary-deep);border-color:var(--line-strong);}
+  .code-copy.done{color:var(--primary-deep);border-color:var(--primary);}
 </style>
 </head>
 <body>
-<div class="progress" id="progress" aria-hidden="true"></div>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
 <header class="topbar">
-  <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Open navigation">☰</button>
-  <div class="brand"><span class="brand-badge">ELEC3609 · Lab 4</span><span class="brand-title">Django Models, ORM &amp; Admin · Lab 4</span></div>
-  <div class="topbar-actions">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">ELEC3609</span>
+    <span class="brand-week">Lab 4</span>
+  </a>
+  <div class="topbar-tools">
     <div class="search">
-      <input id="searchInput" type="search" placeholder="Search this guide…" autocomplete="off" aria-label="Search this guide">
-      <div class="search-results" id="searchResults" role="listbox"></div>
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
     </div>
-    <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle light and dark theme">🌙</button>
-    <button class="icon-btn" id="printBtn" type="button" aria-label="Print this guide">🖨</button>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
   </div>
 </header>
-<div class="shell">
+
+<div class="layout">
   <aside class="sidebar" id="sidebar" aria-label="Table of contents">
-    <p class="toc-title">Contents</p>
-    <ul class="toc">
-<li><a href="#overview" class="toc-link"><span class="toc-n">00</span>Overview</a></li>
-<li><a href="#sec-1" class="toc-link"><span class="toc-n">01</span>What This Lab Builds</a></li>
-<li><a href="#sec-2" class="toc-link"><span class="toc-n">02</span>What Is an ORM?</a></li>
-<li><a href="#sec-3" class="toc-link"><span class="toc-n">03</span>ORM Strengths &amp; Trade-offs</a></li>
-<li><a href="#sec-4" class="toc-link"><span class="toc-n">04</span>Defining Models in Django</a></li>
-<li><a href="#sec-5" class="toc-link"><span class="toc-n">05</span>Common Model Field Types</a></li>
-<li><a href="#sec-6" class="toc-link"><span class="toc-n">06</span>Relationship Field Types</a></li>
-<li><a href="#sec-7" class="toc-link"><span class="toc-n">07</span>Direct vs String References</a></li>
-<li><a href="#sec-8" class="toc-link"><span class="toc-n">08</span>Circular Dependencies &amp; Deadlocks</a></li>
-<li><a href="#sec-9" class="toc-link"><span class="toc-n">09</span>The TIL Models</a></li>
-<li><a href="#sec-10" class="toc-link"><span class="toc-n">10</span>Activating Your App</a></li>
-<li><a href="#sec-11" class="toc-link"><span class="toc-n">11</span>Making &amp; Viewing Migrations</a></li>
-<li><a href="#sec-12" class="toc-link"><span class="toc-n">12</span>Applying Migrations &amp; Workflow</a></li>
-<li><a href="#sec-13" class="toc-link"><span class="toc-n">13</span>Choosing the Database Engine</a></li>
-<li><a href="#sec-14" class="toc-link"><span class="toc-n">14</span>The Django Admin Interface</a></li>
-<li><a href="#key-takeaways" class="toc-link"><span class="toc-n">15</span>Key Takeaways</a></li>
-<li><a href="#glossary" class="toc-link"><span class="toc-n">16</span>Glossary</a></li>
-<li><a href="#mnemonics" class="toc-link"><span class="toc-n">17</span>Mnemonics &amp; Quick Recall</a></li>
-<li><a href="#worked-examples" class="toc-link"><span class="toc-n">18</span>Worked Examples &amp; Scenarios</a></li>
-<li><a href="#exam-focus" class="toc-link"><span class="toc-n">19</span>Exam Practice</a></li>
-    </ul>
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
   </aside>
-  <div class="scrim" id="scrim"></div>
+  <div class="scrim" id="scrim" hidden></div>
+
   <main class="content" id="content">
-<section class="hero" id="overview">
-<p class="hero-tag">📖 Course notes · Lab 4</p>
-<h1>Django Models, ORM &amp; Admin · Lab 4</h1>
-<p class="hero-sub">This lab connects Django to a real database. You learn what an ORM is and why it exists, how to define data models and their relationships in Python, how…</p>
-<div class="hero-overview"><p class="ho-label">Lecture overview</p><p>This lab connects Django to a real database. You learn what an ORM is and why it exists, how to define data models and their relationships in Python, how Django turns those models into database schema through migrations, and how to manage data through the built-in Django admin. You also inspect the SQL Django generates and learn how to keep your models and database in sync. The individual task is Individual Task 4 – Django Relationship Constraint and Design, based on the TIL-Lab04 project.</p></div>
-<div class="stats"><div class="stat"><span class="stat-val">Week 4</span><span class="stat-label">Lab</span></div><div class="stat"><span class="stat-val">Django Relationship Constraint &amp; Design</span><span class="stat-label">Individual Task</span></div><div class="stat"><span class="stat-val">TIL-Lab04 source code</span><span class="stat-label">Lab Resource</span></div><div class="stat"><span class="stat-val">ORM, Models, Migrations, Admin</span><span class="stat-label">Core Topics</span></div><div class="stat"><span class="stat-val">SQLite</span><span class="stat-label">Default Database</span></div></div>
+<section class="hero" id="top">
+  <span class="hero-eyebrow">ELEC3609 · Lab 4 · Django Models, ORM &amp; Admin</span>
+  <h1 class="hero-title">Django Models, the ORM and the Admin Interface</h1>
+  <p class="hero-sub">This lab shows how a Django application turns ordinary Python classes into database tables. You define models, connect them with relationships, let Django generate and apply the SQL schema through migrations, choose a database engine, and finally manage your data through the built-in admin site.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> Think of Django's ORM as a translator that sits between your Python objects and a relational database. You write Python classes; Django writes the SQL. Everything in this lab — models, fields, relationships, migrations, the admin — is a different view of the same translation.</div>
+  <div class="hero-meta"><span class="meta-chip">~20 min read</span><span class="meta-chip">13 teaching sections</span><span class="meta-chip">18 practice questions</span><span class="meta-chip">23 key terms</span></div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list"><li>Explain what an object-relational mapper is and why it is used instead of raw SQL.</li><li>List the benefits and the limitations of using an ORM.</li><li>Define Django models with appropriate field types, including relationship fields.</li><li>Choose between direct class references and string references for relationships.</li><li>Turn an ERD (like the TIL Post/Tag design) into working Django models.</li><li>Register an app and run makemigrations, sqlmigrate and migrate to build the schema.</li><li>Read how Django translates a model into SQL tables and indexes.</li><li>Configure the database engine in settings.py.</li><li>Create an admin superuser and expose models through the Django admin.</li></ul>
+  </div>
 </section>
-<section class="section" id="sec-1"><header class="section-head"><span class="section-num">01</span><h2>What This Lab Builds</h2></header><div class="section-body"><p>This lab teaches you how to define data models using Django's ORM, manage database schema through migrations, and interact with model data using the Django admin interface. It also introduces model relationships and gives guidance on maintaining consistency between your Python models and the underlying database.</p>
-<h3 class="subhead">Learning Objectives</h3>
-<p>After completing this lab you should be able to:</p>
-<ul><li>Understand the purpose and benefits of using an ORM.</li><li>Define and manage Django models and their relationships.</li><li>Apply and inspect schema migrations.</li><li>Interpret Django's model-to-SQL translation.</li><li>Use the Django admin interface to manage data.</li></ul>
-<p><strong>Lab resource:</strong> TIL-Lab04 (Today I Learned project) source code.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Week 3 stored posts in a Python list that vanished on restart. This lab makes data persistent — the foundation of every real web application.</div></div></div></div></section>
-<section class="section" id="sec-2"><header class="section-head"><span class="section-num">02</span><h2>What Is an ORM?</h2></header><div class="section-body"><p><strong>ORM (Object-Relational Mapping)</strong> is a programming technique used to convert data between incompatible systems — in particular, between object-oriented programming languages and relational databases. ORMs let developers interact with a database using their preferred programming language, rather than writing raw SQL queries.</p>
-<h3 class="subhead">Key Features of an ORM</h3>
-<ul><li><strong>Mapping objects to database tables</strong> — each class (in Python, Java, C#, etc.) corresponds to a table; each instance represents a row; each class attribute corresponds to a column.</li><li><strong>Abstracts SQL</strong> — ORMs hide SQL syntax and provide methods for common operations (CREATE, READ, UPDATE, DELETE) using object-oriented code.</li><li><strong>Automatic data conversion</strong> — the ORM converts between database types (like VARCHAR, INT) and language types (like strings, integers).</li><li><strong>Database-agnostic code</strong> — code written with an ORM can work with different databases (MySQL, PostgreSQL, SQLite) with minimal changes, increasing flexibility and portability.</li><li><strong>Reduces boilerplate code</strong> — less repetitive database code, faster development, and fewer SQL-related errors.</li></ul>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background:</p><div class="callout-text">There are many ORM libraries — for example Java's <strong>Hibernate</strong> and Python's <strong>Django ORM</strong>.</div></div></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Because the ORM is database-agnostic, you can develop on SQLite and later move to PostgreSQL/MySQL for deployment without rewriting your queries.</div></div></div></div></section>
-<section class="section" id="sec-3"><header class="section-head"><span class="section-num">03</span><h2>ORM Strengths &amp; Trade-offs</h2></header><div class="section-body"><h3 class="subhead">What an ORM Can Do</h3>
-<ul><li><strong>DRY Principle</strong> — define your data model in one place, making code easier to update, maintain and reuse.</li><li><strong>Encourages MVC architecture</strong> — promotes cleaner, more organised code.</li><li><strong>Avoids poorly formed SQL</strong> — minimises SQL errors by letting developers work in their native language.</li><li><strong>Simplifies security practices</strong> — makes it easy to use prepared statements and transactions.</li><li><strong>Database abstraction</strong> — allows easy changes to the underlying database without rewriting queries.</li><li><strong>Loose coupling</strong> — the data model is loosely bound to the application, allowing flexibility and reuse.</li><li><strong>Supports OOP concepts</strong> — facilitates object-oriented features such as data inheritance.</li></ul>
-<h3 class="subhead">What an ORM Cannot Do</h3>
-<ul><li><strong>Learning curve</strong> — ORMs can be complex and are not lightweight; they take time to learn and set up.</li><li><strong>Performance limitations</strong> — while sufficient for typical queries, ORM-generated queries may not match hand-written SQL in large-scale projects.</li><li><strong>Impedance mismatch</strong> — the way a developer uses objects differs from how data is stored and joined in relational tables.</li></ul>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap — Don't drop down to raw SQL until it's necessary:</p><div class="callout-text">Databases are critical to performance, scalability and security, and are complex enough to require expert teams. Use ORMs when possible, and only drop to raw SQL when absolutely needed.</div></div></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap — Avoid writing your own ORM</p><div class="callout-text">for an application unless it is specifically for learning purposes. Existing ORM libraries are well-tested, optimised and feature-rich, and are difficult to replicate from scratch.</div></div></div></div></section>
-<section class="section" id="sec-4"><header class="section-head"><span class="section-num">04</span><h2>Defining Models in Django</h2></header><div class="section-body"><p>Models in Django are implemented via Python classes, and they form the <strong>canonical representation</strong> of your entities. The models are used to generate the underlying database schema as well as the Python-database interfaces for accessing those tables.</p>
-<p>For the examples in this lab, all models are placed in a single file, <code>models.py</code>. In assignments you might consider splitting models into separate files when the models file becomes too large or complex (20+).</p>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap — Model inheritance:</p><div class="callout-text">Django model inheritance works almost identically to normal Python class inheritance, but be careful. Each model you want in your application must subclass the <strong><code>django.db.models.Model</code></strong> class, and the attributes of your Python class become database fields.</div></div></div>
-<h3 class="subhead">A Basic Model</h3>
-<p>Each attribute must be mapped to an appropriate Django <strong>Field</strong> class, so Django knows the type of each attribute and can generate an accurate schema. Fields can be customised with default values, unique constraints and validations. For example, a <code>Post</code> model with a title and content:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>from django.db import models
+<section class="guide-section" id="why-orms-exist" data-title="Why ORMs Exist">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Why ORMs Exist</h2>
+  </div>
+  <p class="section-kicker">An ORM converts data between two incompatible worlds — object-oriented code and relational tables — so you can work in Python instead of SQL.</p>
+<p>Object-Relational Mapping (<span class="keyterm">ORM</span>) is a programming technique used to convert data between incompatible systems, in particular between object-oriented programming languages and relational databases. An ORM lets developers interact with a database using their preferred programming language rather than writing raw SQL queries.</p>
+<p>The core mapping is simple and worth memorising:</p>
+<div class="table-wrap"><table><thead><tr><th>Object world</th><th>Database world</th></tr></thead><tbody><tr><td>Class (e.g. <code>Post</code>)</td><td>Table</td></tr><tr><td>Instance of the class</td><td>A row in that table</td></tr><tr><td>Class attribute</td><td>A column</td></tr></tbody></table></div>
+<p>So a <code>Post</code> class becomes a table, each <code>Post</code> object becomes one row, and attributes like <code>title</code> and <code>content</code> become columns.</p>
+<p>ORM libraries exist for most languages. Examples include <strong>Hibernate</strong> for Java and <strong>Django ORM</strong> for Python.</p>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Databases are critical to application performance, scalability and security. They support high availability and fault tolerance and are essential in sensitive fields such as finance. Because they are complex, managing them often needs expert teams — so use an ORM when possible.</div></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Don't drop down to raw SQL until it's actually necessary. Reach for hand-written SQL only when the ORM genuinely can't do the job.</div></div>
+</section>
+<section class="guide-section" id="what-orms-give-you-and-what-they-cost" data-title="What ORMs Give You — and What They Cost">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">What ORMs Give You — and What They Cost</h2>
+  </div>
+  <p class="section-kicker">ORMs trade some raw performance and a learning curve for speed, safety, portability and cleaner code.</p>
+<h3 class="sub-title">Key features of an ORM</h3>
+<ul><li><strong>Mapping objects to tables:</strong> each class corresponds to a table, each instance to a row, each attribute to a column.</li><li><strong>Abstracts SQL:</strong> common operations — CREATE, READ, UPDATE, DELETE (often called CRUD) — are expressed as object-oriented code instead of SQL strings.</li><li><strong>Automatic data conversion:</strong> the ORM translates between database types (such as <code>VARCHAR</code>, <code>INT</code>) and language types (such as strings and integers).</li><li><strong>Database-agnostic code:</strong> the same code can run against MySQL, PostgreSQL or SQLite with minimal changes, improving flexibility and portability.</li><li><strong>Reduces boilerplate:</strong> less repetitive code for database interactions, which speeds up development and reduces SQL-related errors.</li></ul>
+<h3 class="sub-title">What an ORM can do</h3>
+<ul><li><strong>DRY principle:</strong> define your data model in one place, making code easier to update, maintain and reuse.</li><li><strong>Encourages MVC architecture:</strong> promotes cleaner, more organised code.</li><li><strong>Avoids poorly formed SQL:</strong> developers work in their native language (and, bluntly, most web programmers are bad at SQL).</li><li><strong>Simplifies security practices:</strong> makes it easy to use prepared statements and transactions, which improves security.</li><li><strong>Database abstraction:</strong> change the underlying database without rewriting queries.</li><li><strong>Loose coupling:</strong> the data model is loosely bound to the application, allowing flexibility and reuse.</li><li><strong>Supports OOP concepts:</strong> facilitates features like data inheritance.</li></ul>
+<h3 class="sub-title">What an ORM cannot do</h3>
+<ul><li><strong>Learning curve:</strong> ORMs can be complex and are not lightweight; they take time to learn and set up.</li><li><strong>Performance limitations:</strong> ORM-generated queries are fine for typical work but may not match hand-written SQL in large-scale projects.</li><li><strong>Impedance mismatch:</strong> the way a developer thinks in objects differs from how data is stored and joined in relational tables.</li></ul>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> Be ready to state the impedance mismatch as the <em>root</em> problem an ORM tries to solve — objects are in-memory graphs, while relational tables are flat, statically structured and joined at query time.</div></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Avoid writing your own ORM for an application unless it is specifically for learning. Existing libraries are well-tested, optimised and feature-rich in ways that are hard to replicate from scratch.</div></div>
+</section>
+<section class="guide-section" id="django-models-classes-that-become-tables" data-title="Django Models: Classes That Become Tables">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Django Models: Classes That Become Tables</h2>
+  </div>
+  <p class="section-kicker">A Django model is a Python class that is the canonical definition of an entity — it drives both the database schema and the Python-side interface to that table.</p>
+<p>In Django, models are implemented as Python classes and form the canonical representation of your entities. They are used to generate the underlying database schema <em>and</em> the Python-to-database interface for accessing those tables.</p>
+<p>For this lab, all models live in a single file, <code>models.py</code>. In larger assignments you might split models into separate files once the file grows too large or complex (roughly 20+ models).</p>
+<h3 class="sub-title">Model inheritance</h3>
+<p>Each model you want to include in your application must subclass <code>django.db.models.Model</code>. The attributes of your Python class become database fields.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>from django.db import models
 
 class Post(models.Model):
     title = models.CharField(max_length=100)
     content = models.TextField()</code></pre></div>
-<div class="callout tip"><div class="callout-ico" aria-hidden="true">✅</div><div class="callout-body"><p class="callout-title">Exam Tip:</p><div class="callout-text">Models are the single source of truth for your schema — Django generates the database tables from them, not the other way around.</div></div></div></div></section>
-<section class="section" id="sec-5"><header class="section-head"><span class="section-num">05</span><h2>Common Model Field Types</h2></header><div class="section-body"><div class="table-wrap"><table><thead><tr><th>Field Type</th><th>Description</th><th>Example Usage</th></tr></thead><tbody><tr><td><strong>CharField</strong></td><td>A string field with a max length.</td><td>Name, title, short text fields</td></tr><tr><td><strong>TextField</strong></td><td>A long text field without a max length (in database).</td><td>Article content, comments</td></tr><tr><td><strong>IntegerField</strong></td><td>An integer field.</td><td>Age, count, score</td></tr><tr><td><strong>FloatField</strong></td><td>A floating-point number field.</td><td>Rating, price</td></tr><tr><td><strong>BooleanField</strong></td><td>A true/false field.</td><td>Is active, is published</td></tr><tr><td><strong>DateField</strong></td><td>A date field (without time).</td><td>Birthday, published date</td></tr><tr><td><strong>DateTimeField</strong></td><td>A date and time field.</td><td>Created timestamp, updated timestamp</td></tr><tr><td><strong>EmailField</strong></td><td>A string field for email addresses (with validation).</td><td>User email</td></tr><tr><td><strong>URLField</strong></td><td>A string field for URLs (with validation).</td><td>Profile URL, external link</td></tr><tr><td><strong>ImageField</strong></td><td>A field for uploading image files.</td><td>User avatar, post image</td></tr><tr><td><strong>FileField</strong></td><td>A field for uploading any file.</td><td>Attachment, document</td></tr><tr><td><strong>ForeignKey</strong></td><td>A many-to-one relationship to another model.</td><td>Author of a post, category of a product</td></tr><tr><td><strong>ManyToManyField</strong></td><td>A many-to-many relationship to another model.</td><td>Tags, group memberships</td></tr><tr><td><strong>OneToOneField</strong></td><td>A one-to-one relationship to another model.</td><td>User profile</td></tr></tbody></table></div>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background:</p><div class="callout-text">It is also possible to add your own field types, either by writing a new Field subclass or through Django plugins.</div></div></div></div></section>
-<section class="section" id="sec-6"><header class="section-head"><span class="section-num">06</span><h2>Relationship Field Types</h2></header><div class="section-body"><p>Relationships between models are represented with specific field types:</p>
-<ul><li><strong>Many-to-one:</strong> <code>models.ForeignKey</code> on the many-side model.</li><li><strong>Many-to-many:</strong> <code>models.ManyToManyField</code> on either (or both) models.</li><li><strong>One-to-one:</strong> <code>models.OneToOneField</code> or <code>models.ForeignKey(unique=True)</code>.</li><li><strong>Many-to-optional-one:</strong> <code>models.ForeignKey(null=True, blank=True)</code> on the many-side model.</li></ul>
-<h3 class="subhead">Many-to-One (ForeignKey)</h3>
+<p>Model inheritance in Django works almost identically to normal Python class inheritance, but follow the documented basics. Use model inheritance with care — read the Django model inheritance documentation before relying on it.</p>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Every attribute is a promise about the schema. Because Django generates the database from the class, the class <em>is</em> the single source of truth — this is the DRY principle in action.</div></div>
+</section>
+<section class="guide-section" id="choosing-field-types" data-title="Choosing Field Types">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Choosing Field Types</h2>
+  </div>
+  <p class="section-kicker">Every attribute must be mapped to the right Field class so Django knows its type and can generate an accurate schema.</p>
+<p>Each attribute of a model must be mapped to an appropriate Django Field class. This tells Django the type of each attribute and lets it generate an accurate schema. Fields can be further customised with default values, unique constraints and validations.</p>
+<h3 class="sub-title">Common Django model field types</h3>
+<div class="table-wrap"><table><thead><tr><th>Field Type</th><th>Description</th><th>Example usage</th></tr></thead><tbody><tr><td><code>CharField</code></td><td>A string field with a max length.</td><td>Name, title, short text</td></tr><tr><td><code>TextField</code></td><td>A long text field with no max length in the database.</td><td>Article content, comments</td></tr><tr><td><code>IntegerField</code></td><td>An integer field.</td><td>Age, count, score</td></tr><tr><td><code>FloatField</code></td><td>A floating-point number field.</td><td>Rating, price</td></tr><tr><td><code>BooleanField</code></td><td>A true/false field.</td><td>Is active, is published</td></tr><tr><td><code>DateField</code></td><td>A date without time.</td><td>Birthday, published date</td></tr><tr><td><code>DateTimeField</code></td><td>A date and time.</td><td>Created timestamp, updated timestamp</td></tr><tr><td><code>EmailField</code></td><td>A string field for email addresses, with validation.</td><td>User email</td></tr><tr><td><code>URLField</code></td><td>A string field for URLs, with validation.</td><td>Profile URL, external link</td></tr><tr><td><code>ImageField</code></td><td>A field for uploading image files.</td><td>User avatar, post image</td></tr><tr><td><code>FileField</code></td><td>A field for uploading any file.</td><td>Attachment, document</td></tr></tbody></table></div>
+<p>Relationship field types (<code>ForeignKey</code>, <code>ManyToManyField</code>, <code>OneToOneField</code>) are covered in the next section.</p>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> It is also possible to add your own types — either by writing a new <code>Field</code> subclass directly or through Django plugins.</div></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> If the data is a short string, <code>CharField</code>; if it can be arbitrarily long, <code>TextField</code>; if it includes time, add <code>Time</code> to the name (<code>DateTimeField</code>). Validation-aware strings get their own types (<code>EmailField</code>, <code>URLField</code>).</div></div>
+</section>
+<section class="guide-section" id="modelling-relationships" data-title="Modelling Relationships">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Modelling Relationships</h2>
+  </div>
+  <p class="section-kicker">Relationships are expressed with special field types, and the choice of field determines the cardinality.</p>
+<p>Relationships between models are represented with dedicated field types.</p>
+<h3 class="sub-title">The four relationship patterns</h3>
+<ul><li><strong>Many-to-one:</strong> <code>models.ForeignKey</code> placed on the <em>many-side</em> model.</li><li><strong>Many-to-many:</strong> <code>models.ManyToManyField</code> placed on either (or both) models.</li><li><strong>One-to-one:</strong> <code>models.OneToOneField</code>, or the alternative <code>models.ForeignKey(..., unique=True)</code>.</li><li><strong>Many-to-optional-one:</strong> <code>models.ForeignKey(null=True, blank=True)</code> on the many-side model.</li></ul>
+<h3 class="sub-title">Many-to-one</h3>
 <p>An Author can write many Book instances, but each Book has only one Author.</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>from django.db import models
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>from django.db import models
 
 class Author(models.Model):
     name = models.CharField(max_length=100)
@@ -355,14 +566,15 @@ class Author(models.Model):
 
 class Book(models.Model):
     title = models.CharField(max_length=200)
-    author = models.ForeignKey(Author, on_delete=models.CASCADE, related_name=&#x27;books&#x27;)
+    author = models.ForeignKey(Author, on_delete=models.CASCADE,
+                               related_name=&#x27;books&#x27;)  # Many-to-one
     published_date = models.DateField()
 
     def __str__(self):
         return self.title</code></pre></div>
-<h3 class="subhead">Many-to-Many (ManyToManyField)</h3>
-<p>A Student can enroll in many Course instances, and a Course can have many Student instances.</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>from django.db import models
+<h3 class="sub-title">Many-to-many</h3>
+<p>A Student can enrol in many Course instances, and a Course can have many Student instances.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>from django.db import models
 
 class Student(models.Model):
     name = models.CharField(max_length=100)
@@ -374,33 +586,34 @@ class Student(models.Model):
 class Course(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField()
-    students = models.ManyToManyField(Student, related_name=&#x27;courses&#x27;)
+    students = models.ManyToManyField(Student, related_name=&#x27;courses&#x27;)  # Many-to-many
 
     def __str__(self):
         return self.name</code></pre></div>
-<h3 class="subhead">One-to-One</h3>
+<h3 class="sub-title">One-to-one</h3>
 <p>A User can have exactly one UserProfile, and a UserProfile can belong to exactly one User.</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>from django.db import models
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>from django.db import models
 from django.contrib.auth.models import User
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)  # One-to-one
     bio = models.TextField()
     profile_picture = models.ImageField(upload_to=&#x27;profiles/&#x27;)
 
     def __str__(self):
         return self.user.username</code></pre></div>
-<p>The one-to-one alternative uses <code>ForeignKey(..., unique=True)</code>:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>class UserProfile(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, unique=True)
+<p>The equivalent alternative uses a unique foreign key:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>class UserProfile(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                             unique=True)  # One-to-one alternative
     bio = models.TextField()
     profile_picture = models.ImageField(upload_to=&#x27;profiles/&#x27;)
 
     def __str__(self):
         return self.user.username</code></pre></div>
-<h3 class="subhead">Many-to-Optional-One</h3>
+<h3 class="sub-title">Many-to-optional-one</h3>
 <p>An Employee can belong to one Department, but not every Employee has to be assigned to a department.</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>from django.db import models
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>from django.db import models
 
 class Department(models.Model):
     name = models.CharField(max_length=100)
@@ -410,42 +623,61 @@ class Department(models.Model):
 
 class Employee(models.Model):
     name = models.CharField(max_length=100)
-    department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
+    department = models.ForeignKey(Department, on_delete=models.SET_NULL,
+                                   null=True, blank=True)  # Many-to-zero
 
     def __str__(self):
         return self.name</code></pre></div>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text"><strong>FK = many-to-one</strong> (on the many side), <strong>M2M = many-to-many</strong>, <strong>OneToOneField = one-to-one</strong>, and adding <code>null=True, blank=True</code> makes a FK optional.</div></div></div></div></section>
-<section class="section" id="sec-7"><header class="section-head"><span class="section-num">07</span><h2>Direct vs String References</h2></header><div class="section-body"><p>When defining relationships between models, you can refer to a related model in two ways: <strong>directly by class name</strong> or <strong>using a string reference</strong>.</p>
-<h3 class="subhead">Referring Directly by Class Name</h3>
-<p>If the related model is already defined in the file, you can refer to it by its class name. This is straightforward and used when there is no circular dependency, or when the order of model definitions can be managed.</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>class Tag(models.Model):
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> <code>on_delete</code> controls what happens to the dependent row when the referenced row is deleted — <code>CASCADE</code> deletes it too, while <code>SET_NULL</code> keeps it but clears the link. <code>related_name</code> sets the name used to go from the related object <em>back</em> to this one.</div></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> The foreign key always lives on the <strong>many</strong> side. If you can say "many of these belong to one of those", the "many" model carries the <code>ForeignKey</code>.</div></div>
+</section>
+<section class="guide-section" id="direct-vs-string-references-and-circular-dependencies" data-title="Direct vs String References and Circular Dependencies">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Direct vs String References and Circular Dependencies</h2>
+  </div>
+  <p class="section-kicker">You can point at a related model by its class name or by a string — strings let you define models in any order and break circular dependencies.</p>
+<p>When defining relationships, you can refer to a related model in two ways: directly by class name, or using a string reference.</p>
+<h3 class="sub-title">Referring directly by class name</h3>
+<p>If the related model is already defined in the file, refer to it by class name. This is straightforward and is used when there is no circular dependency, or when the order of definitions can be managed easily.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>class Tag(models.Model):
     name = models.CharField(max_length=100)
 
 class Post(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)  # Direct reference</code></pre></div>
-<h3 class="subhead">Referring Using a String Reference</h3>
-<p>If the related model is not yet defined, refer to it using a <strong>string</strong> containing the model's name. This lets you define models in any order, including cases where two models refer to each other (mutual or circular references).</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>class Post(models.Model):
+<h3 class="sub-title">Referring using a string reference</h3>
+<p>If the related model is not yet defined, refer to it with a string containing the model's name. This lets you define models in any order, including cases where two models refer to each other.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>class Post(models.Model):
     tag = models.ForeignKey(&quot;Tag&quot;, on_delete=models.CASCADE)  # String reference
 
-# Defined later
-class Tag(models.Model):
+class Tag(models.Model):  # Defined later
     name = models.CharField(max_length=100)</code></pre></div>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background — Lazy relationships:</p><div class="callout-text">String references (also known as <strong>lazy relationships</strong>) also work when a model wants to reference itself.</div></div></div></div></section>
-<section class="section" id="sec-8"><header class="section-head"><span class="section-num">08</span><h2>Circular Dependencies &amp; Deadlocks</h2></header><div class="section-body"><p>If two models refer to each other, reordering their definitions won't solve the problem because both depend on each other. In such cases you use a <strong>string reference</strong> to break the circular dependency.</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>class Author(models.Model):
+<p>String references are also known as <strong>lazy relationships</strong>. They also work when a model wants to reference itself.</p>
+<h3 class="sub-title">Circular or two-way dependency</h3>
+<p>If two models refer to each other, reordering their definitions won't help because both depend on each other. Use a string reference to break the circular dependency.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>class Author(models.Model):
     name = models.CharField(max_length=100)
-    favorite_book = models.ForeignKey(&quot;Book&quot;, on_delete=models.CASCADE, null=False)  # String reference
+    # This line errors if &#x27;Book&#x27; is not yet defined:
+    # favorite_book = models.ForeignKey(Book, on_delete=models.CASCADE, null=False)
+    favorite_book = models.ForeignKey(&quot;Book&quot;, on_delete=models.CASCADE,
+                                      null=False)  # String reference
 
 class Book(models.Model):
     title = models.CharField(max_length=200)
     author = models.ForeignKey(Author, on_delete=models.CASCADE)  # null=False by default</code></pre></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap — The example is a deadlock:</p><div class="callout-text">Avoid circular foreign keys where both sides are required. Making <code>Book.author</code> and <code>Author.favorite_book</code> non-nullable creates a chicken-and-egg situation: you cannot create either row first.</div></div></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap — Avoid circular dependency:</p><div class="callout-text">Circular references are not inherently invalid, but they should be used with caution. They can lead to complex migration dependencies and maintenance challenges. This complexity arises because Django models map to a <strong>relational database</strong>, which follows a <strong>static schema</strong> and enforces <strong>referential integrity</strong>. Unlike runtime memory, where objects can point to each other freely, relational databases require all references to be well-defined ahead of time. Circular references are often a sign that your model design could be simplified.</div></div></div></div></section>
-<section class="section" id="sec-9"><header class="section-head"><span class="section-num">09</span><h2>The TIL Models</h2></header><div class="section-body"><p>In the TIL ERD, a Post can be associated with <strong>zero, one or many</strong> Tags, and a Tag can be applied to <strong>one or many</strong> Posts.</p>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">The ERD has not been normalised to show mapping tables (the many-to-many between Post and Tag).</div></div></div>
-<p>Turning the TIL ERD into models gives the following Python classes in <code>til_app/models.py</code>:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code># til_app/models.py
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Avoid circular foreign keys where <em>both</em> sides are required. Making <code>Book.author</code> and <code>Author.favorite_book</code> non-nullable creates a chicken-and-egg deadlock — you can't create either row first.</div></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Circular references in Django models are not inherently invalid but should be used with caution. They can create complex migration dependencies and maintenance challenges. This is because models eventually map to a relational database, which follows a <strong>static schema</strong> and enforces <strong>referential integrity</strong>. Unlike runtime memory, where objects can point at each other freely, a relational database needs every reference defined ahead of time. Circular references are often a sign the model design could be simplified.</div></div>
+</section>
+<section class="guide-section" id="the-til-model-in-practice" data-title="The TIL Model in Practice">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The TIL Model in Practice</h2>
+  </div>
+  <p class="section-kicker">The TIL app turns a Post/Tag ERD into two Python classes — including a many-to-many relationship Django will implement with a hidden junction table.</p>
+<p>The TIL ("Today I Learned") example uses a Post/Tag design: a Post can be associated with <strong>zero, one or many</strong> Tags, and a Tag can be applied to <strong>one or many</strong> Posts.</p>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> The ERD shown is <em>not</em> normalised — it omits the mapping (junction) table that a many-to-many relationship actually needs between Post and Tag.</div></div>
+<p>Add the following to <code>til_app/models.py</code>:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code># til_app/models.py
 from django.db import models
 
 class Tag(models.Model):
@@ -459,13 +691,23 @@ class Post(models.Model):
     visibility = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    tags = models.ManyToManyField(Tag, related_name=&#x27;posts&#x27;, blank=True)  # Many-to-many relationship</code></pre></div>
-<p>With <code>related_name</code>, you can do things like <code>tag_instance.posts.all()</code>, which returns all posts associated with a Tag instance.</p>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background:</p><div class="callout-text">For now the creator of a Post is left out, because an in-built Django user system (the auth application) is introduced in the next lab.</div></div></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">The <code>ManyToManyField</code> in Django does <strong>not</strong> provide built-in support for enforcing constraints like "at least one." To ensure a Tag is always associated with one or more Posts, you need custom validations and signals (covered in a later lab).</div></div></div>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background:</p><div class="callout-text">While Django's <code>ManyToManyField</code> automatically creates an intermediary model for managing many-to-many relationships, it may lack flexibility for complex use cases. When you need more control — extra fields on the relationship or custom constraints — it is often better to define an <strong>explicit mapping class</strong> instead of relying on <code>ManyToManyField</code>.</div></div></div></div></section>
-<section class="section" id="sec-10"><header class="section-head"><span class="section-num">10</span><h2>Activating Your App</h2></header><div class="section-body"><p>Now that models are defined, integrate them into the project. Django maintains a list of installed applications in <code>settings.py</code> under <code>INSTALLED_APPS</code>. By default, Django comes with these applications installed:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>INSTALLED_APPS = [
+    tags = models.ManyToManyField(Tag, related_name=&#x27;posts&#x27;, blank=True)
+    # With related_name, we can do:
+    # &gt;&gt;&gt; tag_instance.posts.all()  # all posts associated with a Tag instance</code></pre></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> The creator of a Post is deliberately left out for now. You will use Django's built-in user system provided by the <code>auth</code> application in the next lab.</div></div>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> <code>related_name</code> is the name used for the relation from the related object back to this one. Here it lets you call <code>tag_instance.posts.all()</code> to get every Post linked to a Tag.</div></div>
+<h3 class="sub-title">Limits of ManyToManyField</h3>
+<p><code>ManyToManyField</code> does <strong>not</strong> provide built-in support for constraints like "at least one". To guarantee a Tag is always associated with one or more Posts, you must implement custom validations and use signals — covered in a later lab.</p>
+<p>Django automatically creates an intermediary model to manage a many-to-many relationship, but it may lack flexibility for complex cases. When you need more control — adding extra fields to the relationship or enforcing custom constraints — define an explicit mapping class instead of relying on <code>ManyToManyField</code>.</p>
+</section>
+<section class="guide-section" id="activating-your-app" data-title="Activating Your App">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Activating Your App</h2>
+  </div>
+  <p class="section-kicker">Models do nothing until their application is listed in INSTALLED_APPS.</p>
+<p>Django maintains a list of installed applications in <code>settings.py</code>, in the <code>INSTALLED_APPS</code> variable. By default, Django installs these applications:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>INSTALLED_APPS = [
     &#x27;django.contrib.admin&#x27;,
     &#x27;django.contrib.auth&#x27;,
     &#x27;django.contrib.contenttypes&#x27;,
@@ -473,70 +715,68 @@ class Post(models.Model):
     &#x27;django.contrib.messages&#x27;,
     &#x27;django.contrib.staticfiles&#x27;,
 ]</code></pre></div>
-<p>Before Django can generate the schema for your models, add your TIL application to the list of installed applications. This is done by including the <code>TilAppConfig</code> class defined in <code>apps.py</code>:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>INSTALLED_APPS = [
+<p>Before you can generate the schema for your models, you must add your <code>til</code> application to the list. Do this by including the config class (for example <code>TilAppConfig</code>, defined in <code>apps.py</code>):</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>INSTALLED_APPS = [
     &#x27;til_app.apps.TilAppConfig&#x27;,
     &#x27;django.contrib.admin&#x27;,
     &#x27;django.contrib.auth&#x27;,
     # ...
 ]</code></pre></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">If your app is not in <code>INSTALLED_APPS</code>, Django will not see your models, and <code>makemigrations</code> will produce nothing. This is a very common beginner mistake.</div></div></div></div></section>
-<section class="section" id="sec-11"><header class="section-head"><span class="section-num">11</span><h2>Making &amp; Viewing Migrations</h2></header><div class="section-body"><p>Django can generate and manage the database schema from your Python model files. Once models are defined and the app is installed, you use Django's tools to generate schemas.</p>
-<h3 class="subhead">Make Migrations</h3>
-<p>Create migrations for a specific app:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code># Generate migrations for a specific app.
-# The application name is optional.
-# With no name, Django checks all installed apps.
-python3 manage.py makemigrations &lt;application&gt;</code></pre></div>
-<p>Or check all installed apps for pending changes:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>python3 manage.py makemigrations</code></pre></div>
-<p>The second form checks all apps listed in <code>INSTALLED_APPS</code> and creates migrations for all apps that have pending changes. For our example:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>$ python3 manage.py makemigrations til_app
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> <code>makemigrations</code> scans <code>INSTALLED_APPS</code> for models. If your app isn't listed, Django never sees your models and will happily generate nothing.</div></div>
+</section>
+<section class="guide-section" id="schema-migrations-make-inspect-apply" data-title="Schema Migrations: Make, Inspect, Apply">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Schema Migrations: Make, Inspect, Apply</h2>
+  </div>
+  <p class="section-kicker">Django generates and manages the database schema from your model files; migrations are the versioned instructions that turn models into SQL.</p>
+<p>Django can generate and manage the database schema directly from the Python model files. Once your models are defined and the app is installed, the internal tools can produce schemas.</p>
+<h3 class="sub-title">1. Make migrations</h3>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>python3 manage.py makemigrations &lt;application&gt;</code></pre></div>
+<p>With an application name, Django creates migrations only for that app. Without a name:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>python3 manage.py makemigrations</code></pre></div>
+<p>Django then checks every app in <code>INSTALLED_APPS</code> and creates migrations for all apps with pending changes. Example output:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>$ python3 manage.py makemigrations til_app
 Migrations for &#x27;til_app&#x27;:
   til_app/migrations/0001_initial.py
-    - + Create model Tag
-    - + Create model Post</code></pre></div>
-<p>This generates a migration file at <code>til_app/migrations/0001_initial.py</code> but does <strong>not</strong> apply it yet.</p>
-<h3 class="subhead">View Migrations</h3>
-<p>To see the corresponding SQL commands that will be run against the database, use <code>sqlmigrate</code>:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>python manage.py sqlmigrate til_app 0001</code></pre></div>
-<p>Example output (for SQLite):</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>BEGIN;
+    - Create model Tag
+    - Create model Post</code></pre></div>
+<p>This generates a migration file but does <strong>not</strong> apply it yet. The file lives at <code>til_app/migrations/0001_initial.py</code>.</p>
+<h3 class="sub-title">2. View the SQL behind a migration</h3>
+<p>To see the commands that will run against the database, use <code>sqlmigrate</code>:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>python manage.py sqlmigrate til_app 0001</code></pre></div>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>BEGIN;
 -- Create model Tag --
 CREATE TABLE &quot;til_app_tag&quot; (
-  &quot;id&quot; INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  &quot;name&quot; VARCHAR(10) NOT NULL UNIQUE,
-  &quot;creation_date&quot; DATETIME NOT NULL
+    &quot;id&quot; INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    &quot;name&quot; VARCHAR(10) NOT NULL UNIQUE,
+    &quot;creation_date&quot; DATETIME NOT NULL
 );
 -- Create model Post --
 CREATE TABLE &quot;til_app_post&quot; (
-  &quot;id&quot; INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  &quot;subject&quot; VARCHAR(160) NOT NULL,
-  &quot;content&quot; VARCHAR(800) NOT NULL,
-  &quot;visibility&quot; BOOL NOT NULL,
-  &quot;created_at&quot; DATETIME NOT NULL
+    &quot;id&quot; INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    &quot;subject&quot; VARCHAR(160) NOT NULL,
+    &quot;content&quot; VARCHAR(800) NOT NULL,
+    &quot;visibility&quot; BOOL NOT NULL,
+    &quot;created_at&quot; DATETIME NOT NULL
 );
 -- Create many-to-many table for Post and Tag relationship --
 CREATE TABLE &quot;til_app_post_tags&quot; (
-  &quot;id&quot; INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-  &quot;post_id&quot; BIGINT NOT NULL REFERENCES &quot;til_app_post&quot; (&quot;id&quot;) DEFERRABLE INITIALLY DEFERRED,
-  &quot;tag_id&quot; BIGINT NOT NULL REFERENCES &quot;til_app_tag&quot; (&quot;id&quot;) DEFERRABLE INITIALLY DEFERRED
+    &quot;id&quot; INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    &quot;post_id&quot; BIGINT NOT NULL REFERENCES &quot;til_app_post&quot; (&quot;id&quot;) DEFERRABLE INITIALLY DEFERRED,
+    &quot;tag_id&quot; BIGINT NOT NULL REFERENCES &quot;til_app_tag&quot; (&quot;id&quot;) DEFERRABLE INITIALLY DEFERRED
 );
 CREATE UNIQUE INDEX &quot;til_app_post_tags_post_id_tag_id_3b9d1d8d_uniq&quot;
-  ON &quot;til_app_post_tags&quot; (&quot;post_id&quot;, &quot;tag_id&quot;);
+    ON &quot;til_app_post_tags&quot; (&quot;post_id&quot;, &quot;tag_id&quot;);
 CREATE INDEX &quot;til_app_post_tags_post_id_96b51563&quot; ON &quot;til_app_post_tags&quot; (&quot;post_id&quot;);
 CREATE INDEX &quot;til_app_post_tags_tag_id_d18818ba&quot; ON &quot;til_app_post_tags&quot; (&quot;tag_id&quot;);
 COMMIT;</code></pre></div>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background:</p><div class="callout-text">This SQL has been generated for <strong>SQLite</strong>; changing the database engine is discussed later in the lab.</div></div></div>
-<div class="callout tip"><div class="callout-ico" aria-hidden="true">✅</div><div class="callout-body"><p class="callout-title">Exam Tip:</p><div class="callout-text">Notice that Django automatically creates a <strong>junction table</strong> <code>til_app_post_tags</code> to manage the <code>ManyToManyField</code> relationship — this is the normalised mapping table the Week 1 ERD taught you about.</div></div></div></div></section>
-<section class="section" id="sec-12"><header class="section-head"><span class="section-num">12</span><h2>Applying Migrations &amp; Workflow</h2></header><div class="section-body"><h3 class="subhead">Apply Migrations</h3>
-<p>To apply your migration to the database, use the <code>migrate</code> command:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code># Apply migrations to the database.
-# The application argument is optional.
-# With no argument, all unapplied migrations run.
-python3 manage.py migrate &lt;application|optional&gt;</code></pre></div>
-<p>This runs any migrations from all installed applications that have not yet been applied:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>$ python manage.py migrate
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> Notice that Django automatically creates a junction table, <code>til_app_post_tags</code>, to manage the <code>ManyToManyField</code>. It also adds a unique index on the <code>(post_id, tag_id)</code> pair (preventing duplicate links) and separate indexes on each column to speed up queries.</div></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> This SQL was generated for SQLite. Changing the database engine is covered later. To experiment, try creating a circular dependency and inspecting how the ORM translates it to SQL.</div></div>
+<h3 class="sub-title">3. Apply migrations</h3>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>python3 manage.py migrate &lt;application|optional&gt;</code></pre></div>
+<p>This runs every migration from all installed apps that has not yet been applied. Example:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>$ python manage.py migrate
 Operations to perform:
   Apply all migrations: admin, auth, contenttypes, sessions, til_app
 Running migrations:
@@ -544,250 +784,471 @@ Running migrations:
   Applying auth.0001_initial... OK
   Applying admin.0001_initial... OK
   ...
-  Applying sessions.0001_initial... OK
   Applying til_app.0001_initial... OK</code></pre></div>
-<h3 class="subhead">The Workflow</h3>
-<p>Applying models and getting them into the database involves three steps:</p>
-<ol><li>Modify the model Python files (<code>models.py</code>).</li><li>Run <code>python manage.py makemigrations</code>.</li><li>Run <code>python manage.py migrate</code>.</li></ol>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap — Stay in sync:</p><div class="callout-text">Modifying model files without applying migrations, or modifying the database schema without modifying the models, can cause many issues. It is critical to keep these in sync.</div></div></div>
-<div class="callout tip"><div class="callout-ico" aria-hidden="true">✅</div><div class="callout-body"><p class="callout-title">Exam Tip:</p><div class="callout-text">Examine the generated migration code before you run it, especially when complex changes are involved, and always back up your data before running a migration.</div></div></div>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text"><strong>Model → makemigrations → migrate</strong> — "write, prepare, apply".</div></div></div></div></section>
-<section class="section" id="sec-13"><header class="section-head"><span class="section-num">13</span><h2>Choosing the Database Engine</h2></header><div class="section-body"><p>By default, Django uses <strong>SQLite</strong>, a standalone file-based database, as its database engine. You may also use <strong>MySQL</strong> or <strong>PostgreSQL</strong> for eventual deployment into AWS.</p>
-<p>The database engine is configured in <code>settings.py</code> under the <code>DATABASES</code> variable:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>DATABASES = {
+</section>
+<section class="guide-section" id="the-migration-workflow-and-staying-in-sync" data-title="The Migration Workflow and Staying in Sync">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Migration Workflow and Staying in Sync</h2>
+  </div>
+  <p class="section-kicker">The workflow is three steps — edit models, make migrations, migrate — and the model files must always match the database schema.</p>
+<p>Applying your models and getting them into the database involves three steps:</p>
+<ol class="steps"><li>Modify the model Python files (<code>models.py</code>).</li><li>Run <code>python manage.py makemigrations</code>.</li><li>Run <code>python manage.py migrate</code>.</li></ol>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Modifying model files without applying migrations, or modifying the database schema without modifying the models, causes many problems. It is critical to keep the two in sync.</div></div>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> Examine the generated migration code before you run it, especially for complex changes. Always back up your data before running a migration.</div></div>
+</section>
+<section class="guide-section" id="choosing-the-database-engine" data-title="Choosing the Database Engine">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Choosing the Database Engine</h2>
+  </div>
+  <p class="section-kicker">Django uses SQLite by default, but the engine is configured in one place — the DATABASES setting.</p>
+<p>By default, Django uses <strong>SQLite</strong>, a standalone, file-based database. You may also use <strong>MySQL</strong> or <strong>PostgreSQL</strong> for eventual deployment into AWS.</p>
+<p>The engine is configured in <code>settings.py</code> under the <code>DATABASES</code> variable:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>DATABASES = {
     &#x27;default&#x27;: {
         &#x27;ENGINE&#x27;: &#x27;django.db.backends.sqlite3&#x27;,
         &#x27;NAME&#x27;: BASE_DIR / &#x27;db.sqlite3&#x27;,
     }
 }</code></pre></div>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background:</p><div class="callout-text">SQLite is typically sufficient for your group assignment if you are not familiar with database engine mechanisms. Changing the engine is documented in Django's database reference.</div></div></div></div></section>
-<section class="section" id="sec-14"><header class="section-head"><span class="section-num">14</span><h2>The Django Admin Interface</h2></header><div class="section-body"><p>Django comes with a powerful <strong>admin interface</strong> automatically out of the box at <code>http://127.0.0.1:8000/admin</code>. It lets you add, edit and delete models with very little application code. You need to be running the app with <code>python manage.py runserver</code> to access it.</p>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap — Don't use Django admin for end users:</p><div class="callout-text">The admin interface is designed for <strong>site administrators/developers</strong>, not end users. It is a place for site administrators (like an ICT team) to add/edit/delete data and perform site management tasks. Although it is possible to stretch it into something end users could use, you really should not — it is not designed for every site visitor.</div></div></div>
-<h3 class="subhead">Create an Admin User</h3>
-<p>The admin interface is guarded by username/password credentials. The auth application exposes a command to create <strong>superusers</strong>:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>python manage.py createsuperuser</code></pre></div>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>$ python manage.py createsuperuser
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> SQLite is typically sufficient for your group assignment if you are not familiar with database engine mechanisms. See Django's database reference for how to change engines.</div></div>
+</section>
+<section class="guide-section" id="django-admin-managing-data-out-of-the-box" data-title="Django Admin: Managing Data Out of the Box">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Django Admin: Managing Data Out of the Box</h2>
+  </div>
+  <p class="section-kicker">Django ships with a powerful admin interface that lets you add, edit and delete models with very little code — but it is for administrators, not end users.</p>
+<p>Django comes with a powerful admin interface automatically, out of the box, at <code>http://127.0.0.1:8000/admin</code>. It lets you add, edit and delete model data with very little application code. You must be running the app with <code>python manage.py runserver</code> to reach it.</p>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Don't use the Django admin for end users. It is designed for <strong>site administrators and developers</strong> — a place for your ICT team to add, edit and delete data and perform site management. You <em>can</em> stretch it to serve end users (staff, managers, website admins), but you really should not; it is not designed for every site visitor.</div></div>
+<h3 class="sub-title">Create an admin user</h3>
+<p>The admin interface is guarded by username/password credentials. The <code>auth</code> application exposes a command to create superusers:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>python manage.py createsuperuser</code></pre></div>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>$ python manage.py createsuperuser
 Username (leave blank to use &#x27;user&#x27;): user
 Email address: user@user.com
 Password:
 Password (again):
 Superuser created successfully.</code></pre></div>
-<p>These users have access to the admin interface and provide an easy way to bootstrap new admin users without touching the database directly. You can run <code>createsuperuser</code> multiple times to add more superusers.</p>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">The Django auth application has default rules preventing common and insecure passwords. While you can bypass them, it is not recommended. Once your user is created, log in at <code>http://127.0.0.1:8000/admin</code> (or whatever port you are using).</div></div></div>
-<h3 class="subhead">Add Models to Django Admin</h3>
-<p>Models are not automatically exposed through the admin interface. Register them from the TIL application by modifying <code>til_app/admin.py</code> and calling <code>admin.site.register(&lt;model&gt;)</code>:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>from django.contrib import admin
+<p>These users get access to the admin interface and provide an easy way to bootstrap new admin users without touching the database directly.</p>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> You can run <code>createsuperuser</code> multiple times to add more superusers.</div></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> The Django <code>auth</code> application has default rules preventing common and insecure passwords. You can bypass these restrictions, but it is not recommended.</div></div>
+<p>Once the user exists, log in at <code>http://127.0.0.1:8000/admin</code> (or whatever port your server uses).</p>
+</section>
+<section class="guide-section" id="registering-models-and-securing-the-admin" data-title="Registering Models and Securing the Admin">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Registering Models and Securing the Admin</h2>
+  </div>
+  <p class="section-kicker">Models are not visible in the admin until you register them, and the admin deserves extra hardening because it grants special powers.</p>
+<h3 class="sub-title">Register models</h3>
+<p>Models do not automatically appear in the admin interface. You must register them first by editing <code>til_app/admin.py</code> and calling <code>admin.site.register(&lt;model&gt;)</code>:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>from django.contrib import admin
 from .models import Post, Tag
 
 admin.site.register(Post)
 admin.site.register(Tag)</code></pre></div>
-<p>Reload the admin interface and you will see the TIL application and its exposed models.</p>
-<h3 class="subhead">Secure the Django Admin</h3>
-<p>Because the admin gives special powers, it is good practice to make it extra secure:</p>
-<ul><li><strong>Change the default admin URL</strong> — Django co-leader Jacob Kaplan-Moss (paraphrased) suggests using a different name (or even a different domain) for the admin. It also prevents attackers from profiling your site: they can tell which version of Django you use, sometimes down to the point release, by examining the HTML of the login screen at <code>admin/</code>.</li><li><strong>Limit admin access based on IP</strong> — configure your web server to allow access only from certain IP addresses. An acceptable alternative is to put this logic into <strong>middleware</strong>: easy to implement, no web-server changes, but it introduces slight performance overhead compared with doing it at the web-server level.</li></ul>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background:</p><div class="callout-text">You are not required to secure the Django admin for your assignments.</div></div></div>
-<div class="callout tip"><div class="callout-ico" aria-hidden="true">✅</div><div class="callout-body"><p class="callout-title">Exam Tip:</p><div class="callout-text">The admin is a development/administration tool. Your users interact with the views and templates you build — not the admin.</div></div></div>
-<p><strong>Further readings:</strong> Greenfeld &amp; Roy Greenfeld, <em>Two Scoops of Django 3.x: Best Practices for the Django Web Framework</em> — especially Chapter 1 (Coding Style), Chapter 2 (Optimal Django Environment Setup), Chapter 3 (How to Lay Out Django Projects) and Chapter 5 (Settings and Requirements Files).</p></div></section>
-<section class="section" id="key-takeaways"><header class="section-head"><span class="section-num">15</span><h2>Key Takeaways</h2></header><div class="section-body"><ol class="takeaways"><li><span class="tk-n">1</span><div><strong>An ORM maps objects to tables</strong> — classes become tables, instances become rows, and attributes become columns.</div></li><li><span class="tk-n">2</span><div><strong>ORMs abstract SQL</strong> — they handle data conversion, are database-agnostic, and reduce boilerplate code.</div></li><li><span class="tk-n">3</span><div><strong>ORM benefits include DRY, MVC, security and loose coupling</strong> — prepared statements and transactions come easily.</div></li><li><span class="tk-n">4</span><div><strong>ORM limits</strong> — a learning curve, possible performance gaps vs hand-written SQL, and the object/relational impedance mismatch.</div></li><li><span class="tk-n">5</span><div><strong>Use ORMs by default; drop to raw SQL only when necessary</strong> — and never write your own ORM for a real application.</div></li><li><span class="tk-n">6</span><div><strong>Django models are Python classes subclassing <code>django.db.models.Model</code></strong> — they are the canonical source of the schema.</div></li><li><span class="tk-n">7</span><div><strong>Every attribute maps to a Field type</strong> — CharField, TextField, IntegerField, FloatField, BooleanField, Date/DateTimeField, EmailField, URLField, ImageField, FileField.</div></li><li><span class="tk-n">8</span><div><strong>Relationships have dedicated fields</strong> — ForeignKey (many-to-one), ManyToManyField (many-to-many), OneToOneField (one-to-one), and ForeignKey(null=True, blank=True) (many-to-optional-one).</div></li><li><span class="tk-n">9</span><div><strong>Refer to models directly or by string</strong> — string references (lazy relationships) let you define models in any order and break circular dependencies.</div></li><li><span class="tk-n">10</span><div><strong>Avoid required circular FKs</strong> — they create a chicken-and-egg deadlock; circular references add migration complexity and often signal over-complex design.</div></li><li><span class="tk-n">11</span><div><strong>Add your app to INSTALLED_APPS</strong> — otherwise Django cannot see your models.</div></li><li><span class="tk-n">12</span><div><strong>The migration workflow is Model → makemigrations → migrate</strong> — and <code>sqlmigrate</code> shows the SQL that will run.</div></li><li><span class="tk-n">13</span><div><strong>Django auto-creates junction tables for many-to-many</strong> — e.g. <code>til_app_post_tags</code> with a unique index on the pair of foreign keys.</div></li><li><span class="tk-n">14</span><div><strong>The admin is for administrators, not end users</strong> — create a superuser, register models, and consider hardening the admin URL and IP access.</div></li></ol></div></section>
-<section class="section" id="glossary"><header class="section-head"><span class="section-num">16</span><h2>Glossary</h2></header><div class="section-body"><div class="term-filter"><input type="search" id="termSearch" placeholder="Filter terms…" autocomplete="off" aria-label="Filter glossary terms"><span class="term-count" id="termCount"></span></div><div class="terms" id="termsGrid"><div class="term" data-term="orm object-relational mapping — a technique mapping objects to relational database tables."><p class="term-name">ORM</p><p class="term-def">Object-Relational Mapping — a technique mapping objects to relational database tables.</p></div><div class="term" data-term="django orm django&#x27;s built-in orm for defining models and querying the database in python."><p class="term-name">Django ORM</p><p class="term-def">Django's built-in ORM for defining models and querying the database in Python.</p></div><div class="term" data-term="hibernate a well-known orm library for java."><p class="term-name">Hibernate</p><p class="term-def">A well-known ORM library for Java.</p></div><div class="term" data-term="model a python class subclassing `django.db.models.model` that defines a database table."><p class="term-name">Model</p><p class="term-def">A Python class subclassing <code>django.db.models.Model</code> that defines a database table.</p></div><div class="term" data-term="field a django class describing a model attribute&#x27;s type and constraints."><p class="term-name">Field</p><p class="term-def">A Django class describing a model attribute's type and constraints.</p></div><div class="term" data-term="charfield a string field with a maximum length."><p class="term-name">CharField</p><p class="term-def">A string field with a maximum length.</p></div><div class="term" data-term="textfield a long text field without a database max length."><p class="term-name">TextField</p><p class="term-def">A long text field without a database max length.</p></div><div class="term" data-term="integerfield an integer field."><p class="term-name">IntegerField</p><p class="term-def">An integer field.</p></div><div class="term" data-term="floatfield a floating-point number field."><p class="term-name">FloatField</p><p class="term-def">A floating-point number field.</p></div><div class="term" data-term="booleanfield a true/false field."><p class="term-name">BooleanField</p><p class="term-def">A true/false field.</p></div><div class="term" data-term="datefield a date field (no time)."><p class="term-name">DateField</p><p class="term-def">A date field (no time).</p></div><div class="term" data-term="datetimefield a date-and-time field."><p class="term-name">DateTimeField</p><p class="term-def">A date-and-time field.</p></div><div class="term" data-term="emailfield a string field for email addresses, with validation."><p class="term-name">EmailField</p><p class="term-def">A string field for email addresses, with validation.</p></div><div class="term" data-term="urlfield a string field for urls, with validation."><p class="term-name">URLField</p><p class="term-def">A string field for URLs, with validation.</p></div><div class="term" data-term="imagefield a field for uploading image files."><p class="term-name">ImageField</p><p class="term-def">A field for uploading image files.</p></div><div class="term" data-term="filefield a field for uploading any file."><p class="term-name">FileField</p><p class="term-def">A field for uploading any file.</p></div><div class="term" data-term="foreignkey a many-to-one relationship field placed on the many-side model."><p class="term-name">ForeignKey</p><p class="term-def">A many-to-one relationship field placed on the many-side model.</p></div><div class="term" data-term="manytomanyfield a many-to-many relationship field."><p class="term-name">ManyToManyField</p><p class="term-def">A many-to-many relationship field.</p></div><div class="term" data-term="onetoonefield a one-to-one relationship field."><p class="term-name">OneToOneField</p><p class="term-def">A one-to-one relationship field.</p></div><div class="term" data-term="on_delete the behaviour when the referenced row is deleted (e.g. cascade, set_null)."><p class="term-name">on_delete</p><p class="term-def">The behaviour when the referenced row is deleted (e.g. CASCADE, SET_NULL).</p></div><div class="term" data-term="cascade deletes dependent rows when the referenced row is deleted."><p class="term-name">CASCADE</p><p class="term-def">Deletes dependent rows when the referenced row is deleted.</p></div><div class="term" data-term="set_null sets the foreign key to null when the referenced row is deleted (requires null=true)."><p class="term-name">SET_NULL</p><p class="term-def">Sets the foreign key to NULL when the referenced row is deleted (requires null=True).</p></div><div class="term" data-term="related_name the name used to access the reverse relation (e.g. `tag_instance.posts.all()`)."><p class="term-name">related_name</p><p class="term-def">The name used to access the reverse relation (e.g. <code>tag_instance.posts.all()</code>).</p></div><div class="term" data-term="null=true allows the database column to store null."><p class="term-name">null=True</p><p class="term-def">Allows the database column to store NULL.</p></div><div class="term" data-term="blank=true allows the field to be left empty in forms/validation."><p class="term-name">blank=True</p><p class="term-def">Allows the field to be left empty in forms/validation.</p></div><div class="term" data-term="unique=true enforces uniqueness for the column."><p class="term-name">unique=True</p><p class="term-def">Enforces uniqueness for the column.</p></div><div class="term" data-term="lazy relationship a string reference to a model that is resolved later by django."><p class="term-name">Lazy relationship</p><p class="term-def">A string reference to a model that is resolved later by Django.</p></div><div class="term" data-term="circular dependency two models referencing each other, requiring string references and careful migration handling."><p class="term-name">Circular dependency</p><p class="term-def">Two models referencing each other, requiring string references and careful migration handling.</p></div><div class="term" data-term="referential integrity the database rule that all references must point to valid rows."><p class="term-name">Referential integrity</p><p class="term-def">The database rule that all references must point to valid rows.</p></div><div class="term" data-term="impedance mismatch the conceptual gap between object models and relational tables."><p class="term-name">Impedance mismatch</p><p class="term-def">The conceptual gap between object models and relational tables.</p></div><div class="term" data-term="dry don&#x27;t repeat yourself — define a model once and reuse it."><p class="term-name">DRY</p><p class="term-def">Don't Repeat Yourself — define a model once and reuse it.</p></div><div class="term" data-term="mvc model–view–controller — the architectural pattern orms encourage."><p class="term-name">MVC</p><p class="term-def">Model–View–Controller — the architectural pattern ORMs encourage.</p></div><div class="term" data-term="migration a file describing a schema change generated from your models."><p class="term-name">Migration</p><p class="term-def">A file describing a schema change generated from your models.</p></div><div class="term" data-term="makemigrations the command that generates migration files from model changes."><p class="term-name">makemigrations</p><p class="term-def">The command that generates migration files from model changes.</p></div><div class="term" data-term="migrate the command that applies migrations to the database."><p class="term-name">migrate</p><p class="term-def">The command that applies migrations to the database.</p></div><div class="term" data-term="sqlmigrate the command that prints the sql a migration will run."><p class="term-name">sqlmigrate</p><p class="term-def">The command that prints the SQL a migration will run.</p></div><div class="term" data-term="junction table a table django auto-creates for a many-to-many relationship (e.g. `til_app_post_tags`)."><p class="term-name">Junction table</p><p class="term-def">A table Django auto-creates for a many-to-many relationship (e.g. <code>til_app_post_tags</code>).</p></div><div class="term" data-term="installed_apps the settings list of apps django should load and manage."><p class="term-name">INSTALLED_APPS</p><p class="term-def">The settings list of apps Django should load and manage.</p></div><div class="term" data-term="tilappconfig the app configuration class in `apps.py`, added to installed_apps."><p class="term-name">TilAppConfig</p><p class="term-def">The app configuration class in <code>apps.py</code>, added to INSTALLED_APPS.</p></div><div class="term" data-term="databases the settings variable defining the database engine and connection."><p class="term-name">DATABASES</p><p class="term-def">The settings variable defining the database engine and connection.</p></div><div class="term" data-term="sqlite django&#x27;s default standalone, file-based database engine."><p class="term-name">SQLite</p><p class="term-def">Django's default standalone, file-based database engine.</p></div><div class="term" data-term="postgresql / mysql relational databases often used for deployment (e.g. on aws)."><p class="term-name">PostgreSQL / MySQL</p><p class="term-def">Relational databases often used for deployment (e.g. on AWS).</p></div><div class="term" data-term="admin site django&#x27;s built-in interface (`/admin`) for administrators to manage data."><p class="term-name">Admin site</p><p class="term-def">Django's built-in interface (<code>/admin</code>) for administrators to manage data.</p></div><div class="term" data-term="superuser a privileged account created by `createsuperuser` with admin access."><p class="term-name">Superuser</p><p class="term-def">A privileged account created by <code>createsuperuser</code> with admin access.</p></div><div class="term" data-term="admin.site.register the call that exposes a model in the admin interface."><p class="term-name">admin.site.register</p><p class="term-def">The call that exposes a model in the admin interface.</p></div><div class="term" data-term="middleware a layer that processes requests/responses globally, usable to restrict admin access by ip."><p class="term-name">Middleware</p><p class="term-def">A layer that processes requests/responses globally, usable to restrict admin access by IP.</p></div></div></div></section>
-<section class="section" id="mnemonics"><header class="section-head"><span class="section-num">17</span><h2>Mnemonics &amp; Quick Recall</h2></header><div class="section-body"><div class="mnemonics"><div class="mnemonic"><p class="mn-title">Migration Workflow</p><p class="mn-code">M-M-M</p><p class="mn-phrase">Model, makemigrations, migrate</p><p class="mn-note">write, prepare, apply.</p></div><div class="mnemonic"><p class="mn-title">Relationship Fields</p><p class="mn-code">FK = many-to-one, M2M = many-to-many, O2O = one-to-one</p><p class="mn-note">add <code>null=True, blank=True</code> for optional.</p></div><div class="mnemonic"><p class="mn-title">Field Types</p><p class="mn-code">Char, Text, Int, Float, Bool, Date, DateTime, Email, URL, Image, File</p><p class="mn-note">plus the relationship fields.</p></div><div class="mnemonic"><p class="mn-title">ORM Powers</p><p class="mn-code">DRY, MVC, Security, Abstraction, Loose coupling, OOP</p><p class="mn-note">.</p></div><div class="mnemonic"><p class="mn-title">ORM Limits</p><p class="mn-code">Learn, Perform, Impedance</p><p class="mn-note">the learning curve, performance gaps and impedance mismatch.</p></div><div class="mnemonic"><p class="mn-title">Admin Rule</p><p class="mn-code">Admin is for administrators, not end users</p><p class="mn-note">.</p></div></div></div></section>
-<section class="section" id="worked-examples"><header class="section-head"><span class="section-num">18</span><h2>Worked Examples &amp; Scenarios</h2></header><div class="section-body"><div class="example"><span class="example-tag">Example 1</span><h3 class="example-title">From ERD to models</h3><p>The TIL ERD has a many-to-many between Post and Tag. This becomes:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>class Tag(models.Model):
-    name = models.CharField(max_length=10, unique=True)
-    creation_date = models.DateTimeField(auto_now_add=True)
-
-class Post(models.Model):
-    subject = models.CharField(max_length=160)
-    content = models.CharField(max_length=800)
-    visibility = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    tags = models.ManyToManyField(Tag, related_name=&#x27;posts&#x27;, blank=True)</code></pre></div>
-<p><code>related_name='posts'</code> lets you call <code>tag_instance.posts.all()</code> to get every post for a tag.</p></div><div class="example"><span class="example-tag">Example 2</span><h3 class="example-title">Choosing a relationship field</h3><ul><li>Author writes many Books, each Book has one Author → <code>ForeignKey(Author, on_delete=models.CASCADE, related_name='books')</code> on Book.</li><li>Student enrolls in many Courses, a Course has many Students → <code>ManyToManyField(Student, related_name='courses')</code> on Course.</li><li>User has exactly one UserProfile → <code>OneToOneField(User, on_delete=models.CASCADE)</code>.</li><li>Employee may or may not have a Department → <code>ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)</code>.</li></ul></div><div class="example"><span class="example-tag">Example 3</span><h3 class="example-title">Breaking a circular reference</h3><p>If Author needs a <code>favorite_book</code> and Book needs an <code>author</code>, define the reference as a string:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>class Author(models.Model):
-    favorite_book = models.ForeignKey(&quot;Book&quot;, on_delete=models.CASCADE, null=False)
-
-class Book(models.Model):
-    author = models.ForeignKey(Author, on_delete=models.CASCADE)</code></pre></div>
-<p>This compiles, but if both sides are non-nullable it is a <strong>deadlock</strong> — you cannot create the first row. Prefer making at least one side optional or redesigning.</p></div><div class="example"><span class="example-tag">Example 4</span><h3 class="example-title">Tracing a migration to SQL</h3><p>Run <code>python3 manage.py makemigrations til_app</code>, then <code>python manage.py sqlmigrate til_app 0001</code>. Django prints <code>CREATE TABLE "til_app_tag"</code>, <code>CREATE TABLE "til_app_post"</code>, and a junction table <code>til_app_post_tags</code> with <code>post_id</code> and <code>tag_id</code> foreign keys plus a unique index on the pair. This confirms the ORM translated your Python classes into normalised SQL.</p></div><div class="example"><span class="example-tag">Example 5</span><h3 class="example-title">Exposing models in the admin</h3><div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>from django.contrib import admin
-from .models import Post, Tag
-
-admin.site.register(Post)
-admin.site.register(Tag)</code></pre></div>
-<p>After <code>createsuperuser</code> and a server reload, log in at <code>/admin</code> and you can create, edit and delete Posts and Tags without writing any management views.</p></div></div></section>
-<section class="section" id="exam-focus"><header class="section-head"><span class="section-num">19</span><h2>Exam Practice</h2></header><div class="section-body"><div class="exam-bar"><div class="exam-progress"><span class="exam-count"><strong id="examDone">0</strong> / 18 mastered</span><span class="exam-track"><span id="examFill"></span></span></div><div class="exam-actions"><button type="button" class="btn" id="revealAll">Reveal all</button><button type="button" class="btn" id="hideAll">Hide all</button><button type="button" class="btn ghost" id="resetExam">Reset</button></div></div><article class="quiz" data-q="1"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">1</span><span class="quiz-text">What is an ORM and what problem does it solve?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Object-Relational Mapping converts data between object-oriented code and relational databases, letting developers use their language instead of raw SQL and hiding the SQL/type differences.</div><label class="mastered"><input type="checkbox" data-mastered="1"> Mark as mastered</label></div></article><article class="quiz" data-q="2"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">2</span><span class="quiz-text">List the key features of an ORM.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Maps objects to tables, abstracts SQL, performs automatic data conversion, produces database-agnostic code, and reduces boilerplate.</div><label class="mastered"><input type="checkbox" data-mastered="2"> Mark as mastered</label></div></article><article class="quiz" data-q="3"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">3</span><span class="quiz-text">What are the benefits ("can do") of an ORM?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>DRY, encourages MVC, avoids poorly formed SQL, simplifies security (prepared statements/transactions), database abstraction, loose coupling, and support for OOP concepts like inheritance.</div><label class="mastered"><input type="checkbox" data-mastered="3"> Mark as mastered</label></div></article><article class="quiz" data-q="4"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">4</span><span class="quiz-text">What are the limitations ("cannot do") of an ORM?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>A learning curve (complex, not lightweight), performance limitations versus hand-written SQL at scale, and the impedance mismatch between objects and relational tables.</div><label class="mastered"><input type="checkbox" data-mastered="4"> Mark as mastered</label></div></article><article class="quiz" data-q="5"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">5</span><span class="quiz-text">When should you drop down to raw SQL, and should you write your own ORM?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Only when absolutely necessary, because databases are complex and performance/security critical; never write your own ORM for an application unless it is for learning.</div><label class="mastered"><input type="checkbox" data-mastered="5"> Mark as mastered</label></div></article><article class="quiz" data-q="6"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">6</span><span class="quiz-text">How do you define a model in Django?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Define a Python class that subclasses <code>django.db.models.Model</code>, with each attribute mapped to a Django Field class.</div><label class="mastered"><input type="checkbox" data-mastered="6"> Mark as mastered</label></div></article><article class="quiz" data-q="7"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">7</span><span class="quiz-text">Give the Django field types for string, long text, integer, float, boolean, date, datetime, email, URL, image and file.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>CharField, TextField, IntegerField, FloatField, BooleanField, DateField, DateTimeField, EmailField, URLField, ImageField, FileField.</div><label class="mastered"><input type="checkbox" data-mastered="7"> Mark as mastered</label></div></article><article class="quiz" data-q="8"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">8</span><span class="quiz-text">Which field types represent relationships?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>ForeignKey (many-to-one, on the many side), ManyToManyField (many-to-many), OneToOneField or ForeignKey(unique=True) (one-to-one), and ForeignKey(null=True, blank=True) (many-to-optional-one).</div><label class="mastered"><input type="checkbox" data-mastered="8"> Mark as mastered</label></div></article><article class="quiz" data-q="9"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">9</span><span class="quiz-text">What is the difference between a direct class reference and a string reference?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Direct reference uses the class name when the model is already defined; a string reference (lazy relationship) uses the model name in quotes so models can be defined in any order, including mutual/circular references.</div><label class="mastered"><input type="checkbox" data-mastered="9"> Mark as mastered</label></div></article><article class="quiz" data-q="10"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">10</span><span class="quiz-text">Why are required circular foreign keys a problem?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>They create a chicken-and-egg deadlock — if both FKs are non-nullable you cannot create either row first. Circular references also complicate migrations, and relational databases need all references well-defined ahead of time.</div><label class="mastered"><input type="checkbox" data-mastered="10"> Mark as mastered</label></div></article><article class="quiz" data-q="11"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">11</span><span class="quiz-text">Why must an app be added to INSTALLED_APPS?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Django only loads and manages apps in INSTALLED_APPS; if your app is missing, Django will not see your models and migrations will not be generated.</div><label class="mastered"><input type="checkbox" data-mastered="11"> Mark as mastered</label></div></article><article class="quiz" data-q="12"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">12</span><span class="quiz-text">What is the migration workflow, and what does each command do?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Modify models.py, run <code>python manage.py makemigrations</code> (generates migration files without applying), then <code>python manage.py migrate</code> (applies unapplied migrations to the database).</div><label class="mastered"><input type="checkbox" data-mastered="12"> Mark as mastered</label></div></article><article class="quiz" data-q="13"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">13</span><span class="quiz-text">What does sqlmigrate show, and what does it reveal about ManyToManyField?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It prints the SQL a migration will run. It reveals that Django automatically creates a junction table (e.g. <code>til_app_post_tags</code>) with two foreign keys and a unique index to manage the many-to-many relationship.</div><label class="mastered"><input type="checkbox" data-mastered="13"> Mark as mastered</label></div></article><article class="quiz" data-q="14"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">14</span><span class="quiz-text">What database does Django use by default, and where is it configured?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>SQLite, a standalone file-based database, configured in <code>settings.py</code> under the <code>DATABASES</code> variable; MySQL or PostgreSQL can be used for AWS deployment.</div><label class="mastered"><input type="checkbox" data-mastered="14"> Mark as mastered</label></div></article><article class="quiz" data-q="15"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">15</span><span class="quiz-text">What is the Django admin, who is it for, and how do you get access?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>A built-in interface at <code>/admin</code> for site administrators/developers (not end users) to add/edit/delete models; access it by creating a superuser with <code>python manage.py createsuperuser</code> while the server runs.</div><label class="mastered"><input type="checkbox" data-mastered="15"> Mark as mastered</label></div></article><article class="quiz" data-q="16"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">16</span><span class="quiz-text">How do you expose models in the admin?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Import the models in <code>til_app/admin.py</code> and call <code>admin.site.register(Model)</code> for each.</div><label class="mastered"><input type="checkbox" data-mastered="16"> Mark as mastered</label></div></article><article class="quiz" data-q="17"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">17</span><span class="quiz-text">How can you secure the Django admin?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Change the default admin URL (also prevents version profiling), and limit admin access by IP at the web-server level (or via middleware, which is easier but slightly slower).</div><label class="mastered"><input type="checkbox" data-mastered="17"> Mark as mastered</label></div></article><article class="quiz" data-q="18"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">18</span><span class="quiz-text">What constraint does ManyToManyField not enforce, and what is the alternative?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It does not enforce "at least one" — you need custom validations and signals. When you need extra fields or custom constraints, define an explicit mapping class instead of relying on ManyToManyField.</div><label class="mastered"><input type="checkbox" data-mastered="18"> Mark as mastered</label></div></article></div></section>
-    <footer class="foot"><strong>ELEC3609 study guide</strong> · Django Models, ORM &amp; Admin · Lab 4 · Built for self-paced revision.</footer>
+<p>Reload the admin interface and you will now see the TIL application and its exposed models.</p>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> Play around with the admin interface to get familiar with it — you should be able to create, edit and delete data.</div></div>
+<h3 class="sub-title">Secure the Django admin</h3>
+<p>Because the admin gives site admins special powers ordinary users don't have, it's good practice to make it extra secure.</p>
+<h3 class="sub-sub">Change the default admin URL</h3>
+<p>Django project co-leader Jacob Kaplan-Moss suggests (paraphrased) that using a different name — or even a different domain — for the admin is an easy extra layer of security. It also prevents attackers from easily profiling your site: attackers can sometimes tell which version of Django you're using, down to the point-release level, by examining the HTML of the login screen at <code>admin/</code>.</p>
+<h3 class="sub-sub">Limit admin access based on IP</h3>
+<p>Configure your web server to allow access to the Django admin only from certain IP addresses (look up the instructions for your particular server; for Nginx, see <code>https://tech.marksblogg.com/django-admin-logins.html</code>).</p>
+<p>An acceptable alternative is to put this logic into <strong>middleware</strong>. This avoids modifying web server configuration (easy to implement) but introduces slight performance overhead from the extra middleware layer, so it is not as efficient as doing it at the web server level.</p>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> You are not required to secure the Django admin for your assignments.</div></div>
+</section>
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways"><div class="takeaway"><span class="tk-num">1</span><p>An ORM maps classes to tables, instances to rows and attributes to columns, letting you use Python instead of raw SQL.</p></div><div class="takeaway"><span class="tk-num">2</span><p>ORMs give DRY code, MVC encouragement, fewer malformed queries, prepared statements/transactions, database abstraction, loose coupling and OOP support.</p></div><div class="takeaway"><span class="tk-num">3</span><p>ORMs cost you a learning curve, some query performance, and suffer from the impedance mismatch between objects and relational tables.</p></div><div class="takeaway"><span class="tk-num">4</span><p>Never write your own ORM for an application unless it is purely for learning.</p></div><div class="takeaway"><span class="tk-num">5</span><p>Every Django model subclasses <code>django.db.models.Model</code>; its attributes become database fields.</p></div><div class="takeaway"><span class="tk-num">6</span><p>Pick the correct Field class (<code>CharField</code>, <code>TextField</code>, <code>DateTimeField</code>, etc.) so Django can build an accurate schema.</p></div><div class="takeaway"><span class="tk-num">7</span><p>Relationships use <code>ForeignKey</code> (many-to-one, on the many side), <code>ManyToManyField</code>, <code>OneToOneField</code> (or <code>ForeignKey(unique=True)</code>), and <code>ForeignKey(null=True, blank=True)</code> for many-to-optional-one.</p></div><div class="takeaway"><span class="tk-num">8</span><p>Use string references (lazy relationships) to define models in any order or break circular dependencies; avoid circular FKs where both sides are required.</p></div><div class="takeaway"><span class="tk-num">9</span><p>In the TIL model, <code>Post.tags</code> is a <code>ManyToManyField</code> with <code>related_name=&#x27;posts&#x27;</code>, enabling <code>tag_instance.posts.all()</code>.</p></div><div class="takeaway"><span class="tk-num">10</span><p>Register the app in <code>INSTALLED_APPS</code>, then run <code>makemigrations</code>, optionally inspect with <code>sqlmigrate</code>, then <code>migrate</code>.</p></div><div class="takeaway"><span class="tk-num">11</span><p>Django auto-creates a junction table plus a unique index and per-column indexes for many-to-many relationships.</p></div><div class="takeaway"><span class="tk-num">12</span><p>SQLite is the default database; the engine is set under <code>DATABASES</code> in <code>settings.py</code>.</p></div><div class="takeaway"><span class="tk-num">13</span><p>The admin is for administrators, not end users; create access with <code>createsuperuser</code> and expose models via <code>admin.site.register()</code>.</p></div><div class="takeaway"><span class="tk-num">14</span><p>Harden the admin by changing its URL and restricting access by IP (server-level or middleware).</p></div></div>
+</section>
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools"><button class="chip active" type="button" data-cat="all">All</button><button class="chip" type="button" data-cat="concept">Core concepts</button><button class="chip" type="button" data-cat="tech">Technologies &amp; tools</button><button class="chip" type="button" data-cat="method">Methods &amp; process</button></div>
+  <div class="terms"><div class="term-card" data-cat="concept"><div class="term-name">ORM</div><div class="term-meaning">Object-Relational Mapping: a technique that converts data between object-oriented code and relational databases, letting you use your language instead of raw SQL.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Relational database</div><div class="term-meaning">A database that stores data in tables with rows and columns, follows a static schema, and enforces referential integrity.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Model</div><div class="term-meaning">A Python class subclassing django.db.models.Model that is the canonical definition of an entity and generates both the schema and the Python database interface.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Field</div><div class="term-meaning">A model attribute mapped to a Django Field class that determines the column type, defaults, constraints and validation.</div></div><div class="term-card" data-cat="tech"><div class="term-name">CharField</div><div class="term-meaning">A string field with a required max length, used for names, titles and short text.</div></div><div class="term-card" data-cat="tech"><div class="term-name">TextField</div><div class="term-meaning">A long text field with no maximum length in the database, used for article content and comments.</div></div><div class="term-card" data-cat="tech"><div class="term-name">ForeignKey</div><div class="term-meaning">A many-to-one relationship field placed on the many-side model; also used with unique=True for one-to-one.</div></div><div class="term-card" data-cat="tech"><div class="term-name">ManyToManyField</div><div class="term-meaning">A relationship field placed on either (or both) models for many-to-many relationships; Django creates an intermediary/junction table.</div></div><div class="term-card" data-cat="tech"><div class="term-name">OneToOneField</div><div class="term-meaning">A relationship field enforcing exactly one related record on each side.</div></div><div class="term-card" data-cat="tech"><div class="term-name">related_name</div><div class="term-meaning">The name used to access the reverse side of a relationship, e.g. tag_instance.posts.all().</div></div><div class="term-card" data-cat="tech"><div class="term-name">on_delete</div><div class="term-meaning">An option controlling what happens to a dependent row when the referenced row is deleted, e.g. CASCADE or SET_NULL.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Lazy relationship</div><div class="term-meaning">A string reference to a not-yet-defined model, allowing any definition order and self-references.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Circular dependency</div><div class="term-meaning">When two models reference each other; supported via string references but discouraged because it complicates migrations.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Impedance mismatch</div><div class="term-meaning">The fundamental difference between how developers use objects and how relational tables store and join data.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Junction table</div><div class="term-meaning">An automatically created table (e.g. til_app_post_tags) that stores many-to-many links between two models.</div></div><div class="term-card" data-cat="method"><div class="term-name">Migration</div><div class="term-meaning">A generated, versioned file describing schema changes derived from your models.</div></div><div class="term-card" data-cat="method"><div class="term-name">makemigrations</div><div class="term-meaning">The command that generates migration files for pending model changes without applying them.</div></div><div class="term-card" data-cat="method"><div class="term-name">migrate</div><div class="term-meaning">The command that applies unapplied migrations to the database.</div></div><div class="term-card" data-cat="method"><div class="term-name">sqlmigrate</div><div class="term-meaning">The command that prints the SQL that a given migration will run against the database.</div></div><div class="term-card" data-cat="tech"><div class="term-name">INSTALLED_APPS</div><div class="term-meaning">The settings list of applications Django loads; only listed apps have their models seen by migration tools.</div></div><div class="term-card" data-cat="tech"><div class="term-name">DATABASES</div><div class="term-meaning">The settings variable configuring the database engine, such as SQLite, MySQL or PostgreSQL.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Superuser</div><div class="term-meaning">A privileged account created with createsuperuser that can access the Django admin interface.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Django admin</div><div class="term-meaning">A built-in interface for administrators and developers to add, edit and delete model data.</div></div></div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+<article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">What is an ORM and what three mappings does it establish between objects and tables?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Object-Relational Mapping converts data between object-oriented languages and relational databases. It maps a class to a table, an instance of the class to a row, and a class attribute to a column.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Give three benefits an ORM provides and three limitations it has.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Benefits: DRY single-place data model, database-agnostic code, reduced boilerplate, prepared statements/transactions for security, database abstraction, loose coupling, OOP support. Limitations: a learning curve (complex, not lightweight), performance limits versus hand-written SQL at scale, and the impedance mismatch between objects and relational tables.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">What is the impedance mismatch?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> It is the fundamental difference between how a developer uses objects (in-memory, free to reference each other) and how a relational database stores and joins data (static schema, well-defined references, referential integrity). It is the core problem ORMs exist to bridge.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">How do you define a Django model, and what does each attribute represent?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Define a Python class that subclasses django.db.models.Model. Each attribute is assigned an appropriate Django Field class, which becomes a database column; the class itself becomes a table.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">Match the field to its use: short string, long text, date and time, email, file upload.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Short string = CharField; long text = TextField; date and time = DateTimeField; email = EmailField (validated); file upload = FileField (or ImageField for images).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">Which field represents a many-to-one relationship and on which model does it go?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> models.ForeignKey, placed on the many-side model (e.g. Book.author = models.ForeignKey(Author, ...)).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">How do you define a one-to-one relationship in two different ways?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Use models.OneToOneField(OtherModel, on_delete=...) or, as an alternative, models.ForeignKey(OtherModel, on_delete=..., unique=True).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">How do you model a "many-to-optional-one" relationship?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Use models.ForeignKey(OtherModel, on_delete=models.SET_NULL, null=True, blank=True) on the many-side model, so the link is optional.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">When should you use a string reference instead of a direct class reference?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Use a string reference when the related model is not yet defined, when you want to define models in any order, for self-references, or to break a circular/two-way dependency. Otherwise, a direct class reference is fine.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">Why is a circular foreign key with both sides required a problem?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> It creates a chicken-and-egg deadlock: because both foreign keys are non-nullable, you cannot create either row first. Circular references also complicate migration dependencies and maintenance.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">Write the TIL models and explain what related_name='posts' enables.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Tag has name (CharField max_length=10, unique) and creation_date (DateTimeField auto_now_add). Post has subject, content, visibility, created_at and tags = models.ManyToManyField(Tag, related_name='posts', blank=True). related_name='posts' enables tag_instance.posts.all() to return all Posts linked to a Tag.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">What does ManyToManyField not enforce, and what are the options for more control?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> It does not enforce constraints such as "at least one". To enforce them you need custom validations and signals. For complex needs (extra fields or custom constraints) define an explicit mapping/intermediary model instead of relying on the automatic one.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">What must you do before Django can generate a schema for your models?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Add the application (its config class, e.g. 'til_app.apps.TilAppConfig') to INSTALLED_APPS in settings.py, so makemigrations can discover the models.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">State the three-step migration workflow and the difference between makemigrations and migrate.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Step 1 modify models.py; step 2 run python manage.py makemigrations (generates migration files, does not apply); step 3 run python manage.py migrate (applies unapplied migrations to the database).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q15">
+    <div class="quiz-head"><span class="quiz-qnum">Q15</span><p class="quiz-q">What does sqlmigrate show, and what extra objects does Django create for a ManyToManyField?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> sqlmigrate prints the SQL a migration will run. For a ManyToManyField, Django creates a junction table (til_app_post_tags) with foreign keys to both models, a unique index on the (post_id, tag_id) pair, and separate indexes on each column.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q16">
+    <div class="quiz-head"><span class="quiz-qnum">Q16</span><p class="quiz-q">How is the database engine configured, and what is the default?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> It is configured in settings.py under the DATABASES variable using the 'ENGINE' key; the default is SQLite (django.db.backends.sqlite3). MySQL and PostgreSQL can be used for AWS deployment.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q17">
+    <div class="quiz-head"><span class="quiz-qnum">Q17</span><p class="quiz-q">How do you create an admin user and expose your models in the admin?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Run python manage.py createsuperuser and follow the prompts; then edit app/admin.py to import the models and call admin.site.register(Model) for each. Log in at http://127.0.0.1:8000/admin while runserver is running.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q18">
+    <div class="quiz-head"><span class="quiz-qnum">Q18</span><p class="quiz-q">Why should the admin not be used for end users, and name two ways to secure it.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The admin is designed for site administrators/developers, not ordinary visitors. Secure it by changing the default admin URL (or domain) and by limiting access based on IP — either at the web server level (more efficient) or via middleware (easier, slight overhead).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+</section>
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist"><label class="check-item"><input type="checkbox"> I can explain what an ORM is and state the class→table, instance→row, attribute→column mapping.</label><label class="check-item"><input type="checkbox"> I can list the benefits and limitations of using an ORM, including the impedance mismatch.</label><label class="check-item"><input type="checkbox"> I can define a Django model by subclassing django.db.models.Model with appropriate fields.</label><label class="check-item"><input type="checkbox"> I can choose the correct field type for a given kind of data.</label><label class="check-item"><input type="checkbox"> I can model many-to-one, many-to-many, one-to-one and many-to-optional-one relationships.</label><label class="check-item"><input type="checkbox"> I can decide between direct class references and string references and explain lazy relationships.</label><label class="check-item"><input type="checkbox"> I can explain why required circular foreign keys are a deadlock to avoid.</label><label class="check-item"><input type="checkbox"> I can write the TIL Tag and Post models including the ManyToManyField and related_name.</label><label class="check-item"><input type="checkbox"> I can activate an app in INSTALLED_APPS and run makemigrations, sqlmigrate and migrate.</label><label class="check-item"><input type="checkbox"> I can read Django's generated SQL, including the many-to-many junction table and indexes.</label><label class="check-item"><input type="checkbox"> I can configure the database engine in settings.py and describe the SQLite default.</label><label class="check-item"><input type="checkbox"> I can create a superuser, register models in admin.py, and describe how to secure the admin.</label></div>
+</section>
   </main>
 </div>
-<button class="totop" id="toTop" type="button" aria-label="Back to top">↑</button>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">⌂ All guides</a>
+    <a href="../week_3/ELEC3609_lab_week3_study_guide.html">← Lab 3</a>
+    <a href="../week_5/ELEC3609_lab_week5_study_guide.html">Lab 5 →</a>
+  </div>
+  <p>ELEC3609/9609 Internet Software Platforms · Lab 4 · Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
 <script>
 (function(){
-  var GUIDE_ID = "elec3609-lab-week4-study-guide";
+  "use strict";
+
+  /* ---------- Theme ---------- */
   var root = document.documentElement;
-  /* theme */
-  var stored = null;
-  try { stored = localStorage.getItem("sg-theme"); } catch(e){}
-  var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  setTheme(stored || (prefersDark ? "dark" : "light"));
-  function setTheme(t){
-    root.setAttribute("data-theme", t);
-    var b = document.getElementById("themeBtn");
-    if (b) b.textContent = t === "dark" ? "☀️" : "🌙";
-    try { localStorage.setItem("sg-theme", t); } catch(e){}
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('elec3609-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('elec3609-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
   }
-  document.getElementById("themeBtn").addEventListener("click", function(){
-    setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
-  });
-  document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
 
-  /* mobile drawer */
-  var sidebar = document.getElementById("sidebar"), scrim = document.getElementById("scrim");
-  function closeDrawer(){ sidebar.classList.remove("open"); scrim.classList.remove("show"); }
-  document.getElementById("menuBtn").addEventListener("click", function(){
-    sidebar.classList.toggle("open"); scrim.classList.toggle("show");
-  });
-  scrim.addEventListener("click", closeDrawer);
-  sidebar.addEventListener("click", function(e){ if (e.target.closest("a")) closeDrawer(); });
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
 
-  /* progress bar + back to top */
-  var bar = document.getElementById("progress"), toTop = document.getElementById("toTop");
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
   function onScroll(){
-    var h = document.documentElement;
-    var max = h.scrollHeight - h.clientHeight;
-    var pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
-    bar.style.width = pct + "%";
-    toTop.classList.toggle("show", h.scrollTop > 600);
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
   }
-  window.addEventListener("scroll", onScroll, {passive:true});
+  window.addEventListener('scroll', onScroll, {passive:true});
   onScroll();
-  toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
 
-  /* active toc + reveal */
-  var links = Array.prototype.slice.call(document.querySelectorAll(".toc-link"));
-  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
-  if ("IntersectionObserver" in window) {
-    var rev = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){ if (en.isIntersecting) en.target.classList.add("in"); });
-    }, {rootMargin:"0px 0px -8% 0px", threshold:0.05});
-    sections.forEach(function(s){ rev.observe(s); });
-
-    var spy = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){
-        if (!en.isIntersecting) return;
-        var id = en.target.id;
-        links.forEach(function(a){ a.classList.toggle("active", a.getAttribute("href") === "#" + id); });
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
       });
-    }, {rootMargin:"-15% 0px -70% 0px", threshold:0});
-    sections.forEach(function(s){ spy.observe(s); });
-  } else {
-    sections.forEach(function(s){ s.classList.add("in"); });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
   }
 
-  /* copy buttons */
-  document.addEventListener("click", function(e){
-    var btn = e.target.closest("[data-copy]");
-    if (!btn) return;
-    var code = btn.parentElement.querySelector("code");
-    if (!code) return;
-    var text = code.innerText;
-    var done = function(){ btn.textContent = "Copied"; btn.classList.add("done"); setTimeout(function(){ btn.textContent = "Copy"; btn.classList.remove("done"); }, 1400); };
-    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
-    else { var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(err){} document.body.removeChild(ta); done(); }
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'elec3609-ELEC3609_lab_week4_study_guide-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
   });
 
-  /* glossary filter */
-  var termSearch = document.getElementById("termSearch");
-  if (termSearch) {
-    var terms = Array.prototype.slice.call(document.querySelectorAll(".term"));
-    var count = document.getElementById("termCount");
-    var update = function(){
-      var q = termSearch.value.trim().toLowerCase();
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
       var shown = 0;
-      terms.forEach(function(t){
-        var hit = !q || (t.getAttribute("data-term") || "").indexOf(q) !== -1;
-        t.classList.toggle("hide", !hit);
-        if (hit) shown++;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
       });
-      if (count) count.textContent = shown + " / " + terms.length + " shown";
-    };
-    termSearch.addEventListener("input", update);
-    update();
-  }
-
-  /* exam interactions */
-  var quizzes = Array.prototype.slice.call(document.querySelectorAll(".quiz"));
-  quizzes.forEach(function(q){
-    var head = q.querySelector(".quiz-q");
-    head.addEventListener("click", function(){
-      q.classList.toggle("open");
-      head.setAttribute("aria-expanded", q.classList.contains("open") ? "true" : "false");
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
     });
   });
-  var doneEl = document.getElementById("examDone"), fillEl = document.getElementById("examFill");
-  var boxes = Array.prototype.slice.call(document.querySelectorAll("[data-mastered]"));
-  var total = boxes.length;
-  function examKey(){ return "sg-exam-" + GUIDE_ID; }
-  function loadExam(){
-    var data = {};
-    try { data = JSON.parse(localStorage.getItem(examKey()) || "{}"); } catch(e){}
-    boxes.forEach(function(b){ b.checked = !!data[b.getAttribute("data-mastered")]; });
-  }
-  function saveExam(){
-    var data = {};
-    boxes.forEach(function(b){ if (b.checked) data[b.getAttribute("data-mastered")] = 1; });
-    try { localStorage.setItem(examKey(), JSON.stringify(data)); } catch(e){}
-  }
-  function refreshExam(){
-    var done = boxes.filter(function(b){ return b.checked; }).length;
-    if (doneEl) doneEl.textContent = done;
-    if (fillEl) fillEl.style.width = total ? (done / total) * 100 + "%" : "0%";
-  }
-  boxes.forEach(function(b){ b.addEventListener("change", function(){ saveExam(); refreshExam(); }); });
-  if (boxes.length) { loadExam(); refreshExam(); }
-  var revealAll = document.getElementById("revealAll");
-  var hideAll = document.getElementById("hideAll");
-  var resetExam = document.getElementById("resetExam");
-  if (revealAll) revealAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.add("open"); }); });
-  if (hideAll) hideAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.remove("open"); }); });
-  if (resetExam) resetExam.addEventListener("click", function(){ boxes.forEach(function(b){ b.checked = false; }); saveExam(); refreshExam(); });
 
-  /* search */
-  var input = document.getElementById("searchInput");
-  var box = document.getElementById("searchResults");
-  var index = sections.map(function(s){
-    var h = s.querySelector("h2");
-    return { id: s.id, title: h ? h.textContent : "", text: s.innerText.replace(/\s+/g, " ").trim() };
-  });
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
   function runSearch(){
-    var q = input.value.trim().toLowerCase();
-    box.innerHTML = "";
-    if (q.length < 2) { box.classList.remove("open"); return; }
-    var hits = index.filter(function(it){ return (it.title + " " + it.text).toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
-    if (!hits.length) { box.innerHTML = '<div class="sr-empty">No matches</div>'; box.classList.add("open"); return; }
-    hits.forEach(function(it){
-      var low = it.text.toLowerCase(), at = low.indexOf(q);
-      var snippet = at >= 0 ? it.text.slice(Math.max(0, at - 30), at + 70) : it.title;
-      var b = document.createElement("button");
-      b.type = "button"; b.className = "sr-item";
-      b.innerHTML = "<b></b><span></span>";
-      b.querySelector("b").textContent = it.title;
-      b.querySelector("span").textContent = "…" + snippet + "…";
-      b.addEventListener("click", function(){
-        document.getElementById(it.id).scrollIntoView({behavior:"smooth", block:"start"});
-        box.classList.remove("open"); input.blur();
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
       });
-      box.appendChild(b);
-    });
-    box.classList.add("open");
+    }
+    suggest.classList.add('open');
   }
-  if (input) {
-    input.addEventListener("input", runSearch);
-    input.addEventListener("keydown", function(e){
-      if (e.key === "Enter") { var first = box.querySelector(".sr-item"); if (first) first.click(); }
-      if (e.key === "Escape") { box.classList.remove("open"); input.blur(); }
-    });
-    document.addEventListener("click", function(e){ if (!e.target.closest(".search")) box.classList.remove("open"); });
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
   }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'elec3609-ELEC3609_lab_week4_study_guide-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
 })();
 </script>
+
+<script>
+(function(){
+  "use strict";
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.code-copy');
+    if (!btn) return;
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    var text = code.innerText;
+    var done = function(){ btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
+    else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(err){} document.body.removeChild(ta); done(); }
+  });
+})();
+</script>
+
 </body>
 </html>

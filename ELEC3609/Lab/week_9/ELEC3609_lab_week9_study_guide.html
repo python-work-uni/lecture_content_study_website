@@ -3,522 +3,1016 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ELEC3609 Lab 9 Study Guide – AWS Cloud &amp; GraphQL · Lab 9</title>
-<meta name="description" content="This lab introduces cloud-based application development using AWS and modern API technology. You will survey the AWS services used to deploy secure and scalable web applications…">
-<meta name="color-scheme" content="light dark">
+<meta name="description" content="This lab introduces how real web applications are deployed and served in the cloud. It covers the core AWS building blocks (compute, networking, storage, security and monitoring), explains why a manag">
+<title>ELEC3609 Lab 9 — Building in the Cloud: AWS Services, Amazon RDS and GraphQL APIs</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box}
-:root{
-  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --head:'Sora','Inter',system-ui,sans-serif;
-  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-  --bg:#f4f8f7;--bg-2:#e9f1ef;--surface:#ffffff;--surface-2:#eff5f4;
-  --ink:#15282b;--muted:#587076;--faint:#89a0a3;--line:#d8e5e2;
-  --brand:#0e7c6b;--brand-2:#12a594;--brand-soft:#d6f3ec;--brand-ink:#0a5b4e;
-  --amber:#b45309;--amber-soft:#fdf0d6;
-  --rose:#b21e4b;--rose-soft:#fde4ec;
-  --sky:#0c6ea3;--sky-soft:#ddeffb;
-  --violet:#6d28d9;--violet-soft:#ece7fd;
-  --shadow:0 1px 2px rgba(16,40,43,.05),0 10px 28px -16px rgba(16,40,43,.30);
-  --shadow-lg:0 26px 60px -30px rgba(16,40,43,.45);
-  --r:16px;--r-sm:11px;--sidebar:288px;
-}
-[data-theme=dark]{
-  --bg:#07110f;--bg-2:#0b1a17;--surface:#0e1d1a;--surface-2:#122522;
-  --ink:#e6f2ef;--muted:#94ada8;--faint:#69837e;--line:#1c322e;
-  --brand:#2dd4bf;--brand-2:#5eead4;--brand-soft:rgba(45,212,191,.15);--brand-ink:#99f6e4;
-  --amber:#fbbf24;--amber-soft:rgba(251,191,36,.15);
-  --rose:#fb7185;--rose-soft:rgba(251,113,133,.15);
-  --sky:#38bdf8;--sky-soft:rgba(56,189,248,.15);
-  --violet:#a78bfa;--violet-soft:rgba(167,139,250,.17);
-  --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px -18px rgba(0,0,0,.7);
-  --shadow-lg:0 28px 70px -34px rgba(0,0,0,.85);
-}
-html{scroll-behavior:smooth}
-body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.68;-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.75;
-  background:radial-gradient(58rem 38rem at 112% -12%,var(--brand-soft),transparent 62%),
-             radial-gradient(46rem 30rem at -12% 6%,var(--sky-soft),transparent 58%)}
-h1,h2,h3,h4{font-family:var(--head);line-height:1.2;margin:0}
-p{margin:0 0 .85rem}
-a{color:var(--brand);text-decoration:none}
-a:hover{text-decoration:underline}
-strong{font-weight:650;color:var(--ink)}
-code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.08em .38em}
-.math{font-family:var(--mono);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.06em .4em;font-size:.9em}
-::selection{background:var(--brand-soft);color:var(--brand-ink)}
-/* progress */
-.progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;background:linear-gradient(90deg,var(--brand),var(--brand-2),var(--sky))}
-/* topbar */
-.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:.75rem;
-  padding:.6rem clamp(.9rem,3vw,1.6rem);background:color-mix(in srgb,var(--surface) 82%,transparent);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:.6rem;min-width:0}
-.brand-badge{flex:none;font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.28rem .6rem;white-space:nowrap}
-.brand-title{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:.45rem}
-.icon-btn{display:inline-grid;place-items:center;width:38px;height:38px;border:1px solid var(--line);
-  background:var(--surface);color:var(--ink);border-radius:10px;cursor:pointer;font-size:1rem;transition:.15s}
-.icon-btn:hover{border-color:var(--brand);color:var(--brand)}
-.menu-btn{display:none}
-.search{position:relative}
-.search input{width:min(30vw,240px);padding:.5rem .7rem;border:1px solid var(--line);border-radius:10px;
-  background:var(--surface);color:var(--ink);font:inherit;font-size:.85rem}
-.search input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.search-results{position:absolute;right:0;top:calc(100% + 8px);width:min(78vw,380px);max-height:60vh;overflow:auto;
-  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);display:none;padding:.35rem}
-.search-results.open{display:block}
-.sr-item{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;
-  padding:.5rem .6rem;border-radius:8px;cursor:pointer}
-.sr-item:hover,.sr-item.active{background:var(--surface-2)}
-.sr-item b{display:block;font-size:.84rem;color:var(--brand-ink)}
-.sr-item span{display:block;font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sr-empty{padding:.6rem;color:var(--muted);font-size:.82rem}
-/* shell */
-.shell{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);gap:0;align-items:start}
-.sidebar{position:sticky;top:57px;height:calc(100vh - 57px);overflow:auto;padding:1.3rem .9rem 3rem 1.4rem}
-.toc-title{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .7rem .5rem}
-.toc{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
-.toc-link{display:flex;gap:.55rem;align-items:baseline;padding:.36rem .5rem;border-radius:8px;color:var(--muted);
-  font-size:.82rem;line-height:1.35;transition:.13s}
-.toc-link:hover{background:var(--surface-2);color:var(--ink);text-decoration:none}
-.toc-link.active{background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
-.toc-n{font-family:var(--mono);font-size:.66rem;color:var(--faint);flex:none;padding-top:.12rem}
-.toc-link.active .toc-n{color:var(--brand)}
-.content{min-width:0;max-width:960px;padding:1.6rem clamp(1rem,3.5vw,2.6rem) 5rem}
-/* hero */
-.hero{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:var(--r);
-  padding:clamp(1.4rem,3.5vw,2.4rem);background:
-    linear-gradient(180deg,color-mix(in srgb,var(--brand-soft) 55%,var(--surface)),var(--surface) 72%);
-  box-shadow:var(--shadow);margin-bottom:2rem}
-.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:230px;height:230px;border-radius:50%;
-  background:radial-gradient(circle,var(--brand-soft),transparent 68%);opacity:.8}
-.hero-tag{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-ink);font-weight:700;margin:0 0 .55rem}
-.hero h1{font-size:clamp(1.5rem,4vw,2.15rem);letter-spacing:-.02em;margin-bottom:.5rem}
-.hero-sub{color:var(--muted);font-size:1.02rem;max-width:60ch;margin-bottom:1.1rem}
-.hero-overview{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.15rem;box-shadow:var(--shadow)}
-.ho-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .35rem}
-.hero-overview p:last-child{margin:0}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-top:1.1rem}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.7rem .85rem;box-shadow:var(--shadow)}
-.stat-val{display:block;font-family:var(--head);font-weight:800;font-size:1.25rem;color:var(--brand-ink)}
-.stat-label{display:block;font-size:.72rem;color:var(--muted);letter-spacing:.03em;text-transform:uppercase;font-weight:600}
-/* sections */
-.section{scroll-margin-top:80px;margin-bottom:2.4rem;opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
-.section.in{opacity:1;transform:none}
-.section-head{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:2px solid var(--line)}
-.section-num{flex:none;font-family:var(--head);font-weight:800;font-size:.82rem;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));
-  width:2.1rem;height:2.1rem;display:grid;place-items:center;border-radius:10px;box-shadow:0 6px 16px -8px var(--brand)}
-.section-head h2{font-size:clamp(1.15rem,2.6vw,1.5rem);letter-spacing:-.01em}
-.section-body>*+*{margin-top:.5rem}
-.section-body p{margin:0 0 .9rem}
-.subhead{font-size:.98rem;margin:1.2rem 0 .5rem;color:var(--brand-ink)}
-ul,ol{margin:0 0 .9rem;padding-left:1.25rem}
-li{margin:.22rem 0}
-li>ul,li>ol{margin:.3rem 0 .1rem}
-/* table */
-.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm);margin:1rem 0;box-shadow:var(--shadow)}
-table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:440px}
-thead th{background:var(--surface-2);text-align:left;font-weight:700;color:var(--ink);white-space:nowrap}
-th,td{padding:.6rem .8rem;border-bottom:1px solid var(--line);vertical-align:top}
-tbody tr:last-child td{border-bottom:0}
-tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
-/* code */
-.code{position:relative;margin:1rem 0}
-.code pre{margin:0;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.1rem;overflow:auto;box-shadow:var(--shadow)}
-.code code{font-family:var(--mono);font-size:.82rem;line-height:1.6;background:none;border:0;padding:0;color:var(--ink);white-space:pre}
-.copy{position:absolute;top:.55rem;right:.55rem;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;font-weight:700;
-  color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.24rem .5rem;cursor:pointer}
-.copy:hover{color:var(--brand);border-color:var(--brand)}
-.copy.done{color:var(--brand-ink);border-color:var(--brand)}
-/* formula */
-.formula{position:relative;margin:1rem 0;padding:1.1rem 1rem .9rem;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm)}
-.formula-label{position:absolute;top:-.6rem;left:.9rem;font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;font-weight:700;
-  color:#fff;background:var(--brand);border-radius:6px;padding:.14rem .5rem}
-.formula code{display:block;font-family:var(--mono);font-size:.86rem;background:none;border:0;padding:0;color:var(--ink)}
-/* flow */
-.flow{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin:1rem 0;padding:1rem;background:var(--surface);
-  border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--shadow)}
-.flow-step{display:inline-flex;align-items:center;gap:.4rem;background:var(--surface-2);border:1px solid var(--line);
-  border-radius:999px;padding:.34rem .75rem .34rem .5rem;font-size:.82rem;font-weight:600}
-.flow-n{font-family:var(--mono);font-size:.64rem;color:#fff;background:var(--brand);border-radius:999px;padding:.1rem .34rem}
-.flow-arrow{color:var(--brand);font-weight:800}
-/* callouts */
-.callout{display:flex;gap:.75rem;margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--line);border-left-width:4px;
-  border-radius:var(--r-sm);background:var(--surface);box-shadow:var(--shadow)}
-.callout-ico{flex:none;font-size:1.15rem;line-height:1.3}
-.callout-title{font-weight:700;font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;margin:0 0 .18rem}
-.callout-text{font-size:.93rem}
-.callout-text>:last-child{margin-bottom:0}
-.callout.why{border-left-color:var(--amber);background:color-mix(in srgb,var(--amber-soft) 55%,var(--surface))}
-.callout.why .callout-title{color:var(--amber)}
-.callout.memory{border-left-color:var(--violet);background:color-mix(in srgb,var(--violet-soft) 55%,var(--surface))}
-.callout.memory .callout-title{color:var(--violet)}
-.callout.warn{border-left-color:var(--rose);background:color-mix(in srgb,var(--rose-soft) 55%,var(--surface))}
-.callout.warn .callout-title{color:var(--rose)}
-.callout.info{border-left-color:var(--sky);background:color-mix(in srgb,var(--sky-soft) 55%,var(--surface))}
-.callout.info .callout-title{color:var(--sky)}
-.callout.tip{border-left-color:var(--brand);background:color-mix(in srgb,var(--brand-soft) 55%,var(--surface))}
-.callout.tip .callout-title{color:var(--brand-ink)}
-/* takeaways */
-.takeaways{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
-.takeaways li{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r-sm);padding:.75rem .9rem;box-shadow:var(--shadow)}
-.tk-n{flex:none;font-family:var(--mono);font-size:.68rem;font-weight:700;color:var(--brand-ink);background:var(--brand-soft);
-  border-radius:7px;padding:.22rem .45rem;margin-top:.15rem}
-/* glossary */
-.term-filter{display:flex;align-items:center;gap:.7rem;margin:0 0 .9rem}
-.term-filter input{flex:1;max-width:340px;padding:.55rem .75rem;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:.86rem}
-.term-filter input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.term-count{font-size:.78rem;color:var(--muted)}
-.terms{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.7rem}
-.term{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem .9rem;box-shadow:var(--shadow)}
-.term.hide{display:none}
-.term-name{font-family:var(--head);font-weight:700;font-size:.9rem;margin:0 0 .2rem;color:var(--brand-ink)}
-.term-def{font-size:.85rem;color:var(--muted);margin:0}
-/* mnemonics */
-.mnemonics{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:.8rem}
-.mnemonic{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.95rem 1rem;box-shadow:var(--shadow)}
-.mn-title{font-family:var(--head);font-weight:700;font-size:.92rem;margin:0 0 .4rem;color:var(--brand-ink)}
-.mn-code{font-family:var(--mono);font-weight:600;font-size:1.02rem;letter-spacing:.04em;margin:0 0 .35rem}
-.mn-phrase{font-style:italic;font-weight:600;color:var(--violet);margin:0 0 .35rem}
-.mn-note{font-size:.83rem;color:var(--muted);margin:0}
-/* examples */
-.example{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:1.1rem 1.2rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.example-tag{display:inline-block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.2rem .55rem;margin-bottom:.5rem}
-.example-title{font-size:1rem;margin:0 0 .6rem}
-/* exam */
-.exam-bar{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:space-between;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem 1rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.exam-count{font-size:.85rem;color:var(--muted)}
-.exam-count strong{color:var(--brand-ink)}
-.exam-track{display:block;width:170px;height:7px;border-radius:999px;background:var(--surface-2);margin-top:.4rem;overflow:hidden}
-.exam-track>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .3s}
-.exam-actions{display:flex;gap:.4rem;flex-wrap:wrap}
-.btn{font:inherit;font-size:.78rem;font-weight:600;color:var(--brand-ink);background:var(--brand-soft);border:1px solid transparent;
-  border-radius:9px;padding:.42rem .7rem;cursor:pointer}
-.btn:hover{background:var(--brand);color:#fff}
-.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted)}
-.btn.ghost:hover{border-color:var(--brand);color:var(--brand);background:transparent}
-.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);margin:0 0 .6rem;overflow:hidden;box-shadow:var(--shadow)}
-.quiz-q{display:flex;gap:.7rem;align-items:flex-start;width:100%;text-align:left;background:none;border:0;color:var(--ink);
-  font:inherit;font-weight:600;padding:.85rem .95rem;cursor:pointer}
-.quiz-n{flex:none;font-family:var(--mono);font-size:.7rem;font-weight:700;color:#fff;background:var(--brand);border-radius:7px;padding:.2rem .45rem;margin-top:.1rem}
-.quiz-text{flex:1}
-.quiz-chev{flex:none;color:var(--muted);transition:transform .2s}
-.quiz.open .quiz-chev{transform:rotate(180deg)}
-.quiz-body{display:none;padding:0 .95rem .9rem;border-top:1px dashed var(--line)}
-.quiz.open .quiz-body{display:block}
-.quiz-a{font-size:.9rem;margin:.7rem 0;padding:.7rem .85rem;background:var(--surface-2);border-radius:9px}
-.quiz-a-label{display:block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--brand);margin-bottom:.2rem}
-.quiz-a.muted{color:var(--muted);font-style:italic}
-.mastered{display:inline-flex;gap:.45rem;align-items:center;font-size:.8rem;color:var(--muted);cursor:pointer;user-select:none}
-.mastered input{accent-color:var(--brand);width:1rem;height:1rem}
-/* footer */
-.foot{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}
-/* to top */
-.totop{position:fixed;right:1.1rem;bottom:1.1rem;z-index:55;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);
-  background:var(--surface);color:var(--brand-ink);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.2s}
-.totop.show{opacity:1;pointer-events:auto}
-.scrim{display:none}
-/* responsive */
-@media (max-width:980px){
-  .shell{grid-template-columns:1fr}
-  .menu-btn{display:inline-grid}
-  .sidebar{position:fixed;top:0;left:0;z-index:70;height:100vh;width:min(86vw,320px);background:var(--surface);
-    border-right:1px solid var(--line);transform:translateX(-102%);transition:transform .25s ease;padding-top:1.4rem;box-shadow:var(--shadow-lg)}
-  .sidebar.open{transform:none}
-  .scrim{display:block;position:fixed;inset:0;z-index:65;background:rgba(6,18,16,.45);opacity:0;pointer-events:none;transition:.25s}
-  .scrim.show{opacity:1;pointer-events:auto}
-  .search input{width:40vw}
-  .brand-title{display:none}
-}
-@media (max-width:560px){
-  .search input{width:34vw}
-  .content{padding:1.1rem .9rem 4rem}
-  .stats{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
-}
-@media (prefers-reduced-motion:reduce){
-  *{scroll-behavior:auto!important}
-  .section{opacity:1;transform:none;transition:none}
-}
-@media print{
-  .topbar,.sidebar,.totop,.progress,.exam-actions,.copy,.scrim,.term-filter{display:none!important}
-  body::before{display:none}
-  .shell{display:block}
-  .content{max-width:none;padding:0}
-  .section{opacity:1;transform:none;page-break-inside:avoid}
-  .quiz-body{display:block!important}
-  .hero,.callout,.table-wrap,.code pre,.example,.quiz,.term{box-shadow:none}
-  a{color:inherit}
-}
+  /* ============================================================
+     ENGG2112 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+
+  /* ---------- Code blocks (added for ELEC3609) ---------- */
+  .code-block{position:relative;margin:1.2rem 0;}
+  .code-block pre{margin:0;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.1rem;overflow:auto;}
+  .code-block code{font-family:var(--font-mono);font-size:.84rem;line-height:1.62;background:none;padding:0;border-radius:0;color:var(--ink);white-space:pre;}
+  .code-copy{position:absolute;top:.55rem;right:.55rem;font-family:var(--font-body);font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.25rem .55rem;cursor:pointer;transition:.16s var(--ease);}
+  .code-copy:hover{color:var(--primary-deep);border-color:var(--line-strong);}
+  .code-copy.done{color:var(--primary-deep);border-color:var(--primary);}
 </style>
 </head>
 <body>
-<div class="progress" id="progress" aria-hidden="true"></div>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
 <header class="topbar">
-  <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Open navigation">☰</button>
-  <div class="brand"><span class="brand-badge">ELEC3609 · Lab 9</span><span class="brand-title">AWS Cloud &amp; GraphQL · Lab 9</span></div>
-  <div class="topbar-actions">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">ELEC3609</span>
+    <span class="brand-week">Lab 9</span>
+  </a>
+  <div class="topbar-tools">
     <div class="search">
-      <input id="searchInput" type="search" placeholder="Search this guide…" autocomplete="off" aria-label="Search this guide">
-      <div class="search-results" id="searchResults" role="listbox"></div>
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
     </div>
-    <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle light and dark theme">🌙</button>
-    <button class="icon-btn" id="printBtn" type="button" aria-label="Print this guide">🖨</button>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
   </div>
 </header>
-<div class="shell">
+
+<div class="layout">
   <aside class="sidebar" id="sidebar" aria-label="Table of contents">
-    <p class="toc-title">Contents</p>
-    <ul class="toc">
-<li><a href="#overview" class="toc-link"><span class="toc-n">00</span>Overview</a></li>
-<li><a href="#sec-1" class="toc-link"><span class="toc-n">01</span>AWS Cloud Architecture</a></li>
-<li><a href="#sec-2" class="toc-link"><span class="toc-n">02</span>Core AWS Components</a></li>
-<li><a href="#sec-3" class="toc-link"><span class="toc-n">03</span>AWS Security &amp; Networking</a></li>
-<li><a href="#sec-4" class="toc-link"><span class="toc-n">04</span>Additional AWS Services</a></li>
-<li><a href="#sec-5" class="toc-link"><span class="toc-n">05</span>What You Will Actually Deploy</a></li>
-<li><a href="#sec-6" class="toc-link"><span class="toc-n">06</span>Amazon RDS: Managed Database</a></li>
-<li><a href="#sec-7" class="toc-link"><span class="toc-n">07</span>Why Use a Remote Database</a></li>
-<li><a href="#sec-8" class="toc-link"><span class="toc-n">08</span>GraphQL: Origins and Purpose</a></li>
-<li><a href="#sec-9" class="toc-link"><span class="toc-n">09</span>Limitations of REST</a></li>
-<li><a href="#sec-10" class="toc-link"><span class="toc-n">10</span>How GraphQL Works</a></li>
-<li><a href="#sec-11" class="toc-link"><span class="toc-n">11</span>GraphQL vs REST: Similarities</a></li>
-<li><a href="#sec-12" class="toc-link"><span class="toc-n">12</span>Drawbacks of GraphQL</a></li>
-<li><a href="#key-takeaways" class="toc-link"><span class="toc-n">13</span>Key Takeaways</a></li>
-<li><a href="#glossary" class="toc-link"><span class="toc-n">14</span>Glossary</a></li>
-<li><a href="#mnemonics" class="toc-link"><span class="toc-n">15</span>Mnemonics &amp; Quick Recall</a></li>
-<li><a href="#worked-examples" class="toc-link"><span class="toc-n">16</span>Worked Examples &amp; Scenarios</a></li>
-<li><a href="#exam-focus" class="toc-link"><span class="toc-n">17</span>Exam Practice</a></li>
-    </ul>
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
   </aside>
-  <div class="scrim" id="scrim"></div>
+  <div class="scrim" id="scrim" hidden></div>
+
   <main class="content" id="content">
-<section class="hero" id="overview">
-<p class="hero-tag">📖 Course notes · Lab 9</p>
-<h1>AWS Cloud &amp; GraphQL · Lab 9</h1>
-<p class="hero-sub">This lab introduces cloud-based application development using AWS and modern API technology. You will survey the AWS services used to deploy secure and…</p>
-<div class="hero-overview"><p class="ho-label">Lecture overview</p><p>This lab introduces cloud-based application development using AWS and modern API technology. You will survey the AWS services used to deploy secure and scalable web applications, understand why managed databases such as Amazon RDS suit collaborative, production-like development, and learn how GraphQL improves on traditional REST by letting clients ask for exactly the data they need. The lab closes with the trade-offs of GraphQL so you can choose the right API style for a project.</p></div>
-<div class="stats"><div class="stat"><span class="stat-val">Week 9 — 08 AWS Cloud &amp; GraphQL</span><span class="stat-label">Lab</span></div><div class="stat"><span class="stat-val">Task 8 – Basic Cloud Deployment</span><span class="stat-label">Individual Task</span></div><div class="stat"><span class="stat-val">EC2, RDS, VPC, AMI, IAM</span><span class="stat-label">Core AWS Components</span></div><div class="stat"><span class="stat-val">Facebook 2012, public 2015</span><span class="stat-label">GraphQL History</span></div><div class="stat"><span class="stat-val">EC2 + Nginx + uWSGI</span><span class="stat-label">Deployment Stack</span></div></div>
+<section class="hero" id="top">
+  <span class="hero-eyebrow">ELEC3609 · Lab 9 · AWS Cloud &amp; GraphQL</span>
+  <h1 class="hero-title">Building in the Cloud: AWS Services, Amazon RDS and GraphQL APIs</h1>
+  <p class="hero-sub">This lab introduces how real web applications are deployed and served in the cloud. It covers the core AWS building blocks (compute, networking, storage, security and monitoring), explains why a managed remote database like Amazon RDS beats a local file database for team development, and then introduces GraphQL — a query language for APIs that fixes the over-fetching, under-fetching and rigid-endpoint problems of REST.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> Two big ideas run through this lab. First, in the cloud you <em>rent</em> building blocks (a virtual server, a network, a managed database, a CDN) instead of owning them, and you wire them together securely. Second, an API is a contract for how clients ask for data — REST forces the server to decide the shape of every response, while GraphQL lets the <em>client</em> ask for exactly the fields it needs in a single request. Keep those two mental models in mind and everything else clicks into place.</div>
+  <div class="hero-meta"><span class="meta-chip">~20 min read</span><span class="meta-chip">11 teaching sections</span><span class="meta-chip">14 practice questions</span><span class="meta-chip">24 key terms</span></div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list"><li>Identify the core AWS components used to deploy secure, scalable web applications.</li><li>Explain the difference between compute, networking, storage, security and management services in AWS.</li><li>Describe each security measure — Internet Gateway, NAT Gateway, IAM Roles, Parameter Store and Elastic Load Balancer — and the problem it solves.</li><li>Justify why a remote managed database (Amazon RDS) is better than a local SQLite file for collaborative, production-like development.</li><li>Define GraphQL and explain how it improves on REST for API flexibility and efficiency.</li><li>Name and explain the four limitations of poorly designed REST APIs.</li><li>Describe the parts of a GraphQL server: schema, types, queries, mutations, resolvers and subscriptions.</li><li>Compare GraphQL and REST in terms of shared principles and GraphQL's own drawbacks.</li><li>Choose the right AWS deployment shape for the final assignment (EC2 + Nginx + uWSGI, with RDS/S3 as needed).</li></ul>
+  </div>
 </section>
-<section class="section" id="sec-1"><header class="section-head"><span class="section-num">01</span><h2>AWS Cloud Architecture</h2></header><div class="section-body"><p>AWS provides a flexible and scalable cloud platform with a range of services for building secure, reliable and highly available applications. The key components of AWS cloud architecture fall into five broad groups: <strong>compute, storage, networking, security and management services</strong>.</p>
-<p><strong>All students have already been invited to two AWS Cloud courses</strong> — check your mailbox and accept the invitation.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Almost everything later in the unit runs on this platform. Grouping AWS services by their role (compute, storage, networking, security, management) makes a long service list much easier to remember and reason about.</div></div></div>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background:</p><div class="callout-text">This lab is the bridge from building a Django app locally (Weeks 3–8) to running it on real cloud infrastructure (Week 10 and Assignment 3).</div></div></div></div></section>
-<section class="section" id="sec-2"><header class="section-head"><span class="section-num">02</span><h2>Core AWS Components</h2></header><div class="section-body"><ol><li><strong>Amazon EC2 (Elastic Compute Cloud)</strong> — scalable virtual servers to run applications. Supports various instance types, Auto Scaling and Load Balancing.</li><li><strong>Amazon RDS (Relational Database Service)</strong> — a managed relational database service supporting MySQL, PostgreSQL, Oracle and others. Offers automated backups, scaling and multi-AZ deployments.</li><li><strong>Amazon VPC (Virtual Private Cloud)</strong> — an isolated network environment for AWS resources, with customizable IP ranges, subnets, route tables and gateways.</li><li><strong>Amazon AMI (Amazon Machine Image)</strong> — pre-configured templates for EC2 instances, including the operating system, software and configurations.</li><li><strong>AWS IAM (Identity and Access Management)</strong> — manages user access and permissions for AWS resources using roles, policies and multifactor authentication.</li></ol>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">The five core services spell a rough pattern: <strong>C-R-V-A-I</strong> — Compute (EC2), Relational (RDS), Virtual network (VPC), AMI (images) and Identity (IAM).</div></div></div></div></section>
-<section class="section" id="sec-3"><header class="section-head"><span class="section-num">03</span><h2>AWS Security &amp; Networking</h2></header><div class="section-body"><ol><li><strong>Internet Gateway</strong> — enables internet access for VPC resources.</li><li><strong>NAT Gateway</strong> — allows private subnets to access the internet securely.</li><li><strong>IAM Roles</strong> — provide secure access to AWS services for applications <strong>without hard-coded credentials</strong>.</li><li><strong>Parameter Store</strong> — secure storage for configuration data and secrets, with encryption using <strong>AWS KMS</strong>.</li><li><strong>Elastic Load Balancer (ELB)</strong> — distributes incoming traffic for high availability and integrates with <strong>WAF</strong> for security.</li></ol>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">These are the shared building blocks of a safe production deployment. Notice the recurring theme: secrets and credentials are never written into source code — they are held in IAM Roles or Parameter Store.</div></div></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Hard-coding an AWS access key into <code>settings.py</code>. That is exactly what IAM Roles and Parameter Store exist to avoid, and it also leaks secrets into Git history.</div></div></div></div></section>
-<section class="section" id="sec-4"><header class="section-head"><span class="section-num">04</span><h2>Additional AWS Services</h2></header><div class="section-body"><ol><li><strong>Amazon S3</strong> — scalable object storage with high durability, versioning and lifecycle management.</li><li><strong>AWS CloudFront</strong> — a Content Delivery Network (CDN) for low-latency content delivery.</li><li><strong>AWS CloudWatch</strong> — monitoring and observability service for metrics, logs and alerts.</li></ol>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">S3 is the natural home for user-uploaded media and static files, CloudFront speeds up delivery around the world, and CloudWatch is how you would notice a production problem before users report it.</div></div></div></div></section>
-<section class="section" id="sec-5"><header class="section-head"><span class="section-num">05</span><h2>What You Will Actually Deploy</h2></header><div class="section-body"><p>For the final assignment (deployment) you do <strong>not</strong> need to build a full AWS cloud architecture. Instead you will generally use an <strong>EC2 instance to host both the application and the web server</strong> — that is, <strong>EC2 + Nginx + uWSGI</strong>. You may also consider using <strong>Amazon RDS</strong> and <strong>Amazon S3</strong> as needed.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">This scopes the exam and the assignment. You are not expected to wire up the full VPC/ELB/CDN stack; a single EC2 instance running Nginx in front of uWSGI is the baseline, with RDS and S3 as optional additions.</div></div></div></div></section>
-<section class="section" id="sec-6"><header class="section-head"><span class="section-num">06</span><h2>Amazon RDS: Managed Database</h2></header><div class="section-body"><p><strong>Amazon Relational Database Service (Amazon RDS)</strong> is an easy-to-manage relational database service optimised for <strong>total cost of ownership</strong>. It supports engines such as <strong>MySQL, PostgreSQL and Oracle</strong>, and offers automated backups, scaling and <strong>multi-AZ</strong> deployments.</p>
-<p>For more information and hands-on practice with Amazon RDS, the lab points to:</p>
-<ul><li><strong>Module 8 – Databases</strong>, AWS Academy Cloud Foundations</li><li><strong>Module 6 – Adding a Database Layer</strong>, AWS Academy Cloud Architecting</li></ul>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background:</p><div class="callout-text">Since RDS is the "remote database" the lab recommends for team development, the next section explains exactly why a shared cloud database beats everyone running their own local copy.</div></div></div></div></section>
-<section class="section" id="sec-7"><header class="section-head"><span class="section-num">07</span><h2>Why Use a Remote Database</h2></header><div class="section-body"><ol><li><strong>Centralised and consistent database management</strong> — Using Amazon RDS or any cloud-based database ensures all team members work with a centralised, shared database. This eliminates the need to manually update local databases when changes are made, reducing errors and ensuring consistency across the team.</li><li><strong>Avoiding database files in version control</strong> — Database files like <code>db.sqlite3</code> are unsuitable for version control because of their size, frequent changes and potential security risks. Amazon RDS manages the database remotely, keeping the repository clean and focused on code and migrations rather than raw data.</li><li><strong>Remote access and collaboration</strong> — Amazon RDS lets multiple developers access the same database remotely, facilitating collaboration in distributed teams. Changes made by one developer are instantly available to others, eliminating the need to share database dumps or set up local databases repeatedly.</li><li><strong>Simplified database migrations</strong> — With Amazon RDS, migrations are applied to a central instance, giving all developers immediate access to updated schemas. This streamlines the process compared to running scripts on individual local environments, ensuring everyone is on the same page.</li><li><strong>Development environment parity</strong> — Using Amazon RDS in development makes the environment closely mirror production, reducing environment-specific issues during deployment. This consistency helps developers catch potential issues early and smooths production rollouts.</li><li><strong>Backup, recovery and security</strong> — Amazon RDS offers built-in features for backup, recovery, encryption and scaling that are difficult to manage in local environments. This keeps the development database secure and reduces the risk of data loss or unauthorised access.</li></ol>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Six reasons — <strong>C-V-R-M-P-B</strong> — "Centralised, Version-control-free, Remote, Migrations, Parity, Backup."</div></div></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Committing <code>db.sqlite3</code> to GitHub. It bloats the repo, conflicts constantly, and can expose real user data. A managed remote database removes the file from the repo entirely.</div></div></div></div></section>
-<section class="section" id="sec-8"><header class="section-head"><span class="section-num">08</span><h2>GraphQL: Origins and Purpose</h2></header><div class="section-body"><p><strong>GraphQL is a query language for APIs and a runtime for executing those queries against your data.</strong> It was developed by <strong>Facebook in 2012</strong> and released to the public in <strong>2015</strong>. GraphQL provides a more efficient, powerful and flexible alternative to REST for interacting with APIs.</p>
-<p>Many popular public APIs have adopted GraphQL as the default way to access them, including <strong>GitHub, Yelp and Shopify</strong>.</p>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">📌</div><div class="callout-body"><p class="callout-title">Info:</p><div class="callout-text">The lab includes a ByteByteGo video to give a basic understanding of GraphQL — worth watching before the tutorial.</div></div></div></div></section>
-<section class="section" id="sec-9"><header class="section-head"><span class="section-num">09</span><h2>Limitations of REST</h2></header><div class="section-body"><p>The lab is careful to say these are the limitations of <strong>poorly designed and managed</strong> REST.</p>
-<ul><li><strong>Over-fetching and under-fetching</strong> — REST APIs often return more data than needed (over-fetching) or too little data (under-fetching), requiring multiple requests to different endpoints.</li><li><strong>Multiple endpoints</strong> — REST typically uses multiple endpoints for different resources (<code>/users</code>, <code>/posts</code>, <code>/comments</code>, etc.). Managing and maintaining these endpoints can be cumbersome as the API evolves or scales.</li><li><strong>Lack of flexibility</strong> — REST responses are often fixed by the server, meaning clients have little control over what data is returned. Changing data needs may require additional endpoints or modifications to the API.</li><li><strong>Versioning issues</strong> — REST APIs commonly use versioning (e.g. <code>/v1/users</code>, <code>/v2/users</code>) to manage changes, which can lead to bloated and complex API management.</li></ul>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Four REST pain points — <strong>O-M-F-V</strong> — "Over/under-fetching, Multiple endpoints, Flexibility, Versioning."</div></div></div></div></section>
-<section class="section" id="sec-10"><header class="section-head"><span class="section-num">10</span><h2>How GraphQL Works</h2></header><div class="section-body"><ul><li><strong>GraphQL schema</strong> — The schema is the core of any GraphQL server. It defines the types, queries and mutations that clients can use to interact with the API.</li><li><strong>Defining types</strong> — Types are the building blocks of a schema. They define the shape of the data that can be queried.</li><li><strong>Queries</strong> — Used to fetch data from a GraphQL server. They define what data the client can request (the read operations in CRUD).</li><li><strong>Mutations</strong> — Used to modify data on the server (create, update and delete operations).</li><li><strong>Resolvers</strong> — Functions that provide the logic for fetching or modifying data for each field in a type.</li><li><strong>Subscriptions</strong> — Enable real-time capabilities, allowing clients to subscribe to certain events.</li><li><strong>Running a server</strong> — Can be done using libraries such as <strong>Apollo Server</strong> or <strong>Graphene (Python)</strong>.</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">A GraphQL server is described by a schema, and resolvers connect each schema field to real data. That single-endpoint, schema-driven model is what removes REST's fixed-response and versioning problems.</div></div></div>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Building blocks — <strong>S-T-Q-M-R-S</strong> — "Schema, Types, Queries, Mutations, Resolvers, Subscriptions."</div></div></div></div></section>
-<section class="section" id="sec-11"><header class="section-head"><span class="section-num">11</span><h2>GraphQL vs REST: Similarities</h2></header><div class="section-body"><div class="table-wrap"><table><thead><tr><th>Aspect</th><th>Shared Feature</th><th>Notes</th></tr></thead><tbody><tr><td>Architectural Principles</td><td>Stateless, client-server architecture, CRUD operations</td><td>Both follow the same high-level principles.</td></tr><tr><td>Transport Protocol</td><td>Use HTTP as the transport layer</td><td>Standard communication method for both.</td></tr><tr><td>Data Transfer Formats</td><td>JSON (common); REST also supports XML</td><td>JSON is the default, but REST allows additional formats.</td></tr></tbody></table></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">GraphQL is not a replacement transport — it still rides on HTTP and still speaks JSON. The difference is <em>how</em> clients ask for data, not <em>how</em> the bytes travel.</div></div></div></div></section>
-<section class="section" id="sec-12"><header class="section-head"><span class="section-num">12</span><h2>Drawbacks of GraphQL</h2></header><div class="section-body"><div class="table-wrap"><table><thead><tr><th>Drawback</th><th>Explanation</th></tr></thead><tbody><tr><td>Learning curve &amp; implementation complexity</td><td>Requires schemas, types and resolvers, making setup more complex than REST.</td></tr><tr><td>Over-fetching / N+1 problem</td><td>Deeply nested queries can cause N+1 issues if not optimised properly.</td></tr><tr><td>Performance with large queries</td><td>Large, dynamic queries can degrade server performance.</td></tr><tr><td>Caching complexity</td><td>Lacks standard HTTP caching; requires custom strategies or tools like Apollo.</td></tr><tr><td>Security / malicious queries</td><td>Flexible queries can be abused (e.g. DoS); requires rate limiting and complexity analysis.</td></tr><tr><td>Lack of built-in file upload support</td><td>No native file upload support; needs workarounds such as <code>multipart/form-data</code> or <code>graphql-upload</code>.</td></tr></tbody></table></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Assuming GraphQL is always "better." Its flexibility shifts complexity onto the server — you must handle caching, query cost and abuse prevention yourself.</div></div></div></div></section>
-<section class="section" id="key-takeaways"><header class="section-head"><span class="section-num">13</span><h2>Key Takeaways</h2></header><div class="section-body"><ol class="takeaways"><li><span class="tk-n">1</span><div><strong>AWS services group into five areas</strong> — compute, storage, networking, security and management.</div></li><li><span class="tk-n">2</span><div><strong>Five core components</strong> — EC2 (virtual servers), RDS (managed relational DB), VPC (isolated network), AMI (instance templates) and IAM (access control).</div></li><li><span class="tk-n">3</span><div><strong>Never hard-code credentials</strong> — use IAM Roles for service access and Parameter Store (encrypted with KMS) for secrets.</div></li><li><span class="tk-n">4</span><div><strong>RDS supports MySQL, PostgreSQL and Oracle</strong> and adds automated backups, scaling and multi-AZ deployments.</div></li><li><span class="tk-n">5</span><div><strong>A remote database centralises the team's data</strong>, keeps <code>db.sqlite3</code> out of version control, simplifies migrations and matches production.</div></li><li><span class="tk-n">6</span><div><strong>GraphQL is a query language for APIs plus a runtime</strong> — created by Facebook in 2012, public in 2015, adopted by GitHub, Yelp and Shopify.</div></li><li><span class="tk-n">7</span><div><strong>REST pain points</strong> are over-fetching/under-fetching, multiple endpoints, inflexible fixed responses and versioning bloat.</div></li><li><span class="tk-n">8</span><div><strong>A GraphQL schema defines types, queries and mutations</strong>, while resolvers supply the data logic and subscriptions add real-time events.</div></li><li><span class="tk-n">9</span><div><strong>GraphQL still uses HTTP and JSON</strong>, like REST — it differs in letting the client specify the data shape.</div></li><li><span class="tk-n">10</span><div><strong>GraphQL has real costs</strong> — a learning curve, N+1 risks, caching complexity, query-abuse risk and no native file upload.</div></li><li><span class="tk-n">11</span><div><strong>For the final assignment</strong>, a single EC2 instance running Nginx + uWSGI is the baseline; RDS and S3 are optional additions.</div></li><li><span class="tk-n">12</span><div><strong>Your individual task is Task 8 – Basic Cloud Deployment</strong> using the AWS Challenge Labs.</div></li></ol></div></section>
-<section class="section" id="glossary"><header class="section-head"><span class="section-num">14</span><h2>Glossary</h2></header><div class="section-body"><div class="term-filter"><input type="search" id="termSearch" placeholder="Filter terms…" autocomplete="off" aria-label="Filter glossary terms"><span class="term-count" id="termCount"></span></div><div class="terms" id="termsGrid"><div class="term" data-term="amazon ec2 elastic compute cloud — scalable virtual servers supporting instance types, auto scaling and load balancing."><p class="term-name">Amazon EC2</p><p class="term-def">Elastic Compute Cloud — scalable virtual servers supporting instance types, Auto Scaling and Load Balancing.</p></div><div class="term" data-term="amazon rds relational database service — managed relational database supporting mysql, postgresql, oracle and others."><p class="term-name">Amazon RDS</p><p class="term-def">Relational Database Service — managed relational database supporting MySQL, PostgreSQL, Oracle and others.</p></div><div class="term" data-term="amazon vpc virtual private cloud — an isolated network environment with customizable ip ranges, subnets, route tables and gateways."><p class="term-name">Amazon VPC</p><p class="term-def">Virtual Private Cloud — an isolated network environment with customizable IP ranges, subnets, route tables and gateways.</p></div><div class="term" data-term="amazon ami amazon machine image — a pre-configured template for an ec2 instance (os, software, configuration)."><p class="term-name">Amazon AMI</p><p class="term-def">Amazon Machine Image — a pre-configured template for an EC2 instance (OS, software, configuration).</p></div><div class="term" data-term="aws iam identity and access management — controls user access and permissions via roles, policies and multifactor authentication."><p class="term-name">AWS IAM</p><p class="term-def">Identity and Access Management — controls user access and permissions via roles, policies and multifactor authentication.</p></div><div class="term" data-term="internet gateway enables internet access for vpc resources."><p class="term-name">Internet Gateway</p><p class="term-def">Enables internet access for VPC resources.</p></div><div class="term" data-term="nat gateway allows private subnets to reach the internet securely."><p class="term-name">NAT Gateway</p><p class="term-def">Allows private subnets to reach the internet securely.</p></div><div class="term" data-term="iam role provides secure service access to applications without hard-coded credentials."><p class="term-name">IAM Role</p><p class="term-def">Provides secure service access to applications without hard-coded credentials.</p></div><div class="term" data-term="parameter store secure storage for configuration data and secrets, encrypted using aws kms."><p class="term-name">Parameter Store</p><p class="term-def">Secure storage for configuration data and secrets, encrypted using AWS KMS.</p></div><div class="term" data-term="elastic load balancer (elb) distributes incoming traffic for high availability and integrates with waf."><p class="term-name">Elastic Load Balancer (ELB)</p><p class="term-def">Distributes incoming traffic for high availability and integrates with WAF.</p></div><div class="term" data-term="amazon s3 scalable object storage with high durability, versioning and lifecycle management."><p class="term-name">Amazon S3</p><p class="term-def">Scalable object storage with high durability, versioning and lifecycle management.</p></div><div class="term" data-term="aws cloudfront a content delivery network (cdn) for low-latency delivery."><p class="term-name">AWS CloudFront</p><p class="term-def">A Content Delivery Network (CDN) for low-latency delivery.</p></div><div class="term" data-term="aws cloudwatch monitoring and observability for metrics, logs and alerts."><p class="term-name">AWS CloudWatch</p><p class="term-def">Monitoring and observability for metrics, logs and alerts.</p></div><div class="term" data-term="multi-az a deployment across multiple availability zones for resilience (offered by rds)."><p class="term-name">Multi-AZ</p><p class="term-def">A deployment across multiple Availability Zones for resilience (offered by RDS).</p></div><div class="term" data-term="graphql a query language for apis and a runtime for executing queries against your data."><p class="term-name">GraphQL</p><p class="term-def">A query language for APIs and a runtime for executing queries against your data.</p></div><div class="term" data-term="schema the core of a graphql server; defines the types, queries and mutations available."><p class="term-name">Schema</p><p class="term-def">The core of a GraphQL server; defines the types, queries and mutations available.</p></div><div class="term" data-term="type a graphql building block that defines the shape of data that can be queried."><p class="term-name">Type</p><p class="term-def">A GraphQL building block that defines the shape of data that can be queried.</p></div><div class="term" data-term="query a graphql read operation specifying what data the client wants."><p class="term-name">Query</p><p class="term-def">A GraphQL read operation specifying what data the client wants.</p></div><div class="term" data-term="mutation a graphql operation that creates, updates or deletes data."><p class="term-name">Mutation</p><p class="term-def">A GraphQL operation that creates, updates or deletes data.</p></div><div class="term" data-term="resolver a function providing the fetch/modify logic for a field in a type."><p class="term-name">Resolver</p><p class="term-def">A function providing the fetch/modify logic for a field in a type.</p></div><div class="term" data-term="subscription a graphql feature enabling real-time updates from server events."><p class="term-name">Subscription</p><p class="term-def">A GraphQL feature enabling real-time updates from server events.</p></div><div class="term" data-term="apollo server a javascript library for running a graphql server."><p class="term-name">Apollo Server</p><p class="term-def">A JavaScript library for running a GraphQL server.</p></div><div class="term" data-term="graphene a python library for running a graphql server."><p class="term-name">Graphene</p><p class="term-def">A Python library for running a GraphQL server.</p></div><div class="term" data-term="over-fetching a rest response returning more data than the client needs."><p class="term-name">Over-fetching</p><p class="term-def">A REST response returning more data than the client needs.</p></div><div class="term" data-term="under-fetching a rest response returning too little data, forcing extra requests."><p class="term-name">Under-fetching</p><p class="term-def">A REST response returning too little data, forcing extra requests.</p></div><div class="term" data-term="n+1 problem a performance issue where nested queries trigger many extra data lookups."><p class="term-name">N+1 problem</p><p class="term-def">A performance issue where nested queries trigger many extra data lookups.</p></div><div class="term" data-term="versioning rest practice of exposing `/v1`, `/v2` etc. to manage breaking changes."><p class="term-name">Versioning</p><p class="term-def">REST practice of exposing <code>/v1</code>, <code>/v2</code> etc. to manage breaking changes.</p></div><div class="term" data-term="waf web application firewall — filters malicious requests; integrates with elb."><p class="term-name">WAF</p><p class="term-def">Web Application Firewall — filters malicious requests; integrates with ELB.</p></div><div class="term" data-term="amazon kms key management service — provides the encryption keys for parameter store."><p class="term-name">Amazon KMS</p><p class="term-def">Key Management Service — provides the encryption keys for Parameter Store.</p></div><div class="term" data-term="total cost of ownership (tco) the overall cost of running and maintaining a system; rds is optimised for it."><p class="term-name">Total cost of ownership (TCO)</p><p class="term-def">The overall cost of running and maintaining a system; RDS is optimised for it.</p></div></div></div></section>
-<section class="section" id="mnemonics"><header class="section-head"><span class="section-num">15</span><h2>Mnemonics &amp; Quick Recall</h2></header><div class="section-body"><div class="mnemonics"><div class="mnemonic"><p class="mn-title">AWS Service Groups</p><p class="mn-code">C-S-N-S-M</p><p class="mn-phrase">Compute, Storage, Networking, Security, Management.</p></div><div class="mnemonic"><p class="mn-title">Core AWS Components</p><p class="mn-code">C-R-V-A-I</p><p class="mn-phrase">Compute (EC2), Relational (RDS), Virtual network (VPC), AMI, Identity (IAM).</p></div><div class="mnemonic"><p class="mn-title">REST Limitations</p><p class="mn-code">O-M-F-V</p><p class="mn-phrase">Over/under-fetching, Multiple endpoints, Flexibility, Versioning.</p></div><div class="mnemonic"><p class="mn-title">GraphQL Building Blocks</p><p class="mn-code">S-T-Q-M-R-S</p><p class="mn-phrase">Schema, Types, Queries, Mutations, Resolvers, Subscriptions.</p></div><div class="mnemonic"><p class="mn-title">RDS Reasons</p><p class="mn-code">C-V-R-M-P-B</p><p class="mn-phrase">Centralised, Version-control-free, Remote access, Migrations, Parity, Backup.</p></div><div class="mnemonic"><p class="mn-title">GraphQL Server Options</p><p class="mn-code">A-G</p><p class="mn-phrase">Apollo Server (JS) or Graphene (Python).</p></div><div class="mnemonic"><p class="mn-title">Deployment Baseline</p><p class="mn-code">E-N-U</p><p class="mn-phrase">EC2 + Nginx + uWSGI.</p></div></div></div></section>
-<section class="section" id="worked-examples"><header class="section-head"><span class="section-num">16</span><h2>Worked Examples &amp; Scenarios</h2></header><div class="section-body"><div class="example"><span class="example-tag">Example 1</span><h3 class="example-title">Over-fetching explained</h3><p>A mobile app wants only a user's display name. A REST endpoint <code>GET /users/42</code> returns the full profile — name, email, address, phone, preferences — even though the screen shows only the name. That is <strong>over-fetching</strong>: bandwidth and parsing work are wasted. With GraphQL the client describes the fields it wants, so it can request the name alone.</p></div><div class="example"><span class="example-tag">Example 2</span><h3 class="example-title">Under-fetching and multiple endpoints</h3><p>A profile screen needs a user's posts and each post's comments. In REST this often means three calls in sequence: <code>/users/42</code>, then <code>/users/42/posts</code>, then <code>/posts/{id}/comments</code>. That is <strong>under-fetching</strong> driving <strong>multiple round trips</strong>. In GraphQL the client sends one query that traverses user → posts → comments, and the server resolves the graph in a single request.</p></div><div class="example"><span class="example-tag">Example 3</span><h3 class="example-title">Why a shared RDS beats local SQLite</h3><p>Three teammates each run a local SQLite database. A schema change made by one developer is invisible to the others until they manually re-run migrations or swap a <code>db.sqlite3</code> file, and that binary file conflicts badly in Git. Moving the database to <strong>Amazon RDS</strong> means migrations are applied to one central instance, every developer sees the new schema immediately, no database dumps are emailed around, and the repository contains only code and migrations.</p></div><div class="example"><span class="example-tag">Example 4</span><h3 class="example-title">Choosing the architecture for the final assignment</h3><p>A team is tempted to recreate the full AWS diagram — CDN, load balancer, VPC, auto-scaling — because it looks impressive. The lab's guidance is simpler: for the final deployment, host the <strong>application and web server on one EC2 instance</strong> using <strong>Nginx + uWSGI</strong>, and add <strong>Amazon RDS</strong> or <strong>Amazon S3</strong> only if the project genuinely needs a managed database or object storage.</p></div><div class="example"><span class="example-tag">Example 5</span><h3 class="example-title">The N+1 trap in a nested GraphQL query</h3><p>A client requests a list of posts with each post's author. A naive resolver fetches the list of posts (1 query) and then, for each post, separately fetches its author (N more queries) — the <strong>N+1 problem</strong>. The fix is to batch or optimise the resolver logic. This is why the lab lists N+1 as a GraphQL drawback: the flexibility of nested queries can hide a performance cliff.</p></div></div></section>
-<section class="section" id="exam-focus"><header class="section-head"><span class="section-num">17</span><h2>Exam Practice</h2></header><div class="section-body"><div class="exam-bar"><div class="exam-progress"><span class="exam-count"><strong id="examDone">0</strong> / 14 mastered</span><span class="exam-track"><span id="examFill"></span></span></div><div class="exam-actions"><button type="button" class="btn" id="revealAll">Reveal all</button><button type="button" class="btn" id="hideAll">Hide all</button><button type="button" class="btn ghost" id="resetExam">Reset</button></div></div><article class="quiz" data-q="1"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">1</span><span class="quiz-text">Name the five broad groups of AWS cloud architecture components.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Compute, storage, networking, security and management services.</div><label class="mastered"><input type="checkbox" data-mastered="1"> Mark as mastered</label></div></article><article class="quiz" data-q="2"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">2</span><span class="quiz-text">What does Amazon EC2 provide?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Scalable virtual servers to run applications, with support for instance types, Auto Scaling and Load Balancing.</div><label class="mastered"><input type="checkbox" data-mastered="2"> Mark as mastered</label></div></article><article class="quiz" data-q="3"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">3</span><span class="quiz-text">What engines does Amazon RDS support, and what management features does it add?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>MySQL, PostgreSQL, Oracle and others; it adds automated backups, scaling and multi-AZ deployments.</div><label class="mastered"><input type="checkbox" data-mastered="3"> Mark as mastered</label></div></article><article class="quiz" data-q="4"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">4</span><span class="quiz-text">What is an Amazon AMI?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>A pre-configured template for EC2 instances containing the operating system, software and configurations.</div><label class="mastered"><input type="checkbox" data-mastered="4"> Mark as mastered</label></div></article><article class="quiz" data-q="5"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">5</span><span class="quiz-text">How do IAM Roles improve security?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>They give applications access to AWS services without hard-coding credentials.</div><label class="mastered"><input type="checkbox" data-mastered="5"> Mark as mastered</label></div></article><article class="quiz" data-q="6"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">6</span><span class="quiz-text">What is Parameter Store used for, and how is it protected?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Secure storage of configuration data and secrets, encrypted using AWS KMS.</div><label class="mastered"><input type="checkbox" data-mastered="6"> Mark as mastered</label></div></article><article class="quiz" data-q="7"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">7</span><span class="quiz-text">What is the recommended deployment stack for the final assignment?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>A single EC2 instance hosting both the application and web server, i.e. EC2 + Nginx + uWSGI, with RDS/S3 optional.</div><label class="mastered"><input type="checkbox" data-mastered="7"> Mark as mastered</label></div></article><article class="quiz" data-q="8"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">8</span><span class="quiz-text">List four limitations of poorly designed REST APIs.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Over-fetching/under-fetching, multiple endpoints, lack of flexibility, and versioning issues.</div><label class="mastered"><input type="checkbox" data-mastered="8"> Mark as mastered</label></div></article><article class="quiz" data-q="9"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">9</span><span class="quiz-text">What is GraphQL, and where did it come from?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>A query language for APIs and a runtime for executing queries against your data; developed by Facebook in 2012 and released publicly in 2015.</div><label class="mastered"><input type="checkbox" data-mastered="9"> Mark as mastered</label></div></article><article class="quiz" data-q="10"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">10</span><span class="quiz-text">Name the key GraphQL concepts and what each does.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Schema (defines types/queries/mutations), types (data shape), queries (reads), mutations (create/update/delete), resolvers (field logic) and subscriptions (real-time events).</div><label class="mastered"><input type="checkbox" data-mastered="10"> Mark as mastered</label></div></article><article class="quiz" data-q="11"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">11</span><span class="quiz-text">In what ways are GraphQL and REST similar?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Both are stateless client-server architectures with CRUD operations, both use HTTP as the transport, and both commonly use JSON (REST also supports XML).</div><label class="mastered"><input type="checkbox" data-mastered="11"> Mark as mastered</label></div></article><article class="quiz" data-q="12"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">12</span><span class="quiz-text">Give three drawbacks of GraphQL.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Any of: learning curve/complexity, N+1 and over-fetching in deep queries, poor performance with large dynamic queries, caching complexity, malicious-query/DoS risk, and lack of built-in file upload support.</div><label class="mastered"><input type="checkbox" data-mastered="12"> Mark as mastered</label></div></article><article class="quiz" data-q="13"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">13</span><span class="quiz-text">Which popular public APIs have adopted GraphQL?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>GitHub, Yelp and Shopify.</div><label class="mastered"><input type="checkbox" data-mastered="13"> Mark as mastered</label></div></article><article class="quiz" data-q="14"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">14</span><span class="quiz-text">Why is <code>db.sqlite3</code> unsuitable for version control?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Its size, frequent changes and potential security risks make it a poor fit; a remote managed database keeps the repo focused on code and migrations.</div><label class="mastered"><input type="checkbox" data-mastered="14"> Mark as mastered</label></div></article></div></section>
-    <footer class="foot"><strong>ELEC3609 study guide</strong> · AWS Cloud &amp; GraphQL · Lab 9 · Built for self-paced revision.</footer>
+<section class="guide-section" id="the-big-picture-from-local-code-to-a-cloud-deployment" data-title="The Big Picture: From Local Code to a Cloud Deployment">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Big Picture: From Local Code to a Cloud Deployment</h2>
+  </div>
+  <p class="section-kicker">A modern web app is not one program on one machine — it is a set of rented, managed services wired together, and this lab teaches you both the infrastructure and the API layer.</p>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> You have been building apps on your own laptop with a local database and a development server. That works for one person. Real systems must be reachable by users, survive crashes, stay secure, and let a whole team share one source of truth. Cloud services and a well-designed API layer are how that happens.</div></div>
+<h3 class="sub-title">The two halves of this lab</h3>
+<p>This lab has two distinct halves that fit together:</p>
+<ol><li><strong>The infrastructure half (AWS Cloud).</strong> How you <em>host</em> an application: virtual servers, networks, managed databases, storage, content delivery and monitoring.</li><li><strong>The API half (GraphQL).</strong> How clients <em>talk to</em> that application: a query language that gives clients control over exactly what data they get back.</li></ol>
+<h3 class="sub-title">Learning objectives</h3>
+<p>After completing this lab you should be able to:</p>
+<ul><li>Identify core AWS components for deploying secure and scalable web applications.</li><li>Explain the advantages of using Amazon RDS for collaborative, production-like development.</li><li>Describe how GraphQL works and how it addresses the limitations of REST APIs.</li><li>Recognise common security and architectural considerations in cloud and API design.</li></ul>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> You have already been invited to two AWS Cloud courses — check your mailbox and accept the invitation before attempting the AWS Challenge Labs. The individual task for this module is <strong>Individual Task 8 – Basic Cloud Deployment</strong>.</div></div>
+</section>
+<section class="guide-section" id="aws-cloud-architecture-overview" data-title="AWS Cloud Architecture Overview">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">AWS Cloud Architecture Overview</h2>
+  </div>
+  <p class="section-kicker">AWS is a flexible, scalable platform, and its architecture is easiest to learn by grouping services into five categories: compute, storage, networking, security and management.</p>
+<p>AWS provides a flexible and scalable cloud platform with various services to build secure, reliable and highly available applications. Rather than memorising a long list of product names, group them by the job they do.</p>
+<h3 class="sub-title">The five categories of AWS services</h3>
+<div class="table-wrap"><table><thead><tr><th>Category</th><th>What it provides</th><th>Example services</th></tr></thead><tbody><tr><td>Compute</td><td>Machines that run your code</td><td>EC2</td></tr><tr><td>Storage</td><td>Places to keep objects and data</td><td>S3, RDS</td></tr><tr><td>Networking</td><td>Isolated networks and traffic routing</td><td>VPC, Internet/NAT Gateway, ELB</td></tr><tr><td>Security</td><td>Identity, permissions and secrets</td><td>IAM, Parameter Store</td></tr><tr><td>Management</td><td>Monitoring, metrics and alerts</td><td>CloudWatch</td></tr></tbody></table></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Think <strong>C-S-N-S-M</strong> — <em>Compute, Storage, Networking, Security, Management</em>. Every AWS service you meet can be filed under one of these five headings.</div></div>
+<h3 class="sub-title">Key components</h3>
+<ol><li><strong>Amazon EC2 (Elastic Compute Cloud)</strong> — Scalable virtual servers to run applications. Supports various instance types, Auto Scaling and Load Balancing.</li><li><strong>Amazon RDS (Relational Database Service)</strong> — Managed relational database service supporting MySQL, PostgreSQL, Oracle and others. Offers automated backups, scaling and multi-AZ deployments.</li><li><strong>Amazon VPC (Virtual Private Cloud)</strong> — Isolated network environment for AWS resources with customisable IP ranges, subnets, route tables and gateways.</li><li><strong>Amazon AMI (Amazon Machine Image)</strong> — Pre-configured templates for EC2 instances, including operating system, software and configurations.</li><li><strong>AWS IAM (Identity and Access Management)</strong> — Manages user access and permissions for AWS resources using roles, policies and multifactor authentication.</li></ol>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> EC2 is the <em>machine</em>, the AMI is the <em>blueprint</em> used to create that machine, the VPC is the <em>private network</em> it lives in, RDS is the <em>database</em> it talks to, and IAM is the <em>guard</em> deciding who may do what. Almost every AWS deployment is some arrangement of these five.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> You need a virtual server that runs your Django app. Which service do you launch, and which service defines the operating system and software that server starts with?</div></div>
+</section>
+<section class="guide-section" id="security-measures-in-a-cloud-architecture" data-title="Security Measures in a Cloud Architecture">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Security Measures in a Cloud Architecture</h2>
+  </div>
+  <p class="section-kicker">Cloud security is layered: separate gateways control inbound and outbound internet traffic, IAM Roles remove hard-coded credentials, Parameter Store protects secrets, and a load balancer distributes traffic.</p>
+<p>Having servers in the cloud is not enough — you must control who can reach them and how they reach out. AWS gives you a set of security building blocks.</p>
+<h3 class="sub-title">The five security measures</h3>
+<ol><li><strong>Internet Gateway</strong> — Enables internet access for VPC resources.</li><li><strong>NAT Gateway</strong> — Allows private subnets to access the internet securely (outbound only, without exposing them to inbound traffic).</li><li><strong>IAM Roles</strong> — Provide secure access to AWS services for applications <strong>without hard-coded credentials</strong>.</li><li><strong>Parameter Store</strong> — Secure storage for configuration data and secrets, with encryption using <strong>AWS KMS</strong>.</li><li><strong>Elastic Load Balancer (ELB)</strong> — Distributes incoming traffic for high availability and integrates with <strong>WAF</strong> for security.</li></ol>
+<div class="compare"><div class="compare-col a"><h3>Internet Gateway</h3><ul><li>Attaches to a VPC to give resources internet access.</li><li>Handles traffic for <strong>public</strong> subnets.</li><li>Inbound and outbound connectivity.</li></ul></div><div class="compare-col b"><h3>NAT Gateway</h3><ul><li>Lets <strong>private</strong> subnets reach the internet securely.</li><li>Shields those resources from inbound connections.</li><li>Used for outbound-only access (e.g. software updates).</li></ul></div></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Don't confuse the two gateways. The <strong>Internet Gateway</strong> is the front door that lets the public reach your resources; the <strong>NAT Gateway</strong> is a one-way exit that lets private resources go out to the internet <em>without</em> the internet getting in.</div></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>IAM Roles = no passwords in code.</strong> Instead of embedding AWS keys in your source, the application <em>assumes a role</em> and receives temporary credentials.</div></div>
+</section>
+<section class="guide-section" id="additional-aws-services-storage-delivery-and-monitoring" data-title="Additional AWS Services: Storage, Delivery and Monitoring">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Additional AWS Services: Storage, Delivery and Monitoring</h2>
+  </div>
+  <p class="section-kicker">Beyond compute and networking, three services round out most deployments: S3 for object storage, CloudFront as a CDN for low-latency delivery, and CloudWatch for monitoring and alerts.</p>
+<p>These services are not strictly required for a minimal deployment, but they solve three recurring problems: where to store files, how to deliver content quickly to users worldwide, and how to know what your system is doing.</p>
+<h3 class="sub-title">The three additional services</h3>
+<ol><li><strong>Amazon S3</strong> — Scalable object storage with high durability, versioning and lifecycle management. Use it for user uploads, static assets and backups.</li><li><strong>AWS CloudFront</strong> — A Content Delivery Network (CDN) for low-latency content delivery, caching content at edge locations close to users.</li><li><strong>AWS CloudWatch</strong> — Monitoring and observability service for metrics, logs and alerts.</li></ol>
+<div class="table-wrap"><table><thead><tr><th>Service</th><th>Job</th><th>One-line purpose</th></tr></thead><tbody><tr><td>Amazon S3</td><td>Object storage</td><td>Durable, versioned storage for files and assets</td></tr><tr><td>AWS CloudFront</td><td>CDN</td><td>Serve content with low latency from edge locations</td></tr><tr><td>AWS CloudWatch</td><td>Observability</td><td>Collect metrics and logs, raise alerts</td></tr></tbody></table></div>
+<div class="def-card"><span class="dc-term">CDN</span> — A Content Delivery Network caches content at servers around the world (edge locations) so users download it from somewhere geographically close, cutting latency.</div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Your app lets users upload profile pictures and you want to know if the server is running out of memory. Which two of these three services would you reach for?</div></div>
+</section>
+<section class="guide-section" id="the-deployment-blueprint-for-the-final-assignment" data-title="The Deployment Blueprint for the Final Assignment">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Deployment Blueprint for the Final Assignment</h2>
+  </div>
+  <p class="section-kicker">For the final assignment you do not build a full AWS architecture — you run one EC2 instance hosting both the application and the web server, and add RDS or S3 only if you need them.</p>
+<p>This is the single most practically important fact in the cloud half of the lab, because it tells you exactly what you are expected to build.</p>
+<h3 class="sub-title">What you actually need to deploy</h3>
+<ul><li><strong>You do not need to build a full AWS cloud architecture.</strong> The elaborate diagram of gateways, load balancers and multi-AZ databases is context, not a requirement.</li><li><strong>Generally, use a single EC2 instance to host both the application and the web server.</strong></li><li>The stack is <strong>EC2 + Nginx + uWSGI</strong>.</li><li><strong>You may also consider using Amazon RDS and Amazon S3 as needed.</strong></li></ul>
+<div class="flow"><span class="flow-step">EC2 instance</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Nginx (web server)</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">uWSGI (app server)</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">your application</span></div>
+<h3 class="sub-title">Unpacking the stack</h3>
+<ul><li><strong>EC2</strong> provides the virtual server.</li><li><strong>Nginx</strong> is the web server that receives HTTP requests from users and forwards them.</li><li><strong>uWSGI</strong> is the application server that runs your Python web application and speaks to Nginx.</li><li><strong>RDS</strong> (optional) provides a managed remote database instead of a local file.</li><li><strong>S3</strong> (optional) provides object storage for files and assets.</li></ul>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> If asked "what does a typical ELEC3609 final deployment look like?", the expected answer is a <em>single EC2 instance running Nginx and uWSGI</em>, with RDS and S3 added only as needed — not a multi-service, load-balanced architecture.</div></div>
+</section>
+<section class="guide-section" id="amazon-rds-why-use-a-remote-database-service" data-title="Amazon RDS: Why Use a Remote Database Service">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Amazon RDS: Why Use a Remote Database Service</h2>
+  </div>
+  <p class="section-kicker">A managed cloud database gives your whole team one central, always-current, production-like database instead of many fragile local copies.</p>
+<p><strong>Amazon Relational Database Service (Amazon RDS)</strong> is an easy-to-manage relational database service optimised for total cost of ownership. In development it replaces the local database file (for example <code>db.sqlite3</code>) that you have been using so far.</p>
+<h3 class="sub-title">The six reasons to use a remote database service</h3>
+<ol><li><strong>Centralised and consistent database management</strong> — All team members work with one centralised, shared database. This eliminates manually updating local databases when changes are made, reducing errors and ensuring consistency across the team.</li><li><strong>Avoiding database files in version control</strong> — Database files like <code>db.sqlite3</code> are unsuitable for version control due to their size, frequent changes and potential security risks. RDS manages the database remotely, keeping the repository clean and focused on code and migrations rather than raw data.</li><li><strong>Remote access and collaboration</strong> — Multiple developers can access the same database remotely, facilitating collaboration in distributed teams. Changes made by one developer are instantly available to others, eliminating the need for sharing database dumps or repeatedly setting up local databases.</li><li><strong>Simplified database migrations</strong> — Migrations are applied to a central instance, giving all developers immediate access to updated schemas. This streamlines the process compared to running scripts on individual local environments, ensuring everyone is on the same page.</li><li><strong>Development environment parity</strong> — Using RDS in development ensures the environment closely mirrors production, reducing environment-specific issues during deployment. This consistency helps catch potential issues early and facilitates smoother production rollouts.</li><li><strong>Backup, recovery and security</strong> — RDS offers built-in features for backup, recovery, encryption and scaling that are difficult to manage locally. This keeps the development database secure and reduces the risk of data loss or unauthorised access.</li></ol>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> A local <code>db.sqlite3</code> file is a <em>single point of truth that nobody shares</em>. If two teammates edit their own copies, they diverge immediately. RDS makes the database a shared, managed service, exactly as it will be in production.</div></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> "It works on my machine" usually means your database and your teammate's have drifted apart. Environment parity (reason 5) is what prevents this class of bug.</div></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>C-A-R-S-D-B</strong> — <em>Centralised, Avoid VCS, Remote collaboration, Simplified migrations, Development parity, Backup/security.</em></div></div>
+<h3 class="sub-title">Further reading for RDS</h3>
+<ul><li>Module 8 – Databases, AWS Academy Cloud Foundations.</li><li>Module 6 – Adding a Database Layer, AWS Academy Cloud Architecting.</li></ul>
+</section>
+<section class="guide-section" id="graphql-a-query-language-for-apis" data-title="GraphQL: A Query Language for APIs">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">GraphQL: A Query Language for APIs</h2>
+  </div>
+  <p class="section-kicker">GraphQL is both a query language for APIs and a runtime for executing those queries against your data — a more efficient, powerful and flexible alternative to REST.</p>
+<p><strong>GraphQL</strong> was developed by <strong>Facebook in 2012</strong> and <strong>released to the public in 2015</strong>. It provides a more efficient, powerful and flexible alternative to REST for interacting with APIs. Many popular public APIs adopted GraphQL as the default way to access them, including <strong>GitHub, Yelp and Shopify</strong>.</p>
+<div class="def-card"><span class="dc-term">GraphQL</span> — A query language for APIs and a runtime for executing those queries against your data. Clients describe exactly the data they want, and the server returns precisely that.</div>
+<h3 class="sub-title">The core promise</h3>
+<p>In REST the <em>server</em> decides the shape of every response. In GraphQL the <em>client</em> sends a query describing exactly which fields it needs, and the server returns exactly those fields — no more, no less, and often in a single request.</p>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> GraphQL's tagline is essentially <strong>"ask for exactly what you want."</strong> REST gives you a fixed menu; GraphQL lets you build your own plate.</div></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> A recommended ByteByteGo video is provided in the lab to build a basic understanding of GraphQL — worth watching before the assessment.</div></div>
+</section>
+<section class="guide-section" id="the-limitations-of-poorly-designed-and-managed-rest" data-title="The Limitations of (Poorly Designed and Managed) REST">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Limitations of (Poorly Designed and Managed) REST</h2>
+  </div>
+  <p class="section-kicker">REST's fixed endpoints and server-defined responses cause four recurring problems: over-fetching and under-fetching, endpoint sprawl, lack of flexibility, and versioning bloat.</p>
+<p>To understand <em>why</em> GraphQL exists, you first need to see what goes wrong with REST. Note the careful framing: these are the limitations of <strong>poorly designed and managed</strong> REST — REST itself is not inherently broken.</p>
+<h3 class="sub-title">The four limitations</h3>
+<ol><li><strong>Over-fetching and under-fetching</strong> — REST APIs often return more data than needed (<strong>over-fetching</strong>) or too little data (<strong>under-fetching</strong>), requiring multiple requests to different endpoints.</li><li><strong>Multiple endpoints</strong> — REST typically uses multiple endpoints for different resources (<code>/users</code>, <code>/posts</code>, <code>/comments</code>, etc.). Managing and maintaining these endpoints can be cumbersome as the API evolves or scales.</li><li><strong>Lack of flexibility</strong> — REST responses are often fixed by the server, meaning clients have little control over what data is returned. Changing data needs may require additional endpoints or modifications to the API.</li><li><strong>Versioning issues</strong> — REST APIs commonly use versioning (e.g. <code>/v1/users</code>, <code>/v2/users</code>) to manage changes, which can lead to bloated and complex API management.</li></ol>
+<div class="def-card"><span class="dc-term">Over-fetching</span> — The API returns more data than the client needs, wasting bandwidth and processing.</div>
+<div class="def-card"><span class="dc-term">Under-fetching</span> — The API returns too little data, forcing the client to make several extra requests to different endpoints to assemble one screen.</div>
+<div class="compare"><div class="compare-col a"><h3>REST (poorly designed)</h3><ul><li>Many endpoints, one per resource</li><li>Server decides the response shape</li><li>Prone to over- and under-fetching</li><li>Versioning via <code>/v1</code>, <code>/v2</code> paths</li></ul></div><div class="compare-col b"><h3>GraphQL</h3><ul><li>One endpoint, client-shaped responses</li><li>Client asks for exact fields</li><li>Fetches related data in one request</li><li>Schema evolution instead of URL versioning</li></ul></div></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Over-fetching and under-fetching are <em>opposite</em> problems that appear in the same API. Over-fetching wastes bandwidth returning fields you ignore; under-fetching forces extra round-trips. GraphQL addresses both at once.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A mobile screen needs a user's name and the titles of their three latest posts. With REST endpoints <code>/users</code> and <code>/posts</code>, how many requests might that take, and how much of each response would you throw away?</div></div>
+</section>
+<section class="guide-section" id="how-graphql-works-schema-types-queries-mutations-resolvers-and-subscriptions" data-title="How GraphQL Works: Schema, Types, Queries, Mutations, Resolvers and Subscriptions">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">How GraphQL Works: Schema, Types, Queries, Mutations, Resolvers and Subscriptions</h2>
+  </div>
+  <p class="section-kicker">A GraphQL server is built around a schema that defines types, queries and mutations; resolvers provide the logic behind each field, and subscriptions add real-time updates.</p>
+<p>These are the moving parts you must be able to name and explain.</p>
+<h3 class="sub-title">The building blocks</h3>
+<ul><li><strong>GraphQL Schema</strong> — The schema is the core of any GraphQL server. It defines the types, queries and mutations that clients can use to interact with the API.</li><li><strong>Defining types in GraphQL</strong> — Types are the building blocks of a schema. They define the shape of the data that can be queried.</li><li><strong>Queries</strong> — Used to fetch data from a GraphQL server. They define what data the client can request (the <strong>read</strong> operations in CRUD).</li><li><strong>Mutations</strong> — Used to modify data on the server (<strong>create, update and delete</strong> operations).</li><li><strong>Resolvers</strong> — Functions that provide the logic for fetching or modifying data for each field in a type.</li><li><strong>Subscriptions</strong> — Enable real-time capabilities in a GraphQL server, allowing clients to subscribe to certain events.</li><li><strong>Running a GraphQL server</strong> — Can be done using libraries such as <strong>Apollo Server</strong>, <strong>Graphene (Python)</strong>, and others.</li></ul>
+<h3 class="sub-title">What a type and query look like</h3>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>type Post {
+  id: ID!
+  title: String!
+  body: String
+  author: User
+}</code></pre></div>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>query {
+  post(id: &quot;42&quot;) {
+    title
+    author {
+      name
+    }
+  }
+}</code></pre></div>
+<p>The query above asks for only two things — the post's title and its author's name. The server returns exactly that, and nothing else.</p>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Map the parts to CRUD — <strong>Queries = Read</strong>, <strong>Mutations = Create, Update, Delete</strong>, <strong>Subscriptions = live updates</strong>. <strong>Resolvers</strong> are the engine underneath every field.</div></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The <strong>schema</strong> is the contract between client and server. It is typed, so clients know exactly what they can ask for, and the server knows exactly what it must be able to resolve. This is what makes GraphQL self-documenting compared with REST.</div></div>
+</section>
+<section class="guide-section" id="graphql-vs-rest-similarities-and-drawbacks" data-title="GraphQL vs REST: Similarities and Drawbacks">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">GraphQL vs REST: Similarities and Drawbacks</h2>
+  </div>
+  <p class="section-kicker">GraphQL and REST share the same architectural principles, transport and data formats — but GraphQL brings its own costs, including a learning curve, the N+1 problem, caching complexity and security risks.</p>
+<p>GraphQL is not a free upgrade. You must be able to state both what it shares with REST and where it hurts.</p>
+<h3 class="sub-title">Similarities</h3>
+<div class="table-wrap"><table><thead><tr><th>Aspect</th><th>Shared feature</th><th>Notes</th></tr></thead><tbody><tr><td>Architectural principles</td><td>Stateless, client-server architecture, CRUD operations</td><td>Both follow the same high-level principles</td></tr><tr><td>Transport protocol</td><td>Use HTTP as the transport layer</td><td>Standard communication method for both</td></tr><tr><td>Data transfer formats</td><td>JSON (common); REST also supports XML</td><td>JSON is the default, but REST allows additional formats</td></tr></tbody></table></div>
+<h3 class="sub-title">Drawbacks of GraphQL</h3>
+<div class="table-wrap"><table><thead><tr><th>Drawback</th><th>Explanation</th></tr></thead><tbody><tr><td>Learning curve &amp; implementation complexity</td><td>Requires schemas, types and resolvers, making setup more complex than REST</td></tr><tr><td>Over-fetching / N+1 problem</td><td>Deeply nested queries can cause N+1 issues if not optimised properly</td></tr><tr><td>Performance with large queries</td><td>Large, dynamic queries can degrade server performance</td></tr><tr><td>Caching complexity</td><td>Lacks standard HTTP caching; requires custom strategies or tools like Apollo</td></tr><tr><td>Security / malicious queries</td><td>Flexible queries can be abused (e.g. DoS); requires rate limiting and complexity analysis</td></tr><tr><td>Lack of built-in file upload support</td><td>No native file upload support; needs workarounds such as <code>multipart/form-data</code> or <code>graphql-upload</code></td></tr></tbody></table></div>
+<div class="def-card"><span class="dc-term">N+1 problem</span> — A performance issue where resolving a list of N items triggers one extra query per item (N+1 total), usually from deeply nested queries that were not optimised.</div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Don't claim GraphQL "has no downsides" or "is always faster." It trades REST's rigid endpoints for flexibility, but pays for it with complexity, caching difficulty and new attack surfaces such as malicious deep queries.</div></div>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> When comparing the two, structure your answer in three moves — (1) what they <strong>share</strong> (stateless client-server over HTTP, JSON, CRUD), (2) what GraphQL <strong>fixes</strong> (over/under-fetching, endpoint sprawl, flexibility, versioning), (3) what GraphQL <strong>costs</strong> (learning curve, N+1, caching, security, file uploads).</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Your team needs server-side caching via standard HTTP headers and native file uploads. Which style of API makes that easier, and why?</div></div>
+</section>
+<section class="guide-section" id="choosing-between-aws-services-and-api-styles" data-title="Choosing Between AWS Services and API Styles">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Choosing Between AWS Services and API Styles</h2>
+  </div>
+  <p class="section-kicker">Pick AWS services by the job they do and API style by the trade-off you can accept — managed services remove operational burden, and GraphQL buys flexibility at the cost of complexity.</p>
+<p>This final synthesis turns the two halves of the lab into decisions you can defend.</p>
+<h3 class="sub-title">Choosing AWS services</h3>
+<div class="table-wrap"><table><thead><tr><th>If you need to...</th><th>Reach for...</th></tr></thead><tbody><tr><td>Run application code on a virtual server</td><td>Amazon EC2 (built from an AMI)</td></tr><tr><td>Give resources an isolated network</td><td>Amazon VPC</td></tr><tr><td>Store relational data without managing servers</td><td>Amazon RDS</td></tr><tr><td>Store files and objects durably</td><td>Amazon S3</td></tr><tr><td>Deliver content with low latency worldwide</td><td>AWS CloudFront</td></tr><tr><td>Monitor metrics, logs and alerts</td><td>AWS CloudWatch</td></tr><tr><td>Control who can access what</td><td>AWS IAM (roles, policies, MFA)</td></tr><tr><td>Keep secrets and config encrypted</td><td>Parameter Store (with AWS KMS)</td></tr><tr><td>Spread traffic across instances</td><td>Elastic Load Balancer (with WAF)</td></tr><tr><td>Let private resources reach the internet safely</td><td>NAT Gateway</td></tr></tbody></table></div>
+<h3 class="sub-title">Choosing an API style</h3>
+<ul><li>Choose <strong>REST</strong> when you want simple, cacheable, well-understood endpoints and native file uploads.</li><li>Choose <strong>GraphQL</strong> when clients have varied and changing data needs, when over- and under-fetching are hurting performance (especially on mobile), or when you want a single self-documenting endpoint driven by a typed schema.</li></ul>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>Managed beats manual.</strong> Every "managed" AWS service (RDS, ELB, CloudFront) exists to remove operational work you would otherwise do yourself — backups, scaling, distribution, health checks.</div></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Architecture is a set of trade-offs. The final-assignment blueprint (one EC2 instance with Nginx + uWSGI, RDS/S3 optional) is the <em>right-sized</em> choice for a student project: enough to be production-like, without the cost and complexity of a full multi-service cloud.</div></div>
+</section>
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways"><div class="takeaway"><span class="tk-num">1</span><p>AWS architecture is easiest to learn by grouping services into five categories: compute, storage, networking, security and management.</p></div><div class="takeaway"><span class="tk-num">2</span><p>The five key AWS components are EC2 (virtual servers), RDS (managed relational database), VPC (isolated network), AMI (instance template) and IAM (access and permissions).</p></div><div class="takeaway"><span class="tk-num">3</span><p>Cloud security is layered: Internet Gateway for public access, NAT Gateway for secure outbound access from private subnets, IAM Roles to avoid hard-coded credentials, Parameter Store (encrypted with KMS) for secrets, and Elastic Load Balancer for traffic distribution plus WAF integration.</p></div><div class="takeaway"><span class="tk-num">4</span><p>S3 provides durable object storage, CloudFront is a CDN for low-latency delivery, and CloudWatch provides monitoring, logs and alerts.</p></div><div class="takeaway"><span class="tk-num">5</span><p>For the final assignment you do not build a full cloud architecture: use one EC2 instance hosting both the application and web server as EC2 + Nginx + uWSGI, adding RDS and S3 only as needed.</p></div><div class="takeaway"><span class="tk-num">6</span><p>Amazon RDS is a managed relational database (MySQL, PostgreSQL, Oracle and more) with automated backups, scaling and multi-AZ deployments.</p></div><div class="takeaway"><span class="tk-num">7</span><p>The six reasons to use a remote database service are centralised consistency, keeping database files out of version control, remote collaboration, simplified migrations, development environment parity, and built-in backup/recovery/security.</p></div><div class="takeaway"><span class="tk-num">8</span><p><code>db.sqlite3</code> is unsuitable for version control because of its size, frequent changes and security risks.</p></div><div class="takeaway"><span class="tk-num">9</span><p>GraphQL is a query language for APIs and a runtime for executing those queries; it was developed by Facebook in 2012 and released publicly in 2015, and is used by GitHub, Yelp and Shopify.</p></div><div class="takeaway"><span class="tk-num">10</span><p>REST's four limitations are over-fetching/under-fetching, multiple endpoints, lack of flexibility, and versioning issues.</p></div><div class="takeaway"><span class="tk-num">11</span><p>A GraphQL server is built from a schema, types, queries (read), mutations (create/update/delete), resolvers (per-field logic), subscriptions (real-time) and libraries such as Apollo Server or Graphene.</p></div><div class="takeaway"><span class="tk-num">12</span><p>GraphQL and REST share a stateless client-server architecture, HTTP transport and JSON data format — but GraphQL adds a learning curve, the N+1 problem, large-query performance costs, caching complexity, malicious-query risk, and no native file upload support.</p></div></div>
+</section>
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools"><button class="chip active" type="button" data-cat="all">All</button><button class="chip" type="button" data-cat="tech">Technologies &amp; tools</button><button class="chip" type="button" data-cat="concept">Core concepts</button></div>
+  <div class="terms"><div class="term-card" data-cat="tech"><div class="term-name">Amazon EC2</div><div class="term-meaning">Elastic Compute Cloud — scalable virtual servers to run applications, supporting instance types, Auto Scaling and Load Balancing.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Amazon RDS</div><div class="term-meaning">Relational Database Service — a managed relational database supporting MySQL, PostgreSQL, Oracle and others, with automated backups, scaling and multi-AZ deployments.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Amazon VPC</div><div class="term-meaning">Virtual Private Cloud — an isolated network environment for AWS resources with customisable IP ranges, subnets, route tables and gateways.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Amazon AMI</div><div class="term-meaning">Amazon Machine Image — a pre-configured template for an EC2 instance, including its operating system, software and configurations.</div></div><div class="term-card" data-cat="tech"><div class="term-name">AWS IAM</div><div class="term-meaning">Identity and Access Management — manages user access and permissions for AWS resources using roles, policies and multifactor authentication.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Internet Gateway</div><div class="term-meaning">A component that enables internet access for VPC resources, typically for public subnets.</div></div><div class="term-card" data-cat="tech"><div class="term-name">NAT Gateway</div><div class="term-meaning">A component that lets private subnets access the internet securely without exposing them to inbound traffic.</div></div><div class="term-card" data-cat="tech"><div class="term-name">IAM Role</div><div class="term-meaning">A mechanism that provides secure access to AWS services for applications without hard-coded credentials.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Parameter Store</div><div class="term-meaning">A secure store for configuration data and secrets, with encryption using AWS KMS.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Elastic Load Balancer</div><div class="term-meaning">Distributes incoming traffic for high availability and integrates with WAF for security.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Amazon S3</div><div class="term-meaning">Scalable object storage with high durability, versioning and lifecycle management.</div></div><div class="term-card" data-cat="tech"><div class="term-name">AWS CloudFront</div><div class="term-meaning">A Content Delivery Network (CDN) for low-latency content delivery.</div></div><div class="term-card" data-cat="tech"><div class="term-name">AWS CloudWatch</div><div class="term-meaning">Monitoring and observability service for metrics, logs and alerts.</div></div><div class="term-card" data-cat="concept"><div class="term-name">db.sqlite3</div><div class="term-meaning">A local SQLite database file; unsuitable for version control due to its size, frequent changes and security risks.</div></div><div class="term-card" data-cat="tech"><div class="term-name">GraphQL</div><div class="term-meaning">A query language for APIs and a runtime for executing those queries against your data, giving clients exact control over returned fields.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Schema</div><div class="term-meaning">The core of a GraphQL server; it defines the types, queries and mutations clients can use.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Query</div><div class="term-meaning">A GraphQL operation used to fetch (read) data from the server.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Mutation</div><div class="term-meaning">A GraphQL operation used to modify data on the server (create, update, delete).</div></div><div class="term-card" data-cat="tech"><div class="term-name">Resolver</div><div class="term-meaning">A function providing the logic to fetch or modify the data for each field in a GraphQL type.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Subscription</div><div class="term-meaning">A GraphQL feature enabling real-time capabilities by letting clients subscribe to events.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Apollo Server / Graphene</div><div class="term-meaning">Popular libraries for running a GraphQL server — Apollo Server in JavaScript and Graphene in Python.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Over-fetching</div><div class="term-meaning">When an API returns more data than the client needs, wasting bandwidth and processing.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Under-fetching</div><div class="term-meaning">When an API returns too little data, forcing multiple requests to different endpoints.</div></div><div class="term-card" data-cat="concept"><div class="term-name">N+1 problem</div><div class="term-meaning">A performance issue where a list of N items triggers one extra query per item, typically from unoptimised nested queries.</div></div></div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+<article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">Name the five key AWS components covered in this lab and give one line on what each does.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Amazon EC2 (Elastic Compute Cloud) — scalable virtual servers for running applications; Amazon RDS (Relational Database Service) — managed relational database with automated backups, scaling and multi-AZ deployments; Amazon VPC (Virtual Private Cloud) — isolated network environment with customisable IP ranges, subnets, route tables and gateways; Amazon AMI (Amazon Machine Image) — pre-configured EC2 templates including OS, software and configuration; AWS IAM (Identity and Access Management) — manages access and permissions using roles, policies and multifactor authentication.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">What is the difference between an Internet Gateway and a NAT Gateway?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> An Internet Gateway enables internet access for VPC resources (typically public subnets, allowing inbound and outbound connectivity). A NAT Gateway allows private subnets to access the internet securely — outbound only, without exposing those resources to inbound traffic.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">Why do IAM Roles matter compared with putting AWS credentials in your code?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> IAM Roles provide secure access to AWS services for applications without hard-coded credentials. Instead of embedding long-lived keys in source code, the application assumes a role and gets temporary credentials, reducing the risk of leaked secrets.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">What does Parameter Store do, and how is its content protected?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Parameter Store provides secure storage for configuration data and secrets, and encrypts them using AWS KMS.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">What does a typical ELEC3609 final-assignment deployment look like?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> You do not need a full AWS cloud architecture. Generally you use a single EC2 instance to host both the application and the web server, with the stack EC2 + Nginx + uWSGI. You may also consider Amazon RDS and Amazon S3 as needed.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">Why is a local db.sqlite3 file unsuitable for version control, and what does RDS do instead?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Database files like db.sqlite3 are unsuitable for version control because of their size, frequent changes and potential security risks. Amazon RDS manages the database remotely, keeping the repository clean and focused on code and migrations rather than raw data.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">List all six reasons to use a remote database service such as Amazon RDS.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) Centralised and consistent database management; (2) avoiding database files in version control; (3) remote access and collaboration across distributed teams; (4) simplified database migrations applied to one central instance; (5) development environment parity with production; (6) built-in backup, recovery and security.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">Explain "development environment parity" and why it reduces deployment problems.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Using RDS in development makes the development environment closely mirror production, so environment-specific issues are reduced. This helps developers catch potential issues early and makes production rollouts smoother.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">Who created GraphQL, when, and name three well-known public APIs that adopted it.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> GraphQL was developed by Facebook in 2012 and released to the public in 2015. Public APIs that adopted it include GitHub, Yelp and Shopify.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">State and explain the four limitations of poorly designed REST APIs.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) Over-fetching and under-fetching — responses return too much or too little data, forcing multiple requests; (2) multiple endpoints — one endpoint per resource such as /users, /posts, /comments, which becomes cumbersome to maintain as the API evolves; (3) lack of flexibility — responses are fixed by the server, so clients have little control and changes may require new endpoints or API modifications; (4) versioning issues — paths like /v1/users and /v2/users lead to bloated and complex API management.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">What are the parts of a GraphQL server, what does each do, and name two libraries used to run one.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The parts are the schema (defines the types, queries and mutations), types (define the shape of queryable data), queries (read operations), mutations (create, update and delete operations), resolvers (functions providing the logic to fetch or modify data for each field in a type) and subscriptions (real-time event updates). Servers can be run with libraries such as Apollo Server and Graphene (Python).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">In what three ways are GraphQL and REST similar?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> They share the same architectural principles (stateless, client-server architecture with CRUD operations), the same transport protocol (HTTP), and the same data transfer format by default (JSON — though REST also supports XML).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">List the main drawbacks of GraphQL.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Learning curve and implementation complexity (schemas, types, resolvers); the N+1 problem with deeply nested queries if not optimised; performance degradation with large dynamic queries; caching complexity because it lacks standard HTTP caching; security risks from malicious queries (e.g. DoS) requiring rate limiting and complexity analysis; and no built-in file upload support, needing workarounds like multipart/form-data or graphql-upload.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">When would you choose REST over GraphQL?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Choose REST when you want simple, well-understood, cacheable endpoints with standard HTTP caching and native file upload support. Choose GraphQL when clients have varied or changing data needs, when over- and under-fetching are hurting performance, or when you want one self-documenting endpoint driven by a typed schema.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+</section>
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist"><label class="check-item"><input type="checkbox"> I can name the five categories of AWS services (compute, storage, networking, security, management).</label><label class="check-item"><input type="checkbox"> I can describe what EC2, RDS, VPC, AMI and IAM each do.</label><label class="check-item"><input type="checkbox"> I can explain the roles of the Internet Gateway, NAT Gateway, IAM Roles, Parameter Store and Elastic Load Balancer.</label><label class="check-item"><input type="checkbox"> I can explain what S3, CloudFront and CloudWatch are used for.</label><label class="check-item"><input type="checkbox"> I can describe the typical final-assignment deployment (EC2 + Nginx + uWSGI, with RDS and S3 as needed).</label><label class="check-item"><input type="checkbox"> I can list and justify all six reasons to use a remote database service like Amazon RDS.</label><label class="check-item"><input type="checkbox"> I can explain why db.sqlite3 is unsuitable for version control.</label><label class="check-item"><input type="checkbox"> I can define GraphQL and state who created it and when.</label><label class="check-item"><input type="checkbox"> I can name and explain the four limitations of poorly designed REST APIs.</label><label class="check-item"><input type="checkbox"> I can describe a GraphQL schema, types, queries, mutations, resolvers and subscriptions.</label><label class="check-item"><input type="checkbox"> I can state the similarities between GraphQL and REST and list GraphQL's drawbacks, including the N+1 problem.</label><label class="check-item"><input type="checkbox"> I can decide whether REST or GraphQL is the better fit for a given set of requirements.</label></div>
+</section>
   </main>
 </div>
-<button class="totop" id="toTop" type="button" aria-label="Back to top">↑</button>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">⌂ All guides</a>
+    <a href="../week_8/ELEC3609_lab_week8_study_guide.html">← Lab 8</a>
+    <a href="../week_10/ELEC3609_lab_week10_study_guide.html">Lab 10 →</a>
+  </div>
+  <p>ELEC3609/9609 Internet Software Platforms · Lab 9 · Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
 <script>
 (function(){
-  var GUIDE_ID = "elec3609-lab-week9-study-guide";
+  "use strict";
+
+  /* ---------- Theme ---------- */
   var root = document.documentElement;
-  /* theme */
-  var stored = null;
-  try { stored = localStorage.getItem("sg-theme"); } catch(e){}
-  var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  setTheme(stored || (prefersDark ? "dark" : "light"));
-  function setTheme(t){
-    root.setAttribute("data-theme", t);
-    var b = document.getElementById("themeBtn");
-    if (b) b.textContent = t === "dark" ? "☀️" : "🌙";
-    try { localStorage.setItem("sg-theme", t); } catch(e){}
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('elec3609-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('elec3609-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
   }
-  document.getElementById("themeBtn").addEventListener("click", function(){
-    setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
-  });
-  document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
 
-  /* mobile drawer */
-  var sidebar = document.getElementById("sidebar"), scrim = document.getElementById("scrim");
-  function closeDrawer(){ sidebar.classList.remove("open"); scrim.classList.remove("show"); }
-  document.getElementById("menuBtn").addEventListener("click", function(){
-    sidebar.classList.toggle("open"); scrim.classList.toggle("show");
-  });
-  scrim.addEventListener("click", closeDrawer);
-  sidebar.addEventListener("click", function(e){ if (e.target.closest("a")) closeDrawer(); });
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
 
-  /* progress bar + back to top */
-  var bar = document.getElementById("progress"), toTop = document.getElementById("toTop");
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
   function onScroll(){
-    var h = document.documentElement;
-    var max = h.scrollHeight - h.clientHeight;
-    var pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
-    bar.style.width = pct + "%";
-    toTop.classList.toggle("show", h.scrollTop > 600);
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
   }
-  window.addEventListener("scroll", onScroll, {passive:true});
+  window.addEventListener('scroll', onScroll, {passive:true});
   onScroll();
-  toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
 
-  /* active toc + reveal */
-  var links = Array.prototype.slice.call(document.querySelectorAll(".toc-link"));
-  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
-  if ("IntersectionObserver" in window) {
-    var rev = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){ if (en.isIntersecting) en.target.classList.add("in"); });
-    }, {rootMargin:"0px 0px -8% 0px", threshold:0.05});
-    sections.forEach(function(s){ rev.observe(s); });
-
-    var spy = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){
-        if (!en.isIntersecting) return;
-        var id = en.target.id;
-        links.forEach(function(a){ a.classList.toggle("active", a.getAttribute("href") === "#" + id); });
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
       });
-    }, {rootMargin:"-15% 0px -70% 0px", threshold:0});
-    sections.forEach(function(s){ spy.observe(s); });
-  } else {
-    sections.forEach(function(s){ s.classList.add("in"); });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
   }
 
-  /* copy buttons */
-  document.addEventListener("click", function(e){
-    var btn = e.target.closest("[data-copy]");
-    if (!btn) return;
-    var code = btn.parentElement.querySelector("code");
-    if (!code) return;
-    var text = code.innerText;
-    var done = function(){ btn.textContent = "Copied"; btn.classList.add("done"); setTimeout(function(){ btn.textContent = "Copy"; btn.classList.remove("done"); }, 1400); };
-    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
-    else { var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(err){} document.body.removeChild(ta); done(); }
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'elec3609-ELEC3609_lab_week9_study_guide-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
   });
 
-  /* glossary filter */
-  var termSearch = document.getElementById("termSearch");
-  if (termSearch) {
-    var terms = Array.prototype.slice.call(document.querySelectorAll(".term"));
-    var count = document.getElementById("termCount");
-    var update = function(){
-      var q = termSearch.value.trim().toLowerCase();
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
       var shown = 0;
-      terms.forEach(function(t){
-        var hit = !q || (t.getAttribute("data-term") || "").indexOf(q) !== -1;
-        t.classList.toggle("hide", !hit);
-        if (hit) shown++;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
       });
-      if (count) count.textContent = shown + " / " + terms.length + " shown";
-    };
-    termSearch.addEventListener("input", update);
-    update();
-  }
-
-  /* exam interactions */
-  var quizzes = Array.prototype.slice.call(document.querySelectorAll(".quiz"));
-  quizzes.forEach(function(q){
-    var head = q.querySelector(".quiz-q");
-    head.addEventListener("click", function(){
-      q.classList.toggle("open");
-      head.setAttribute("aria-expanded", q.classList.contains("open") ? "true" : "false");
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
     });
   });
-  var doneEl = document.getElementById("examDone"), fillEl = document.getElementById("examFill");
-  var boxes = Array.prototype.slice.call(document.querySelectorAll("[data-mastered]"));
-  var total = boxes.length;
-  function examKey(){ return "sg-exam-" + GUIDE_ID; }
-  function loadExam(){
-    var data = {};
-    try { data = JSON.parse(localStorage.getItem(examKey()) || "{}"); } catch(e){}
-    boxes.forEach(function(b){ b.checked = !!data[b.getAttribute("data-mastered")]; });
-  }
-  function saveExam(){
-    var data = {};
-    boxes.forEach(function(b){ if (b.checked) data[b.getAttribute("data-mastered")] = 1; });
-    try { localStorage.setItem(examKey(), JSON.stringify(data)); } catch(e){}
-  }
-  function refreshExam(){
-    var done = boxes.filter(function(b){ return b.checked; }).length;
-    if (doneEl) doneEl.textContent = done;
-    if (fillEl) fillEl.style.width = total ? (done / total) * 100 + "%" : "0%";
-  }
-  boxes.forEach(function(b){ b.addEventListener("change", function(){ saveExam(); refreshExam(); }); });
-  if (boxes.length) { loadExam(); refreshExam(); }
-  var revealAll = document.getElementById("revealAll");
-  var hideAll = document.getElementById("hideAll");
-  var resetExam = document.getElementById("resetExam");
-  if (revealAll) revealAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.add("open"); }); });
-  if (hideAll) hideAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.remove("open"); }); });
-  if (resetExam) resetExam.addEventListener("click", function(){ boxes.forEach(function(b){ b.checked = false; }); saveExam(); refreshExam(); });
 
-  /* search */
-  var input = document.getElementById("searchInput");
-  var box = document.getElementById("searchResults");
-  var index = sections.map(function(s){
-    var h = s.querySelector("h2");
-    return { id: s.id, title: h ? h.textContent : "", text: s.innerText.replace(/\s+/g, " ").trim() };
-  });
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
   function runSearch(){
-    var q = input.value.trim().toLowerCase();
-    box.innerHTML = "";
-    if (q.length < 2) { box.classList.remove("open"); return; }
-    var hits = index.filter(function(it){ return (it.title + " " + it.text).toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
-    if (!hits.length) { box.innerHTML = '<div class="sr-empty">No matches</div>'; box.classList.add("open"); return; }
-    hits.forEach(function(it){
-      var low = it.text.toLowerCase(), at = low.indexOf(q);
-      var snippet = at >= 0 ? it.text.slice(Math.max(0, at - 30), at + 70) : it.title;
-      var b = document.createElement("button");
-      b.type = "button"; b.className = "sr-item";
-      b.innerHTML = "<b></b><span></span>";
-      b.querySelector("b").textContent = it.title;
-      b.querySelector("span").textContent = "…" + snippet + "…";
-      b.addEventListener("click", function(){
-        document.getElementById(it.id).scrollIntoView({behavior:"smooth", block:"start"});
-        box.classList.remove("open"); input.blur();
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
       });
-      box.appendChild(b);
-    });
-    box.classList.add("open");
+    }
+    suggest.classList.add('open');
   }
-  if (input) {
-    input.addEventListener("input", runSearch);
-    input.addEventListener("keydown", function(e){
-      if (e.key === "Enter") { var first = box.querySelector(".sr-item"); if (first) first.click(); }
-      if (e.key === "Escape") { box.classList.remove("open"); input.blur(); }
-    });
-    document.addEventListener("click", function(e){ if (!e.target.closest(".search")) box.classList.remove("open"); });
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
   }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'elec3609-ELEC3609_lab_week9_study_guide-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
 })();
 </script>
+
+<script>
+(function(){
+  "use strict";
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.code-copy');
+    if (!btn) return;
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    var text = code.innerText;
+    var done = function(){ btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
+    else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(err){} document.body.removeChild(ta); done(); }
+  });
+})();
+</script>
+
 </body>
 </html>

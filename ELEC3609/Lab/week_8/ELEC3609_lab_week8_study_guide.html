@@ -3,431 +3,699 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ELEC3609 Lab 8 Study Guide – Django Security &amp; Testing · Lab 8</title>
-<meta name="description" content="This lab explores fundamental web security issues — XSS, CSRF, SQL injection, clickjacking and session handling — within Django, showing common pitfalls and the built-in…">
-<meta name="color-scheme" content="light dark">
+<meta name="description" content="This lab covers the two halves of shipping a trustworthy Django app: defending against the classic web attacks (XSS, CSRF, SQL injection, clickjacking, and unencrypted traffic) using Django&#x27;s built-in">
+<title>ELEC3609 Lab 8 — Securing and Testing Django Web Applications</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
-*,*::before,*::after{box-sizing:border-box}
-:root{
-  --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
-  --head:'Sora','Inter',system-ui,sans-serif;
-  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
-  --bg:#f4f8f7;--bg-2:#e9f1ef;--surface:#ffffff;--surface-2:#eff5f4;
-  --ink:#15282b;--muted:#587076;--faint:#89a0a3;--line:#d8e5e2;
-  --brand:#0e7c6b;--brand-2:#12a594;--brand-soft:#d6f3ec;--brand-ink:#0a5b4e;
-  --amber:#b45309;--amber-soft:#fdf0d6;
-  --rose:#b21e4b;--rose-soft:#fde4ec;
-  --sky:#0c6ea3;--sky-soft:#ddeffb;
-  --violet:#6d28d9;--violet-soft:#ece7fd;
-  --shadow:0 1px 2px rgba(16,40,43,.05),0 10px 28px -16px rgba(16,40,43,.30);
-  --shadow-lg:0 26px 60px -30px rgba(16,40,43,.45);
-  --r:16px;--r-sm:11px;--sidebar:288px;
-}
-[data-theme=dark]{
-  --bg:#07110f;--bg-2:#0b1a17;--surface:#0e1d1a;--surface-2:#122522;
-  --ink:#e6f2ef;--muted:#94ada8;--faint:#69837e;--line:#1c322e;
-  --brand:#2dd4bf;--brand-2:#5eead4;--brand-soft:rgba(45,212,191,.15);--brand-ink:#99f6e4;
-  --amber:#fbbf24;--amber-soft:rgba(251,191,36,.15);
-  --rose:#fb7185;--rose-soft:rgba(251,113,133,.15);
-  --sky:#38bdf8;--sky-soft:rgba(56,189,248,.15);
-  --violet:#a78bfa;--violet-soft:rgba(167,139,250,.17);
-  --shadow:0 1px 2px rgba(0,0,0,.35),0 12px 32px -18px rgba(0,0,0,.7);
-  --shadow-lg:0 28px 70px -34px rgba(0,0,0,.85);
-}
-html{scroll-behavior:smooth}
-body{margin:0;font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.68;-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.75;
-  background:radial-gradient(58rem 38rem at 112% -12%,var(--brand-soft),transparent 62%),
-             radial-gradient(46rem 30rem at -12% 6%,var(--sky-soft),transparent 58%)}
-h1,h2,h3,h4{font-family:var(--head);line-height:1.2;margin:0}
-p{margin:0 0 .85rem}
-a{color:var(--brand);text-decoration:none}
-a:hover{text-decoration:underline}
-strong{font-weight:650;color:var(--ink)}
-code{font-family:var(--mono);font-size:.86em;background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.08em .38em}
-.math{font-family:var(--mono);background:var(--surface-2);border:1px solid var(--line);border-radius:6px;padding:.06em .4em;font-size:.9em}
-::selection{background:var(--brand-soft);color:var(--brand-ink)}
-/* progress */
-.progress{position:fixed;top:0;left:0;height:3px;width:0;z-index:60;background:linear-gradient(90deg,var(--brand),var(--brand-2),var(--sky))}
-/* topbar */
-.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:.75rem;
-  padding:.6rem clamp(.9rem,3vw,1.6rem);background:color-mix(in srgb,var(--surface) 82%,transparent);
-  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
-.brand{display:flex;align-items:center;gap:.6rem;min-width:0}
-.brand-badge{flex:none;font-size:.68rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.28rem .6rem;white-space:nowrap}
-.brand-title{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.topbar-actions{margin-left:auto;display:flex;align-items:center;gap:.45rem}
-.icon-btn{display:inline-grid;place-items:center;width:38px;height:38px;border:1px solid var(--line);
-  background:var(--surface);color:var(--ink);border-radius:10px;cursor:pointer;font-size:1rem;transition:.15s}
-.icon-btn:hover{border-color:var(--brand);color:var(--brand)}
-.menu-btn{display:none}
-.search{position:relative}
-.search input{width:min(30vw,240px);padding:.5rem .7rem;border:1px solid var(--line);border-radius:10px;
-  background:var(--surface);color:var(--ink);font:inherit;font-size:.85rem}
-.search input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.search-results{position:absolute;right:0;top:calc(100% + 8px);width:min(78vw,380px);max-height:60vh;overflow:auto;
-  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow-lg);display:none;padding:.35rem}
-.search-results.open{display:block}
-.sr-item{display:block;width:100%;text-align:left;border:0;background:none;color:var(--ink);font:inherit;
-  padding:.5rem .6rem;border-radius:8px;cursor:pointer}
-.sr-item:hover,.sr-item.active{background:var(--surface-2)}
-.sr-item b{display:block;font-size:.84rem;color:var(--brand-ink)}
-.sr-item span{display:block;font-size:.76rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sr-empty{padding:.6rem;color:var(--muted);font-size:.82rem}
-/* shell */
-.shell{display:grid;grid-template-columns:var(--sidebar) minmax(0,1fr);gap:0;align-items:start}
-.sidebar{position:sticky;top:57px;height:calc(100vh - 57px);overflow:auto;padding:1.3rem .9rem 3rem 1.4rem}
-.toc-title{font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .7rem .5rem}
-.toc{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:1px}
-.toc-link{display:flex;gap:.55rem;align-items:baseline;padding:.36rem .5rem;border-radius:8px;color:var(--muted);
-  font-size:.82rem;line-height:1.35;transition:.13s}
-.toc-link:hover{background:var(--surface-2);color:var(--ink);text-decoration:none}
-.toc-link.active{background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
-.toc-n{font-family:var(--mono);font-size:.66rem;color:var(--faint);flex:none;padding-top:.12rem}
-.toc-link.active .toc-n{color:var(--brand)}
-.content{min-width:0;max-width:960px;padding:1.6rem clamp(1rem,3.5vw,2.6rem) 5rem}
-/* hero */
-.hero{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:var(--r);
-  padding:clamp(1.4rem,3.5vw,2.4rem);background:
-    linear-gradient(180deg,color-mix(in srgb,var(--brand-soft) 55%,var(--surface)),var(--surface) 72%);
-  box-shadow:var(--shadow);margin-bottom:2rem}
-.hero::after{content:"";position:absolute;right:-70px;top:-70px;width:230px;height:230px;border-radius:50%;
-  background:radial-gradient(circle,var(--brand-soft),transparent 68%);opacity:.8}
-.hero-tag{font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--brand-ink);font-weight:700;margin:0 0 .55rem}
-.hero h1{font-size:clamp(1.5rem,4vw,2.15rem);letter-spacing:-.02em;margin-bottom:.5rem}
-.hero-sub{color:var(--muted);font-size:1.02rem;max-width:60ch;margin-bottom:1.1rem}
-.hero-overview{position:relative;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.15rem;box-shadow:var(--shadow)}
-.ho-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 .35rem}
-.hero-overview p:last-child{margin:0}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.7rem;margin-top:1.1rem}
-.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.7rem .85rem;box-shadow:var(--shadow)}
-.stat-val{display:block;font-family:var(--head);font-weight:800;font-size:1.25rem;color:var(--brand-ink)}
-.stat-label{display:block;font-size:.72rem;color:var(--muted);letter-spacing:.03em;text-transform:uppercase;font-weight:600}
-/* sections */
-.section{scroll-margin-top:80px;margin-bottom:2.4rem;opacity:0;transform:translateY(14px);transition:opacity .5s ease,transform .5s ease}
-.section.in{opacity:1;transform:none}
-.section-head{display:flex;align-items:center;gap:.75rem;margin-bottom:1rem;padding-bottom:.6rem;border-bottom:2px solid var(--line)}
-.section-num{flex:none;font-family:var(--head);font-weight:800;font-size:.82rem;color:#fff;background:linear-gradient(135deg,var(--brand),var(--brand-2));
-  width:2.1rem;height:2.1rem;display:grid;place-items:center;border-radius:10px;box-shadow:0 6px 16px -8px var(--brand)}
-.section-head h2{font-size:clamp(1.15rem,2.6vw,1.5rem);letter-spacing:-.01em}
-.section-body>*+*{margin-top:.5rem}
-.section-body p{margin:0 0 .9rem}
-.subhead{font-size:.98rem;margin:1.2rem 0 .5rem;color:var(--brand-ink)}
-ul,ol{margin:0 0 .9rem;padding-left:1.25rem}
-li{margin:.22rem 0}
-li>ul,li>ol{margin:.3rem 0 .1rem}
-/* table */
-.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-sm);margin:1rem 0;box-shadow:var(--shadow)}
-table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:440px}
-thead th{background:var(--surface-2);text-align:left;font-weight:700;color:var(--ink);white-space:nowrap}
-th,td{padding:.6rem .8rem;border-bottom:1px solid var(--line);vertical-align:top}
-tbody tr:last-child td{border-bottom:0}
-tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface-2) 45%,transparent)}
-/* code */
-.code{position:relative;margin:1rem 0}
-.code pre{margin:0;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);
-  padding:1rem 1.1rem;overflow:auto;box-shadow:var(--shadow)}
-.code code{font-family:var(--mono);font-size:.82rem;line-height:1.6;background:none;border:0;padding:0;color:var(--ink);white-space:pre}
-.copy{position:absolute;top:.55rem;right:.55rem;font-size:.68rem;letter-spacing:.04em;text-transform:uppercase;font-weight:700;
-  color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.24rem .5rem;cursor:pointer}
-.copy:hover{color:var(--brand);border-color:var(--brand)}
-.copy.done{color:var(--brand-ink);border-color:var(--brand)}
-/* formula */
-.formula{position:relative;margin:1rem 0;padding:1.1rem 1rem .9rem;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm)}
-.formula-label{position:absolute;top:-.6rem;left:.9rem;font-size:.66rem;letter-spacing:.07em;text-transform:uppercase;font-weight:700;
-  color:#fff;background:var(--brand);border-radius:6px;padding:.14rem .5rem}
-.formula code{display:block;font-family:var(--mono);font-size:.86rem;background:none;border:0;padding:0;color:var(--ink)}
-/* flow */
-.flow{display:flex;flex-wrap:wrap;align-items:center;gap:.45rem;margin:1rem 0;padding:1rem;background:var(--surface);
-  border:1px solid var(--line);border-radius:var(--r-sm);box-shadow:var(--shadow)}
-.flow-step{display:inline-flex;align-items:center;gap:.4rem;background:var(--surface-2);border:1px solid var(--line);
-  border-radius:999px;padding:.34rem .75rem .34rem .5rem;font-size:.82rem;font-weight:600}
-.flow-n{font-family:var(--mono);font-size:.64rem;color:#fff;background:var(--brand);border-radius:999px;padding:.1rem .34rem}
-.flow-arrow{color:var(--brand);font-weight:800}
-/* callouts */
-.callout{display:flex;gap:.75rem;margin:1rem 0;padding:.9rem 1rem;border:1px solid var(--line);border-left-width:4px;
-  border-radius:var(--r-sm);background:var(--surface);box-shadow:var(--shadow)}
-.callout-ico{flex:none;font-size:1.15rem;line-height:1.3}
-.callout-title{font-weight:700;font-size:.78rem;letter-spacing:.05em;text-transform:uppercase;margin:0 0 .18rem}
-.callout-text{font-size:.93rem}
-.callout-text>:last-child{margin-bottom:0}
-.callout.why{border-left-color:var(--amber);background:color-mix(in srgb,var(--amber-soft) 55%,var(--surface))}
-.callout.why .callout-title{color:var(--amber)}
-.callout.memory{border-left-color:var(--violet);background:color-mix(in srgb,var(--violet-soft) 55%,var(--surface))}
-.callout.memory .callout-title{color:var(--violet)}
-.callout.warn{border-left-color:var(--rose);background:color-mix(in srgb,var(--rose-soft) 55%,var(--surface))}
-.callout.warn .callout-title{color:var(--rose)}
-.callout.info{border-left-color:var(--sky);background:color-mix(in srgb,var(--sky-soft) 55%,var(--surface))}
-.callout.info .callout-title{color:var(--sky)}
-.callout.tip{border-left-color:var(--brand);background:color-mix(in srgb,var(--brand-soft) 55%,var(--surface))}
-.callout.tip .callout-title{color:var(--brand-ink)}
-/* takeaways */
-.takeaways{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
-.takeaways li{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r-sm);padding:.75rem .9rem;box-shadow:var(--shadow)}
-.tk-n{flex:none;font-family:var(--mono);font-size:.68rem;font-weight:700;color:var(--brand-ink);background:var(--brand-soft);
-  border-radius:7px;padding:.22rem .45rem;margin-top:.15rem}
-/* glossary */
-.term-filter{display:flex;align-items:center;gap:.7rem;margin:0 0 .9rem}
-.term-filter input{flex:1;max-width:340px;padding:.55rem .75rem;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);font:inherit;font-size:.86rem}
-.term-filter input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
-.term-count{font-size:.78rem;color:var(--muted)}
-.terms{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:.7rem}
-.term{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem .9rem;box-shadow:var(--shadow)}
-.term.hide{display:none}
-.term-name{font-family:var(--head);font-weight:700;font-size:.9rem;margin:0 0 .2rem;color:var(--brand-ink)}
-.term-def{font-size:.85rem;color:var(--muted);margin:0}
-/* mnemonics */
-.mnemonics{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:.8rem}
-.mnemonic{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.95rem 1rem;box-shadow:var(--shadow)}
-.mn-title{font-family:var(--head);font-weight:700;font-size:.92rem;margin:0 0 .4rem;color:var(--brand-ink)}
-.mn-code{font-family:var(--mono);font-weight:600;font-size:1.02rem;letter-spacing:.04em;margin:0 0 .35rem}
-.mn-phrase{font-style:italic;font-weight:600;color:var(--violet);margin:0 0 .35rem}
-.mn-note{font-size:.83rem;color:var(--muted);margin:0}
-/* examples */
-.example{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:1.1rem 1.2rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.example-tag{display:inline-block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;
-  color:var(--brand-ink);background:var(--brand-soft);border-radius:999px;padding:.2rem .55rem;margin-bottom:.5rem}
-.example-title{font-size:1rem;margin:0 0 .6rem}
-/* exam */
-.exam-bar{display:flex;flex-wrap:wrap;gap:.8rem;align-items:center;justify-content:space-between;
-  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);padding:.8rem 1rem;margin:0 0 1rem;box-shadow:var(--shadow)}
-.exam-count{font-size:.85rem;color:var(--muted)}
-.exam-count strong{color:var(--brand-ink)}
-.exam-track{display:block;width:170px;height:7px;border-radius:999px;background:var(--surface-2);margin-top:.4rem;overflow:hidden}
-.exam-track>span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--brand-2));transition:width .3s}
-.exam-actions{display:flex;gap:.4rem;flex-wrap:wrap}
-.btn{font:inherit;font-size:.78rem;font-weight:600;color:var(--brand-ink);background:var(--brand-soft);border:1px solid transparent;
-  border-radius:9px;padding:.42rem .7rem;cursor:pointer}
-.btn:hover{background:var(--brand);color:#fff}
-.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted)}
-.btn.ghost:hover{border-color:var(--brand);color:var(--brand);background:transparent}
-.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);margin:0 0 .6rem;overflow:hidden;box-shadow:var(--shadow)}
-.quiz-q{display:flex;gap:.7rem;align-items:flex-start;width:100%;text-align:left;background:none;border:0;color:var(--ink);
-  font:inherit;font-weight:600;padding:.85rem .95rem;cursor:pointer}
-.quiz-n{flex:none;font-family:var(--mono);font-size:.7rem;font-weight:700;color:#fff;background:var(--brand);border-radius:7px;padding:.2rem .45rem;margin-top:.1rem}
-.quiz-text{flex:1}
-.quiz-chev{flex:none;color:var(--muted);transition:transform .2s}
-.quiz.open .quiz-chev{transform:rotate(180deg)}
-.quiz-body{display:none;padding:0 .95rem .9rem;border-top:1px dashed var(--line)}
-.quiz.open .quiz-body{display:block}
-.quiz-a{font-size:.9rem;margin:.7rem 0;padding:.7rem .85rem;background:var(--surface-2);border-radius:9px}
-.quiz-a-label{display:block;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--brand);margin-bottom:.2rem}
-.quiz-a.muted{color:var(--muted);font-style:italic}
-.mastered{display:inline-flex;gap:.45rem;align-items:center;font-size:.8rem;color:var(--muted);cursor:pointer;user-select:none}
-.mastered input{accent-color:var(--brand);width:1rem;height:1rem}
-/* footer */
-.foot{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}
-/* to top */
-.totop{position:fixed;right:1.1rem;bottom:1.1rem;z-index:55;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);
-  background:var(--surface);color:var(--brand-ink);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow-lg);opacity:0;pointer-events:none;transition:.2s}
-.totop.show{opacity:1;pointer-events:auto}
-.scrim{display:none}
-/* responsive */
-@media (max-width:980px){
-  .shell{grid-template-columns:1fr}
-  .menu-btn{display:inline-grid}
-  .sidebar{position:fixed;top:0;left:0;z-index:70;height:100vh;width:min(86vw,320px);background:var(--surface);
-    border-right:1px solid var(--line);transform:translateX(-102%);transition:transform .25s ease;padding-top:1.4rem;box-shadow:var(--shadow-lg)}
-  .sidebar.open{transform:none}
-  .scrim{display:block;position:fixed;inset:0;z-index:65;background:rgba(6,18,16,.45);opacity:0;pointer-events:none;transition:.25s}
-  .scrim.show{opacity:1;pointer-events:auto}
-  .search input{width:40vw}
-  .brand-title{display:none}
-}
-@media (max-width:560px){
-  .search input{width:34vw}
-  .content{padding:1.1rem .9rem 4rem}
-  .stats{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
-}
-@media (prefers-reduced-motion:reduce){
-  *{scroll-behavior:auto!important}
-  .section{opacity:1;transform:none;transition:none}
-}
-@media print{
-  .topbar,.sidebar,.totop,.progress,.exam-actions,.copy,.scrim,.term-filter{display:none!important}
-  body::before{display:none}
-  .shell{display:block}
-  .content{max-width:none;padding:0}
-  .section{opacity:1;transform:none;page-break-inside:avoid}
-  .quiz-body{display:block!important}
-  .hero,.callout,.table-wrap,.code pre,.example,.quiz,.term{box-shadow:none}
-  a{color:inherit}
-}
+  /* ============================================================
+     ENGG2112 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+
+  /* ---------- Code blocks (added for ELEC3609) ---------- */
+  .code-block{position:relative;margin:1.2rem 0;}
+  .code-block pre{margin:0;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.1rem;overflow:auto;}
+  .code-block code{font-family:var(--font-mono);font-size:.84rem;line-height:1.62;background:none;padding:0;border-radius:0;color:var(--ink);white-space:pre;}
+  .code-copy{position:absolute;top:.55rem;right:.55rem;font-family:var(--font-body);font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.25rem .55rem;cursor:pointer;transition:.16s var(--ease);}
+  .code-copy:hover{color:var(--primary-deep);border-color:var(--line-strong);}
+  .code-copy.done{color:var(--primary-deep);border-color:var(--primary);}
 </style>
 </head>
 <body>
-<div class="progress" id="progress" aria-hidden="true"></div>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
 <header class="topbar">
-  <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Open navigation">☰</button>
-  <div class="brand"><span class="brand-badge">ELEC3609 · Lab 8</span><span class="brand-title">Django Security &amp; Testing · Lab 8</span></div>
-  <div class="topbar-actions">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">ELEC3609</span>
+    <span class="brand-week">Lab 8</span>
+  </a>
+  <div class="topbar-tools">
     <div class="search">
-      <input id="searchInput" type="search" placeholder="Search this guide…" autocomplete="off" aria-label="Search this guide">
-      <div class="search-results" id="searchResults" role="listbox"></div>
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
     </div>
-    <button class="icon-btn" id="themeBtn" type="button" aria-label="Toggle light and dark theme">🌙</button>
-    <button class="icon-btn" id="printBtn" type="button" aria-label="Print this guide">🖨</button>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
   </div>
 </header>
-<div class="shell">
+
+<div class="layout">
   <aside class="sidebar" id="sidebar" aria-label="Table of contents">
-    <p class="toc-title">Contents</p>
-    <ul class="toc">
-<li><a href="#overview" class="toc-link"><span class="toc-n">00</span>Overview</a></li>
-<li><a href="#sec-1" class="toc-link"><span class="toc-n">01</span>Web Security Threats Overview</a></li>
-<li><a href="#sec-2" class="toc-link"><span class="toc-n">02</span>XSS: How the Attack Works</a></li>
-<li><a href="#sec-3" class="toc-link"><span class="toc-n">03</span>XSS: Protection Strategies</a></li>
-<li><a href="#sec-4" class="toc-link"><span class="toc-n">04</span>CSRF: How the Attack Works</a></li>
-<li><a href="#sec-5" class="toc-link"><span class="toc-n">05</span>CSRF: GET vs POST</a></li>
-<li><a href="#sec-6" class="toc-link"><span class="toc-n">06</span>CSRF Tokens &amp; Django Protection</a></li>
-<li><a href="#sec-7" class="toc-link"><span class="toc-n">07</span>JWT &amp; CSRF in DRF</a></li>
-<li><a href="#sec-8" class="toc-link"><span class="toc-n">08</span>SQL Injection &amp; Clickjacking</a></li>
-<li><a href="#sec-9" class="toc-link"><span class="toc-n">09</span>Enforcing TLS/HTTPS</a></li>
-<li><a href="#sec-10" class="toc-link"><span class="toc-n">10</span>Security Settings for Deployment</a></li>
-<li><a href="#sec-11" class="toc-link"><span class="toc-n">11</span>Django Testing Fundamentals</a></li>
-<li><a href="#sec-12" class="toc-link"><span class="toc-n">12</span>Testing Models, Forms &amp; Views</a></li>
-<li><a href="#sec-13" class="toc-link"><span class="toc-n">13</span>The Test Database &amp; setUpTestData</a></li>
-<li><a href="#sec-14" class="toc-link"><span class="toc-n">14</span>Code Coverage &amp; Frontend Testing</a></li>
-<li><a href="#key-takeaways" class="toc-link"><span class="toc-n">15</span>Key Takeaways</a></li>
-<li><a href="#glossary" class="toc-link"><span class="toc-n">16</span>Glossary</a></li>
-<li><a href="#mnemonics" class="toc-link"><span class="toc-n">17</span>Mnemonics &amp; Quick Recall</a></li>
-<li><a href="#worked-examples" class="toc-link"><span class="toc-n">18</span>Worked Examples &amp; Scenarios</a></li>
-<li><a href="#exam-focus" class="toc-link"><span class="toc-n">19</span>Exam Practice</a></li>
-    </ul>
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
   </aside>
-  <div class="scrim" id="scrim"></div>
+  <div class="scrim" id="scrim" hidden></div>
+
   <main class="content" id="content">
-<section class="hero" id="overview">
-<p class="hero-tag">📖 Course notes · Lab 8</p>
-<h1>Django Security &amp; Testing · Lab 8</h1>
-<p class="hero-sub">This lab explores fundamental web security issues — XSS, CSRF, SQL injection, clickjacking and session handling — within Django, showing common pitfalls…</p>
-<div class="hero-overview"><p class="ho-label">Lecture overview</p><p>This lab explores fundamental web security issues — <strong>XSS, CSRF, SQL injection, clickjacking</strong> and <strong>session handling</strong> — within Django, showing common pitfalls and the <strong>built-in mechanisms that mitigate them</strong>. It then covers <strong>secure deployment settings</strong> such as ALLOWED_HOSTS, HTTPS enforcement and secret key management. The second half teaches <strong>Django testing</strong>: how to write unit tests for models, forms, views and templates with <strong>unittest</strong> and Django's <strong>test client</strong>, measure <strong>code coverage</strong>, and where <strong>frontend testing</strong> tools fit. The individual task is to understand and evaluate Django security.</p></div>
-<div class="stats"><div class="stat"><span class="stat-val">2</span><span class="stat-label">Chapters</span></div><div class="stat"><span class="stat-val">Task 7 (Django security)</span><span class="stat-label">Individual task</span></div><div class="stat"><span class="stat-val">N/A</span><span class="stat-label">Lab resource</span></div><div class="stat"><span class="stat-val">XSS, CSRF, SQLi, clickjacking</span><span class="stat-label">Threats covered</span></div><div class="stat"><span class="stat-val">python manage.py test</span><span class="stat-label">Test runner</span></div></div>
+<section class="hero" id="top">
+  <span class="hero-eyebrow">ELEC3609 · Lab 8 · Django Security &amp; Testing</span>
+  <h1 class="hero-title">Securing and Testing Django Web Applications</h1>
+  <p class="hero-sub">This lab covers the two halves of shipping a trustworthy Django app: defending against the classic web attacks (XSS, CSRF, SQL injection, clickjacking, and unencrypted traffic) using Django's built-in protections and safe deployment settings, and proving the app actually works by writing automated tests for models, forms, views, and templates, then measuring how much of your code those tests cover.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> Security and testing are the same discipline seen from two sides — you assume the app <em>will</em> be attacked and <em>will</em> break, so you build defences into every layer (templates escape output, forms carry CSRF tokens, the ORM parameterises SQL, settings lock down deployment) and you write tests that exercise each layer so a regression is caught before an attacker or a user finds it. Everything in this lab is either "how an attack works" or "how Django stops it / how you verify it."</div>
+  <div class="hero-meta"><span class="meta-chip">~22 min read</span><span class="meta-chip">13 teaching sections</span><span class="meta-chip">14 practice questions</span><span class="meta-chip">24 key terms</span></div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list"><li>Explain how XSS, CSRF, SQL injection, and clickjacking attacks work and why each is dangerous.</li><li>Apply Django's defences: autoescaping, the csrf_token tag, the ORM, and X-Frame-Options.</li><li>Configure secure deployment settings such as ALLOWED_HOSTS, HTTPS enforcement, HSTS, and secret-key management.</li><li>Reason about CSRF risk when using JWT and Django REST Framework.</li><li>Structure a Django test suite using TestCase and test_-prefixed methods.</li><li>Write unit tests for models, forms, views, and templates using unittest assertions and Django's test client.</li><li>Use the test database with fixtures and setUpTestData to isolate tests from production data.</li><li>Measure test coverage with Coverage.py and choose frontend testing tools.</li></ul>
+  </div>
 </section>
-<section class="section" id="sec-1"><header class="section-head"><span class="section-num">01</span><h2>Web Security Threats Overview</h2></header><div class="section-body"><p>Web applications are vulnerable to a wide variety of attacks, which can lead to <strong>data breaches, loss of user trust, and downtime</strong>. This guide walks through the most common security concerns in web development and deployment.</p>
-<p><strong>Learning objectives</strong> — after the lab you should be able to:</p>
-<ul><li>Identify and explain common web application vulnerabilities including <strong>XSS, CSRF, SQL injection, and clickjacking</strong>.</li><li>Apply Django's built-in security features such as <strong>CSRF middleware, autoescaping, and secure cookie settings</strong>.</li><li>Configure secure deployment settings such as <strong>ALLOWED_HOSTS, HTTPS enforcement, and secret key management</strong>.</li><li>Write effective <strong>unit tests</strong> for Django models, views, forms and templates using <strong>unittest</strong> and Django's <strong>test client</strong>.</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Security is not one feature — it is a set of defaults and disciplines. Django ships secure defaults, but the lab shows where developers can accidentally defeat them.</div></div></div></div></section>
-<section class="section" id="sec-2"><header class="section-head"><span class="section-num">02</span><h2>XSS: How the Attack Works</h2></header><div class="section-body"><p><strong>XSS (Cross-Site Scripting)</strong> is a vulnerability where attackers <strong>inject malicious scripts into websites</strong>. These scripts are <strong>executed by users' browsers</strong> and can <strong>steal sensitive information like cookies, hijack sessions, or perform malicious actions on behalf of the user</strong>.</p>
-<p><strong>How an XSS attack works:</strong></p>
-<ol><li>The attacker finds a <strong>form or input field that does not properly sanitise or escape user input</strong>. For example, a comment section rendered as:</li></ol>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>&lt;div&gt;{{ user_comment }}&lt;/div&gt;</code></pre></div>
-<ol><li>The attacker submits <strong>malicious JavaScript</strong> via that input. If <code>user_comment</code> is not properly escaped, the attacker could inject something like:</li></ol>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>&lt;script&gt;alert(&#x27;Your session has been hijacked&#x27;);&lt;/script&gt;</code></pre></div>
-<p>This would execute when <strong>any user visits the page</strong> containing the comment.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">XSS turns your own website into the delivery vehicle. The browser trusts your page, so injected script runs with the user's privileges.</div></div></div></div></section>
-<section class="section" id="sec-3"><header class="section-head"><span class="section-num">03</span><h2>XSS: Protection Strategies</h2></header><div class="section-body"><p>The lab lists four layers of XSS protection:</p>
-<ol><li><strong>Django's built-in protection (autoescaping).</strong> Django <strong>automatically escapes dangerous characters</strong> in HTML templates, preventing inputs like <code>&lt;script&gt;</code> tags from executing. By default, <strong>every template automatically escapes the output of every variable tag</strong>:</li></ol>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>{% autoescape on %}
+<section class="guide-section" id="the-threat-landscape-and-django-s-defence-in-depth" data-title="The Threat Landscape and Django&#x27;s Defence-in-Depth">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Threat Landscape and Django's Defence-in-Depth</h2>
+  </div>
+  <p class="section-kicker">Every web app faces a predictable catalogue of attacks, and Django answers each one with a specific built-in mechanism rather than leaving you to invent a defence.</p>
+<p>Web applications are exposed to a wide variety of attacks. The consequences are concrete: data breaches, loss of user trust, and downtime. This lab works through the most common security concerns in web development and deployment, then shows how Django mitigates them.</p>
+<p>The threats you must be able to name and explain are:</p>
+<ul><li><strong>Cross-Site Scripting (XSS)</strong> — attacker-injected scripts run in a victim's browser.</li><li><strong>Cross-Site Request Forgery (CSRF)</strong> — a victim's authenticated browser is tricked into sending a state-changing request.</li><li><strong>SQL Injection</strong> — attacker-supplied input alters the SQL your database runs.</li><li><strong>Clickjacking</strong> — a victim's clicks are hijacked to a hidden malicious page.</li></ul>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Security is not one feature you bolt on at the end. Each attack targets a different layer — the browser, the request, the database, the frame — so each defence lives in a different layer too. Knowing <em>which layer</em> an attack hits tells you <em>where</em> to look for the fix.</div></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Think of the four classic attacks by where they strike: <strong>XSS hits the browser, CSRF hits the request, SQL injection hits the database, clickjacking hits the frame.</strong></div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> For each of the four attacks above, which part of a typical request lifecycle (browser → network → server view → database) does it primarily abuse?</div></div>
+</section>
+<section class="guide-section" id="cross-site-scripting-xss" data-title="Cross-Site Scripting (XSS)">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Cross-Site Scripting (XSS)</h2>
+  </div>
+  <p class="section-kicker">XSS happens when untrusted input reaches a page as executable code, so the victim's own browser runs the attacker's script with the victim's privileges.</p>
+<p>XSS is a vulnerability where attackers inject malicious scripts into a website. Those scripts are then executed by users' browsers, and because they run in the page's origin they can:</p>
+<ul><li>Steal sensitive information such as cookies.</li><li>Hijack the user's session.</li><li>Perform malicious actions on the user's behalf.</li></ul>
+<h3 class="sub-title">How an XSS attack works</h3>
+<ol><li>The attacker finds a form or input field on your site that does not properly sanitise or escape user input. For example, a comment section renders:</li></ol>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>&lt;div&gt;{{ user_comment }}&lt;/div&gt;</code></pre></div>
+<ol><li>The attacker submits malicious JavaScript through that input. If <code>user_comment</code> is not properly escaped, the attacker can inject something like:</li></ol>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>&lt;script&gt;alert(&#x27;Your session has been hijacked&#x27;);&lt;/script&gt;</code></pre></div>
+<p>This script executes whenever any user visits the page containing the comment.</p>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> The danger is not the <code>&lt;script&gt;</code> tag itself — it is that user-controlled text was placed into an HTML context <em>without escaping</em>. The same problem exists for data injected into JavaScript or JSON, where HTML escaping alone is not enough.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> The template shows <code>{{ user_comment }}</code>. If Django autoescapes by default, why is this example still presented as vulnerable?</div></div>
+</section>
+<section class="guide-section" id="defending-against-xss" data-title="Defending Against XSS">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Defending Against XSS</h2>
+  </div>
+  <p class="section-kicker">Django escapes template output by default, and the remaining work is to avoid switching that off and to sanitise input for non-HTML contexts.</p>
+<h3 class="sub-title">1. Django's built-in protection: autoescaping</h3>
+<p>Django automatically escapes dangerous characters in HTML templates, which prevents inputs such as <code>&lt;script&gt;</code> tags from being executed. By default in Django, <strong>every template automatically escapes the output of every variable tag</strong>. You can state the behaviour explicitly (or scope it) with the <code>autoescape</code> tag:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>{% autoescape on %}
 {{ body }}
 {% endautoescape %}</code></pre></div>
-<ol><li><strong>Avoid using the safe filter.</strong> Django provides a <strong>safe</strong> filter that marks a string as safe and <strong>prevents escaping</strong>. Use it cautiously, as it can allow XSS:</li></ol>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>&lt;p&gt;{{ user_input|safe }}&lt;/p&gt;   &lt;!-- Avoid this unless absolutely necessary --&gt;</code></pre></div>
-<ol><li><strong>Input sanitisation in the backend.</strong> Even though Django's template system escapes content by default, it is good practice to <strong>sanitise input when it is stored or processed</strong>, especially for data used in <strong>non-HTML contexts like JSON or JavaScript</strong>. You can use Python libraries like <strong>Bleach</strong> or <strong>nh3</strong> before saving to the database:</li></ol>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>import bleach
+<h3 class="sub-title">2. Avoid the <code>safe</code> filter</h3>
+<p>Django provides a <code>safe</code> filter that marks a string as safe and stops escaping it. Use it cautiously — it can reintroduce XSS:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>&lt;p&gt;{{ user_input|safe }}&lt;/p&gt; &lt;!-- Avoid this unless absolutely necessary --&gt;</code></pre></div>
+<h3 class="sub-title">3. Input sanitisation in the backend</h3>
+<p>Even though Django's template system escapes content by default, it is good practice to sanitise input when it is stored or processed — especially data that will be used in non-HTML contexts such as JSON or JavaScript. Python libraries such as <strong>Bleach</strong> or <strong>nh3</strong> can sanitise input before it is saved to the database:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>import bleach
 clean_input = bleach.clean(user_input)</code></pre></div>
-<ol><li><strong>Setting HTTP-Only cookies.</strong> This makes it less trivial for an attacker to escalate an XSS vulnerability into <strong>full session hijacking</strong>. Django uses HTTP-only cookies for session management by default:</li></ol>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code># settings.py
+<h3 class="sub-title">4. Set HTTP-only cookies</h3>
+<p>Marking cookies HTTP-only makes it much harder for an attacker to escalate an XSS vulnerability into full session hijacking, because JavaScript cannot read the cookie. Django uses HTTP-only cookies for session management by default:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code># settings.py
 SESSION_COOKIE_HTTPONLY = True</code></pre></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Reaching for the <strong>safe</strong> filter to make a template "work." It disables the escaping that protects you — use it only when absolutely necessary.</div></div></div></div></section>
-<section class="section" id="sec-4"><header class="section-head"><span class="section-num">04</span><h2>CSRF: How the Attack Works</h2></header><div class="section-body"><p><strong>CSRF (Cross-Site Request Forgery)</strong> tricks users into making <strong>unwanted actions on a site where they are authenticated</strong>. An attacker crafts a malicious request that uses the victim's authentication credentials to perform actions such as <strong>transferring funds or changing account information</strong>.</p>
-<p><strong>Common example:</strong> Alice is logged into her bank <code>http://bank.com</code> and has a valid session cookie. Malicious Maria wants to trick Alice into transferring money to Maria's account without consent. With social engineering, Maria sends Alice a malicious link or embeds an image tag:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>&lt;a href=&quot;https://bank.com/transfer?acct=Maria&amp;amount=10000&quot;&gt;Check out this cool picture!&lt;/a&gt;
-&lt;!-- Or as a hidden request --&gt;
-&lt;img src=&quot;https://bank.com/transfer?acct=Maria&amp;amount=10000&quot; width=&quot;0&quot; height=&quot;0&quot;&gt;</code></pre></div>
-<p>When Alice clicks the link (or the image loads), <strong>her browser automatically sends the session cookie to bank.com</strong>, executing the action without Alice's knowledge.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">CSRF exploits <strong>trust in the browser</strong>, not a flaw in the script. The victim's own valid session becomes the weapon.</div></div></div>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">XSS injects code the <strong>victim runs</strong>; CSRF makes the victim's browser send a request <strong>the victim never intended</strong>.</div></div></div></div></section>
-<section class="section" id="sec-5"><header class="section-head"><span class="section-num">05</span><h2>CSRF: GET vs POST</h2></header><div class="section-body"><p><strong>GET requests and CSRF:</strong></p>
-<ul><li><strong>GET requests</strong> are typically used to <strong>retrieve data</strong> and <strong>are not meant to modify state</strong> (e.g. transfer money, delete an account). However, if an application <strong>incorrectly uses GET for sensitive actions</strong>, it becomes vulnerable to CSRF <strong>even with CSRF token protection</strong>.</li><li><strong>Example:</strong> if the bank uses GET to transfer funds, an attacker can exploit it by phishing a user into clicking a malicious link.</li><li><strong>Solution:</strong> <strong>avoid using GET requests for any state-changing actions.</strong></li></ul>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> Four-layer XSS defence to recall: <strong>autoescape on → avoid <code>|safe</code> → sanitise on save (Bleach/nh3) → HTTP-only cookies.</strong> The last one limits the <em>damage</em> if an XSS slips through; the first three try to prevent it.</div></div>
+</section>
+<section class="guide-section" id="cross-site-request-forgery-csrf" data-title="Cross-Site Request Forgery (CSRF)">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Cross-Site Request Forgery (CSRF)</h2>
+  </div>
+  <p class="section-kicker">CSRF abuses the fact that browsers attach a victim's session cookie automatically, letting an attacker trigger actions the victim never intended.</p>
+<p>CSRF tricks users into making unwanted actions on a site where they are already authenticated. The attacker crafts a malicious request that rides on the victim's authentication credentials to perform actions such as transferring funds or changing account information.</p>
+<h3 class="sub-title">A concrete CSRF attack</h3>
+<p>Alice is logged into her bank, <code>http://bank.com</code>, and has a valid session cookie stored in her browser. Malicious Maria wants to trick Alice into transferring money to Maria's account without consent. Using social engineering, Maria sends Alice a malicious link or embeds an image tag:</p>
+<ul><li><code>&lt;a href=&quot;https://bank.com/transfer?acct=Maria&amp;amount=10000&quot;&gt;Check out this cool picture!&lt;/a&gt;</code></li><li>Or as a hidden request: <code>&lt;img src=&quot;https://bank.com/transfer?acct=Maria&amp;amount=10000&quot; width=&quot;0&quot; height=&quot;0&quot;&gt;</code></li></ul>
+<p>When Alice clicks the link (or when the image loads), her browser automatically sends the session cookie to <code>bank.com</code>, executing the action without Alice's knowledge.</p>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The browser cannot tell a legitimate transfer request from a forged one — it just sees "request to bank.com, attach the cookie." The defence must therefore prove the request originated from <em>your</em> page, not from Maria's.</div></div>
+<h3 class="sub-title">GET vs POST and CSRF</h3>
+<p><strong>GET requests and CSRF:</strong></p>
+<ul><li>GET requests are typically used to retrieve data and are not meant to modify state (e.g. transfer money, delete an account).</li><li>However, if an application incorrectly uses GET for sensitive actions, it becomes vulnerable to CSRF <strong>even with CSRF token protection</strong>.</li><li>Example: if the bank uses a GET request to transfer funds, an attacker can exploit it by simply phishing a user into clicking a malicious link.</li><li>Solution: avoid using GET requests for any state-changing actions.</li></ul>
 <p><strong>POST requests and CSRF:</strong></p>
-<ul><li>The only difference between GET and POST attacks is <strong>how the attack is executed by the victim</strong>. Suppose the bank uses POST at <code>POST http://bank.com/transfer</code>.</li><li>Such a request <strong>cannot be delivered using standard A or IMG tags</strong>, but can be delivered using a <strong>FORM</strong> on behalf of Alice:</li></ul>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>&lt;form action=&quot;https://bank.com/transfer&quot; method=&quot;POST&quot;&gt;
+<ul><li>The only difference between GET and POST attacks is how the attack is executed by the victim.</li><li>Suppose the bank now uses POST to <code>http://bank.com/transfer</code>. Such a request cannot be delivered with standard <code>&lt;a&gt;</code> or <code>&lt;img&gt;</code> tags, but it can be delivered with a <code>&lt;form&gt;</code> submitted on Alice's behalf:</li></ul>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>&lt;form action=&quot;https://bank.com/transfer&quot; method=&quot;POST&quot;&gt;
   &lt;input type=&quot;hidden&quot; name=&quot;account&quot; value=&quot;attacker_account&quot;&gt;
   &lt;input type=&quot;hidden&quot; name=&quot;amount&quot; value=&quot;1000&quot;&gt;
 &lt;/form&gt;
 &lt;script&gt;document.forms[0].submit();&lt;/script&gt;</code></pre></div>
-<ul><li><strong>Solution:</strong> to prevent CSRF attacks on POST requests, websites typically use <strong>CSRF tokens</strong> as an additional layer of security.</li></ul>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Assuming that "we protect POSTs" makes the app safe. A state-changing <strong>GET</strong> is still CSRF-able no matter how good your token handling is for POSTs.</div></div></div></div></section>
-<section class="section" id="sec-6"><header class="section-head"><span class="section-num">06</span><h2>CSRF Tokens &amp; Django Protection</h2></header><div class="section-body"><p><strong>What a CSRF token is:</strong> a <strong>unique, random value generated by the server and associated with the user's session</strong>. It is included in <strong>every form submission or AJAX request for state-changing actions</strong>. When the user submits, the token is sent <strong>alongside the session cookie</strong>, and the server checks <strong>both</strong> to ensure the request is legitimate.</p>
-<p><strong>CSRF token in a Django template:</strong></p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>&lt;form action=&quot;{% url &#x27;transfer&#x27; %}&quot; method=&quot;POST&quot;&gt;
+<ul><li>Solution: to prevent CSRF on POST requests, websites typically use CSRF tokens as an additional layer of security.</li></ul>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>GET = click a link; POST = auto-submit a form.</strong> Both ride the cookie, but POST needs a hidden form because tags like <code>&lt;img&gt;</code> only issue GETs.</div></div>
+</section>
+<section class="guide-section" id="csrf-tokens-and-django-s-csrf-protection" data-title="CSRF Tokens and Django&#x27;s CSRF Protection">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">CSRF Tokens and Django's CSRF Protection</h2>
+  </div>
+  <p class="section-kicker">A CSRF token is a per-session secret that must accompany every state-changing request, so a request forged by another site cannot be valid.</p>
+<p>A <strong>CSRF token</strong> is a unique, random value generated by the server and associated with the user's session. It is included in every form submission or AJAX request for state-changing actions. When the user submits, the token is sent alongside the session cookie, and the server checks both to confirm the request is legitimate.</p>
+<h3 class="sub-title">CSRF token in a Django template</h3>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>&lt;form action=&quot;{% url &#x27;transfer&#x27; %}&quot; method=&quot;POST&quot;&gt;
   {% csrf_token %}
   &lt;input type=&quot;hidden&quot; name=&quot;account&quot; value=&quot;recipient_account&quot;&gt;
   &lt;input type=&quot;hidden&quot; name=&quot;amount&quot; value=&quot;1000&quot;&gt;
   &lt;button type=&quot;submit&quot;&gt;Transfer&lt;/button&gt;
 &lt;/form&gt;
 &lt;script&gt;
-  document.forms[0].submit();  // Automatically submits the form
+  document.forms[0].submit(); // Automatically submits the form
 &lt;/script&gt;</code></pre></div>
-<p>Now the server <strong>validates the CSRF token before processing the request</strong>. If the token is missing or invalid, the server <strong>rejects</strong> the request — so a simple phishing email alone will not work.</p>
-<p><strong>CSRF token in AJAX requests:</strong></p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>fetch(&#x27;/transfer&#x27;, {
+<h3 class="sub-title">CSRF token in AJAX requests</h3>
+<p>The token can be sent in a request header instead of the body:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>fetch(&#x27;/transfer&#x27;, {
   method: &#x27;POST&#x27;,
   headers: {
     &#x27;X-CSRFToken&#x27;: &#x27;random_token_value&#x27;
   },
   body: JSON.stringify({ amount: 1000, to: &#x27;Bob&#x27; })
 });</code></pre></div>
-<p><strong>Django's built-in CSRF protection</strong> secures POST requests by verifying a CSRF token embedded in forms or headers and ensuring it matches a CSRF cookie sent to the client. Specifically:</p>
-<ul><li><strong>CsrfViewMiddleware</strong> checks for the CSRF token on <strong>unsafe requests (POST, PUT, DELETE)</strong>.</li><li>It validates the <strong>Origin</strong> or <strong>Referer</strong> headers for requests over <strong>HTTPS</strong> and compares them with trusted domains or subdomains to block cross-origin attacks.</li><li><strong>GET requests are exempt</strong> (as they should not modify data).</li><li>Using <strong>HTTPS and HSTS</strong> is essential to defend against <strong>man-in-the-middle</strong> attacks.</li><li>Disabling CSRF protection should only be done with caution; cross-subdomain POSTs can be allowed by configuring <strong>CSRF_TRUSTED_ORIGINS</strong> and <strong>CSRF_COOKIE_DOMAIN</strong>.</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">The token proves the request originated from a page your server rendered, not from a malicious third-party page that merely borrowed the user's cookie.</div></div></div></div></section>
-<section class="section" id="sec-7"><header class="section-head"><span class="section-num">07</span><h2>JWT &amp; CSRF in DRF</h2></header><div class="section-body"><p>When using <strong>JWT</strong> for authentication, CSRF protection becomes relevant <strong>based on how the JWT is stored</strong>:</p>
-<ul><li><strong>JWT in LocalStorage</strong> — it is <strong>not automatically sent</strong> with requests like cookies, reducing the risk of CSRF. However, <strong>XSS becomes a concern</strong>.</li><li><strong>JWT in cookies as HTTP-only</strong> — CSRF protection is <strong>still required</strong>, since the browser automatically includes cookies in every request, making CSRF attacks possible. Mitigate with</li></ul>
-<p><strong>CSRF tokens</strong> or by configuring <strong>SameSite</strong> attributes for cookies.</p>
-<p>In <strong>Django REST Framework</strong>, CSRF protection is <strong>disabled by default for API views</strong> unless you are using <strong>session-based authentication</strong>. DRF's <strong>APIView</strong> and <strong>ViewSet</strong> classes are typically <strong>CSRF exempt</strong>. It is important to <strong>explicitly re-implement CSRF protection</strong> or take alternative measures depending on your authentication and storage strategy.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">The storage location of the JWT changes your threat model: local storage shifts risk toward XSS; cookie storage re-introduces CSRF. Neither choice is free.</div></div></div></div></section>
-<section class="section" id="sec-8"><header class="section-head"><span class="section-num">08</span><h2>SQL Injection &amp; Clickjacking</h2></header><div class="section-body"><p><strong>SQL injection protection.</strong> SQL injection vulnerabilities let attackers <strong>run arbitrary SQL code on your database</strong>, potentially modifying, accessing or deleting data without authorisation. When using <strong>Django's models and querysets (the Django ORM)</strong>, the underlying database driver <strong>automatically escapes the SQL</strong>, which mitigates the risk of injection. However, when writing <strong>raw SQL queries</strong>, it is essential to <strong>explicitly prevent SQL injection by safely parameterising inputs</strong>.</p>
-<p><strong>Clickjacking protection.</strong> Clickjacking is an attack where a malicious user <strong>hijacks clicks meant for a top-level site</strong>, routing them to a <strong>hidden, malicious page underneath</strong>. Attackers may display legitimate content — such as a bank's login page — while <strong>capturing user credentials in an invisible iframe</strong> they control. Django combats this through the <strong>X-Frame-Options middleware</strong>, which prevents your site from being rendered inside an iframe in compatible browsers.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">The ORM protects you <em>by default</em> — the danger appears the moment you drop to raw SQL and forget to parameterise.</div></div></div></div></section>
-<section class="section" id="sec-9"><header class="section-head"><span class="section-num">09</span><h2>Enforcing TLS/HTTPS</h2></header><div class="section-body"><p><strong>TLS/HTTPS encrypts communication between server and client</strong>, ensuring sensitive data — including authentication credentials — is <strong>not sent in plain text</strong>. Enabling HTTPS is crucial. Django offers additional protections when HTTPS is enabled:</p>
-<ul><li><strong>SECURE_PROXY_SSL_HEADER</strong> — ensures security even when traffic passes through a <strong>non-HTTPS proxy</strong>.</li><li><strong>SECURE_SSL_REDIRECT</strong> — <strong>automatically redirects all HTTP requests to HTTPS</strong>.</li><li><strong>HTTP Strict Transport Security (HSTS)</strong> — an HTTP header that <strong>enforces HTTPS for all future connections</strong> to the site. Combined with redirecting HTTP to HTTPS, it ensures HTTPS is always used once a secure connection is established. Configure it with <strong>SECURE_HSTS_SECONDS</strong> and</li></ul>
-<p><strong>SECURE_HSTS_INCLUDE_SUBDOMAINS</strong>.</p>
-<ul><li><strong>Secure cookies</strong> — set <strong>SESSION_COOKIE_SECURE</strong> and <strong>CSRF_COOKIE_SECURE</strong> to <code>True</code> so cookies are sent <strong>only over HTTPS</strong>.</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Redirects fix the <em>current</em> request; HSTS fixes <em>future</em> ones by telling the browser never to try plain HTTP again.</div></div></div></div></section>
-<section class="section" id="sec-10"><header class="section-head"><span class="section-num">10</span><h2>Security Settings for Deployment</h2></header><div class="section-body"><p>The lab lists deployment-hardening settings and practices:</p>
-<ul><li><strong>ALLOWED_HOSTS</strong> — restricts which domains can serve your Django app, preventing <strong>HTTP Host header attacks</strong>:</li></ul>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>ALLOWED_HOSTS = [&#x27;yourdomain.com&#x27;, &#x27;www.yourdomain.com&#x27;]</code></pre></div>
-<ul><li><strong>SECRET_KEY in .env</strong> — keep secret keys and sensitive data out of your codebase using environment variables stored in a <strong>.env</strong> file:</li></ul>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>SECRET_KEY = os.getenv(&#x27;SECRET_KEY&#x27;)</code></pre></div>
-<ul><li><strong>DEBUG mode</strong> — <strong>never run your app with DEBUG=True in production</strong>, as it exposes sensitive information:</li></ul>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>DEBUG = False</code></pre></div>
+<p>The server validates the CSRF token before processing. If the token is missing or invalid, the server rejects the request — so a simple phishing email alone will not work.</p>
+<h3 class="sub-title">How Django's CSRF protection works</h3>
+<p>Django's built-in CSRF protection secures POST requests by verifying a CSRF token embedded in forms or headers and ensuring it matches a CSRF cookie sent to the client. This prevents attackers from executing actions on behalf of authenticated users via cross-site requests. Specifically, <code>CsrfViewMiddleware</code>:</p>
+<ul><li>Checks for the CSRF token on unsafe requests (<strong>POST, PUT, DELETE</strong>).</li><li>Validates the <strong>Origin</strong> or <strong>Referer</strong> headers for requests over HTTPS, comparing them with trusted domains or subdomains to block cross-origin attacks.</li></ul>
+<p>GET requests are exempt, since they should not modify data. Additional points:</p>
+<ul><li>Using <strong>HTTPS</strong> and <strong>HSTS</strong> is essential to defend against man-in-the-middle attacks.</li><li>Disabling CSRF protection should only be done with caution.</li><li>Cross-subdomain POSTs can be allowed by configuring <code>CSRF_TRUSTED_ORIGINS</code> and <code>CSRF_COOKIE_DOMAIN</code>.</li></ul>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> A CSRF token does <strong>not</strong> rescue an app that performs state changes over GET. Because GET is exempt from token checking, the correct fix is to make the action a POST, not to rely on the token.</div></div>
+</section>
+<section class="guide-section" id="jwt-csrf-and-django-rest-framework" data-title="JWT, CSRF, and Django REST Framework">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">JWT, CSRF, and Django REST Framework</h2>
+  </div>
+  <p class="section-kicker">Where you store a JWT decides whether CSRF is a risk, and DRF disables CSRF protection by default for API views.</p>
+<p>When using <strong>JWT</strong> for authentication, whether CSRF protection is relevant depends on <strong>how the JWT is stored</strong>:</p>
+<ul><li><strong>JWT in LocalStorage:</strong> it is not automatically sent with requests the way cookies are, which reduces CSRF risk. However, <strong>XSS becomes the concern</strong> because scripts can read LocalStorage.</li><li><strong>JWT in cookies (HTTP-only):</strong> the browser automatically includes the cookie in every request, so CSRF attacks become possible and CSRF protection is still required. Mitigate with CSRF tokens or by configuring <strong>SameSite</strong> attributes on cookies.</li></ul>
+<h3 class="sub-title">CSRF in Django REST Framework (DRF)</h3>
+<p>In DRF, CSRF protection is <strong>disabled by default for API views</strong> unless you are using session-based authentication. DRF's <code>APIView</code> and <code>ViewSet</code> classes are typically CSRF exempt. It is important to explicitly re-implement CSRF protection, or take alternative measures, depending on your authentication and storage strategy.</p>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Storing a token in LocalStorage trades CSRF risk for XSS risk; storing it in a cookie trades XSS readability for CSRF risk. There is no free option — you must pick the threat you are better defended against and add the matching control.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Your API uses JWT in an HTTP-only cookie and DRF <code>APIView</code> endpoints. What two protections must you add, and why does the default DRF behaviour not already cover you?</div></div>
+</section>
+<section class="guide-section" id="other-protections-sql-injection-and-clickjacking" data-title="Other Protections: SQL Injection and Clickjacking">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Other Protections: SQL Injection and Clickjacking</h2>
+  </div>
+  <p class="section-kicker">The Django ORM parameterises SQL for you, and the X-Frame-Options middleware blocks your pages from being framed.</p>
+<h3 class="sub-title">SQL injection protection</h3>
+<p>SQL injection vulnerabilities let attackers run arbitrary SQL code on your database, potentially modifying, accessing, or deleting data without proper authorisation. Django defends in two ways:</p>
+<ul><li>When you use Django's models and querysets (<strong>the Django ORM</strong>), the underlying database driver <strong>automatically escapes the SQL</strong>, which mitigates injection risk.</li><li>When you write <strong>raw SQL queries</strong>, you must explicitly prevent injection by <strong>safely parameterising inputs</strong> — the ORM cannot protect you.</li></ul>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> "We use Django, so we're safe from SQL injection" is only true while you stay inside the ORM. The moment you drop to raw SQL with string formatting, you have opted out of the automatic protection.</div></div>
+<h3 class="sub-title">Clickjacking protection</h3>
+<p>Clickjacking is an attack where a malicious user hijacks clicks meant for a top-level site and routes them to a hidden, malicious page underneath. Attackers may use it to display legitimate content — such as a bank's login page — while capturing user credentials in an invisible <strong>iframe</strong> they control.</p>
+<p>Django combats this with the <strong>X-Frame-Options</strong> middleware, which prevents your site from being rendered inside an iframe in compatible browsers.</p>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Clickjacking = invisible iframe + redirected clicks; the fix is literally an HTTP header named <code>X-Frame-Options</code> that says "do not frame me."</div></div>
+</section>
+<section class="guide-section" id="enforcing-tls-https" data-title="Enforcing TLS/HTTPS">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Enforcing TLS/HTTPS</h2>
+  </div>
+  <p class="section-kicker">HTTPS encrypts the whole conversation, and Django adds redirect, proxy, HSTS, and secure-cookie settings on top so plaintext traffic can never be used.</p>
+<p>TLS/HTTPS encrypts communication between the server and client, ensuring sensitive data — including authentication credentials — is not sent in plain text. Enabling HTTPS is crucial for site security. Django offers additional protections once HTTPS is enabled:</p>
+<ul><li><strong><code>SECURE_PROXY_SSL_HEADER</code></strong> — ensures security even when traffic passes through a non-HTTPS proxy.</li><li><strong><code>SECURE_SSL_REDIRECT</code></strong> — automatically redirects all HTTP requests to HTTPS.</li><li><strong>HTTP Strict Transport Security (HSTS)</strong> — an HTTP header that enforces HTTPS for all future connections to the site. Combined with redirecting HTTP to HTTPS, it ensures HTTPS is always used once a secure connection is established. Configure it with <code>SECURE_HSTS_SECONDS</code> and <code>SECURE_HSTS_INCLUDE_SUBDOMAINS</code>.</li><li><strong>Secure cookies</strong> — setting <code>SESSION_COOKIE_SECURE</code> and <code>CSRF_COOKIE_SECURE</code> to <code>True</code> means cookies are sent only over HTTPS, further safeguarding sensitive information.</li></ul>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> HSTS is a <em>browser memory</em> mechanism. After the first secure connection, the browser refuses to attempt plain HTTP to your site for the duration set in <code>SECURE_HSTS_SECONDS</code> — which is why the redirect and HSTS are complementary.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Why is <code>SECURE_PROXY_SSL_HEADER</code> needed specifically when a load balancer or reverse proxy terminates TLS before the request reaches Django?</div></div>
+</section>
+<section class="guide-section" id="security-settings-for-deployment" data-title="Security Settings for Deployment">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Security Settings for Deployment</h2>
+  </div>
+  <p class="section-kicker">Production configuration is where most real breaches start, so lock down hosts, secrets, debug mode, cross-origin rules, database privileges, and file permissions.</p>
+<ul><li><strong><code>ALLOWED_HOSTS</code></strong> — restrict which domains can serve your Django app, to prevent HTTP Host header attacks:</li></ul>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>ALLOWED_HOSTS = [&#x27;yourdomain.com&#x27;, &#x27;www.yourdomain.com&#x27;]</code></pre></div>
+<ul><li><strong><code>SECRET_KEY</code> in <code>.env</code></strong> — keep secret keys and sensitive data out of your codebase using environment variables stored in a <code>.env</code> file:</li></ul>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>SECRET_KEY = os.getenv(&#x27;SECRET_KEY&#x27;)</code></pre></div>
+<ul><li><strong><code>DEBUG</code> mode</strong> — never run with <code>DEBUG=True</code> in production, as it exposes sensitive information:</li></ul>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>DEBUG = False</code></pre></div>
 <ul><li><strong>CORS and CSRF trusted origins</strong> — control which domains can interact with your API securely:</li></ul>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>CORS_ALLOWED_ORIGINS = [&#x27;https://yourfrontend.com&#x27;]
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>CORS_ALLOWED_ORIGINS = [&#x27;https://yourfrontend.com&#x27;]
 CSRF_TRUSTED_ORIGINS = [&#x27;https://yourfrontend.com&#x27;]</code></pre></div>
-<ul><li><strong>Database permissions</strong> — ensure the database user connecting to Django has <strong>limited permissions</strong> (avoid root). <strong>Limit CREATE, ALTER or DROP</strong> permissions to reduce the impact of SQL injections.</li><li><strong>Linux file permission management</strong> — protect sensitive files with appropriate permissions:</li></ul>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>chmod 600 /path/to/.env</code></pre></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Shipping with DEBUG=True. It exposes sensitive information, which is exactly what an attacker wants.</div></div></div></div></section>
-<section class="section" id="sec-11"><header class="section-head"><span class="section-num">11</span><h2>Django Testing Fundamentals</h2></header><div class="section-body"><p>Django provides a <strong>robust suite of built-in testing tools</strong> to verify that an application works as expected. Testing is critical to verify the functionality of your <strong>models, views, forms, databases and even templates</strong>. You should write tests for anything crucial — particularly features that <strong>handle user data, interact with the database, or display dynamic content</strong>. Django's testing framework integrates seamlessly with Python's <strong>unittest</strong>.</p>
-<p><strong>Testing structure:</strong> Django organises tests using classes derived from <strong>TestCase</strong>, and individual test methods are <strong>prefixed with <code>test_</code></strong>. Test files go inside an app's <strong>tests.py</strong> or a dedicated <strong>tests</strong> directory:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>til_app/
+<ul><li><strong>Database permissions</strong> — ensure the database user that connects your Django application has limited permissions (avoid using <code>root</code>). Limit <code>CREATE</code>, <code>ALTER</code>, or <code>DROP</code> permissions to reduce the impact of SQL injections.</li><li><strong>Linux file permission management</strong> — protect sensitive files by setting appropriate permissions, e.g.:</li></ul>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>chmod 600 /path/to/.env</code></pre></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> The production checklist is <strong>H·S·D·C·D·F</strong> — <strong>H</strong>osts, <strong>S</strong>ecret key, <strong>D</strong>ebug off, <strong>C</strong>ORS/CSRF origins, <strong>D</strong>atabase least privilege, <strong>F</strong>ile permissions (<code>chmod 600</code>).</div></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Least-privilege database permissions are a <em>damage limiter</em>: they do not stop SQL injection, but they stop an injection from dropping tables or creating users. Defence in depth means every layer assumes the layer above already failed.</div></div>
+</section>
+<section class="guide-section" id="django-testing-structure-and-running-tests" data-title="Django Testing: Structure and Running Tests">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Django Testing: Structure and Running Tests</h2>
+  </div>
+  <p class="section-kicker">Django builds testing on Python's unittest, so tests are classes derived from TestCase with methods named test_, discovered and run by one command.</p>
+<p>Django provides a robust suite of built-in testing tools to ensure an application works as expected. Testing is critical to verify the functionality of your <strong>models, views, forms, databases, and even templates</strong>. You should write tests for anything crucial to your application — particularly features that handle user data, interact with the database, or display dynamic content. Django's testing framework integrates seamlessly with Python's <strong>unittest</strong>, making tests easy to create and manage.</p>
+<h3 class="sub-title">Structure</h3>
+<ul><li>Tests are organised in classes derived from <code>TestCase</code>.</li><li>Individual test methods are prefixed with <code>test_</code>.</li><li>Test files go inside an app's <code>tests.py</code> <strong>or</strong> a dedicated <code>tests</code> directory, for example:</li></ul>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>til_app/
   tests.py
-  /tests/
+  tests/
     __init__.py
     test_models.py
     test_forms.py
     test_views.py</code></pre></div>
-<p><strong>Run the tests:</strong></p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>python manage.py test</code></pre></div>
-<p>This command <strong>automatically discovers and runs all tests</strong> across the project and provides feedback on which tests pass or fail. The test runner provides many options (see the Django test runner documentation).</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Tests turn "I think it works" into "I can prove it works," and rerun that proof after every change — exactly what you need for features touching user data.</div></div></div></div></section>
-<section class="section" id="sec-12"><header class="section-head"><span class="section-num">12</span><h2>Testing Models, Forms &amp; Views</h2></header><div class="section-body"><p><strong>Testing models</strong> verifies database structure and logic: field default values, model methods, and relationships.</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>from django.test import TestCase
+<h3 class="sub-title">Running tests</h3>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>python manage.py test</code></pre></div>
+<p>This command automatically discovers and runs all tests across your project and provides feedback on which tests pass or fail. The test runner offers many additional options.</p>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> The <code>test_</code> prefix is not cosmetic — the runner discovers methods by that prefix. A method named <code>check_post_list()</code> will silently never run.</div></div>
+</section>
+<section class="guide-section" id="what-to-test-models-forms-views-and-templates" data-title="What to Test: Models, Forms, Views, and Templates">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">What to Test: Models, Forms, Views, and Templates</h2>
+  </div>
+  <p class="section-kicker">Test each layer where it makes decisions — model defaults and logic, form validation, view responses, and template selection — using the test client to simulate real requests.</p>
+<h3 class="sub-title">Testing models</h3>
+<p>Testing models ensures the database structure and logic behave correctly: verifying field default values, model methods, and database relationships.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>from django.test import TestCase
 from .models import Post
 
 class PostModelTests(TestCase):
     def test_default_visibility_should_be_public(self):
         post = Post(subject=&quot;Test Post&quot;, content=&quot;This is a test post.&quot;)
         self.assertEqual(post.public, True)</code></pre></div>
-<p><strong>assertTrue</strong>, <strong>assertFalse</strong> and <strong>assertEqual</strong> are standard assertions provided by <strong>unittest</strong>. There are other standard assertions and Django-specific ones such as <strong>assertRedirects</strong> (view redirects) and <strong>assertTemplateUsed</strong> (a particular template was used).</p>
-<p><strong>Testing forms</strong> checks that forms validate input, handle missing fields, and reject invalid submissions:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>from django.test import TestCase
+<p><code>assertTrue</code>, <code>assertFalse</code>, and <code>assertEqual</code> are standard assertions provided by <strong>unittest</strong>. There are other standard assertions, plus Django-specific assertions such as <code>assertRedirects</code> (test that a view redirects) and <code>assertTemplateUsed</code> (test which template was used).</p>
+<h3 class="sub-title">Testing forms</h3>
+<p>Forms are crucial for user input validation. Test that forms correctly validate input, handle missing fields, and reject invalid submissions.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>from django.test import TestCase
 from .forms import PostForm
 
 class PostFormTests(TestCase):
@@ -435,8 +703,9 @@ class PostFormTests(TestCase):
         form_data = {&#x27;subject&#x27;: &#x27;Test Post&#x27;, &#x27;content&#x27;: &#x27;Test content&#x27;}
         form = PostForm(data=form_data)
         self.assertTrue(form.is_valid())</code></pre></div>
-<p><strong>Testing views</strong> verifies the correct response, template rendering, and context variables. You simulate HTTP requests with Django's <strong>test client</strong>:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>from django.test import TestCase
+<h3 class="sub-title">Testing views</h3>
+<p>Views are tested to verify the correct response, template rendering, and context variables. Simulate HTTP requests with Django's <strong>test client</strong>:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>from django.test import TestCase
 from django.urls import reverse
 
 class PostViewTests(TestCase):
@@ -444,18 +713,19 @@ class PostViewTests(TestCase):
         response = self.client.get(reverse(&#x27;post_list&#x27;))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, &quot;Post List&quot;)</code></pre></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">The <strong>test client is not supposed to replace frontend testing</strong> — you still need something to verify that JavaScript functions correctly and to catch layout or styling issues.</div></div></div>
-<p><strong>Testing templates</strong> checks correct rendering, dynamic content and layout:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>from django.test import TestCase
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> The test client is <strong>not</strong> supposed to replace frontend testing. You still need something to verify that JavaScript functions as expected and to catch layout or styling issues.</div></div>
+<h3 class="sub-title">Testing templates</h3>
+<p>Templates should be tested for correct rendering, dynamic content, and layout. The test client lets you verify the correct template is rendered with the expected content:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>from django.test import TestCase
 from django.urls import reverse
 
 class TemplateTests(TestCase):
     def test_home_template(self):
         response = self.client.get(reverse(&#x27;home&#x27;))
         self.assertTemplateUsed(response, &#x27;home.html&#x27;)</code></pre></div>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text"><code>reverse()</code> looks up URLs by name, so tests keep passing even if the URL path changes — test behaviour, not hard-coded strings.</div></div></div></div></section>
-<section class="section" id="sec-13"><header class="section-head"><span class="section-num">13</span><h2>The Test Database &amp; setUpTestData</h2></header><div class="section-body"><p>Use Django's <strong>test database</strong> to test model behaviour <strong>without affecting production data</strong>. You can use <strong>fixtures</strong> or <strong>setUpTestData()</strong> to create data shared across tests:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>from django.test import TestCase
+<h3 class="sub-title">Using the test database</h3>
+<p>Use Django's test database to test model behaviour <strong>without affecting production data</strong>. Use fixtures or <code>setUpTestData()</code> to create data shared across tests:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>from django.test import TestCase
 from .models import Post
 
 class PostDatabaseTests(TestCase):
@@ -465,197 +735,393 @@ class PostDatabaseTests(TestCase):
 
     def test_post_creation(self):
         self.assertEqual(Post.objects.count(), 1)</code></pre></div>
-<p>Usually <strong>constructing objects directly in setUpTestData() is sufficient</strong> for testing the database.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text"><code>setUpTestData()</code> runs once per class (not per test method), so shared objects are built efficiently and safely inside the isolated test database.</div></div></div></div></section>
-<section class="section" id="sec-14"><header class="section-head"><span class="section-num">14</span><h2>Code Coverage &amp; Frontend Testing</h2></header><div class="section-body"><p><strong>Code coverage</strong> helps identify parts of your code <strong>not covered by tests</strong>. Django integrates with the <strong>Coverage.py</strong> tool to measure how much of your codebase is tested. To use it:</p>
+<p>Usually constructing objects directly in <code>setUpTestData()</code> is sufficient for testing the database.</p>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Match the test tool to the layer — <strong>model → assertEqual/assertTrue; form → is_valid(); view → status_code + assertContains; template → assertTemplateUsed; shared data → setUpTestData().</strong></div></div>
+</section>
+<section class="guide-section" id="code-coverage-with-coverage-py" data-title="Code Coverage with Coverage.py">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Code Coverage with Coverage.py</h2>
+  </div>
+  <p class="section-kicker">Coverage tells you what your tests <em>didn't</em> touch, which is exactly where untested bugs and unguarded security paths hide.</p>
+<p>Code coverage helps identify parts of your code that are <strong>not</strong> covered by tests. Django integrates with the <strong>Coverage.py</strong> tool to measure how much of your codebase is tested. To use it:</p>
 <ol><li>Install Coverage.py:</li></ol>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>pip install coverage</code></pre></div>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>pip install coverage</code></pre></div>
 <ol><li>Run coverage with Django's test suite:</li></ol>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>coverage run manage.py test
-coverage report    # or: coverage html for a more visual report</code></pre></div>
-<p><strong>Frontend testing tools.</strong> While Django's built-in tools focus on the <strong>backend</strong>, frontend testing is essential for validating <strong>JavaScript, user interactions, and layout consistency</strong>:</p>
-<ul><li><strong>Selenium</strong> — automates browser interactions, simulating real user actions like clicks, form submissions and navigation across multiple pages. Ideal for testing complete user flows in a browser.</li><li><strong>Jest</strong> — a JavaScript testing framework designed for testing frontend logic, with easy-to-use syntax for unit tests.</li><li><strong>Jasmine</strong> — a behaviour-driven JavaScript testing framework, often used for unit and integration tests, focusing on simple syntax and intuitive test writing.</li></ul>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">Coverage tells you what is <em>untested</em>, not that your tests are <em>good</em> — use it as a map of gaps, and pair backend tests with frontend tools for the full picture.</div></div></div></div></section>
-<section class="section" id="key-takeaways"><header class="section-head"><span class="section-num">15</span><h2>Key Takeaways</h2></header><div class="section-body"><ol class="takeaways"><li><span class="tk-n">1</span><div><strong>XSS injects scripts that run in the victim's browser</strong> — Django autoescapes variables by default, so avoid the <code>safe</code> filter.</div></li><li><span class="tk-n">2</span><div><strong>Sanitise backend input too</strong> — use Bleach or nh3 for data used in non-HTML contexts like JSON or JavaScript.</div></li><li><span class="tk-n">3</span><div><strong>HTTP-only cookies limit XSS damage</strong> — SESSION_COOKIE_HTTPONLY = True is Django's default for sessions.</div></li><li><span class="tk-n">4</span><div><strong>CSRF uses the victim's own authenticated session</strong> — a malicious link or hidden image/form triggers an unwanted action.</div></li><li><span class="tk-n">5</span><div><strong>Never use GET for state-changing actions</strong> — doing so is CSRF-vulnerable even with token protection.</div></li><li><span class="tk-n">6</span><div><strong>CSRF tokens pair with the session cookie</strong> — the server checks both; missing or invalid tokens are rejected.</div></li><li><span class="tk-n">7</span><div><strong>Django checks unsafe methods (POST, PUT, DELETE)</strong> — CsrfViewMiddleware validates Origin/Referer over HTTPS; GETs are exempt.</div></li><li><span class="tk-n">8</span><div><strong>JWT storage changes the threat model</strong> — LocalStorage shifts risk to XSS; HTTP-only cookies re-introduce CSRF.</div></li><li><span class="tk-n">9</span><div><strong>DRF disables CSRF by default for API views</strong> — APIView and ViewSet are typically exempt unless using session auth.</div></li><li><span class="tk-n">10</span><div><strong>The ORM escapes SQL automatically</strong> — raw SQL must be safely parameterised.</div></li><li><span class="tk-n">11</span><div><strong>Clickjacking is stopped by X-Frame-Options middleware</strong> — it prevents iframe embedding.</div></li><li><span class="tk-n">12</span><div><strong>Enforce HTTPS with redirects, HSTS and secure cookies</strong> — SECURE_SSL_REDIRECT, SECURE_HSTS_SECONDS, SESSION_COOKIE_SECURE, CSRF_COOKIE_SECURE.</div></li><li><span class="tk-n">13</span><div><strong>Harden deployment</strong> — restrict ALLOWED_HOSTS, keep SECRET_KEY in .env, set DEBUG=False, limit DB and file permissions.</div></li><li><span class="tk-n">14</span><div><strong>Write tests for models, forms, views and templates</strong> — classes derive from TestCase; methods are prefixed test_ and run with python manage.py test.</div></li><li><span class="tk-n">15</span><div><strong>Use the isolated test database and setUpTestData()</strong> — share created objects without touching production data.</div></li><li><span class="tk-n">16</span><div><strong>Measure coverage with Coverage.py</strong> — and remember the test client does not replace frontend testing (Selenium, Jest, Jasmine).</div></li></ol></div></section>
-<section class="section" id="glossary"><header class="section-head"><span class="section-num">16</span><h2>Glossary</h2></header><div class="section-body"><div class="term-filter"><input type="search" id="termSearch" placeholder="Filter terms…" autocomplete="off" aria-label="Filter glossary terms"><span class="term-count" id="termCount"></span></div><div class="terms" id="termsGrid"><div class="term" data-term="allowed_hosts setting restricting which domains may serve the app, preventing host header attacks."><p class="term-name">ALLOWED_HOSTS</p><p class="term-def">Setting restricting which domains may serve the app, preventing Host header attacks.</p></div><div class="term" data-term="assertcontains / assertredirects / asserttemplateused django test assertions for response content, redirects, and template usage."><p class="term-name">assertContains / assertRedirects / assertTemplateUsed</p><p class="term-def">Django test assertions for response content, redirects, and template usage.</p></div><div class="term" data-term="autoescaping django&#x27;s default escaping of variable output in templates to prevent xss."><p class="term-name">Autoescaping</p><p class="term-def">Django's default escaping of variable output in templates to prevent XSS.</p></div><div class="term" data-term="bleach python library for sanitising input before storage."><p class="term-name">Bleach</p><p class="term-def">Python library for sanitising input before storage.</p></div><div class="term" data-term="clickjacking hijacking clicks meant for a top-level site, routing them to a hidden malicious page via an iframe."><p class="term-name">Clickjacking</p><p class="term-def">Hijacking clicks meant for a top-level site, routing them to a hidden malicious page via an iframe.</p></div><div class="term" data-term="code coverage measure of how much of the codebase the tests exercise, via coverage.py."><p class="term-name">Code coverage</p><p class="term-def">Measure of how much of the codebase the tests exercise, via Coverage.py.</p></div><div class="term" data-term="cors_allowed_origins setting controlling which domains may interact with your api."><p class="term-name">CORS_ALLOWED_ORIGINS</p><p class="term-def">Setting controlling which domains may interact with your API.</p></div><div class="term" data-term="coverage.py tool integrated with django to measure tested code."><p class="term-name">Coverage.py</p><p class="term-def">Tool integrated with Django to measure tested code.</p></div><div class="term" data-term="csrf cross-site request forgery; tricking a user&#x27;s browser into an unwanted authenticated action."><p class="term-name">CSRF</p><p class="term-def">Cross-Site Request Forgery; tricking a user's browser into an unwanted authenticated action.</p></div><div class="term" data-term="csrf token unique random value tied to the session, submitted with state-changing requests and validated by the server."><p class="term-name">CSRF token</p><p class="term-def">Unique random value tied to the session, submitted with state-changing requests and validated by the server.</p></div><div class="term" data-term="csrf_cookie_domain / csrf_trusted_origins settings allowing cross-subdomain posts."><p class="term-name">CSRF_COOKIE_DOMAIN / CSRF_TRUSTED_ORIGINS</p><p class="term-def">Settings allowing cross-subdomain POSTs.</p></div><div class="term" data-term="csrf_cookie_secure setting that sends the csrf cookie only over https."><p class="term-name">CSRF_COOKIE_SECURE</p><p class="term-def">Setting that sends the CSRF cookie only over HTTPS.</p></div><div class="term" data-term="csrfviewmiddleware django middleware checking csrf tokens on unsafe requests and validating origin/referer."><p class="term-name">CsrfViewMiddleware</p><p class="term-def">Django middleware checking CSRF tokens on unsafe requests and validating Origin/Referer.</p></div><div class="term" data-term="debug setting that must be false in production to avoid exposing sensitive information."><p class="term-name">DEBUG</p><p class="term-def">Setting that must be False in production to avoid exposing sensitive information.</p></div><div class="term" data-term="fixtures predefined data usable to populate the test database."><p class="term-name">Fixtures</p><p class="term-def">Predefined data usable to populate the test database.</p></div><div class="term" data-term="hsts http strict transport security; enforces https for future connections (secure_hsts_seconds, secure_hsts_include_subdomains)."><p class="term-name">HSTS</p><p class="term-def">HTTP Strict Transport Security; enforces HTTPS for future connections (SECURE_HSTS_SECONDS, SECURE_HSTS_INCLUDE_SUBDOMAINS).</p></div><div class="term" data-term="http-only cookie cookie inaccessible to javascript, limiting xss session theft."><p class="term-name">HTTP-only cookie</p><p class="term-def">Cookie inaccessible to JavaScript, limiting XSS session theft.</p></div><div class="term" data-term="jasmine behaviour-driven javascript testing framework."><p class="term-name">Jasmine</p><p class="term-def">Behaviour-driven JavaScript testing framework.</p></div><div class="term" data-term="jest javascript testing framework for frontend logic."><p class="term-name">Jest</p><p class="term-def">JavaScript testing framework for frontend logic.</p></div><div class="term" data-term="localstorage client-side jwt storage that is not auto-sent with requests, reducing csrf but raising xss risk."><p class="term-name">LocalStorage</p><p class="term-def">Client-side JWT storage that is not auto-sent with requests, reducing CSRF but raising XSS risk.</p></div><div class="term" data-term="nh3 python library for input sanitisation."><p class="term-name">nh3</p><p class="term-def">Python library for input sanitisation.</p></div><div class="term" data-term="origin / referer header headers validated by django over https to block cross-origin requests."><p class="term-name">Origin / Referer header</p><p class="term-def">Headers validated by Django over HTTPS to block cross-origin requests.</p></div><div class="term" data-term="parameterisation safely passing inputs to raw sql to prevent injection."><p class="term-name">Parameterisation</p><p class="term-def">Safely passing inputs to raw SQL to prevent injection.</p></div><div class="term" data-term="samesite cookie attribute that helps mitigate csrf when jwt is stored in cookies."><p class="term-name">SameSite</p><p class="term-def">Cookie attribute that helps mitigate CSRF when JWT is stored in cookies.</p></div><div class="term" data-term="selenium tool that automates browser interactions for end-to-end frontend testing."><p class="term-name">Selenium</p><p class="term-def">Tool that automates browser interactions for end-to-end frontend testing.</p></div><div class="term" data-term="secret_key secret used by django; keep it out of the codebase in a .env file."><p class="term-name">SECRET_KEY</p><p class="term-def">Secret used by Django; keep it out of the codebase in a .env file.</p></div><div class="term" data-term="secure_hsts_include_subdomains hsts setting extending enforcement to subdomains."><p class="term-name">SECURE_HSTS_INCLUDE_SUBDOMAINS</p><p class="term-def">HSTS setting extending enforcement to subdomains.</p></div><div class="term" data-term="secure_hsts_seconds hsts setting controlling how long browsers enforce https."><p class="term-name">SECURE_HSTS_SECONDS</p><p class="term-def">HSTS setting controlling how long browsers enforce HTTPS.</p></div><div class="term" data-term="secure_proxy_ssl_header setting ensuring security when traffic passes through a non-https proxy."><p class="term-name">SECURE_PROXY_SSL_HEADER</p><p class="term-def">Setting ensuring security when traffic passes through a non-HTTPS proxy.</p></div><div class="term" data-term="secure_ssl_redirect setting that redirects all http requests to https."><p class="term-name">SECURE_SSL_REDIRECT</p><p class="term-def">Setting that redirects all HTTP requests to HTTPS.</p></div><div class="term" data-term="session_cookie_httponly setting making the session cookie http-only (true by default)."><p class="term-name">SESSION_COOKIE_HTTPONLY</p><p class="term-def">Setting making the session cookie HTTP-only (True by default).</p></div><div class="term" data-term="session_cookie_secure setting sending the session cookie only over https."><p class="term-name">SESSION_COOKIE_SECURE</p><p class="term-def">Setting sending the session cookie only over HTTPS.</p></div><div class="term" data-term="setuptestdata() class method creating shared test data once per test class."><p class="term-name">setUpTestData()</p><p class="term-def">Class method creating shared test data once per test class.</p></div><div class="term" data-term="sql injection attack running arbitrary sql against the database; mitigated by the orm and by parameterising raw sql."><p class="term-name">SQL injection</p><p class="term-def">Attack running arbitrary SQL against the database; mitigated by the ORM and by parameterising raw SQL.</p></div><div class="term" data-term="test client django tool that simulates http requests to test views and templates."><p class="term-name">Test client</p><p class="term-def">Django tool that simulates HTTP requests to test views and templates.</p></div><div class="term" data-term="testcase class tests derive from; test methods are prefixed test_."><p class="term-name">TestCase</p><p class="term-def">Class tests derive from; test methods are prefixed test_.</p></div><div class="term" data-term="unittest python&#x27;s standard testing framework, integrated with django."><p class="term-name">unittest</p><p class="term-def">Python's standard testing framework, integrated with Django.</p></div><div class="term" data-term="x-frame-options middleware/header preventing the site being rendered in an iframe (clickjacking defence)."><p class="term-name">X-Frame-Options</p><p class="term-def">Middleware/header preventing the site being rendered in an iframe (clickjacking defence).</p></div><div class="term" data-term="xss cross-site scripting; injecting scripts executed by users&#x27; browsers."><p class="term-name">XSS</p><p class="term-def">Cross-Site Scripting; injecting scripts executed by users' browsers.</p></div></div></div></section>
-<section class="section" id="mnemonics"><header class="section-head"><span class="section-num">17</span><h2>Mnemonics &amp; Quick Recall</h2></header><div class="section-body"><div class="mnemonics"><div class="mnemonic"><p class="mn-title">XSS Defences</p><p class="mn-code">A-S-S-H</p><p class="mn-phrase">Autoescape, Sanitise, avoid Safe filter, HTTP-only cookies.</p></div><div class="mnemonic"><p class="mn-title">CSRF Defence</p><p class="mn-code">Token + Cookie + Origin</p><p class="mn-phrase">all three must agree on unsafe methods.</p></div><div class="mnemonic"><p class="mn-title">State-Changing Safety</p><p class="mn-code">No GET</p><p class="mn-phrase">only POST (or PUT/DELETE) should change state.</p></div><div class="mnemonic"><p class="mn-title">HTTPS Hardening</p><p class="mn-code">P-R-H-C</p><p class="mn-phrase">Proxy header, Redirect, HSTS, secure Cookies.</p></div><div class="mnemonic"><p class="mn-title">Deployment Checklist</p><p class="mn-code">H-K-D-C-F</p><p class="mn-phrase">Hosts, Key in .env, Debug off, CORS/CSRF origins, File/DB permissions.</p></div><div class="mnemonic"><p class="mn-title">Test Structure</p><p class="mn-code">C-T</p><p class="mn-phrase">Class from TestCase, methods start with test_.</p></div><div class="mnemonic"><p class="mn-title">What to Test</p><p class="mn-code">M-F-V-T</p><p class="mn-phrase">Models, Forms, Views, Templates.</p></div><div class="mnemonic"><p class="mn-title">Frontend Tools</p><p class="mn-code">S-J-J</p><p class="mn-phrase">Selenium, Jest, Jasmine.</p></div><div class="mnemonic"><p class="mn-title">Coverage Commands</p><p class="mn-code">run → report/html</p><p class="mn-phrase">coverage run manage.py test; coverage report.</p></div></div></div></section>
-<section class="section" id="worked-examples"><header class="section-head"><span class="section-num">18</span><h2>Worked Examples &amp; Scenarios</h2></header><div class="section-body"><div class="example"><span class="example-tag">Example 1</span><h3 class="example-title">Killing an XSS Injection</h3><p>An attacker submits <code>&lt;script&gt;alert('Your session has been hijacked');&lt;/script&gt;</code> into a comment field rendered as <code>&lt;div&gt;{{ user_comment }}&lt;/div&gt;</code>. Because <strong>Django autoescapes</strong> every variable tag by default, the angle brackets are escaped and the script does not execute. If a developer had written <code>&lt;p&gt;{{ user_input|safe }}&lt;/p&gt;</code>, escaping would be disabled and the script would run. Extra defence: sanitise stored input with <code>bleach.clean(user_input)</code> and keep <code>SESSION_COOKIE_HTTPONLY = True</code>.</p></div><div class="example"><span class="example-tag">Example 2</span><h3 class="example-title">The Bank Transfer That Was Never Authorised (CSRF)</h3><p>Maria sends Alice a link or a zero-size image pointing at <code>https://bank.com/transfer?acct=Maria&amp;amount=10000</code>. Alice is logged in, so her browser <strong>automatically attaches the session cookie</strong>, and the transfer executes. Two lessons: if the bank had used <strong>POST</strong> instead of GET, the attack would need a hidden <strong>FORM</strong> rather than a simple link/image; and a <strong>CSRF token</strong> (<code>{% csrf_token %}</code>) validated against the CSRF cookie would cause the server to reject the forged request.</p></div><div class="example"><span class="example-tag">Example 3</span><h3 class="example-title">AJAX POST Without a CSRF Token</h3><p>A JavaScript <code>fetch('/transfer', { method: 'POST', ... })</code> fails because the request lacks the CSRF token. The fix is to send it in the header:</p>
-<div class="code"><button class="copy" type="button" data-copy>Copy</button><pre><code>headers: { &#x27;X-CSRFToken&#x27;: &#x27;random_token_value&#x27; }</code></pre></div>
-<p>Django's CsrfViewMiddleware then compares it with the CSRF cookie and accepts the request.</p></div><div class="example"><span class="example-tag">Example 4</span><h3 class="example-title">Testing a View End to End</h3><ol><li>Import <code>TestCase</code> and <code>reverse</code>.</li><li>Create <code>PostViewTests(TestCase)</code>.</li><li>In <code>test_post_list_view</code>, call <code>self.client.get(reverse('post_list'))</code>.</li><li>Assert <code>response.status_code == 200</code>.</li><li>Assert <code>self.assertContains(response, "Post List")</code>. Because <code>reverse()</code> resolves the URL by name, the test survives path changes. The test client checks backend responses only — use Selenium/Jest/Jasmine for JavaScript and layout.</li></ol></div><div class="example"><span class="example-tag">Example 5</span><h3 class="example-title">Sharing Data with setUpTestData()</h3><p><code>PostDatabaseTests</code> defines <code>@classmethod setUpTestData(cls)</code> and creates <code>cls.post</code>. The test <code>test_post_creation</code> then asserts <code>Post.objects.count() == 1</code>. The data is built once per class in the isolated <strong>test database</strong>, so production data is untouched and tests stay fast.</p></div></div></section>
-<section class="section" id="exam-focus"><header class="section-head"><span class="section-num">19</span><h2>Exam Practice</h2></header><div class="section-body"><div class="exam-bar"><div class="exam-progress"><span class="exam-count"><strong id="examDone">0</strong> / 20 mastered</span><span class="exam-track"><span id="examFill"></span></span></div><div class="exam-actions"><button type="button" class="btn" id="revealAll">Reveal all</button><button type="button" class="btn" id="hideAll">Hide all</button><button type="button" class="btn ghost" id="resetExam">Reset</button></div></div><article class="quiz" data-q="1"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">1</span><span class="quiz-text">What is XSS and what can injected scripts do?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Cross-Site Scripting injects malicious scripts into websites; executed by users' browsers, they can steal cookies, hijack sessions, or perform actions on the user's behalf.</div><label class="mastered"><input type="checkbox" data-mastered="1"> Mark as mastered</label></div></article><article class="quiz" data-q="2"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">2</span><span class="quiz-text">How does Django protect against XSS by default?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Template autoescaping escapes dangerous characters in every variable tag by default; use {% autoescape on %} to be explicit.</div><label class="mastered"><input type="checkbox" data-mastered="2"> Mark as mastered</label></div></article><article class="quiz" data-q="3"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">3</span><span class="quiz-text">Why is the safe filter dangerous, and what should you do instead?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It marks a string safe and prevents escaping, enabling XSS; avoid it unless absolutely necessary, and sanitise backend input with libraries such as Bleach or nh3.</div><label class="mastered"><input type="checkbox" data-mastered="3"> Mark as mastered</label></div></article><article class="quiz" data-q="4"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">4</span><span class="quiz-text">How do HTTP-only cookies reduce XSS impact, and what is the setting?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>They make it harder to escalate XSS into full session hijacking; Django uses them by default and you set SESSION_COOKIE_HTTPONLY = True.</div><label class="mastered"><input type="checkbox" data-mastered="4"> Mark as mastered</label></div></article><article class="quiz" data-q="5"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">5</span><span class="quiz-text">What is CSRF, and why does it work even without stealing a password?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It tricks a user into unwanted actions on a site where they are authenticated; the browser automatically sends the valid session cookie, so no password is needed.</div><label class="mastered"><input type="checkbox" data-mastered="5"> Mark as mastered</label></div></article><article class="quiz" data-q="6"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">6</span><span class="quiz-text">Why is using GET for state-changing actions dangerous?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>GET should only retrieve data; if used for sensitive actions, it becomes CSRF-vulnerable even with CSRF token protection — avoid GET for any state-changing action.</div><label class="mastered"><input type="checkbox" data-mastered="6"> Mark as mastered</label></div></article><article class="quiz" data-q="7"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">7</span><span class="quiz-text">How does a CSRF token prevent an attack?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>The server generates a unique random value tied to the session; it is submitted with the form/AJAX alongside the session cookie, and the server checks both, rejecting requests with a missing or invalid token.</div><label class="mastered"><input type="checkbox" data-mastered="7"> Mark as mastered</label></div></article><article class="quiz" data-q="8"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">8</span><span class="quiz-text">What does CsrfViewMiddleware check, and which methods are exempt?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It checks for the CSRF token on unsafe requests (POST, PUT, DELETE) and validates Origin/Referer over HTTPS against trusted domains; GET requests are exempt.</div><label class="mastered"><input type="checkbox" data-mastered="8"> Mark as mastered</label></div></article><article class="quiz" data-q="9"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">9</span><span class="quiz-text">How does JWT storage affect CSRF and XSS risk?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>JWT in LocalStorage is not auto-sent, reducing CSRF but raising XSS risk; JWT in HTTP-only cookies is auto-sent, requiring CSRF protection via tokens or SameSite.</div><label class="mastered"><input type="checkbox" data-mastered="9"> Mark as mastered</label></div></article><article class="quiz" data-q="10"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">10</span><span class="quiz-text">What is DRF's default CSRF posture, and what must developers do?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>CSRF protection is disabled by default for API views; APIView and ViewSet are typically CSRF exempt, so developers must explicitly re-implement protection or use alternatives.</div><label class="mastered"><input type="checkbox" data-mastered="10"> Mark as mastered</label></div></article><article class="quiz" data-q="11"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">11</span><span class="quiz-text">How does Django mitigate SQL injection, and when must you act?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>The ORM's database driver automatically escapes SQL; when writing raw SQL you must explicitly parameterise inputs safely.</div><label class="mastered"><input type="checkbox" data-mastered="11"> Mark as mastered</label></div></article><article class="quiz" data-q="12"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">12</span><span class="quiz-text">What is clickjacking and how does Django defend against it?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Hijacking clicks meant for a top-level site and routing them to a hidden malicious page (e.g. an invisible iframe capturing credentials); Django uses X-Frame-Options middleware to prevent iframe rendering.</div><label class="mastered"><input type="checkbox" data-mastered="12"> Mark as mastered</label></div></article><article class="quiz" data-q="13"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">13</span><span class="quiz-text">Name the Django HTTPS protections and their settings.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>SECURE_PROXY_SSL_HEADER, SECURE_SSL_REDIRECT, HSTS (SECURE_HSTS_SECONDS, SECURE_HSTS_INCLUDE_SUBDOMAINS), and secure cookies (SESSION_COOKIE_SECURE, CSRF_COOKIE_SECURE).</div><label class="mastered"><input type="checkbox" data-mastered="13"> Mark as mastered</label></div></article><article class="quiz" data-q="14"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">14</span><span class="quiz-text">How should ALLOWED_HOSTS and DEBUG be set for production?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>ALLOWED_HOSTS should list only your domains to prevent Host header attacks, and DEBUG must be False in production because DEBUG=True exposes sensitive information.</div><label class="mastered"><input type="checkbox" data-mastered="14"> Mark as mastered</label></div></article><article class="quiz" data-q="15"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">15</span><span class="quiz-text">Where should SECRET_KEY live, and what Linux permissions protect it?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>In a .env file loaded via os.getenv('SECRET_KEY'); protect it with chmod 600 /path/to/.env.</div><label class="mastered"><input type="checkbox" data-mastered="15"> Mark as mastered</label></div></article><article class="quiz" data-q="16"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">16</span><span class="quiz-text">Why limit database user permissions?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>To reduce the impact of SQL injections — avoid root and limit CREATE, ALTER or DROP permissions.</div><label class="mastered"><input type="checkbox" data-mastered="16"> Mark as mastered</label></div></article><article class="quiz" data-q="17"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">17</span><span class="quiz-text">How are Django tests structured and run?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Test classes derive from TestCase with methods prefixed test_, placed in tests.py or a tests/ directory, and run with python manage.py test.</div><label class="mastered"><input type="checkbox" data-mastered="17"> Mark as mastered</label></div></article><article class="quiz" data-q="18"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">18</span><span class="quiz-text">What tools does the test client offer for views and templates?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It simulates HTTP requests (self.client.get), letting you assert response.status_code, assertContains, assertRedirects and assertTemplateUsed; it does not replace frontend testing.</div><label class="mastered"><input type="checkbox" data-mastered="18"> Mark as mastered</label></div></article><article class="quiz" data-q="19"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">19</span><span class="quiz-text">What is setUpTestData() for?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>A class method that creates shared test data once per test class in the isolated test database, used to test model behaviour without affecting production data.</div><label class="mastered"><input type="checkbox" data-mastered="19"> Mark as mastered</label></div></article><article class="quiz" data-q="20"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">20</span><span class="quiz-text">How is code coverage measured, and what frontend tools are suggested?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Install Coverage.py (pip install coverage), then run coverage run manage.py test and coverage report (or coverage html for a visual report); frontend tools are Selenium, Jest and Jasmine.</div><label class="mastered"><input type="checkbox" data-mastered="20"> Mark as mastered</label></div></article></div></section>
-    <footer class="foot"><strong>ELEC3609 study guide</strong> · Django Security &amp; Testing · Lab 8 · Built for self-paced revision.</footer>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>coverage run manage.py test</code></pre></div>
+<ol><li>View the report:</li></ol>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>coverage report   # or coverage html for a more visual report</code></pre></div>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> Remember the three commands in order: <code>pip install coverage</code> → <code>coverage run manage.py test</code> → <code>coverage report</code> (or <code>coverage html</code>). The key idea is that coverage <em>measures</em> untested code; it does not prove the tests are good.</div></div>
+</section>
+<section class="guide-section" id="frontend-testing-tools" data-title="Frontend Testing Tools">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Frontend Testing Tools</h2>
+  </div>
+  <p class="section-kicker">Django's built-in tools cover the backend, so frontend logic, interactions, and layout need their own tools.</p>
+<p>While Django's built-in testing tools focus on the backend, frontend testing is essential for validating JavaScript, user interactions, and layout consistency. Tools you can use:</p>
+<ul><li><strong>Selenium</strong> — automates browser interactions, simulating real user actions such as clicks, form submissions, and navigation across multiple pages. Ideal for testing complete user flows in a browser.</li><li><strong>Jest</strong> — a JavaScript testing framework designed for testing frontend logic, providing easy-to-use syntax for writing unit tests.</li><li><strong>Jasmine</strong> — a behaviour-driven testing framework for JavaScript, often used for unit and integration tests, focusing on simple syntax and intuitive test writing.</li></ul>
+<div class="table-wrap"><table><thead><tr><th>Tool</th><th>Language / domain</th><th>Best for</th></tr></thead><tbody><tr><td>Selenium</td><td>Browser automation</td><td>End-to-end user flows (clicks, forms, navigation)</td></tr><tr><td>Jest</td><td>JavaScript</td><td>Frontend logic unit tests</td></tr><tr><td>Jasmine</td><td>JavaScript (BDD)</td><td>JS unit and integration tests</td></tr></tbody></table></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> Backend tests (Django <code>TestCase</code> + test client) and frontend tests (Selenium/Jest/Jasmine) are complementary. Neither replaces the other.</div></div>
+</section>
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways"><div class="takeaway"><span class="tk-num">1</span><p>XSS injects malicious scripts that run in a victim's browser to steal cookies, hijack sessions, or act as the user.</p></div><div class="takeaway"><span class="tk-num">2</span><p>Django autoescapes every variable tag by default; avoid the <code>|safe</code> filter, sanitise backend input (Bleach/nh3), and keep cookies HTTP-only.</p></div><div class="takeaway"><span class="tk-num">3</span><p>CSRF abuses the browser's automatic cookie attachment to trigger unwanted authenticated actions.</p></div><div class="takeaway"><span class="tk-num">4</span><p>GET is meant for retrieval only; never use GET for state-changing actions, and use POST plus a CSRF token for anything that changes state.</p></div><div class="takeaway"><span class="tk-num">5</span><p>Django's <code>CsrfViewMiddleware</code> checks tokens on POST/PUT/DELETE and validates Origin/Referer over HTTPS; GET is exempt.</p></div><div class="takeaway"><span class="tk-num">6</span><p>With JWT, LocalStorage reduces CSRF but raises XSS risk; HTTP-only cookies restore CSRF risk and need tokens or SameSite.</p></div><div class="takeaway"><span class="tk-num">7</span><p>DRF disables CSRF protection by default for API views unless session-based authentication is used.</p></div><div class="takeaway"><span class="tk-num">8</span><p>The Django ORM auto-escapes SQL, but raw SQL must be safely parameterised; clickjacking is blocked by X-Frame-Options.</p></div><div class="takeaway"><span class="tk-num">9</span><p>HTTPS protections include <code>SECURE_PROXY_SSL_HEADER</code>, <code>SECURE_SSL_REDIRECT</code>, HSTS (<code>SECURE_HSTS_SECONDS</code>, <code>SECURE_HSTS_INCLUDE_SUBDOMAINS</code>), and secure cookies.</p></div><div class="takeaway"><span class="tk-num">10</span><p>Deployment settings to get right: <code>ALLOWED_HOSTS</code>, <code>SECRET_KEY</code> in <code>.env</code>, <code>DEBUG=False</code>, CORS/CSRF trusted origins, least-privilege DB users, and <code>chmod 600</code> on secrets.</p></div><div class="takeaway"><span class="tk-num">11</span><p>Django tests are <code>TestCase</code> subclasses with <code>test_</code>-prefixed methods, placed in <code>tests.py</code> or a <code>tests/</code> directory, run with <code>python manage.py test</code>.</p></div><div class="takeaway"><span class="tk-num">12</span><p>Test models, forms, views, and templates; use the test client and test database, and share data via fixtures or <code>setUpTestData()</code>.</p></div><div class="takeaway"><span class="tk-num">13</span><p>Coverage.py (<code>pip install coverage</code> → <code>coverage run manage.py test</code> → <code>coverage report</code>/<code>coverage html</code>) reveals untested code.</p></div><div class="takeaway"><span class="tk-num">14</span><p>Frontend testing needs its own tools — Selenium for browser flows, Jest and Jasmine for JavaScript.</p></div></div>
+</section>
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools"><button class="chip active" type="button" data-cat="all">All</button><button class="chip" type="button" data-cat="concept">Core concepts</button><button class="chip" type="button" data-cat="tech">Technologies &amp; tools</button><button class="chip" type="button" data-cat="method">Methods &amp; process</button><button class="chip" type="button" data-cat="metric">Metrics &amp; evaluation</button></div>
+  <div class="terms"><div class="term-card" data-cat="concept"><div class="term-name">Cross-Site Scripting (XSS)</div><div class="term-meaning">An attack that injects malicious scripts into a site so they execute in victims' browsers, enabling cookie theft, session hijacking, or actions as the user.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Autoescaping</div><div class="term-meaning">Django's default behaviour of escaping dangerous characters in every template variable tag so injected HTML/script cannot execute.</div></div><div class="term-card" data-cat="tech"><div class="term-name">safe filter</div><div class="term-meaning">A Django template filter that marks a string as safe and disables escaping; dangerous because it can reintroduce XSS.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Bleach</div><div class="term-meaning">A Python library used to sanitise user input before storing it, particularly for non-HTML contexts such as JSON or JavaScript (nh3 is an alternative).</div></div><div class="term-card" data-cat="tech"><div class="term-name">SESSION_COOKIE_HTTPONLY</div><div class="term-meaning">A settings flag that makes the session cookie unreadable by JavaScript, limiting XSS escalation to full session hijacking; True by default.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Cross-Site Request Forgery (CSRF)</div><div class="term-meaning">An attack that tricks an authenticated user's browser into sending an unwanted state-changing request using the victim's credentials.</div></div><div class="term-card" data-cat="concept"><div class="term-name">CSRF token</div><div class="term-meaning">A unique random value tied to a user's session, included in state-changing form or AJAX requests and verified by the server alongside the session cookie.</div></div><div class="term-card" data-cat="tech"><div class="term-name">CsrfViewMiddleware</div><div class="term-meaning">Django middleware that checks for the CSRF token on unsafe methods (POST, PUT, DELETE) and validates Origin/Referer over HTTPS.</div></div><div class="term-card" data-cat="concept"><div class="term-name">JSON Web Token (JWT)</div><div class="term-meaning">A token-based authentication credential; its CSRF exposure depends on whether it is stored in LocalStorage or in cookies.</div></div><div class="term-card" data-cat="concept"><div class="term-name">SQL injection</div><div class="term-meaning">An attack that runs arbitrary SQL against a database by injecting untrusted input into queries, risking unauthorised read, modification, or deletion of data.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Django ORM</div><div class="term-meaning">Django's models-and-querysets layer, whose database driver automatically escapes SQL, mitigating injection when used instead of raw SQL.</div></div><div class="term-card" data-cat="concept"><div class="term-name">Clickjacking</div><div class="term-meaning">An attack that hijacks clicks meant for a top-level site and routes them to a hidden malicious page, often via an invisible iframe.</div></div><div class="term-card" data-cat="tech"><div class="term-name">X-Frame-Options</div><div class="term-meaning">An HTTP header applied by Django middleware that prevents a site from being rendered inside an iframe in compatible browsers.</div></div><div class="term-card" data-cat="tech"><div class="term-name">HTTP Strict Transport Security (HSTS)</div><div class="term-meaning">An HTTP header that forces HTTPS for all future connections to a site, configured via SECURE_HSTS_SECONDS and SECURE_HSTS_INCLUDE_SUBDOMAINS.</div></div><div class="term-card" data-cat="tech"><div class="term-name">SECURE_SSL_REDIRECT</div><div class="term-meaning">A Django setting that automatically redirects all HTTP requests to HTTPS.</div></div><div class="term-card" data-cat="tech"><div class="term-name">SECURE_PROXY_SSL_HEADER</div><div class="term-meaning">A Django setting that preserves security awareness when traffic passes through a non-HTTPS proxy.</div></div><div class="term-card" data-cat="tech"><div class="term-name">ALLOWED_HOSTS</div><div class="term-meaning">A Django setting restricting which domains may serve the app, preventing HTTP Host header attacks.</div></div><div class="term-card" data-cat="tech"><div class="term-name">TestCase</div><div class="term-meaning">Django's base class (built on Python's unittest) for organising tests, with test_ prefixed methods and a test database.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Test client</div><div class="term-meaning">Django's tool (self.client) for simulating HTTP requests to views and inspecting responses, templates, and context.</div></div><div class="term-card" data-cat="method"><div class="term-name">setUpTestData()</div><div class="term-meaning">A classmethod that creates data once, shared across a TestCase's tests, avoiding repeated database setup.</div></div><div class="term-card" data-cat="metric"><div class="term-name">Coverage.py</div><div class="term-meaning">A tool integrated with Django that measures how much of the codebase the test suite exercises.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Selenium</div><div class="term-meaning">A browser-automation tool that simulates real user actions such as clicks, form submissions, and navigation for end-to-end frontend testing.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Jest</div><div class="term-meaning">A JavaScript testing framework designed for frontend logic unit tests.</div></div><div class="term-card" data-cat="tech"><div class="term-name">Jasmine</div><div class="term-meaning">A behaviour-driven JavaScript testing framework for unit and integration tests.</div></div></div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+<article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">What is the core mechanism of an XSS attack, and what can an attacker achieve with it?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> An attacker finds an input that is not properly sanitised or escaped, then injects malicious scripts that victims' browsers execute. This lets the attacker steal sensitive information such as cookies, hijack sessions, or perform malicious actions on the user's behalf.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Explain the CSRF attack on Alice's bank using a hidden image tag, and state why it works.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Maria sends Alice a link or embeds <code>&lt;img src=&quot;https://bank.com/transfer?acct=Maria&amp;amount=10000&quot; width=&quot;0&quot; height=&quot;0&quot;&gt;</code>. When Alice clicks the link or the image loads, her browser automatically sends her bank session cookie to bank.com, executing the transfer without her knowledge. It works because browsers attach cookies automatically and cannot distinguish a forged request from a legitimate one.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">Why can using GET for state-changing actions defeat even CSRF token protection?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> GET requests are exempt from CSRF token checking because they are meant to retrieve data and not modify state. If an app performs a sensitive action over GET, an attacker can trigger it with a simple link or image load, and the token check never applies. The solution is to use POST for any state-changing action.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">How does a CSRF token prevent an attack, and how is it delivered in a Django template versus an AJAX request?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The server generates a unique random token tied to the user's session; it is sent alongside the session cookie and the server verifies both, rejecting requests with a missing or invalid token. In a template you include <code>{% csrf_token %}</code> inside the POST form. In AJAX you send it as a header, e.g. <code>&#x27;X-CSRFToken&#x27;: &#x27;random_token_value&#x27;</code>.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">What does CsrfViewMiddleware check, and which HTTP methods does it treat as unsafe?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> It checks for the CSRF token on unsafe requests (POST, PUT, DELETE) and validates the Origin or Referer headers for requests over HTTPS, comparing them with trusted domains or subdomains to block cross-origin attacks. GET requests are exempt because they should not modify data.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">When using JWT, how does storage choice affect CSRF versus XSS risk?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> If the JWT is stored in LocalStorage it is not automatically sent like a cookie, so CSRF risk is reduced but XSS becomes the concern because scripts can read it. If the JWT is stored in an HTTP-only cookie, the browser includes it automatically, so CSRF is possible and protection (CSRF tokens or SameSite attributes) is required.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">What is DRF's default CSRF behaviour, and what should you do about it?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> In Django REST Framework, CSRF protection is disabled by default for API views unless session-based authentication is used; <code>APIView</code> and <code>ViewSet</code> are typically CSRF exempt. You should explicitly re-implement CSRF protection or take alternative measures suited to your authentication and storage strategy.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">How does Django protect against SQL injection, and where does that protection stop?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> When using Django's models and querysets (the ORM), the underlying database driver automatically escapes the SQL, mitigating injection. The protection stops when you write raw SQL queries — there you must explicitly parameterise inputs to prevent injection.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">What is clickjacking and how does Django prevent it?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Clickjacking hijacks clicks intended for a top-level site and routes them to a hidden malicious page underneath, often showing legitimate content like a bank login inside an invisible iframe to capture credentials. Django uses the X-Frame-Options middleware, which prevents the site from being rendered inside an iframe in compatible browsers.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">List the HTTPS-related Django protections and what each does.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> <code>SECURE_PROXY_SSL_HEADER</code> ensures security through a non-HTTPS proxy; <code>SECURE_SSL_REDIRECT</code> redirects all HTTP to HTTPS; HSTS (configured by <code>SECURE_HSTS_SECONDS</code> and <code>SECURE_HSTS_INCLUDE_SUBDOMAINS</code>) enforces HTTPS for all future connections; and <code>SESSION_COOKIE_SECURE</code>/<code>CSRF_COOKIE_SECURE = True</code> send cookies only over HTTPS.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">What deployment settings should you verify before going live, and why?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Set <code>ALLOWED_HOSTS</code> to prevent Host header attacks; keep <code>SECRET_KEY</code> in a <code>.env</code> read via <code>os.getenv(&#x27;SECRET_KEY&#x27;)</code>; set <code>DEBUG = False</code>; configure <code>CORS_ALLOWED_ORIGINS</code> and <code>CSRF_TRUSTED_ORIGINS</code>; give the database user least privilege (no root, limit CREATE/ALTER/DROP); and protect files with <code>chmod 600</code> (e.g. <code>/path/to/.env</code>).</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">How are Django tests structured and run?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Tests are classes derived from <code>TestCase</code> with methods prefixed <code>test_</code>, placed in an app's <code>tests.py</code> or a <code>tests/</code> directory (e.g. <code>test_models.py</code>, <code>test_forms.py</code>, <code>test_views.py</code>). Run them with <code>python manage.py test</code>, which auto-discovers and runs all tests and reports pass/fail.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">Why use the test database and <code>setUpTestData()</code>, and how do you measure coverage?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The test database lets you test model behaviour without affecting production data, and <code>setUpTestData()</code> (a classmethod) creates data once to share across tests. Coverage is measured with Coverage.py: <code>pip install coverage</code>, then <code>coverage run manage.py test</code>, then <code>coverage report</code> or <code>coverage html</code>.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+<article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">Why is the Django test client not a substitute for frontend testing, and which tools fill the gap?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The test client exercises backend views but cannot verify JavaScript behaviour, user interactions, or layout/styling. Frontend tools fill the gap: Selenium automates real browser interactions for end-to-end flows, Jest tests frontend logic, and Jasmine provides behaviour-driven JavaScript unit and integration tests.</div>
+    <div class="quiz-actions">
+      <button class="quiz-reveal" type="button">Show answer</button>
+      <label class="mastered"><input type="checkbox"> Mastered</label>
+    </div>
+  </article>
+</section>
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist"><label class="check-item"><input type="checkbox"> I can explain how XSS works and list Django's four defences against it.</label><label class="check-item"><input type="checkbox"> I can describe a CSRF attack and why browsers make it possible.</label><label class="check-item"><input type="checkbox"> I can explain why GET must never be used for state-changing actions.</label><label class="check-item"><input type="checkbox"> I can show how a CSRF token is included in a Django form and an AJAX request.</label><label class="check-item"><input type="checkbox"> I can describe what CsrfViewMiddleware checks and which methods are unsafe.</label><label class="check-item"><input type="checkbox"> I can reason about JWT storage and its CSRF/XSS trade-off, including DRF's default behaviour.</label><label class="check-item"><input type="checkbox"> I can explain how the Django ORM prevents SQL injection and where raw SQL needs manual parameterisation.</label><label class="check-item"><input type="checkbox"> I can explain clickjacking and how X-Frame-Options prevents it.</label><label class="check-item"><input type="checkbox"> I can configure and justify the HTTPS protections: SSL redirect, proxy header, HSTS, and secure cookies.</label><label class="check-item"><input type="checkbox"> I can list and justify the key production deployment settings, including ALLOWED_HOSTS, SECRET_KEY handling, and DEBUG=False.</label><label class="check-item"><input type="checkbox"> I can structure Django tests with TestCase and test_ methods and run them with python manage.py test.</label><label class="check-item"><input type="checkbox"> I can write tests for models, forms, views, and templates using the test client and test database.</label><label class="check-item"><input type="checkbox"> I can measure coverage with Coverage.py and choose appropriate frontend testing tools.</label></div>
+</section>
   </main>
 </div>
-<button class="totop" id="toTop" type="button" aria-label="Back to top">↑</button>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">⌂ All guides</a>
+    <a href="../week_7/ELEC3609_lab_week7_study_guide.html">← Lab 7</a>
+    <a href="../week_9/ELEC3609_lab_week9_study_guide.html">Lab 9 →</a>
+  </div>
+  <p>ELEC3609/9609 Internet Software Platforms · Lab 8 · Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
 <script>
 (function(){
-  var GUIDE_ID = "elec3609-lab-week8-study-guide";
+  "use strict";
+
+  /* ---------- Theme ---------- */
   var root = document.documentElement;
-  /* theme */
-  var stored = null;
-  try { stored = localStorage.getItem("sg-theme"); } catch(e){}
-  var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  setTheme(stored || (prefersDark ? "dark" : "light"));
-  function setTheme(t){
-    root.setAttribute("data-theme", t);
-    var b = document.getElementById("themeBtn");
-    if (b) b.textContent = t === "dark" ? "☀️" : "🌙";
-    try { localStorage.setItem("sg-theme", t); } catch(e){}
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('elec3609-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('elec3609-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
   }
-  document.getElementById("themeBtn").addEventListener("click", function(){
-    setTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark");
-  });
-  document.getElementById("printBtn").addEventListener("click", function(){ window.print(); });
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
 
-  /* mobile drawer */
-  var sidebar = document.getElementById("sidebar"), scrim = document.getElementById("scrim");
-  function closeDrawer(){ sidebar.classList.remove("open"); scrim.classList.remove("show"); }
-  document.getElementById("menuBtn").addEventListener("click", function(){
-    sidebar.classList.toggle("open"); scrim.classList.toggle("show");
-  });
-  scrim.addEventListener("click", closeDrawer);
-  sidebar.addEventListener("click", function(e){ if (e.target.closest("a")) closeDrawer(); });
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
 
-  /* progress bar + back to top */
-  var bar = document.getElementById("progress"), toTop = document.getElementById("toTop");
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
   function onScroll(){
-    var h = document.documentElement;
-    var max = h.scrollHeight - h.clientHeight;
-    var pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
-    bar.style.width = pct + "%";
-    toTop.classList.toggle("show", h.scrollTop > 600);
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
   }
-  window.addEventListener("scroll", onScroll, {passive:true});
+  window.addEventListener('scroll', onScroll, {passive:true});
   onScroll();
-  toTop.addEventListener("click", function(){ window.scrollTo({top:0, behavior:"smooth"}); });
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
 
-  /* active toc + reveal */
-  var links = Array.prototype.slice.call(document.querySelectorAll(".toc-link"));
-  var sections = Array.prototype.slice.call(document.querySelectorAll(".section"));
-  if ("IntersectionObserver" in window) {
-    var rev = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){ if (en.isIntersecting) en.target.classList.add("in"); });
-    }, {rootMargin:"0px 0px -8% 0px", threshold:0.05});
-    sections.forEach(function(s){ rev.observe(s); });
-
-    var spy = new IntersectionObserver(function(entries){
-      entries.forEach(function(en){
-        if (!en.isIntersecting) return;
-        var id = en.target.id;
-        links.forEach(function(a){ a.classList.toggle("active", a.getAttribute("href") === "#" + id); });
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
       });
-    }, {rootMargin:"-15% 0px -70% 0px", threshold:0});
-    sections.forEach(function(s){ spy.observe(s); });
-  } else {
-    sections.forEach(function(s){ s.classList.add("in"); });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
   }
 
-  /* copy buttons */
-  document.addEventListener("click", function(e){
-    var btn = e.target.closest("[data-copy]");
-    if (!btn) return;
-    var code = btn.parentElement.querySelector("code");
-    if (!code) return;
-    var text = code.innerText;
-    var done = function(){ btn.textContent = "Copied"; btn.classList.add("done"); setTimeout(function(){ btn.textContent = "Copy"; btn.classList.remove("done"); }, 1400); };
-    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
-    else { var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(err){} document.body.removeChild(ta); done(); }
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'elec3609-ELEC3609_lab_week8_study_guide-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
   });
 
-  /* glossary filter */
-  var termSearch = document.getElementById("termSearch");
-  if (termSearch) {
-    var terms = Array.prototype.slice.call(document.querySelectorAll(".term"));
-    var count = document.getElementById("termCount");
-    var update = function(){
-      var q = termSearch.value.trim().toLowerCase();
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
       var shown = 0;
-      terms.forEach(function(t){
-        var hit = !q || (t.getAttribute("data-term") || "").indexOf(q) !== -1;
-        t.classList.toggle("hide", !hit);
-        if (hit) shown++;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
       });
-      if (count) count.textContent = shown + " / " + terms.length + " shown";
-    };
-    termSearch.addEventListener("input", update);
-    update();
-  }
-
-  /* exam interactions */
-  var quizzes = Array.prototype.slice.call(document.querySelectorAll(".quiz"));
-  quizzes.forEach(function(q){
-    var head = q.querySelector(".quiz-q");
-    head.addEventListener("click", function(){
-      q.classList.toggle("open");
-      head.setAttribute("aria-expanded", q.classList.contains("open") ? "true" : "false");
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
     });
   });
-  var doneEl = document.getElementById("examDone"), fillEl = document.getElementById("examFill");
-  var boxes = Array.prototype.slice.call(document.querySelectorAll("[data-mastered]"));
-  var total = boxes.length;
-  function examKey(){ return "sg-exam-" + GUIDE_ID; }
-  function loadExam(){
-    var data = {};
-    try { data = JSON.parse(localStorage.getItem(examKey()) || "{}"); } catch(e){}
-    boxes.forEach(function(b){ b.checked = !!data[b.getAttribute("data-mastered")]; });
-  }
-  function saveExam(){
-    var data = {};
-    boxes.forEach(function(b){ if (b.checked) data[b.getAttribute("data-mastered")] = 1; });
-    try { localStorage.setItem(examKey(), JSON.stringify(data)); } catch(e){}
-  }
-  function refreshExam(){
-    var done = boxes.filter(function(b){ return b.checked; }).length;
-    if (doneEl) doneEl.textContent = done;
-    if (fillEl) fillEl.style.width = total ? (done / total) * 100 + "%" : "0%";
-  }
-  boxes.forEach(function(b){ b.addEventListener("change", function(){ saveExam(); refreshExam(); }); });
-  if (boxes.length) { loadExam(); refreshExam(); }
-  var revealAll = document.getElementById("revealAll");
-  var hideAll = document.getElementById("hideAll");
-  var resetExam = document.getElementById("resetExam");
-  if (revealAll) revealAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.add("open"); }); });
-  if (hideAll) hideAll.addEventListener("click", function(){ quizzes.forEach(function(q){ q.classList.remove("open"); }); });
-  if (resetExam) resetExam.addEventListener("click", function(){ boxes.forEach(function(b){ b.checked = false; }); saveExam(); refreshExam(); });
 
-  /* search */
-  var input = document.getElementById("searchInput");
-  var box = document.getElementById("searchResults");
-  var index = sections.map(function(s){
-    var h = s.querySelector("h2");
-    return { id: s.id, title: h ? h.textContent : "", text: s.innerText.replace(/\s+/g, " ").trim() };
-  });
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
   function runSearch(){
-    var q = input.value.trim().toLowerCase();
-    box.innerHTML = "";
-    if (q.length < 2) { box.classList.remove("open"); return; }
-    var hits = index.filter(function(it){ return (it.title + " " + it.text).toLowerCase().indexOf(q) !== -1; }).slice(0, 8);
-    if (!hits.length) { box.innerHTML = '<div class="sr-empty">No matches</div>'; box.classList.add("open"); return; }
-    hits.forEach(function(it){
-      var low = it.text.toLowerCase(), at = low.indexOf(q);
-      var snippet = at >= 0 ? it.text.slice(Math.max(0, at - 30), at + 70) : it.title;
-      var b = document.createElement("button");
-      b.type = "button"; b.className = "sr-item";
-      b.innerHTML = "<b></b><span></span>";
-      b.querySelector("b").textContent = it.title;
-      b.querySelector("span").textContent = "…" + snippet + "…";
-      b.addEventListener("click", function(){
-        document.getElementById(it.id).scrollIntoView({behavior:"smooth", block:"start"});
-        box.classList.remove("open"); input.blur();
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
       });
-      box.appendChild(b);
-    });
-    box.classList.add("open");
+    }
+    suggest.classList.add('open');
   }
-  if (input) {
-    input.addEventListener("input", runSearch);
-    input.addEventListener("keydown", function(e){
-      if (e.key === "Enter") { var first = box.querySelector(".sr-item"); if (first) first.click(); }
-      if (e.key === "Escape") { box.classList.remove("open"); input.blur(); }
-    });
-    document.addEventListener("click", function(e){ if (!e.target.closest(".search")) box.classList.remove("open"); });
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
   }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'elec3609-ELEC3609_lab_week8_study_guide-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
 })();
 </script>
+
+<script>
+(function(){
+  "use strict";
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.code-copy');
+    if (!btn) return;
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    var text = code.innerText;
+    var done = function(){ btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
+    else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(err){} document.body.removeChild(ta); done(); }
+  });
+})();
+</script>
+
 </body>
 </html>
