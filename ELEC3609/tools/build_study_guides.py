@@ -1,10 +1,600 @@
-<!DOCTYPE html>
+#!/usr/bin/env python3
+"""ELEC3609/9609 study-guide builder.
+
+Self-contained: the whole design system (CSS + JS + layout) lives in this file
+as an embedded template, so every generated guide is a single portable HTML file
+with no external template or stylesheet dependency.
+
+Usage:
+    python build_study_guides.py <root-dir>
+
+Scans <root-dir> recursively for *_study_guide.txt sources and writes a sibling
+*.html for each (skipping the legacy, session-less reference source).
+"""
+from __future__ import annotations
+
+import html
+import re
+import sys
+from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Inline markdown
+# ---------------------------------------------------------------------------
+
+
+def inline(text: str) -> str:
+    """Render inline markdown. Code/math spans are protected first so that a
+    single '*' inside `code` cannot break surrounding **bold** parsing."""
+    text = text.strip()
+    store: list[str] = []
+
+    def stash(html_str: str) -> str:
+        store.append(html_str)
+        return "\x00" + str(len(store) - 1) + "\x00"
+
+    text = re.sub(r"`([^`]+)`",
+                  lambda m: stash("<code>" + html.escape(m.group(1), quote=False) + "</code>"),
+                  text)
+    text = re.sub(r"\$([^$\n]+)\$",
+                  lambda m: stash('<span class="math">' + html.escape(m.group(1), quote=False) + "</span>"),
+                  text)
+    text = html.escape(text, quote=False)
+    text = re.sub(r"\*\*([^*]+)\*\*", lambda m: "<strong>" + m.group(1) + "</strong>", text)
+    text = re.sub(r"(?<!\*)\*([^*\n]+)\*(?!\*)", lambda m: "<em>" + m.group(1) + "</em>", text)
+    text = re.sub(r"\x00(\d+)\x00", lambda m: store[int(m.group(1))], text)
+    return text
+
+
+# ---------------------------------------------------------------------------
+# Source parsing
+# ---------------------------------------------------------------------------
+SEP = re.compile(r"^\s*[=\-_]{4,}\s*$")
+FENCE = re.compile(r"^\s*(?:```|~~~)")
+CALLOUTS = {
+    "💡": ("why", "Why It Matters"),
+    "🧠": ("memory", "Memory Hook"),
+    "⚠️": ("warn", "Watch Out"),
+    "❌": ("warn", "Watch Out"),
+    "🔥": ("warn", "Watch Out"),
+    "ℹ️": ("info", "Note"),
+    "📌": ("info", "Note"),
+    "✅": ("tip", "Tip"),
+    "📝": ("tip", "Tip"),
+}
+EMOJI_RE = re.compile(r"^(" + "|".join(map(re.escape, CALLOUTS)) + r")\s*(.*)$")
+
+
+def split_segments(text: str) -> list[list[str]]:
+    segs: list[list[str]] = []
+    buf: list[str] = []
+    fence = False
+    for raw in text.split("\n"):
+        line = raw.rstrip()
+        if FENCE.match(line):
+            fence = not fence
+            buf.append(line)
+            continue
+        if not fence and SEP.match(line):
+            segs.append(buf)
+            buf = []
+            continue
+        buf.append(line)
+    segs.append(buf)
+    out = []
+    for s in segs:
+        while s and not s[0].strip():
+            s.pop(0)
+        while s and not s[-1].strip():
+            s.pop()
+        if s:
+            out.append(s)
+    return out
+
+
+def header_kind(line: str) -> str | None:
+    low = line.strip().lower()
+    if re.match(r"^section\s*\d+", low):
+        return "section"
+    if low.startswith("overview"):
+        return "overview"
+    if low.startswith("stats"):
+        return "stats"
+    if "key takeaway" in low:
+        return "takeaways"
+    if "term" in low and ("know" in low or "glossary" in low):
+        return "terms"
+    if "mnemonic" in low or "quick recall" in low:
+        return "mnemonics"
+    if any(k in low for k in ("worked", "concrete", "scenario")):
+        return "examples"
+    if "exam" in low or "practice question" in low:
+        return "exam"
+    return None
+
+
+def parse_title(lines: list[str]) -> dict:
+    first = lines[0].strip() if lines else "Study Guide"
+    subtitle = lines[1].strip() if len(lines) > 1 else ""
+    m = re.match(r"^\s*([A-Z]{2,}\s*\d+[A-Za-z]?)\s*(.*)$", first)
+    course = m.group(1).replace(" ", "") if m else first.split()[0]
+    rest = m.group(2) if m else first
+    if "lab" in rest.lower():
+        lm = re.search(r"lab\s*(?:week\s*)?(\d+)", rest, re.I)
+        label = f"Lab {lm.group(1)}" if lm else "Lab Overview"
+    else:
+        wm = re.search(r"week\s*\d+", rest, re.I)
+        label = wm.group(0) if wm else ""
+    return {"course": course, "label": label, "subtitle": subtitle, "first": first}
+
+
+def parse(text: str) -> dict:
+    segs = split_segments(text)
+    meta = parse_title([l.strip() for l in segs[0] if l.strip()])
+    doc: dict = {"meta": meta, "overview": [], "stats": [], "sections": [],
+                 "takeaways": [], "terms": [], "mnemonics": [], "examples": [], "exam": []}
+    pending = None
+    for seg in segs[1:]:
+        nonblank = [l for l in seg if l.strip()]
+        if not nonblank:
+            continue
+        if pending is None and len(nonblank) == 1:
+            k = header_kind(nonblank[0])
+            if k:
+                pending = (k, nonblank[0])
+                continue
+        if pending:
+            k, hdr = pending
+            body = seg
+        else:
+            k, hdr = "section", nonblank[0]
+            body = seg[1:]
+        pending = None
+        if k == "overview":
+            doc["overview"].extend(body)
+        elif k == "stats":
+            doc["stats"].extend(body)
+        elif k == "section":
+            m = re.match(r"^\s*section\s*(\d+)\s*[:.\-]?\s*(.*)$", hdr, re.I)
+            num = int(m.group(1)) if m else len(doc["sections"]) + 1
+            title = (m.group(2) if m else hdr).strip() or hdr.strip()
+            doc["sections"].append({"num": num, "title": title, "body": body})
+        else:
+            doc[k].extend(body)
+    return doc
+
+
+# ---------------------------------------------------------------------------
+# Block rendering
+# ---------------------------------------------------------------------------
+def is_block_start(line: str) -> bool:
+    s = line.strip()
+    if not s:
+        return True
+    if FENCE.match(s) or s.startswith("#") or s.startswith("|"):
+        return True
+    if EMOJI_RE.match(s):
+        return True
+    if re.match(r"^\s*[-*]\s+", line) or re.match(r"^\s*\d+[.)]\s+", line):
+        return True
+    if re.match(r"^\*\*(.+?)\*\*:\s*`[^`]+`\s*$", s):
+        return True
+    return False
+
+
+def render_callout(emoji: str, text: str) -> str:
+    cls, default = CALLOUTS[emoji]
+    m = re.match(r"^\*\*(.+?)\*\*:?\s*(.*)$", text)
+    if m and m.group(2).strip():
+        title, body = m.group(1).strip(), m.group(2).strip()
+    else:
+        title, body = default, text
+    return (f'<div class="callout {cls}"><div class="callout-ico" aria-hidden="true">{emoji}</div>'
+            f'<div class="callout-body"><p class="callout-title">{inline(title)}</p>'
+            f'<div class="callout-text">{inline(body)}</div></div></div>')
+
+
+def render_code(text: str) -> str:
+    return ('<div class="code"><button class="copy" type="button" data-copy>Copy</button>'
+            '<pre><code>' + html.escape(text) + "</code></pre></div>")
+
+
+def render_flow(text: str) -> str:
+    steps: list[str] = []
+    for raw in text.split("\n"):
+        line = raw.strip()
+        if not line:
+            continue
+        line = re.sub(r"\s*←.*$", "", line)
+        line = line.replace("↓", " ").replace("↑", " ").replace("↔", " & ")
+        for part in re.split(r"[→↦]", line):
+            part = part.strip()
+            if part:
+                steps.append(part)
+    out = []
+    for k, st in enumerate(steps, 1):
+        out.append(f'<div class="flow-step"><span class="flow-n">{k:02d}</span><span>{inline(st)}</span></div>')
+        if k < len(steps):
+            out.append('<span class="flow-arrow" aria-hidden="true">→</span>')
+    return '<div class="flow">' + "".join(out) + "</div>"
+
+
+def render_fence(body: list[str]) -> str:
+    text = "\n".join(l.rstrip() for l in body).strip("\n")
+    if text.count("→") + text.count("↓") >= 2:
+        return render_flow(text)
+    return render_code(text)
+
+
+def render_table(rows: list[str]) -> str:
+    parsed = []
+    for r in rows:
+        r = r.strip()
+        if r.startswith("|"):
+            r = r[1:]
+        if r.endswith("|"):
+            r = r[:-1]
+        parsed.append([c.strip() for c in r.split("|")])
+    header = None
+    data = parsed
+    if len(parsed) >= 2 and all(re.fullmatch(r":?-+:?", c) for c in parsed[1]):
+        header = parsed[0]
+        data = parsed[2:]
+    thead = ""
+    if header:
+        thead = "<thead><tr>" + "".join("<th>" + inline(c) + "</th>" for c in header) + "</tr></thead>"
+    tbody = "<tbody>" + "".join(
+        "<tr>" + "".join("<td>" + inline(c) + "</td>" for c in row) + "</tr>" for row in data) + "</tbody>"
+    return '<div class="table-wrap"><table>' + thead + tbody + "</table></div>"
+
+
+def build_list(items: list[tuple[int, str]]) -> str:
+    def build(idx: int, indent: int):
+        parts = []
+        while idx < len(items):
+            ind, content = items[idx]
+            if ind < indent:
+                break
+            if ind > indent:
+                sub, idx = build(idx, ind)
+                parts.append(sub)
+                continue
+            idx += 1
+            sub = ""
+            if idx < len(items) and items[idx][0] > ind:
+                sub, idx = build(idx, items[idx][0])
+            parts.append("<li>" + content + sub + "</li>")
+        return "".join(parts), idx
+
+    body, _ = build(0, items[0][0])
+    return "<ul>" + body + "</ul>"
+
+
+def render_bullets(lines: list[str]) -> str:
+    items = []
+    for raw in lines:
+        m = re.match(r"^(\s*)[-*]\s+(.*)$", raw)
+        indent = len(m.group(1).replace("\t", "  "))
+        items.append((indent, inline(m.group(2))))
+    return build_list(items)
+
+
+def render_numbered(lines: list[str]) -> str:
+    items = [inline(re.match(r"^\s*\d+[.)]\s+(.*)$", l).group(1)) for l in lines]
+    return "<ol>" + "".join("<li>" + t + "</li>" for t in items) + "</ol>"
+
+
+def render_blocks(lines: list[str]) -> str:
+    parts: list[str] = []
+    i, n = 0, len(lines)
+    while i < n:
+        raw = lines[i]
+        s = raw.strip()
+        if not s:
+            i += 1
+            continue
+        if FENCE.match(s):
+            j = i + 1
+            body = []
+            while j < n and not FENCE.match(lines[j].strip()):
+                body.append(lines[j])
+                j += 1
+            j += 1
+            parts.append(render_fence(body))
+            i = j
+            continue
+        m = EMOJI_RE.match(s)
+        if m:
+            buf = [m.group(2)]
+            j = i + 1
+            while j < n and lines[j].strip() and not is_block_start(lines[j]):
+                buf.append(lines[j].strip())
+                j += 1
+            parts.append(render_callout(m.group(1), " ".join(buf)))
+            i = j
+            continue
+        if s.startswith("#"):
+            parts.append('<h3 class="subhead">' + inline(s.lstrip("#").strip()) + "</h3>")
+            i += 1
+            continue
+        if s.startswith("|"):
+            j = i
+            rows = []
+            while j < n and lines[j].strip().startswith("|"):
+                rows.append(lines[j])
+                j += 1
+            parts.append(render_table(rows))
+            i = j
+            continue
+        m = re.match(r"^\*\*(.+?)\*\*:\s*`([^`]+)`\s*$", s)
+        if m:
+            parts.append('<div class="formula"><span class="formula-label">' + html.escape(m.group(1)) +
+                         "</span><code>" + html.escape(m.group(2)) + "</code></div>")
+            i += 1
+            continue
+        if re.match(r"^\s*[-*]\s+", raw):
+            j = i
+            while j < n and re.match(r"^\s*[-*]\s+", lines[j]):
+                j += 1
+            parts.append(render_bullets(lines[i:j]))
+            i = j
+            continue
+        if re.match(r"^\s*\d+[.)]\s+", raw):
+            j = i
+            while j < n and re.match(r"^\s*\d+[.)]\s+", lines[j]):
+                j += 1
+            parts.append(render_numbered(lines[i:j]))
+            i = j
+            continue
+        buf = [s]
+        j = i + 1
+        while j < n and lines[j].strip() and not is_block_start(lines[j]):
+            buf.append(lines[j].strip())
+            j += 1
+        parts.append("<p>" + inline(" ".join(buf)) + "</p>")
+        i = j
+    return "\n".join(parts)
+
+
+# ---------------------------------------------------------------------------
+# Closing sections
+# ---------------------------------------------------------------------------
+def render_takeaways(lines: list[str]) -> str:
+    items = []
+    for raw in lines:
+        m = re.match(r"^\s*\d+[.)]\s*(.*)$", raw)
+        if m and m.group(1).strip():
+            items.append(inline(m.group(1)))
+    body = "".join(f'<li><span class="tk-n">{k}</span><div>{t}</div></li>' for k, t in enumerate(items, 1))
+    return '<ol class="takeaways">' + body + "</ol>"
+
+
+def render_terms(lines: list[str]) -> str:
+    cards = []
+    for raw in lines:
+        s = raw.strip()
+        if ":" not in s:
+            continue
+        name, defn = s.split(":", 1)
+        name = name.strip().strip("*").strip()
+        defn = defn.strip()
+        if not name or not defn:
+            continue
+        blob = (name + " " + defn).lower()
+        cards.append(
+            f'<div class="term" data-term="{html.escape(blob, quote=True)}">'
+            f'<p class="term-name">{inline(name)}</p>'
+            f'<p class="term-def">{inline(defn)}</p></div>')
+    return ('<div class="term-filter"><input type="search" id="termSearch" placeholder="Filter terms…" '
+            'autocomplete="off" aria-label="Filter glossary terms"><span class="term-count" id="termCount"></span></div>'
+            '<div class="terms" id="termsGrid">' + "".join(cards) + "</div>")
+
+
+def render_mnemonics(lines: list[str]) -> str:
+    cards: list[str] = []
+    cur: dict | None = None
+
+    def flush():
+        nonlocal cur
+        if not cur:
+            return
+        bits = ['<div class="mnemonic">', f'<p class="mn-title">{inline(cur["name"])}</p>']
+        if cur["code"]:
+            bits.append(f'<p class="mn-code">{html.escape(cur["code"])}</p>')
+        if cur["phrase"]:
+            bits.append(f'<p class="mn-phrase">{inline(cur["phrase"])}</p>')
+        if cur["note"]:
+            bits.append(f'<p class="mn-note">{inline(cur["note"])}</p>')
+        bits.append("</div>")
+        cards.append("".join(bits))
+        cur = None
+
+    for raw in lines:
+        s = raw.strip()
+        if not s:
+            continue
+        m = re.match(r"^\*\*(.+?)\*\*:\s*(.*)$", s)
+        if m:
+            flush()
+            name, rest = m.group(1).strip(), m.group(2).strip()
+            cm = re.search(r"\*\*(.+?)\*\*", rest)
+            code = cm.group(1) if cm else ""
+            pm = re.search(r"[“\"](.+?)[”\"]", rest)
+            phrase = pm.group(1) if pm else ""
+            note = rest
+            if code:
+                note = note.replace("**" + code + "**", "")
+            if phrase:
+                note = re.sub(r"[“\"].*?[”\"]", "", note)
+            cur = {"name": name, "code": code, "phrase": phrase, "note": note.strip(" —-–:")}
+        elif cur:
+            cur["note"] = (cur["note"] + " " + s).strip()
+    flush()
+    return '<div class="mnemonics">' + "".join(cards) + "</div>"
+
+
+def render_examples(lines: list[str]) -> str:
+    out: list[str] = []
+    i, n = 0, len(lines)
+    while i < n:
+        s = lines[i].strip()
+        if not s:
+            i += 1
+            continue
+        m = re.match(r"^###\s*Example\s*(\d+)\s*[:.\-]?\s*(.*)$", s, re.I)
+        if not m:
+            out.append('<div class="example">' + render_blocks(lines[i:]) + "</div>")
+            break
+        title = m.group(2).strip() or f"Example {m.group(1)}"
+        j = i + 1
+        body = []
+        while j < n and not re.match(r"^\s*###\s*Example", lines[j].strip(), re.I):
+            body.append(lines[j])
+            j += 1
+        out.append('<div class="example"><span class="example-tag">Example ' + m.group(1) + "</span>"
+                   '<h3 class="example-title">' + inline(title) + "</h3>" + render_blocks(body) + "</div>")
+        i = j
+    return "".join(out)
+
+
+def render_exam(lines: list[str]) -> str:
+    qs: list[str] = []
+    ans: list[str] = []
+    for raw in lines:
+        m = re.match(r"^\s*(\d+)[.)]\s*(.*)$", raw)
+        if m:
+            q = m.group(2).strip()
+            am = re.match(r"^(.*?)(?:→\s*Answer:|\*\*Answer:?\*\*|Answer:)\s*(.*)$", q, re.I)
+            if am and am.group(2):
+                qs.append(am.group(1).strip())
+                ans.append(am.group(2).strip())
+            else:
+                qs.append(q)
+                ans.append("")
+            continue
+        am = re.match(r"^(?:\*\*Answer:?\*\*|Answer:)\s*(.*)$", raw.strip(), re.I)
+        if am and ans:
+            ans[-1] = am.group(1).strip()
+    cards = []
+    for k, q in enumerate(qs, 1):
+        a = ans[k - 1] if k - 1 < len(ans) else ""
+        ahtml = ('<div class="quiz-a"><span class="quiz-a-label">Answer</span>' + inline(a) + "</div>"
+                 if a else '<div class="quiz-a muted">Answer not provided — review the section above.</div>')
+        cards.append(
+            f'<article class="quiz" data-q="{k}">'
+            f'<button class="quiz-q" type="button" aria-expanded="false">'
+            f'<span class="quiz-n">{k}</span><span class="quiz-text">{inline(q)}</span>'
+            f'<span class="quiz-chev" aria-hidden="true">▾</span></button>'
+            f'<div class="quiz-body">{ahtml}'
+            f'<label class="mastered"><input type="checkbox" data-mastered="{k}"> Mark as mastered</label>'
+            f"</div></article>")
+    total = len(qs)
+    return (f'<div class="exam-bar"><div class="exam-progress"><span class="exam-count">'
+            f'<strong id="examDone">0</strong> / {total} mastered</span>'
+            f'<span class="exam-track"><span id="examFill"></span></span></div>'
+            f'<div class="exam-actions"><button type="button" class="btn" id="revealAll">Reveal all</button>'
+            f'<button type="button" class="btn" id="hideAll">Hide all</button>'
+            f'<button type="button" class="btn ghost" id="resetExam">Reset</button></div></div>'
+            + "".join(cards))
+
+
+# ---------------------------------------------------------------------------
+# Page assembly
+# ---------------------------------------------------------------------------
+def shorten(text: str, limit: int) -> str:
+    text = " ".join(text.split())
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rsplit(" ", 1)[0].rstrip(".,;: ") + "…"
+
+
+def render_doc(doc: dict, guide_id: str) -> str:
+    meta = doc["meta"]
+    overview_raw = " ".join(l.strip() for l in doc["overview"] if l.strip())
+    overview_plain = overview_raw.replace("**", "")
+
+    # stat pills
+    pills = []
+    for raw in doc["stats"]:
+        s = raw.strip()
+        if not s or "|" not in s:
+            continue
+        label, value = [p.strip() for p in s.split("|", 1)]
+        pills.append(f'<div class="stat"><span class="stat-val">{inline(value)}</span>'
+                     f'<span class="stat-label">{html.escape(label)}</span></div>')
+
+    hero = ['<section class="hero" id="overview">',
+            '<p class="hero-tag">📖 Course notes · ' + html.escape(meta["label"] or meta["course"]) + "</p>",
+            "<h1>" + inline(meta["subtitle"] or meta["course"]) + "</h1>",
+            '<p class="hero-sub">' + html.escape(shorten(overview_plain, 155)) + "</p>",
+            '<div class="hero-overview"><p class="ho-label">Lecture overview</p>'
+            "<p>" + inline(overview_raw) + "</p></div>"]
+    if pills:
+        hero.append('<div class="stats">' + "".join(pills) + "</div>")
+    hero.append("</section>")
+
+    sections_html = []
+    nav = ['<li><a href="#overview" class="toc-link"><span class="toc-n">00</span>Overview</a></li>']
+    n = 0
+
+    def add_section(anchor: str, number: str, title: str, body_html: str):
+        sections_html.append(
+            f'<section class="section" id="{anchor}">'
+            f'<header class="section-head"><span class="section-num">{number}</span>'
+            f'<h2>{inline(title)}</h2></header>'
+            f'<div class="section-body">{body_html}</div></section>')
+        nav.append(f'<li><a href="#{anchor}" class="toc-link"><span class="toc-n">{number}</span>{html.escape(title)}</a></li>')
+
+    for sec in doc["sections"]:
+        n += 1
+        add_section(f"sec-{n}", f"{n:02d}", sec["title"], render_blocks(sec["body"]))
+
+    if doc["takeaways"]:
+        n += 1
+        add_section("key-takeaways", f"{n:02d}", "Key Takeaways", render_takeaways(doc["takeaways"]))
+    if doc["terms"]:
+        n += 1
+        add_section("glossary", f"{n:02d}", "Glossary", render_terms(doc["terms"]))
+    if doc["mnemonics"]:
+        n += 1
+        add_section("mnemonics", f"{n:02d}", "Mnemonics & Quick Recall", render_mnemonics(doc["mnemonics"]))
+    if doc["examples"]:
+        n += 1
+        add_section("worked-examples", f"{n:02d}", "Worked Examples & Scenarios", render_examples(doc["examples"]))
+    if doc["exam"]:
+        n += 1
+        add_section("exam-focus", f"{n:02d}", "Exam Practice", render_exam(doc["exam"]))
+
+    content = "\n".join(hero) + "\n" + "\n".join(sections_html)
+
+    course, label = meta["course"], meta["label"]
+    badge = f"{course} · {label}".strip(" ·")
+    page_title = f"{course} {label} Study Guide – {meta['subtitle']}".strip(" –")
+    header_title = shorten(meta["subtitle"], 70)
+    footer = (f'<strong>{html.escape(course)} study guide</strong> · '
+              f'{html.escape(meta["subtitle"])}')
+
+    return (TEMPLATE
+            .replace("{{TITLE}}", html.escape(page_title))
+            .replace("{{DESC}}", html.escape(shorten(overview_plain, 180), quote=True))
+            .replace("{{BADGE}}", html.escape(badge))
+            .replace("{{HEADTITLE}}", html.escape(header_title))
+            .replace("{{NAV}}", "\n".join(nav))
+            .replace("{{CONTENT}}", content)
+            .replace("{{FOOTER}}", footer)
+            .replace("{{GUIDEID}}", html.escape(guide_id, quote=True)))
+
+
+# ---------------------------------------------------------------------------
+# Embedded design system (template)
+# ---------------------------------------------------------------------------
+TEMPLATE = r"""<!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ELEC3609 Lab 12 Study Guide – A2 Technical Interview · Lab 12</title>
-<meta name="description" content="In Week 12 your group takes part in a technical interview conducted by the tutors, focused on your Assignment 2 (A2) source code, system architecture and development process…">
+<title>{{TITLE}}</title>
+<meta name="description" content="{{DESC}}">
 <meta name="color-scheme" content="light dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -265,7 +855,7 @@ tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface-2) 45%,trans
 <div class="progress" id="progress" aria-hidden="true"></div>
 <header class="topbar">
   <button class="icon-btn menu-btn" id="menuBtn" type="button" aria-label="Open navigation">☰</button>
-  <div class="brand"><span class="brand-badge">ELEC3609 · Lab 12</span><span class="brand-title">A2 Technical Interview · Lab 12</span></div>
+  <div class="brand"><span class="brand-badge">{{BADGE}}</span><span class="brand-title">{{HEADTITLE}}</span></div>
   <div class="topbar-actions">
     <div class="search">
       <input id="searchInput" type="search" placeholder="Search this guide…" autocomplete="off" aria-label="Search this guide">
@@ -279,63 +869,19 @@ tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface-2) 45%,trans
   <aside class="sidebar" id="sidebar" aria-label="Table of contents">
     <p class="toc-title">Contents</p>
     <ul class="toc">
-<li><a href="#overview" class="toc-link"><span class="toc-n">00</span>Overview</a></li>
-<li><a href="#sec-1" class="toc-link"><span class="toc-n">01</span>A2 Technical Interview Overview</a></li>
-<li><a href="#sec-2" class="toc-link"><span class="toc-n">02</span>What Tutors Will Ask About</a></li>
-<li><a href="#sec-3" class="toc-link"><span class="toc-n">03</span>Interview Order and Timing</a></li>
-<li><a href="#sec-4" class="toc-link"><span class="toc-n">04</span>What to Have Ready</a></li>
-<li><a href="#sec-5" class="toc-link"><span class="toc-n">05</span>Conduct During the Interview</a></li>
-<li><a href="#sec-6" class="toc-link"><span class="toc-n">06</span>How It Counts and How to Prepare</a></li>
-<li><a href="#key-takeaways" class="toc-link"><span class="toc-n">07</span>Key Takeaways</a></li>
-<li><a href="#glossary" class="toc-link"><span class="toc-n">08</span>Glossary</a></li>
-<li><a href="#mnemonics" class="toc-link"><span class="toc-n">09</span>Mnemonics &amp; Quick Recall</a></li>
-<li><a href="#worked-examples" class="toc-link"><span class="toc-n">10</span>Worked Examples &amp; Scenarios</a></li>
-<li><a href="#exam-focus" class="toc-link"><span class="toc-n">11</span>Exam Practice</a></li>
+{{NAV}}
     </ul>
   </aside>
   <div class="scrim" id="scrim"></div>
   <main class="content" id="content">
-<section class="hero" id="overview">
-<p class="hero-tag">📖 Course notes · Lab 12</p>
-<h1>A2 Technical Interview · Lab 12</h1>
-<p class="hero-sub">In Week 12 your group takes part in a technical interview conducted by the tutors, focused on your Assignment 2 (A2) source code, system architecture and…</p>
-<div class="hero-overview"><p class="ho-label">Lecture overview</p><p>In Week 12 your group takes part in a <strong>technical interview</strong> conducted by the tutors, focused on your <strong>Assignment 2 (A2)</strong> source code, system architecture and development process. This is an assessment, not a presentation to the class: tutors visit your table and ask questions individually. The interview contributes to your final project mark and is designed to test your <strong>technical understanding and individual contributions</strong>.</p></div>
-<div class="stats"><div class="stat"><span class="stat-val">Week 12 — A2 Technical Interview</span><span class="stat-label">Lab</span></div><div class="stat"><span class="stat-val">Tutor-led group interview at your table</span><span class="stat-label">Format</span></div><div class="stat"><span class="stat-val">10 minutes per group</span><span class="stat-label">Duration</span></div><div class="stat"><span class="stat-val">~5 min architecture · ~5 min Q&amp;A</span><span class="stat-label">Structure</span></div><div class="stat"><span class="stat-val">Ascending group number</span><span class="stat-label">Order</span></div><div class="stat"><span class="stat-val">Week 11 source code and report</span><span class="stat-label">Materials</span></div></div>
-</section>
-<section class="section" id="sec-1"><header class="section-head"><span class="section-num">01</span><h2>A2 Technical Interview Overview</h2></header><div class="section-body"><p>Each group will participate in a technical interview conducted by the tutors, focusing on your A2 <strong>source code, system architecture and development process</strong>.</p>
-<p>This lab session is a <strong>technical interview</strong> to assess your understanding of your implementation (Assignment 2). Tutors will visit each group and ask questions.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">The interview checks whether you genuinely understand what you built. It rewards teams who can explain and justify their own code, not just teams whose code happens to run.</div></div></div>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Background:</p><div class="callout-text">You should use the materials you submitted in <strong>Week 11</strong> — your source code and report — as the basis for the discussion.</div></div></div></div></section>
-<section class="section" id="sec-2"><header class="section-head"><span class="section-num">02</span><h2>What Tutors Will Ask About</h2></header><div class="section-body"><p>Tutors will ask questions about:</p>
-<ul><li>Your <strong>project architecture</strong> and design choices.</li><li><strong>Code structure</strong> and key implementation decisions.</li><li>The content in your submitted <strong>assignment report</strong>.</li><li>Any <strong>technical challenges or trade-offs</strong> encountered.</li></ul>
-<p>You should be prepared to <strong>explain, justify and walk through</strong> parts of your system using your submitted materials from Week 11 (source code and report).</p>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Four question areas — <strong>A-C-R-T</strong> — "Architecture, Code structure, Report, Trade-offs."</div></div></div>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Memorising a script about the project in general, then being unable to answer a question about a specific file or design decision. Prepare to go deep on your own code.</div></div></div></div></section>
-<section class="section" id="sec-3"><header class="section-head"><span class="section-num">03</span><h2>Interview Order and Timing</h2></header><div class="section-body"><ul><li>Groups will be interviewed in <strong>ascending group number order</strong> (for example Group 1 → Group 2 → Group 3…).</li><li>Each group is allocated <strong>10 minutes total</strong> for the interview.</li><li>You are expected to spend roughly:<li><strong>~5 minutes</strong> introducing your architecture and key implementation points.</li><li><strong>~5 minutes</strong> responding to questions tailored to your project.</li></li></ul>
-<div class="callout info"><div class="callout-ico" aria-hidden="true">ℹ️</div><div class="callout-body"><p class="callout-title">Info:</p><div class="callout-text">If your group needs to be interviewed earlier because of urgent circumstances, please notify the tutors <strong>before the lab begins</strong>.</div></div></div>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Ten minutes = <strong>5 + 5</strong> — half presenting your architecture, half answering questions.</div></div></div></div></section>
-<section class="section" id="sec-4"><header class="section-head"><span class="section-num">04</span><h2>What to Have Ready</h2></header><div class="section-body"><p>Ensure your group has:</p>
-<ul><li>A <strong>running version of your project</strong> (local only).</li><li>Your <strong>assignment report</strong> and <strong>source code</strong> ready to access.</li></ul>
-<p>All group members must attend, and everyone should be ready to answer.</p>
-<div class="callout why"><div class="callout-ico" aria-hidden="true">💡</div><div class="callout-body"><p class="callout-title">Why It Matters:</p><div class="callout-text">The project is expected to run <strong>locally only</strong> — you do not need a live deployment for the A2 interview. What matters is that the app runs, the key features are accessible, and you can navigate your own codebase quickly.</div></div></div></div></section>
-<section class="section" id="sec-5"><header class="section-head"><span class="section-num">05</span><h2>Conduct During the Interview</h2></header><div class="section-body"><ul><li>Groups will <strong>not present to the whole lab</strong>. Tutors will visit your table and conduct the interview <strong>individually</strong>.</li><li>Keep the required materials — running project, report and source code — open and ready.</li><li>Be <strong>respectful and quiet</strong> while other groups are being interviewed.</li><li><strong>All group members must attend</strong>, and everyone should be ready to answer.</li></ul>
-<div class="callout warn"><div class="callout-ico" aria-hidden="true">⚠️</div><div class="callout-body"><p class="callout-title">Common Trap:</p><div class="callout-text">Letting one member answer everything. The interview focuses on individual contributions, so each member should be able to speak to their part.</div></div></div></div></section>
-<section class="section" id="sec-6"><header class="section-head"><span class="section-num">06</span><h2>How It Counts and How to Prepare</h2></header><div class="section-body"><p>This interview <strong>contributes to your final project mark</strong> and focuses on your <strong>technical understanding and individual contributions</strong>.</p>
-<p>To prepare:</p>
-<ul><li><strong>Practice explaining</strong> your system architecture and logic.</li><li>Ensure your app <strong>runs correctly</strong> and key features are accessible.</li><li><strong>Use your report and submitted codebase</strong> to support your answers.</li></ul>
-<div class="callout memory"><div class="callout-ico" aria-hidden="true">🧠</div><div class="callout-body"><p class="callout-title">Memory Hook:</p><div class="callout-text">Preparation is <strong>P-R-U</strong> — "Practice explaining, Run the app, Use your report and code."</div></div></div></div></section>
-<section class="section" id="key-takeaways"><header class="section-head"><span class="section-num">07</span><h2>Key Takeaways</h2></header><div class="section-body"><ol class="takeaways"><li><span class="tk-n">1</span><div><strong>Week 12 is an assessed technical interview</strong>, not a lab and not a class presentation.</div></li><li><span class="tk-n">2</span><div><strong>The subject is A2</strong> — your source code, system architecture and development process.</div></li><li><span class="tk-n">3</span><div><strong>Four question areas</strong> — project architecture and design choices, code structure and implementation decisions, the assignment report, and challenges/trade-offs.</div></li><li><span class="tk-n">4</span><div><strong>Be ready to explain, justify and walk through</strong> parts of your system.</div></li><li><span class="tk-n">5</span><div><strong>Use Week 11 materials</strong> — your submitted source code and report.</div></li><li><span class="tk-n">6</span><div><strong>Interview order is ascending group number</strong> (Group 1, 2, 3…).</div></li><li><span class="tk-n">7</span><div><strong>Ten minutes per group</strong>, split into roughly five minutes of architecture introduction and five minutes of tailored questions.</div></li><li><span class="tk-n">8</span><div><strong>Notify tutors before the lab</strong> if you urgently need an earlier slot.</div></li><li><span class="tk-n">9</span><div><strong>Have a running local copy of the project</strong>, plus your report and source code, ready to access.</div></li><li><span class="tk-n">10</span><div><strong>Tutors visit your table individually</strong> — groups do not present to the whole lab.</div></li><li><span class="tk-n">11</span><div><strong>All members must attend and be ready to answer</strong>, because the interview assesses individual contributions.</div></li><li><span class="tk-n">12</span><div><strong>The interview contributes to your final project mark</strong>, so practise explaining your architecture and keep the app runnable.</div></li></ol></div></section>
-<section class="section" id="glossary"><header class="section-head"><span class="section-num">08</span><h2>Glossary</h2></header><div class="section-body"><div class="term-filter"><input type="search" id="termSearch" placeholder="Filter terms…" autocomplete="off" aria-label="Filter glossary terms"><span class="term-count" id="termCount"></span></div><div class="terms" id="termsGrid"><div class="term" data-term="technical interview a tutor-led, question-and-answer assessment of your understanding of the project."><p class="term-name">Technical interview</p><p class="term-def">A tutor-led, question-and-answer assessment of your understanding of the project.</p></div><div class="term" data-term="a2 assignment 2 — the implementation being assessed in this interview."><p class="term-name">A2</p><p class="term-def">Assignment 2 — the implementation being assessed in this interview.</p></div><div class="term" data-term="project architecture the high-level structure of your system and how its parts fit together."><p class="term-name">Project architecture</p><p class="term-def">The high-level structure of your system and how its parts fit together.</p></div><div class="term" data-term="design choices the decisions made about how the system is built and why."><p class="term-name">Design choices</p><p class="term-def">The decisions made about how the system is built and why.</p></div><div class="term" data-term="code structure how the codebase is organised (apps, modules, files, classes, functions)."><p class="term-name">Code structure</p><p class="term-def">How the codebase is organised (apps, modules, files, classes, functions).</p></div><div class="term" data-term="implementation decisions specific technical choices made while building features."><p class="term-name">Implementation decisions</p><p class="term-def">Specific technical choices made while building features.</p></div><div class="term" data-term="assignment report the written a2 document describing the project."><p class="term-name">Assignment report</p><p class="term-def">The written A2 document describing the project.</p></div><div class="term" data-term="technical challenge a difficulty encountered during development."><p class="term-name">Technical challenge</p><p class="term-def">A difficulty encountered during development.</p></div><div class="term" data-term="trade-off a decision that gains one benefit at the cost of another; you should be able to justify these."><p class="term-name">Trade-off</p><p class="term-def">A decision that gains one benefit at the cost of another; you should be able to justify these.</p></div><div class="term" data-term="source code the project codebase used to support your answers."><p class="term-name">Source code</p><p class="term-def">The project codebase used to support your answers.</p></div><div class="term" data-term="ascending group number order interview order from the lowest group number upward."><p class="term-name">Ascending group number order</p><p class="term-def">Interview order from the lowest group number upward.</p></div><div class="term" data-term="running version (local only) a working copy of the project on your own machine; no live deployment is required for a2."><p class="term-name">Running version (local only)</p><p class="term-def">A working copy of the project on your own machine; no live deployment is required for A2.</p></div><div class="term" data-term="individual contributions the work each group member personally did; the interview focuses on this."><p class="term-name">Individual contributions</p><p class="term-def">The work each group member personally did; the interview focuses on this.</p></div><div class="term" data-term="tutors the teaching staff who conduct the interviews and award marks."><p class="term-name">Tutors</p><p class="term-def">The teaching staff who conduct the interviews and award marks.</p></div><div class="term" data-term="final project mark the overall project grade that this interview contributes to."><p class="term-name">Final project mark</p><p class="term-def">The overall project grade that this interview contributes to.</p></div></div></div></section>
-<section class="section" id="mnemonics"><header class="section-head"><span class="section-num">09</span><h2>Mnemonics &amp; Quick Recall</h2></header><div class="section-body"><div class="mnemonics"><div class="mnemonic"><p class="mn-title">Question Areas</p><p class="mn-code">A-C-R-T</p><p class="mn-phrase">Architecture, Code structure, Report, Trade-offs.</p></div><div class="mnemonic"><p class="mn-title">Time Split</p><p class="mn-code">5 + 5</p><p class="mn-note">five minutes introducing architecture, five minutes answering questions.</p></div><div class="mnemonic"><p class="mn-title">Preparation</p><p class="mn-code">P-R-U</p><p class="mn-phrase">Practice explaining, Run the app, Use your report and code.</p></div><div class="mnemonic"><p class="mn-title">Interview Order</p><p class="mn-code">1-2-3</p><p class="mn-note">ascending group number order.</p></div><div class="mnemonic"><p class="mn-title">Materials</p><p class="mn-code">R-C</p><p class="mn-phrase">Report and Code (from Week 11).</p></div></div></div></section>
-<section class="section" id="worked-examples"><header class="section-head"><span class="section-num">10</span><h2>Worked Examples &amp; Scenarios</h2></header><div class="section-body"><div class="example"><span class="example-tag">Example 1</span><h3 class="example-title">Planning the ten minutes</h3><p>A group decides in advance that the first five minutes will cover the system architecture: the Django project layout, the main apps, how data flows from the API to the database, and the headline features. The remaining five minutes are reserved for tutor questions. They rehearse the architecture talk twice so it fits the time without rushing.</p></div><div class="example"><span class="example-tag">Example 2</span><h3 class="example-title">Explaining an architecture decision</h3><p>A tutor asks why the team split the project into separate Django apps. A good answer explains the decision and its consequence: each app groups related models, views and serializers, which keeps the codebase organised and makes ownership across team members clearer. The answer references the actual project structure rather than a generic textbook definition.</p></div><div class="example"><span class="example-tag">Example 3</span><h3 class="example-title">Answering a trade-off question</h3><p>A tutor asks why the team used one approach rather than another. A strong answer names the trade-off honestly — for example, choosing a simpler option that was faster to build and easier for the team to maintain, while acknowledging what it gives up — instead of claiming there were no downsides.</p></div><div class="example"><span class="example-tag">Example 4</span><h3 class="example-title">Why the project is "local only"</h3><p>A student worries that A2 requires a live public URL. It does not. The Week 12 requirement is a <strong>running version of your project (local only)</strong>. The student instead makes sure the app starts cleanly on their laptop, the key features work, and the report and source code are open in separate windows ready to reference.</p></div></div></section>
-<section class="section" id="exam-focus"><header class="section-head"><span class="section-num">11</span><h2>Exam Practice</h2></header><div class="section-body"><div class="exam-bar"><div class="exam-progress"><span class="exam-count"><strong id="examDone">0</strong> / 11 mastered</span><span class="exam-track"><span id="examFill"></span></span></div><div class="exam-actions"><button type="button" class="btn" id="revealAll">Reveal all</button><button type="button" class="btn" id="hideAll">Hide all</button><button type="button" class="btn ghost" id="resetExam">Reset</button></div></div><article class="quiz" data-q="1"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">1</span><span class="quiz-text">What kind of session is Week 12?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>An assessed technical interview conducted by the tutors for Assignment 2.</div><label class="mastered"><input type="checkbox" data-mastered="1"> Mark as mastered</label></div></article><article class="quiz" data-q="2"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">2</span><span class="quiz-text">What is the interview focused on?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Your A2 source code, system architecture and development process.</div><label class="mastered"><input type="checkbox" data-mastered="2"> Mark as mastered</label></div></article><article class="quiz" data-q="3"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">3</span><span class="quiz-text">List the four areas tutors will ask about.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Project architecture and design choices; code structure and key implementation decisions; the content of the submitted assignment report; and technical challenges or trade-offs encountered.</div><label class="mastered"><input type="checkbox" data-mastered="3"> Mark as mastered</label></div></article><article class="quiz" data-q="4"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">4</span><span class="quiz-text">What materials should you use to support your answers?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Your submitted Week 11 materials — the source code and the assignment report.</div><label class="mastered"><input type="checkbox" data-mastered="4"> Mark as mastered</label></div></article><article class="quiz" data-q="5"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">5</span><span class="quiz-text">In what order are groups interviewed, and how long does each group get?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Ascending group number order; 10 minutes total per group.</div><label class="mastered"><input type="checkbox" data-mastered="5"> Mark as mastered</label></div></article><article class="quiz" data-q="6"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">6</span><span class="quiz-text">How should the 10 minutes be allocated?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>About five minutes introducing architecture and key implementation points, and about five minutes answering project-specific questions.</div><label class="mastered"><input type="checkbox" data-mastered="6"> Mark as mastered</label></div></article><article class="quiz" data-q="7"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">7</span><span class="quiz-text">What should your group have ready on the day?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>A running version of the project (local only) plus the assignment report and source code, all easy to access; all members present.</div><label class="mastered"><input type="checkbox" data-mastered="7"> Mark as mastered</label></div></article><article class="quiz" data-q="8"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">8</span><span class="quiz-text">Do groups present to the whole lab?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>No — tutors visit each table and conduct the interview individually.</div><label class="mastered"><input type="checkbox" data-mastered="8"> Mark as mastered</label></div></article><article class="quiz" data-q="9"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">9</span><span class="quiz-text">How do you request an earlier interview slot?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Notify the tutors before the lab begins.</div><label class="mastered"><input type="checkbox" data-mastered="9"> Mark as mastered</label></div></article><article class="quiz" data-q="10"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">10</span><span class="quiz-text">What does the interview contribute to, and what does it assess?</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>It contributes to your final project mark and focuses on your technical understanding and individual contributions.</div><label class="mastered"><input type="checkbox" data-mastered="10"> Mark as mastered</label></div></article><article class="quiz" data-q="11"><button class="quiz-q" type="button" aria-expanded="false"><span class="quiz-n">11</span><span class="quiz-text">Give three ways to prepare.</span><span class="quiz-chev" aria-hidden="true">▾</span></button><div class="quiz-body"><div class="quiz-a"><span class="quiz-a-label">Answer</span>Practise explaining your system architecture and logic; ensure the app runs correctly and key features are accessible; use your report and submitted codebase to support your answers.</div><label class="mastered"><input type="checkbox" data-mastered="11"> Mark as mastered</label></div></article></div></section>
-    <footer class="foot"><strong>ELEC3609 study guide</strong> · A2 Technical Interview · Lab 12 · Built for self-paced revision.</footer>
+{{CONTENT}}
+    <footer class="foot">{{FOOTER}} · Built for self-paced revision.</footer>
   </main>
 </div>
 <button class="totop" id="toTop" type="button" aria-label="Back to top">↑</button>
 <script>
 (function(){
-  var GUIDE_ID = "elec3609-lab-week12-study-guide";
+  var GUIDE_ID = "{{GUIDEID}}";
   var root = document.documentElement;
   /* theme */
   var stored = null;
@@ -505,3 +1051,32 @@ tbody tr:nth-child(even){background:color-mix(in srgb,var(--surface-2) 45%,trans
 </script>
 </body>
 </html>
+"""
+
+
+def guide_id_for(path: Path) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", path.stem.lower()).strip("-")
+
+
+def main(argv: list[str] | None = None) -> int:
+    argv = argv if argv is not None else sys.argv[1:]
+    if not argv:
+        print(__doc__)
+        return 1
+    root = Path(argv[0])
+    skip = {"ELEC3609_week2_study_guide.txt"}  # legacy session-less reference source
+    count = 0
+    for src in sorted(root.rglob("*_study_guide.txt")):
+        if src.name in skip:
+            continue
+        out = src.with_suffix(".html")
+        doc = parse(src.read_text(encoding="utf-8"))
+        out.write_text(render_doc(doc, guide_id_for(src)), encoding="utf-8")
+        count += 1
+        print(f"wrote {out} ({out.stat().st_size} bytes)")
+    print(f"generated {count} guides")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
