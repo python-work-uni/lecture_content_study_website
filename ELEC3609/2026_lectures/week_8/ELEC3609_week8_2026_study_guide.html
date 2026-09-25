@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="ELEC3609 Week 8 study guide — Linux users and capabilities, SSH, AWS (EC2, EBS, RDS, Route 53), ports and firewalls, security groups, load balancing, nginx and databases, explained for first-time readers and active recall.">
+<title>ELEC3609 Week 8 — Production Infrastructure: Linux, Networking and the Cloud</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     ENGG2112 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+
+  /* ---------- Code blocks (added for ELEC3609) ---------- */
+  .code-block{position:relative;margin:1.2rem 0;}
+  .code-block pre{margin:0;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.1rem;overflow:auto;}
+  .code-block code{font-family:var(--font-mono);font-size:.84rem;line-height:1.62;background:none;padding:0;border-radius:0;color:var(--ink);white-space:pre;}
+  .code-copy{position:absolute;top:.55rem;right:.55rem;font-family:var(--font-body);font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.25rem .55rem;cursor:pointer;transition:.16s var(--ease);}
+  .code-copy:hover{color:var(--primary-deep);border-color:var(--line-strong);}
+  .code-copy.done{color:var(--primary-deep);border-color:var(--primary);}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
+<header class="topbar">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">ELEC3609</span>
+    <span class="brand-week">Week 8</span>
+  </a>
+  <div class="topbar-tools">
+    <div class="search">
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
+    </div>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Table of contents">
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+
+  <main class="content" id="content">
+<section class="hero" id="top">
+  <span class="hero-eyebrow">ELEC3609 · Week 8 · Production Infrastructure: Linux, Networking &amp; the Cloud</span>
+  <h1 class="hero-title">Production Infrastructure: Linux, Networking and the Cloud</h1>
+  <p class="hero-sub">What it takes to move a project from your laptop to a real server. We cover the Linux foundations you need on the command line (users, capabilities, SSH), the AWS building blocks for hosting (EC2, EBS, RDS, Route 53, VPC), how ports and firewalls control traffic, and the server applications — nginx, a WSGI/ASGI interface and a database — that make up a production deployment.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> Production is about <em>running your app where the internet can reach it, safely</em>. Keep four questions in mind: <strong>who</strong> can log in (Linux users, SSH keys), <strong>where</strong> it runs (EC2, EBS, RDS, VPC), <strong>what</strong> may connect (ports, firewalls, security groups), and <strong>how</strong> requests reach the app (nginx → WSGI/ASGI → Django → database). The whole week is those four layers stacked up.</div>
+  <div class="hero-meta"><span class="meta-chip">~22 min read</span><span class="meta-chip">14 teaching sections</span><span class="meta-chip">14 practice questions</span><span class="meta-chip">29 key terms</span></div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list">
+      <li>Explain why Linux dominates web servers and describe its user model.</li>
+      <li>Explain Linux capabilities and how they apply least privilege.</li>
+      <li>Describe SSH, its server and client, and password vs key authentication.</li>
+      <li>Explain SSH host keys, client keys, known_hosts and authorized_keys.</li>
+      <li>Describe ssh-agent and the risk of agent forwarding.</li>
+      <li>Match AWS services (EC2, EBS, RDS, Route 53, VPC, ECS/EKS) to their jobs.</li>
+      <li>Explain TCP ports, the OSI layers involved, and what a firewall does.</li>
+      <li>Configure the principle of least exposure with AWS security groups.</li>
+      <li>Explain load balancing and Elastic IPs.</li>
+      <li>Describe the production stack: nginx as reverse proxy, WSGI vs ASGI, and an RDBMS.</li>
+      <li>Explain why data must be separated from application code.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="guide-section" id="linux-recap" data-title="Linux: The Dominant Server Platform">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Linux: The Dominant Server Platform</h2>
+  </div>
+  <p class="section-kicker">Linux is an open-source Unix-like OS whose kernel runs the overwhelming majority of the world's web servers.</p>
+<p><strong>Linux</strong> is an open-source UNIX-like operating system, whose defining feature is the <strong>Linux kernel</strong>. It was released in <strong>1991 by Linus Torvalds</strong>.</p>
+<p>A <strong>Linux distribution</strong> defines a collection of software that comes prepackaged as a complete operating system. For example:</p>
+<ul>
+  <li><strong>Package managers</strong> — <code>apt-get</code> or <code>pacman</code>.</li>
+  <li><strong>Window managers</strong> — <code>GNOME</code> or <code>i3</code>.</li>
+  <li>Text editors.</li>
+</ul>
+<p>Linux has become the most widely installed general-purpose OS due to the proliferation of Android. It is also the <strong>most dominant OS for web servers (&gt;90%)</strong>.</p>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> When you deploy to the cloud, you are almost certainly deploying onto Linux. The rest of this section is the minimum command-line and privilege knowledge you need to operate that server safely.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> a "distribution" is not just a kernel. Name three kinds of software a distro bundles around the kernel.</div></div>
+</section>
+
+<section class="guide-section" id="linux-users" data-title="Linux Users and Privilege">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Linux Users and Privilege</h2>
+  </div>
+  <p class="section-kicker">Every program runs as some user, and the privileges of that user bound what a compromise can do.</p>
+<p>The <strong>root</strong> user (aka the <strong>superuser</strong>) is the most privileged user on a Linux system. While root can do anything on the system, other users can have a wide variety of privileges.</p>
+<p><strong>Programs execute as a particular user.</strong> If a program requires special privileges, it may need to execute as root.</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>ps aux</code></pre></div>
+<p>The command <code>ps aux</code> lists all processes running on the system and the user they are running as.</p>
+<h3 class="sub-title">Program-specific Linux users</h3>
+<p>Usually a program does <em>not</em> need root, and so will (or at least should) run as a different user. If such a program is compromised, it can only perform malicious actions that its running user could perform.</p>
+<div class="table-wrap"><table><thead><tr><th>Program</th><th>Runs as</th></tr></thead><tbody>
+  <tr><td>Web servers (including <code>nginx</code>)</td><td><code>www-data</code></td></tr>
+  <tr><td>MySQL (including <code>mysqld</code>)</td><td><code>mysql</code></td></tr>
+  <tr><td>Programs needing almost no privileges</td><td><code>nobody</code></td></tr>
+</tbody></table></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Run each service as its own low-privilege user. Then the blast radius of a bug is capped at that user's permissions — never at root's.</div></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> "It works when I run it as root" is not a solution. A service that <em>needs</em> root to start is a service that, when hacked, hands over the whole machine.</div></div>
+</section>
+
+<section class="guide-section" id="capabilities" data-title="Linux Capabilities">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Capabilities: Fine-Grained Privilege</h2>
+  </div>
+  <p class="section-kicker">Capabilities break root's all-or-nothing power into small units, so a process gets only the privileges it truly needs.</p>
+<h3 class="sub-title">Traditional root vs capabilities</h3>
+<div class="compare"><div class="compare-col a"><h3>Classic UNIX/Linux model</h3><ul><li><code>root</code> (UID 0) has <strong>all</strong> privileges.</li><li>If a process is compromised while running as root, the attacker gains <strong>full control</strong> of the system.</li></ul></div><div class="compare-col b"><h3>Capabilities</h3><ul><li>Split root privileges into smaller, <strong>fine-grained units</strong>.</li><li>Examples: <code>CAP_NET_BIND_SERVICE</code>, <code>CAP_SYS_ADMIN</code>, <code>CAP_DAC_OVERRIDE</code>.</li><li>Each process can be assigned only the subset it really needs.</li></ul></div></div>
+<h3 class="sub-title">Why it improves security</h3>
+<ul>
+  <li><strong>Least privilege</strong> — grant the minimum.</li>
+  <li><strong>Damage containment</strong> — a compromise is capped at the granted capability.</li>
+  <li><strong>Reduced attack surface</strong> — the process cannot perform unrelated privileged operations.</li>
+</ul>
+<h3 class="sub-title">Worked example: running nginx</h3>
+<ul>
+  <li>Traditionally: nginx needed <strong>root just to bind port 80</strong>.</li>
+  <li>With capabilities: run it as an unprivileged user but grant only <code>CAP_NET_BIND_SERVICE</code>.</li>
+  <li>If nginx is then hacked, the attacker <em>cannot</em>: create raw sockets (<code>CAP_NET_RAW</code>), mount filesystems (<code>CAP_SYS_ADMIN</code>), or change ownership of files (<code>CAP_CHOWN</code>).</li>
+</ul>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Binding to a privileged port is the <em>only</em> reason nginx needs elevated power. Capabilities let you grant exactly that one thing instead of everything.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> why is "run nginx as root" a bigger risk than "run nginx as www-data with CAP_NET_BIND_SERVICE"?</div></div>
+</section>
+
+<section class="guide-section" id="ssh-basics" data-title="Secure Shell (SSH)">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Secure Shell (SSH)</h2>
+  </div>
+  <p class="section-kicker">SSH is the secure replacement for Telnet, letting you reach a remote machine's shell — and it is an essential tool for anyone running Linux servers.</p>
+<p><strong>Secure Shell (SSH)</strong> is a secure replacement for the old Telnet protocol. SSH enables a user to access the shell or terminal on a remote machine, and is an essential tool for any web master, since Linux is the dominant server platform on the internet.</p>
+<h3 class="sub-title">The SSH server</h3>
+<p>The most common SSH server software is <strong>OpenSSH</strong>, which originates from the OpenBSD project. An SSH server:</p>
+<ul>
+  <li><strong>Listens for incoming connections on TCP port 22.</strong></li>
+  <li>Authenticates connecting users using <strong>passwords</strong> or <strong>public/private keys</strong>.</li>
+</ul>
+<h3 class="sub-title">The SSH client</h3>
+<p>OpenSSH also provides an SSH client, the client-side software that connects to the SSH server. There are many alternative clients depending on the platform; on macOS, Linux and Windows you can use <code>ssh</code> via OpenSSH.</p>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Port <strong>22</strong> is SSH. Remember it the same way you remember HTTP is 80 and HTTPS is 443.</div></div>
+</section>
+
+<section class="guide-section" id="ssh-keys" data-title="SSH Keys and Public-Key Authentication">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">SSH Keys and Public-Key Authentication</h2>
+  </div>
+  <p class="section-kicker">SSH provides both authentication and encryption, and it uses two different key pairs — one for the server, one for the user.</p>
+<p>SSH provides <strong>authentication</strong> and <strong>encryption</strong>. The obvious way to log in is using the remote user's password — but <strong>this is bad</strong>. Instead, we want to use <strong>SSH keys</strong>.</p>
+<h3 class="sub-title">The two sets of keys</h3>
+<div class="compare"><div class="compare-col a"><h3>Server host key</h3><ul><li>The SSH server has a long-term public/private <strong>host key pair</strong>.</li><li>The host key is used to <strong>authenticate the server to the client</strong>.</li><li>During connection setup, SSH performs a key-exchange to derive shared symmetric session keys.</li><li>The server proves possession of its private host key by <strong>signing data</strong> associated with the key exchange.</li><li>The private host key is <strong>never sent</strong> to the client.</li></ul></div><div class="compare-col b"><h3>Client / user key</h3><ul><li>Each user may have a public/private key pair for authentication.</li><li>The <strong>public key is stored on the server</strong>.</li><li>The client proves possession of the corresponding private key <strong>without sending it</strong> to the server.</li></ul></div></div>
+<h3 class="sub-title">Public-key authentication and digital signatures</h3>
+<p>A public/private key pair authenticates by proving possession of the private key without revealing it:</p>
+<ul>
+  <li><strong>Private key</strong> — kept secret; used to <strong>create a digital signature</strong>.</li>
+  <li><strong>Public key</strong> — can be shared; used to <strong>verify the signature</strong>.</li>
+</ul>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> SSH session <em>encryption</em> keys are established separately through the SSH key-exchange protocol. Do not conflate authentication keys with session keys.</div></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> The private key never travels over the network. The client <em>proves</em> it holds the private key (by signing); it never sends it.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> two key pairs are involved in a key-based SSH login. What does each one authenticate?</div></div>
+</section>
+
+<section class="guide-section" id="ssh-server-keys-and-agent" data-title="Server Keys, authorized_keys and ssh-agent">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Server Keys, authorized_keys and ssh-agent</h2>
+  </div>
+  <p class="section-kicker">known_hosts protects you from impostor servers, authorized_keys decides who may log in, and ssh-agent saves you retyping a passphrase.</p>
+<h3 class="sub-title">SSH server keys and known_hosts</h3>
+<p>The server typically stores its key pairs as:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>/etc/ssh/ssh_host_*_key
+/etc/ssh/ssh_host_*_key.pub</code></pre></div>
+<p>When first connecting to an unknown server, you get a warning. By accepting it, a new entry is added to your <code>~/.ssh/known_hosts</code> file. By keeping track of known SSH server public keys, SSH clients can minimise the potential for a <strong>MITM attack</strong>.</p>
+<h3 class="sub-title">SSH client keys and authorized_keys</h3>
+<p>To authenticate a user on the SSH server, a client proves ownership of a private key corresponding to an authorised public key. For example, to connect as user <code>myuser</code>, the server has a file in that user's home directory:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>/home/myuser/.ssh/authorized_keys</code></pre></div>
+<p>This file contains the public keys of anyone authorised to connect as this user. The SSH server checks that any connecting client possesses the private key corresponding to a public key in that file; if so, the connection is authorised.</p>
+<h3 class="sub-title">ssh-agent and agent forwarding</h3>
+<p><code>ssh-agent</code> is a useful program for storing the <strong>unencrypted SSH private key in memory</strong>. SSH typically reads private keys from <code>~/.ssh/id_rsa</code>, which is encrypted, so every run of SSH needs the passphrase. To make things easier, the unencrypted key can be stored in memory by attaching it to a running process — that process is <code>ssh-agent</code>.</p>
+<p>With the <code>ForwardAgent</code> option, we can allow remote SSH clients to access our local <code>ssh-agent</code> process — and therefore our unencrypted private key.</p>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Agent forwarding extends trust to the remote host. If that host is compromised, so is your agent — and thus your key. Forward only to hosts you trust.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> known_hosts and authorized_keys both contain public keys, but they protect opposite directions. Which protects whom?</div></div>
+</section>
+
+<section class="guide-section" id="aws-overview" data-title="Amazon Web Services: The Cloud Toolkit">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Amazon Web Services: The Cloud Toolkit</h2>
+  </div>
+  <p class="section-kicker">AWS lets you rent the infrastructure instead of buying hardware, and it supplies a whole toolkit of services around the servers.</p>
+<p><strong>Amazon Web Services (AWS)</strong> is an extremely popular cloud hosting provider. Using AWS:</p>
+<ul>
+  <li>Removes the need to set up dedicated hardware to host a website.</li>
+  <li>Often takes care of software installation and configuration.</li>
+  <li>Provides a wide range of services that can assist in creating website infrastructure.</li>
+</ul>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The cloud turns capital expense (buying servers) into operating expense (renting capacity), and lets you scale up or down in minutes instead of weeks.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> you need a server, a hard drive for the database, a managed database and a domain name. Which AWS services come to mind?</div></div>
+</section>
+
+<section class="guide-section" id="ec2-ebs-rds-route53" data-title="EC2, EBS, RDS and Route 53">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">EC2, EBS, RDS and Route 53</h2>
+  </div>
+  <p class="section-kicker">These four services cover compute, storage, managed databases and DNS — the core of a hosted web application.</p>
+<h3 class="sub-title">Elastic Compute Cloud (EC2)</h3>
+<ul>
+  <li>Provides access to <strong>server instances</strong>.</li>
+  <li>EC2 is the most common and fundamental part of the AWS suite, and <strong>you will need it for your project deployment</strong>.</li>
+  <li>Instances can be created in one of many <strong>availability zones (AZs)</strong> in various regions of the world.</li>
+</ul>
+<h3 class="sub-title">Elastic Block Store (EBS)</h3>
+<ul>
+  <li>Provides <strong>hard-drive volumes</strong> that can be attached to EC2 instances.</li>
+  <li>Useful for <strong>separating data storage from the server</strong> that executes your software.</li>
+  <li>When attaching a volume to an instance, <strong>both must be in the same Availability Zone</strong>.</li>
+</ul>
+<h3 class="sub-title">Relational Database Service (RDS)</h3>
+<ul>
+  <li>Provides <strong>managed database servers</strong>.</li>
+  <li>Useful for a <strong>scalable, backed-up</strong> version of your data.</li>
+  <li>Supports Aurora, PostgreSQL, MySQL, MariaDB, Oracle Database and SQL Server.</li>
+</ul>
+<h3 class="sub-title">Route 53</h3>
+<ul>
+  <li>Provides the ability to <strong>route requests</strong> to AWS infrastructure, e.g. <code>www.example.com =&gt; 53.96.54.23</code>.</li>
+  <li>Operates a <strong>Domain Name System (DNS)</strong> web service.</li>
+</ul>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>EC2 = computer</strong>, <strong>EBS = disk</strong>, <strong>RDS = managed database</strong>, <strong>Route 53 = DNS</strong>. Four nouns, four jobs.</div></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> An EBS volume and the EC2 instance it attaches to must be in the <strong>same Availability Zone</strong>. A volume in the wrong AZ simply cannot attach.</div></div>
+</section>
+
+<section class="guide-section" id="vpc-and-containers" data-title="VPC and Container Deployment">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">VPC and Container Deployment (ECS/EKS)</h2>
+  </div>
+  <p class="section-kicker">A VPC gives you network control around your instances; ECS and EKS are AWS's managed ways to run containers instead of full VMs.</p>
+<h3 class="sub-title">Virtual Private Cloud (VPC)</h3>
+<ul>
+  <li>Provides support for <strong>network segregation</strong> and greater control over EC2 instances.</li>
+  <li>Very useful for web infrastructure, but its configuration can be <strong>complex</strong>.</li>
+  <li><strong>Not necessary for the project</strong> — instead we use the <strong>default VPC</strong> created by AWS (EC2-VPC: using a VPC within EC2).</li>
+</ul>
+<h3 class="sub-title">VM deployment vs container deployment</h3>
+<div class="compare"><div class="compare-col a"><h3>Amazon ECS</h3><ul><li>Elastic Container Service — AWS's own <strong>fully managed container orchestration</strong> service.</li></ul></div><div class="compare-col b"><h3>Amazon EKS</h3><ul><li>Elastic Kubernetes Service — AWS's <strong>managed Kubernetes</strong> service.</li></ul></div></div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> Week 6 introduced containers and Docker. This is the AWS-managed way to run those containers: ECS if you want AWS's own orchestration, EKS if you want Kubernetes.</div></div>
+</section>
+
+<section class="guide-section" id="ports-and-firewalls" data-title="Ports, the OSI Model and Firewalls">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Ports, the OSI Model and Firewalls</h2>
+  </div>
+  <p class="section-kicker">Applications listen on TCP ports, and firewalls decide which traffic is allowed to reach them.</p>
+<h3 class="sub-title">Ports and the OSI model</h3>
+<p>Recall the <strong>7-layer OSI model</strong>. In particular:</p>
+<ul>
+  <li><strong>TCP/UDP ports</strong> — Layer 4.</li>
+  <li><strong>Firewalls</strong> and <strong>load balancers</strong> operate around this layer.</li>
+  <li><strong>Public IPs</strong> — Layer 3.</li>
+</ul>
+<p>We say applications <strong>listen</strong> on a particular TCP port. This lets multiple applications run on the same host, each listening on a different port. Any application can choose any port, but there are <strong>standard port numbers</strong> for particular application types.</p>
+<p>Whenever a network service starts on a host, it attempts to listen on a particular port. <strong>Only one running application may listen to a port at a time.</strong></p>
+<h3 class="sub-title">Firewalls</h3>
+<p>A <strong>firewall</strong> is a security system that can allow or disallow network traffic to pass according to a set of rules. Firewalls come in many shapes and sizes:</p>
+<div class="grid grid-2">
+  <div class="card"><h3 class="card-title">🏠 Home router</h3><p>Makes decisions about incoming/outgoing traffic and prevents attackers from gaining access to your network.</p></div>
+  <div class="card"><h3 class="card-title">🧱 Software firewall</h3><p>Runs on a host machine and provides rules about the traffic allowed to enter that host.</p></div>
+</div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> An IP address finds the <em>host</em> (Layer 3); a port finds the <em>application</em> on that host (Layer 4). The firewall sits between the internet and your listening ports.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> two web apps on one server both want to be reached by browsers. How do ports let that work?</div></div>
+</section>
+
+<section class="guide-section" id="security-groups" data-title="AWS Security Groups">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">AWS Security Groups</h2>
+  </div>
+  <p class="section-kicker">A security group is a stateful virtual firewall whose rules form a whitelist — anything not explicitly allowed is dropped.</p>
+<p>AWS Security Groups (SGs) are <strong>stateful virtual firewalls</strong>. When first configuring an EC2 instance, you can either create a new security group or add the instance to an existing one.</p>
+<p>To configure a security group, you must specify:</p>
+<div class="grid grid-3">
+  <div class="card"><h3 class="card-title">📡 Protocol</h3><p>TCP / UDP / ICMP.</p></div>
+  <div class="card"><h3 class="card-title">🔌 Port(s)</h3><p>The TCP/UDP port(s) the rule applies to.</p></div>
+  <div class="card"><h3 class="card-title">📍 Source</h3><p>Which source IP address(es) the rule applies to.</p></div>
+</div>
+<p>The rules are a <strong>whitelist</strong>: any packets not matching a rule are automatically dropped (disallowed).</p>
+<div class="table-wrap"><table><thead><tr><th>SSH rule</th><th>Verdict</th></tr></thead><tbody>
+  <tr><td><strong>SSH 22 ← 0.0.0.0/0</strong></td><td>Bad — the whole internet may attempt SSH.</td></tr>
+  <tr><td><strong>SSH 22 ← your IP only</strong></td><td>Better — restrict the source.</td></tr>
+  <tr><td><strong>AWS Systems Manager Session Manager</strong></td><td>Best cloud-native option — avoid exposing the port at all.</td></tr>
+</tbody></table></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Opening SSH (22) to <code>0.0.0.0/0</code> exposes the port to continuous brute-force attempts. Restrict the source, or use Session Manager so no inbound SSH port is open.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> a security group is a whitelist. What happens to a packet that matches no rule at all?</div></div>
+</section>
+
+<section class="guide-section" id="load-balancing-and-elastic-ips" data-title="Load Balancing and Elastic IPs">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Elastic Load Balancing and Elastic IPs</h2>
+  </div>
+  <p class="section-kicker">A load balancer spreads traffic across instances for scaling, and an Elastic IP keeps an instance's address stable across restarts.</p>
+<h3 class="sub-title">Elastic Load Balancer (ELB)</h3>
+<ul>
+  <li>Provides a <strong>load balancing service for EC2 instances</strong>.</li>
+  <li>Useful for production websites, allowing for easy <strong>horizontal scaling</strong>.</li>
+  <li>For your project, you should learn how to utilise ELB and configure it for your deployment.</li>
+</ul>
+<h3 class="sub-title">IPs vs DNS</h3>
+<ul>
+  <li>When you start an EC2 instance, AWS assigns it a <strong>public IP address</strong>. If you stop and start the instance, it can be reassigned to a <strong>different</strong> IP — which means updating DNS records.</li>
+  <li>To maintain a consistent IP address between restarts, assign the instance an <strong>Elastic IP address</strong>. Once assigned, the instance always has this IP whenever it is created.</li>
+</ul>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> A stable address (Elastic IP) plus a stable name (Route 53 DNS) means users and clients do not break when you restart or replace a server.</div></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>ELB = spread the load</strong> across many instances; <strong>Elastic IP = pin the address</strong> so one instance keeps the same IP.</div></div>
+</section>
+
+<section class="guide-section" id="server-applications" data-title="From Development Server to Production">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">From Development Server to Production: nginx and WSGI/ASGI</h2>
+  </div>
+  <p class="section-kicker">A production server stacks a web server in front of an application interface, which talks to your framework and database.</p>
+<p>You will need to configure several applications on your server:</p>
+<div class="flow"><span class="flow-step">Web server</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Application interface</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Web application</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Database</span></div>
+<h3 class="sub-title">Recommended web server: nginx</h3>
+<p><code>nginx</code> (pronounced "engine-X") is a fast web server that can also act as a <strong>reverse proxy</strong>. Due to its widespread use and ease of configuration, it is highly recommended for the project.</p>
+<ul>
+  <li><code>nginx</code> can receive and process an HTTP request, but it <strong>does not interpret web application code</strong>.</li>
+  <li>Instead, we ask nginx to <code>proxy_pass</code> HTTP requests to the application interface.</li>
+</ul>
+<h3 class="sub-title">WSGI vs ASGI</h3>
+<p>Both are <strong>interface standards</strong>. Both define how Python web application servers communicate with frameworks such as Django.</p>
+<div class="compare"><div class="compare-col a"><h3>WSGI</h3><ul><li>Designed for conventional <strong>request–response</strong> web applications.</li></ul></div><div class="compare-col b"><h3>ASGI</h3><ul><li>Extends the model for <strong>asynchronous and real-time</strong> communication.</li></ul></div></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> The split keeps responsibilities clean: nginx handles connections and static assets efficiently; the application server runs your Python framework; the interface (WSGI/ASGI) is the agreed contract between them.</div></div>
+</section>
+
+<section class="guide-section" id="databases-and-data-separation" data-title="Databases and Separation of Data">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Databases and Separation of Data</h2>
+  </div>
+  <p class="section-kicker">Most apps need a relational database, and its data should live on a separate volume from your code.</p>
+<ul>
+  <li>Most web applications require <strong>persistent storage</strong> of data.</li>
+  <li>You will most likely need a <strong>relational database management system (RDBMS)</strong>.</li>
+  <li>We recommend <strong>MySQL</strong> (feature-rich and relatively easy to use); PostgreSQL and MariaDB are acceptable alternatives.</li>
+</ul>
+<h3 class="sub-title">Rough setup steps</h3>
+<ol class="steps">
+  <li><strong>Install</strong> the DB software.</li>
+  <li><strong>Configure users</strong> (username &amp; password).</li>
+  <li><strong>Configure application code</strong> to use the DB, connecting with the username &amp; password.</li>
+</ol>
+<h3 class="sub-title">Separation of data</h3>
+<ul>
+  <li>You should <strong>always separate your data from your application code</strong>.</li>
+  <li>Typically this means configuring your DB to save data to a <strong>separate volume</strong> from where the operating system and web application are installed.</li>
+  <li>On EC2, use a <strong>separate EBS volume</strong> for database storage, then configure the RDBMS to store data on the new volume (for MySQL, this means moving the data directory).</li>
+</ul>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> If code and data share a volume, redeploying or rebuilding the app can destroy the data. A separate volume lets you replace the application without touching the database — and back it up independently.</div></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Putting the database data directory on the same volume as the OS means a rebuilt instance loses everything. Attach a dedicated EBS volume and point the RDBMS at it.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> you need to rebuild your EC2 instance. What must have been separated for your data to survive?</div></div>
+</section>
+
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways">
+    <div class="takeaway"><span class="tk-num">1</span><p>Linux is the dominant web-server OS (&gt;90%); a distribution bundles the kernel with package managers, window managers and tools.</p></div>
+    <div class="takeaway"><span class="tk-num">2</span><p>Programs run as a particular user. Root has everything; services should run as low-privilege users such as <code>www-data</code>, <code>mysql</code> or <code>nobody</code>.</p></div>
+    <div class="takeaway"><span class="tk-num">3</span><p>Capabilities split root into fine-grained units (e.g. <code>CAP_NET_BIND_SERVICE</code>), giving least privilege, damage containment and a smaller attack surface.</p></div>
+    <div class="takeaway"><span class="tk-num">4</span><p>SSH replaces Telnet, listens on TCP port 22, and is OpenSSH-based; use keys, not passwords.</p></div>
+    <div class="takeaway"><span class="tk-num">5</span><p>SSH has two key pairs: the server host key (authenticates the server, never sent) and the user key (proves the client's identity without sending the private key).</p></div>
+    <div class="takeaway"><span class="tk-num">6</span><p><code>known_hosts</code> protects the client from impostor servers (MITM); <code>authorized_keys</code> decides which client keys may log in as a user.</p></div>
+    <div class="takeaway"><span class="tk-num">7</span><p><code>ssh-agent</code> keeps the unencrypted private key in memory; agent forwarding extends that trust to remote hosts, so use it cautiously.</p></div>
+    <div class="takeaway"><span class="tk-num">8</span><p>Core AWS: EC2 (compute/instances), EBS (attachable volumes, same AZ as the instance), RDS (managed DB), Route 53 (DNS).</p></div>
+    <div class="takeaway"><span class="tk-num">9</span><p>VPC gives network segregation (use the default VPC for the project); ECS/EKS run containers as a managed alternative to VMs.</p></div>
+    <div class="takeaway"><span class="tk-num">10</span><p>Apps listen on TCP ports (Layer 4); only one app per port; firewalls allow or disallow traffic by rule.</p></div>
+    <div class="takeaway"><span class="tk-num">11</span><p>AWS Security Groups are stateful virtual firewalls with whitelist rules (protocol, port, source); never open SSH to <code>0.0.0.0/0</code> if you can avoid it.</p></div>
+    <div class="takeaway"><span class="tk-num">12</span><p>ELB distributes traffic across instances for scaling; an Elastic IP keeps a stable address across restarts.</p></div>
+    <div class="takeaway"><span class="tk-num">13</span><p>The production stack is nginx (reverse proxy, <code>proxy_pass</code>) → application interface (WSGI for request–response, ASGI for async/real-time) → Django → database.</p></div>
+    <div class="takeaway"><span class="tk-num">14</span><p>Use an RDBMS (MySQL recommended) and <strong>separate the data from the code</strong> — on a dedicated EBS volume so rebuilding the app never destroys the data.</p></div>
+  </div>
+</section>
+
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools"><button class="chip active" type="button" data-cat="all">All</button><button class="chip" type="button" data-cat="linux">Linux &amp; SSH</button><button class="chip" type="button" data-cat="aws">AWS &amp; cloud</button><button class="chip" type="button" data-cat="net">Networking</button><button class="chip" type="button" data-cat="server">Server stack</button></div>
+  <div class="terms">
+    <div class="term-card" data-cat="linux"><div class="term-name">Linux kernel</div><div class="term-meaning">The defining component of Linux, an open-source UNIX-like OS released in 1991 by Linus Torvalds.</div></div>
+    <div class="term-card" data-cat="linux"><div class="term-name">Distribution</div><div class="term-meaning">A collection of software (package managers, window managers, editors) bundled around the kernel into a complete OS.</div></div>
+    <div class="term-card" data-cat="linux"><div class="term-name">root / superuser</div><div class="term-meaning">The most privileged user on a Linux system (UID 0); can do anything.</div></div>
+    <div class="term-card" data-cat="linux"><div class="term-name">www-data / mysql / nobody</div><div class="term-meaning">Low-privilege users that specific services (web server, MySQL, minimal tasks) should run as.</div></div>
+    <div class="term-card" data-cat="linux"><div class="term-name">Capability</div><div class="term-meaning">A fine-grained unit of root privilege (e.g. CAP_NET_BIND_SERVICE) assignable to a process individually.</div></div>
+    <div class="term-card" data-cat="linux"><div class="term-name">Least privilege</div><div class="term-meaning">Giving each process or user only the minimum privileges it needs.</div></div>
+    <div class="term-card" data-cat="linux"><div class="term-name">SSH</div><div class="term-meaning">Secure Shell — a secure replacement for Telnet for accessing a remote machine's shell; listens on TCP port 22.</div></div>
+    <div class="term-card" data-cat="linux"><div class="term-name">OpenSSH</div><div class="term-meaning">The most common SSH server and client software, originating from the OpenBSD project.</div></div>
+    <div class="term-card" data-cat="linux"><div class="term-name">Host key</div><div class="term-meaning">A long-term server public/private key pair used to authenticate the server to the client; the private key is never sent.</div></div>
+    <div class="term-card" data-cat="linux"><div class="term-name">known_hosts</div><div class="term-meaning">A client file recording known server public keys, used to minimise MITM attacks.</div></div>
+    <div class="term-card" data-cat="linux"><div class="term-name">authorized_keys</div><div class="term-meaning">A per-user server file listing public keys authorised to connect as that user.</div></div>
+    <div class="term-card" data-cat="linux"><div class="term-name">ssh-agent</div><div class="term-meaning">A program storing the unencrypted SSH private key in memory so it need not be re-entered each time.</div></div>
+    <div class="term-card" data-cat="linux"><div class="term-name">Agent forwarding</div><div class="term-meaning">Allowing a remote host to use your local ssh-agent (and thus your key); convenient but a trust risk.</div></div>
+    <div class="term-card" data-cat="aws"><div class="term-name">AWS</div><div class="term-meaning">Amazon Web Services — a cloud hosting provider offering compute, storage, databases and more.</div></div>
+    <div class="term-card" data-cat="aws"><div class="term-name">EC2</div><div class="term-meaning">Elastic Compute Cloud — server instances; the fundamental AWS service used for project deployment.</div></div>
+    <div class="term-card" data-cat="aws"><div class="term-name">EBS</div><div class="term-meaning">Elastic Block Store — attachable hard-drive volumes; must be in the same Availability Zone as the instance.</div></div>
+    <div class="term-card" data-cat="aws"><div class="term-name">RDS</div><div class="term-meaning">Relational Database Service — managed, scalable, backed-up database servers (Aurora, PostgreSQL, MySQL, MariaDB, Oracle, SQL Server).</div></div>
+    <div class="term-card" data-cat="aws"><div class="term-name">Route 53</div><div class="term-meaning">AWS's DNS service, routing names to AWS infrastructure.</div></div>
+    <div class="term-card" data-cat="aws"><div class="term-name">VPC</div><div class="term-meaning">Virtual Private Cloud — network segregation and control over EC2; the default VPC is used for the project.</div></div>
+    <div class="term-card" data-cat="aws"><div class="term-name">ECS / EKS</div><div class="term-meaning">AWS's managed container orchestration (ECS) and managed Kubernetes (EKS) services.</div></div>
+    <div class="term-card" data-cat="aws"><div class="term-name">Elastic IP</div><div class="term-meaning">A stable public IP address assigned to an instance so it does not change across restarts.</div></div>
+    <div class="term-card" data-cat="net"><div class="term-name">TCP port</div><div class="term-meaning">Layer-4 endpoint on which an application listens; only one app per port at a time.</div></div>
+    <div class="term-card" data-cat="net"><div class="term-name">Firewall</div><div class="term-meaning">A system that allows or disallows network traffic according to rules (home router or host software).</div></div>
+    <div class="term-card" data-cat="net"><div class="term-name">Security Group</div><div class="term-meaning">A stateful virtual firewall in AWS whose rules (protocol, port, source) act as a whitelist.</div></div>
+    <div class="term-card" data-cat="net"><div class="term-name">Elastic Load Balancer (ELB)</div><div class="term-meaning">A service distributing traffic across EC2 instances for horizontal scaling.</div></div>
+    <div class="term-card" data-cat="server"><div class="term-name">nginx</div><div class="term-meaning">A fast web server and reverse proxy that forwards requests to the application interface via proxy_pass.</div></div>
+    <div class="term-card" data-cat="server"><div class="term-name">WSGI / ASGI</div><div class="term-meaning">Interface standards between Python app servers and frameworks; WSGI for request–response, ASGI for async/real-time.</div></div>
+    <div class="term-card" data-cat="server"><div class="term-name">RDBMS</div><div class="term-meaning">Relational database management system; MySQL is recommended for the project.</div></div>
+    <div class="term-card" data-cat="server"><div class="term-name">Separation of data</div><div class="term-meaning">Storing database data on a separate volume from the OS and application code so it survives rebuilds.</div></div>
+  </div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+  <article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">What is Linux, what is a distribution, and why is Linux so important for web servers?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Linux is an open-source UNIX-like operating system whose defining feature is the Linux kernel, released in 1991 by Linus Torvalds. A distribution is a collection of software packaged as a complete OS, including package managers (apt-get, pacman), window managers (GNOME, i3) and text editors. Linux is the most widely installed general-purpose OS (largely due to Android) and the most dominant web-server OS (&gt;90%).</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Who is root, why do programs run as particular users, and which users do nginx, MySQL and minimal programs use?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> root (the superuser) is the most privileged user and can do anything; other users have a variety of privileges. Programs execute as a particular user, and a program needing special privileges may run as root — but usually it should not, so a compromise is limited to that user's abilities. nginx (web servers) usually runs as www-data, mysqld (MySQL) as mysql, and programs needing almost no privileges as nobody. Use ps aux to see processes and their users.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">Explain Linux capabilities, why they improve security, and how they apply to running nginx.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> In the classic model root (UID 0) has all privileges, so a compromised root process means full system control. Capabilities split root into fine-grained units — e.g. CAP_NET_BIND_SERVICE, CAP_SYS_ADMIN, CAP_DAC_OVERRIDE — and each process can be assigned only the subset it needs. Benefits: least privilege, damage containment, reduced attack surface. For nginx: traditionally it needed root just to bind port 80; with capabilities it runs as an unprivileged user granted only CAP_NET_BIND_SERVICE, so if hacked the attacker cannot create raw sockets (CAP_NET_RAW), mount filesystems (CAP_SYS_ADMIN) or change file ownership (CAP_CHOWN).</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">What is SSH, what does the SSH server do, and why prefer keys over passwords?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> SSH (Secure Shell) is a secure replacement for Telnet that lets a user access the shell/terminal on a remote machine; it is essential for web masters since Linux dominates servers. The server software is usually OpenSSH (from OpenBSD); it listens on TCP port 22 and authenticates users with passwords or public/private keys. The obvious password login is bad; instead use SSH keys, which provide authentication and encryption.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">Describe the two SSH key pairs and how public-key authentication uses a digital signature.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Server host key: a long-term public/private pair that authenticates the server to the client; during connection setup SSH performs a key exchange to derive shared symmetric session keys, and the server proves possession of its private host key by signing key-exchange data. The private host key is never sent to the client. Client/user key: each user may have a key pair; the public key is stored on the server, and the client proves possession of the matching private key without sending it. A private key is kept secret and used to create a digital signature; the public key is shared and used to verify it. Note session encryption keys are established separately via the SSH key-exchange protocol.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">Where are SSH server keys stored, what is known_hosts for, and what does authorized_keys do?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Server keys are typically stored at /etc/ssh/ssh_host_*_key and /etc/ssh/ssh_host_*_key.pub. On first connecting to an unknown server you get a warning; accepting it adds an entry to your ~/.ssh/known_hosts file. By tracking known server public keys, SSH clients minimise the potential for a MITM attack. authorized_keys lives in a user's home directory (/home/&lt;user&gt;/.ssh/authorized_keys) and lists the public keys of anyone authorised to connect as that user; the server checks the client possesses the matching private key.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">What does ssh-agent do, and what risk does agent forwarding introduce?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> ssh-agent stores the unencrypted SSH private key in memory by attaching it to a running process, so you do not need to enter the passphrase for ~/.ssh/id_rsa every time SSH runs. With the ForwardAgent option, remote SSH clients can access the local ssh-agent process — and therefore the unencrypted private key. That extends trust to the remote host: if it is compromised, so is your key, so forward only to trusted hosts.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">Match EC2, EBS, RDS and Route 53 to their jobs, and state the Availability Zone rule for EBS.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> EC2 (Elastic Compute Cloud) provides server instances and is the fundamental AWS service you need for project deployment; instances live in availability zones in regions worldwide. EBS (Elastic Block Store) provides hard-drive volumes attachable to EC2 instances, useful for separating data storage from the server; the volume and instance must be in the same Availability Zone. RDS (Relational Database Service) provides managed, scalable, backed-up database servers supporting Aurora, PostgreSQL, MySQL, MariaDB, Oracle and SQL Server. Route 53 provides DNS routing to AWS infrastructure.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">What is a VPC, is it required for the project, and what is the difference between ECS and EKS?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> A Virtual Private Cloud provides network segregation and greater control over EC2 instances; it is very useful for web infrastructure but complex to configure. It is not necessary for the project — the default VPC created by AWS is used (EC2-VPC). ECS (Elastic Container Service) is AWS's own fully managed container orchestration service; EKS (Elastic Kubernetes Service) is AWS's managed Kubernetes service.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">How do ports and firewalls control traffic, and which OSI layers are involved?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Applications listen on a particular TCP port so multiple apps can share a host; only one running application may listen to a port at a time; standard port numbers exist for common application types. In the 7-layer OSI model, TCP/UDP ports are Layer 4 (firewalls and load balancers sit around here), and public IPs are Layer 3. A firewall allows or disallows traffic according to rules — examples include a home router (deciding on incoming/outgoing traffic) and a host software firewall.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">What is an AWS Security Group, what three things configure its rules, and what is the best practice for SSH?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Security Groups are stateful virtual firewalls attached when configuring an EC2 instance. Rules specify Protocol (TCP/UDP/ICMP), Port(s), and Source (source IP address(es)). Rules are a whitelist — any packet not matching a rule is automatically dropped. Bad: SSH 22 ← 0.0.0.0/0 (whole internet). Better: SSH 22 ← your IP only. Best cloud-native option: AWS Systems Manager Session Manager.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">What does an Elastic Load Balancer do, and why use an Elastic IP?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> ELB provides a load-balancing service for EC2 instances, useful for production sites and easy horizontal scaling; you should learn to configure it for your deployment. When an EC2 instance starts it gets a public IP that can change if you stop and start it (requiring DNS updates). An Elastic IP is a consistent address you assign so the instance always has that IP whenever it is created.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">Describe the production server stack, the role of nginx, and the difference between WSGI and ASGI.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Configure a web server, an application interface, the web application and a database. nginx (pronounced "engine-X") is a fast web server that can also act as a reverse proxy, and is recommended; it does not interpret application code, instead proxy_pass-ing HTTP requests to the application interface. WSGI and ASGI are interface standards defining how Python app servers communicate with frameworks such as Django; WSGI is for conventional request–response apps, while ASGI extends the model to asynchronous and real-time communication.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">What database do we recommend, what are the setup steps, and why separate the data?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Most apps need persistent storage and a relational DBMS; MySQL is recommended (feature-rich, easy), with PostgreSQL and MariaDB acceptable. Setup: install the DB software, configure users (username &amp; password), and configure the application code to connect using those credentials. Always separate data from application code: configure the DB to save data to a separate volume from the OS and web app. On EC2, use a separate EBS volume for database storage and point the RDBMS at it (for MySQL, move the data directory). This means rebuilding the application does not destroy the data.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+</section>
+
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist">
+    <label class="check-item"><input type="checkbox"> I can explain what Linux is, what a distribution is, and why it dominates servers.</label>
+    <label class="check-item"><input type="checkbox"> I can describe root, program-specific users and the ps aux command.</label>
+    <label class="check-item"><input type="checkbox"> I can explain capabilities and how they apply to running nginx.</label>
+    <label class="check-item"><input type="checkbox"> I can explain SSH, port 22, OpenSSH and keys over passwords.</label>
+    <label class="check-item"><input type="checkbox"> I can contrast the server host key and the client/user key.</label>
+    <label class="check-item"><input type="checkbox"> I can explain known_hosts, authorized_keys, ssh-agent and agent forwarding.</label>
+    <label class="check-item"><input type="checkbox"> I can match EC2, EBS, RDS and Route 53 to their jobs and state the EBS AZ rule.</label>
+    <label class="check-item"><input type="checkbox"> I can explain VPC, ECS and EKS.</label>
+    <label class="check-item"><input type="checkbox"> I can explain TCP ports, the relevant OSI layers, and what a firewall does.</label>
+    <label class="check-item"><input type="checkbox"> I can configure a security group rule and explain least exposure for SSH.</label>
+    <label class="check-item"><input type="checkbox"> I can explain ELB and Elastic IPs.</label>
+    <label class="check-item"><input type="checkbox"> I can describe the nginx → WSGI/ASGI → Django → database stack.</label>
+    <label class="check-item"><input type="checkbox"> I can explain why the database should live on a separate volume.</label>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">⌂ All guides</a>
+    <span class="spacer"></span>
+    <a href="../week_7/ELEC3609_week7_2026_study_guide.html">← Week 7</a>
+  </div>
+  <p>ELEC3609/9609 Internet Software Platforms · Week 8 · Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Theme ---------- */
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('elec3609-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('elec3609-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
+  }
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
+
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
+
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
+  function onScroll(){
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
+      });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
+  }
+
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'elec3609-ELEC3609_week8_2026_study_guide-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
+  });
+
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
+      var shown = 0;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
+      });
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
+    });
+  });
+
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
+  function runSearch(){
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
+      });
+    }
+    suggest.classList.add('open');
+  }
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
+  }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'elec3609-ELEC3609_week8_2026_study_guide-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
+})();
+</script>
+
+<script>
+(function(){
+  "use strict";
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.code-copy');
+    if (!btn) return;
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    var text = code.innerText;
+    var done = function(){ btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
+    else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(err){} document.body.removeChild(ta); done(); }
+  });
+})();
+</script>
+
+</body>
+</html>

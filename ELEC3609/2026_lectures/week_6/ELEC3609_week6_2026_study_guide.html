@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="ELEC3609 Week 6 study guide — pre-packaged software, supply-chain security, reverse proxies and WAFs, Docker containers, and monitoring, explained for first-time readers and active recall.">
+<title>ELEC3609 Week 6 — Pre-packaged Software: Deployment, Docker and Monitoring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+     ENGG2112 Study Guides — "Calm Canvas" design system
+     Warm paper light theme + soft night theme, editorial type,
+     guided reading flow, active-recall components.
+     Light theme is default; night theme via [data-theme="dark"].
+     ============================================================ */
+  :root{
+    --font-display:'Fraunces', Georgia, 'Times New Roman', serif;
+    --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    --font-mono:'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Surfaces */
+    --paper:#f4f1ea;
+    --surface:#fffdf9;
+    --surface-2:#f8f4ec;
+    --surface-3:#efe9de;
+    --ink:#33302b;
+    --ink-soft:#5d574e;
+    --ink-faint:#8b8377;
+    --line:#e6dfd3;
+    --line-strong:#d7cdbc;
+
+    /* Brand palette (muted, low-glare) */
+    --primary:#3f7d74;
+    --primary-deep:#2c5d56;
+    --primary-soft:#e3efeb;
+    --accent:#b4663f;
+    --accent-soft:#f7e8e0;
+    --gold:#9c7a28;
+    --gold-soft:#f6efdc;
+    --violet:#6c60ab;
+    --violet-soft:#ece9f7;
+    --blue:#3f6f8e;
+    --blue-soft:#e7f0f5;
+    --rose:#ab4f55;
+    --rose-soft:#f8e8e9;
+
+    /* Semantic callout tokens */
+    --c-info-bg:var(--blue-soft);      --c-info-line:#c6dbe8;  --c-info-fg:#2f5d79;
+    --c-why-bg:var(--gold-soft);       --c-why-line:#e8dbb4;   --c-why-fg:#7d6220;
+    --c-memory-bg:var(--violet-soft);  --c-memory-line:#d6cff0;--c-memory-fg:#574c94;
+    --c-tip-bg:var(--primary-soft);    --c-tip-line:#c2ded6;   --c-tip-fg:#2c5d56;
+    --c-warn-bg:var(--rose-soft);      --c-warn-line:#ecccce;  --c-warn-fg:#8f3f45;
+
+    --radius:18px;
+    --radius-sm:11px;
+    --shadow-sm:0 1px 2px rgba(60,50,40,.05);
+    --shadow:0 8px 24px -12px rgba(60,50,40,.22);
+    --shadow-lg:0 24px 60px -28px rgba(60,50,40,.35);
+    --sidebar-w:300px;
+    --measure:76ch;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  html[data-theme="dark"]{
+    --paper:#171614;
+    --surface:#201e1b;
+    --surface-2:#262320;
+    --surface-3:#2e2b26;
+    --ink:#ece7df;
+    --ink-soft:#bdb6ab;
+    --ink-faint:#8d867b;
+    --line:#37332d;
+    --line-strong:#484239;
+
+    --primary:#7fc3b4;
+    --primary-deep:#a5d8cc;
+    --primary-soft:#21322e;
+    --accent:#e0a07b;
+    --accent-soft:#33241d;
+    --gold:#e0c183;
+    --gold-soft:#332b1a;
+    --violet:#b3a9e6;
+    --violet-soft:#282343;
+    --blue:#9cc4dc;
+    --blue-soft:#1e2c36;
+    --rose:#e6a3a8;
+    --rose-soft:#362223;
+
+    --c-info-bg:#1e2c36;      --c-info-line:#2d4354;  --c-info-fg:#a9cfe4;
+    --c-why-bg:#332b1a;       --c-why-line:#4a3f24;   --c-why-fg:#e3c98d;
+    --c-memory-bg:#282343;    --c-memory-line:#3c3563;--c-memory-fg:#bdb3ec;
+    --c-tip-bg:#21322e;       --c-tip-line:#2f4a43;   --c-tip-fg:#93cec1;
+    --c-warn-bg:#362223;      --c-warn-line:#4d3032;  --c-warn-fg:#e6adb1;
+
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 10px 28px -14px rgba(0,0,0,.6);
+    --shadow-lg:0 26px 65px -30px rgba(0,0,0,.75);
+  }
+
+  *,*::before,*::after{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body);
+    font-size:16.5px;
+    line-height:1.72;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  ::selection{background:var(--primary-soft);color:var(--ink);}
+  a{color:var(--primary-deep);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  p{margin:0 0 1.05rem;}
+  strong{font-weight:650;color:var(--ink);}
+  img{max-width:100%;height:auto;}
+
+  .skip-link{
+    position:absolute;left:-9999px;top:0;z-index:200;
+    background:var(--surface);padding:.6rem 1rem;border-radius:0 0 var(--radius-sm) 0;
+  }
+  .skip-link:focus{left:0;}
+
+  /* ---------- Reading progress ---------- */
+  .progress-track{position:fixed;inset:0 0 auto 0;height:3px;background:transparent;z-index:120;}
+  .progress-fill{
+    height:100%;width:0;
+    background:linear-gradient(90deg,var(--primary),var(--accent));
+    transition:width .12s linear;
+  }
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:100;
+    display:flex;align-items:center;gap:.9rem;
+    height:62px;padding:0 clamp(.8rem,3vw,1.6rem);
+    background:color-mix(in srgb, var(--paper) 82%, transparent);
+    backdrop-filter:blur(12px);
+    border-bottom:1px solid var(--line);
+  }
+  .icon-btn{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:40px;height:40px;flex:0 0 auto;
+    border:1px solid var(--line);border-radius:11px;
+    background:var(--surface);color:var(--ink-soft);
+    font-size:1.05rem;cursor:pointer;transition:.18s var(--ease);
+  }
+  .icon-btn:hover{border-color:var(--line-strong);color:var(--ink);transform:translateY(-1px);}
+  .menu-toggle{display:none;}
+  .brand{display:flex;align-items:baseline;gap:.55rem;white-space:nowrap;}
+  .brand:hover{text-decoration:none;}
+  .brand-course{font-family:var(--font-display);font-weight:600;font-size:1.12rem;color:var(--ink);letter-spacing:-.01em;}
+  .brand-week{font-size:.74rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.2rem .55rem;border-radius:999px;}
+  .topbar-tools{margin-left:auto;display:flex;align-items:center;gap:.55rem;}
+  .search{position:relative;display:flex;align-items:center;}
+  .search-icon{position:absolute;left:.7rem;color:var(--ink-faint);font-size:1rem;pointer-events:none;}
+  .search input{
+    width:min(40vw,270px);padding:.55rem .8rem .55rem 2.1rem;
+    border:1px solid var(--line);border-radius:999px;
+    background:var(--surface);color:var(--ink);font-family:inherit;font-size:.9rem;
+    outline:none;transition:.2s var(--ease);
+  }
+  .search input:focus{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-soft);}
+  .suggest{
+    position:absolute;top:calc(100% + .5rem);right:0;width:min(86vw,340px);max-height:60vh;overflow:auto;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);box-shadow:var(--shadow-lg);
+    padding:.4rem;display:none;z-index:110;
+  }
+  .suggest.open{display:block;}
+  .suggest a{display:block;padding:.5rem .6rem;border-radius:8px;font-size:.88rem;color:var(--ink-soft);}
+  .suggest a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .suggest .none{padding:.6rem;color:var(--ink-faint);font-size:.85rem;}
+
+  /* ---------- Layout ---------- */
+  .layout{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:clamp(1.2rem,3vw,3rem);max-width:1280px;margin:0 auto;padding:0 clamp(.9rem,3vw,2rem);}
+  .sidebar{position:sticky;top:62px;align-self:start;height:calc(100vh - 62px);overflow-y:auto;padding:1.6rem 0 3rem;}
+  .sidebar-inner{padding-right:.4rem;}
+  .sidebar-progress{margin-bottom:1.3rem;padding:.85rem .9rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);}
+  .sidebar-progress-label{display:flex;justify-content:space-between;font-size:.74rem;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-faint);margin-bottom:.5rem;}
+  .bar{height:7px;border-radius:999px;background:var(--surface-3);overflow:hidden;}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--primary),var(--accent));transition:width .3s var(--ease);}
+  .toc-title{font-size:.72rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .5rem .2rem;}
+  .toc{display:flex;flex-direction:column;gap:1px;margin-bottom:1.4rem;}
+  .toc a{
+    display:block;padding:.46rem .65rem .46rem .8rem;border-radius:9px;
+    font-size:.875rem;line-height:1.4;color:var(--ink-soft);
+    border-left:2px solid transparent;transition:.15s var(--ease);
+  }
+  .toc a:hover{background:var(--surface-2);text-decoration:none;color:var(--ink);}
+  .toc a.active{background:var(--primary-soft);color:var(--primary-deep);border-left-color:var(--primary);font-weight:600;}
+  .toc a .n{display:inline-block;width:1.5rem;color:var(--ink-faint);font-variant-numeric:tabular-nums;font-size:.78rem;}
+  .toc a.active .n{color:var(--primary-deep);}
+  .sidebar-links{display:flex;flex-direction:column;gap:.35rem;padding-top:1rem;border-top:1px solid var(--line);}
+  .sidebar-links a{font-size:.83rem;color:var(--ink-soft);padding:.25rem .2rem;}
+  .scrim{display:none;}
+
+  .content{max-width:var(--measure);padding:2.4rem 0 4rem;min-width:0;}
+  .content :is(h2,h3,h4){scroll-margin-top:80px;}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:linear-gradient(160deg,var(--surface),var(--surface-2));
+    border:1px solid var(--line);border-radius:calc(var(--radius) + 6px);
+    padding:clamp(1.6rem,4vw,3rem);margin-bottom:2.6rem;box-shadow:var(--shadow);
+  }
+  .hero::after{
+    content:"";position:absolute;right:-90px;top:-90px;width:280px;height:280px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%,var(--primary-soft),transparent 68%);
+    opacity:.9;pointer-events:none;
+  }
+  .hero-eyebrow{display:inline-flex;align-items:center;gap:.5rem;font-size:.74rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.3rem .7rem;border-radius:999px;margin-bottom:1rem;}
+  .hero-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.8rem,4.2vw,2.7rem);line-height:1.12;letter-spacing:-.02em;margin:0 0 .7rem;color:var(--ink);}
+  .hero-sub{font-size:clamp(1rem,1.6vw,1.14rem);color:var(--ink-soft);max-width:62ch;margin-bottom:1.3rem;}
+  .hero-lead{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:1rem 1.15rem;font-size:.95rem;color:var(--ink-soft);margin-bottom:1.4rem;}
+  .hero-lead strong{color:var(--ink);}
+  .hero-meta{display:flex;flex-wrap:wrap;gap:.55rem;}
+  .meta-chip{display:inline-flex;align-items:center;gap:.4rem;font-size:.8rem;font-weight:600;color:var(--ink-soft);background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.4rem .8rem;}
+  .meta-chip .dot{width:7px;height:7px;border-radius:50%;background:var(--primary);}
+  .hero-outcomes{margin-top:1.5rem;padding-top:1.3rem;border-top:1px dashed var(--line-strong);}
+  .hero-outcomes h2{font-family:var(--font-body);font-size:.76rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 .75rem;}
+  .outcome-list{list-style:none;margin:0;padding:0;display:grid;gap:.5rem;}
+  .outcome-list li{position:relative;padding-left:1.7rem;font-size:.95rem;color:var(--ink-soft);}
+  .outcome-list li::before{content:"✓";position:absolute;left:0;top:0;color:var(--primary);font-weight:700;}
+
+  /* ---------- Sections ---------- */
+  .guide-section{margin:0 0 3.4rem;counter-increment:sec;}
+  .content{counter-reset:sec;}
+  .section-head{display:flex;align-items:center;gap:.9rem;margin:0 0 .55rem;}
+  .sec-num{
+    flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    min-width:42px;height:42px;padding:0 .3rem;border-radius:12px;
+    background:var(--primary-soft);color:var(--primary-deep);
+    font-family:var(--font-display);font-weight:600;font-size:1.05rem;
+  }
+  .sec-num::before{content:counter(sec,decimal-leading-zero);}
+  .section-title{font-family:var(--font-display);font-weight:600;font-size:clamp(1.35rem,2.4vw,1.72rem);line-height:1.2;letter-spacing:-.015em;margin:0;color:var(--ink);}
+  .section-kicker{
+    font-size:1.02rem;color:var(--ink-soft);font-style:italic;
+    border-left:3px solid var(--accent);padding-left:.9rem;margin:.2rem 0 1.6rem;
+  }
+  .sub-title{font-family:var(--font-body);font-weight:700;font-size:1.08rem;letter-spacing:-.005em;margin:2rem 0 .7rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .sub-title::before{content:"";width:14px;height:3px;border-radius:2px;background:var(--accent);flex:0 0 auto;}
+  .sub-sub{font-weight:700;font-size:.98rem;margin:1.4rem 0 .5rem;color:var(--primary-deep);}
+  .lede{font-size:1.06rem;color:var(--ink);}
+  .muted{color:var(--ink-faint);}
+  .divider{height:1px;background:var(--line);border:0;margin:1.8rem 0;}
+
+  ul,ol{margin:0 0 1.1rem;padding-left:1.35rem;}
+  li{margin:.32rem 0;}
+  li::marker{color:var(--primary);}
+  ol li::marker{font-weight:600;color:var(--accent);}
+
+  /* Inline highlights */
+  .keyterm{font-weight:650;color:var(--primary-deep);}
+  .hl{background:var(--gold-soft);padding:0 .25rem;border-radius:4px;}
+  code{font-family:var(--font-mono);font-size:.88em;background:var(--surface-3);padding:.12em .4em;border-radius:6px;color:var(--ink);}
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1px solid var(--c-line);background:var(--c-bg);color:var(--ink);
+    border-radius:var(--radius-sm);padding:.95rem 1.1rem;margin:1.2rem 0;
+  }
+  .callout-icon{font-size:1.15rem;line-height:1.5;flex:0 0 auto;}
+  .callout-body{font-size:.95rem;}
+  .callout-body strong:first-child{color:var(--c-fg);}
+  .c-info{--c-bg:var(--c-info-bg);--c-line:var(--c-info-line);--c-fg:var(--c-info-fg);}
+  .c-why{--c-bg:var(--c-why-bg);--c-line:var(--c-why-line);--c-fg:var(--c-why-fg);}
+  .c-memory{--c-bg:var(--c-memory-bg);--c-line:var(--c-memory-line);--c-fg:var(--c-memory-fg);}
+  .c-tip{--c-bg:var(--c-tip-bg);--c-line:var(--c-tip-line);--c-fg:var(--c-tip-fg);}
+  .c-warn{--c-bg:var(--c-warn-bg);--c-line:var(--c-warn-line);--c-fg:var(--c-warn-fg);}
+
+  .reflect{
+    display:flex;gap:.85rem;align-items:flex-start;
+    border:1.5px dashed var(--line-strong);border-left:4px solid var(--accent);
+    background:var(--surface-2);border-radius:var(--radius-sm);
+    padding:.9rem 1.1rem;margin:1.2rem 0;font-size:.95rem;color:var(--ink-soft);
+  }
+  .reflect .ri{font-size:1.15rem;flex:0 0 auto;}
+  .reflect strong{color:var(--accent);}
+
+  /* ---------- Cards & grids ---------- */
+  .grid{display:grid;gap:1rem;margin:1.2rem 0;}
+  .grid-2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
+  .grid-3{grid-template-columns:repeat(auto-fit,minmax(190px,1fr));}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:1.15rem 1.25rem;box-shadow:var(--shadow-sm);transition:.2s var(--ease);
+  }
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-2px);}
+  .card-title{font-family:var(--font-body);font-weight:700;font-size:1rem;margin:0 0 .5rem;color:var(--ink);display:flex;align-items:center;gap:.5rem;}
+  .card p:last-child,.card ul:last-child,.card ol:last-child{margin-bottom:0;}
+  .card .tag{font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--primary-deep);background:var(--primary-soft);padding:.15rem .5rem;border-radius:999px;}
+
+  .def-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--primary);border-radius:var(--radius-sm);padding:.9rem 1.1rem;margin:1rem 0;}
+  .def-card .dc-term{font-weight:700;color:var(--primary-deep);}
+
+  /* ---------- Tables ---------- */
+  .table-wrap{overflow-x:auto;margin:1.3rem 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow-sm);}
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  thead th{background:var(--surface-3);color:var(--ink);text-align:left;font-weight:700;padding:.8rem .95rem;border-bottom:1px solid var(--line-strong);white-space:nowrap;}
+  tbody td{padding:.75rem .95rem;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink-soft);}
+  tbody tr:last-child td{border-bottom:0;}
+  tbody tr:nth-child(even){background:var(--surface-2);}
+  td strong{color:var(--ink);}
+
+  /* ---------- Formula ---------- */
+  .formula{background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.2rem;margin:1.2rem 0;text-align:center;}
+  .formula-label{font-size:.72rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:.45rem;}
+  .math{font-family:var(--font-mono);font-size:1.02rem;color:var(--ink);}
+
+  /* ---------- Flow / steps ---------- */
+  .steps{list-style:none;margin:1.2rem 0;padding:0;counter-reset:step;}
+  .steps li{position:relative;padding:.1rem 0 .95rem 2.6rem;counter-increment:step;color:var(--ink-soft);}
+  .steps li::before{
+    content:counter(step);position:absolute;left:0;top:-.1rem;
+    width:1.85rem;height:1.85rem;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--primary-soft);color:var(--primary-deep);font-weight:700;font-size:.85rem;
+  }
+  .steps li:not(:last-child)::after{content:"";position:absolute;left:.9rem;top:1.85rem;bottom:.1rem;width:2px;background:var(--line);}
+  .steps li strong{color:var(--ink);}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin:1.2rem 0;}
+  .flow-step{background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.5rem .95rem;font-size:.86rem;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm);}
+  .flow-arrow{color:var(--accent);font-weight:700;}
+
+  /* ---------- Compare ---------- */
+  .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin:1.2rem 0;}
+  .compare-col{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.15rem;background:var(--surface);}
+  .compare-col h3,.compare-col h4{margin:0 0 .55rem;font-size:.95rem;color:var(--ink);}
+  .compare-col.a{border-top:3px solid var(--primary);}
+  .compare-col.b{border-top:3px solid var(--accent);}
+
+  /* ---------- Mnemonic ---------- */
+  .mnemonic{background:linear-gradient(160deg,var(--violet-soft),var(--surface));border:1px solid var(--violet-soft);border-radius:var(--radius);padding:1.2rem 1.3rem;margin:1.2rem 0;text-align:center;}
+  .mnemonic-letters{font-family:var(--font-display);font-size:1.5rem;font-weight:700;letter-spacing:.28em;color:var(--violet);margin-bottom:.35rem;}
+  .mnemonic-phrase{font-style:italic;font-weight:600;color:var(--ink);margin-bottom:.35rem;}
+  .mnemonic-expand{font-size:.88rem;color:var(--ink-soft);}
+
+  /* ---------- Quiz ---------- */
+  .quiz-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:.85rem 1rem;margin:1.4rem 0;box-shadow:var(--shadow-sm);}
+  .quiz-toolbar .progress-copy{margin-right:auto;font-size:.88rem;font-weight:600;color:var(--ink-soft);}
+  .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:.42rem .9rem;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:.16s var(--ease);}
+  .btn:hover{background:var(--surface-2);transform:translateY(-1px);}
+  .btn-primary{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .btn-primary:hover{background:var(--primary-deep);}
+
+  .quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin:1rem 0;overflow:hidden;box-shadow:var(--shadow-sm);transition:.2s var(--ease);}
+  .quiz:hover{box-shadow:var(--shadow);}
+  .quiz-head{display:flex;gap:.85rem;align-items:flex-start;padding:1rem 1.15rem;}
+  .quiz-qnum{flex:0 0 auto;font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--accent);padding-top:.15rem;}
+  .quiz-q{font-weight:600;color:var(--ink);}
+  .quiz-answer{display:none;padding:0 1.15rem 1rem 3.6rem;font-size:.94rem;color:var(--ink-soft);border-top:1px dashed var(--line);margin-top:0;padding-top:.9rem;}
+  .quiz.open .quiz-answer{display:block;}
+  .quiz-answer strong{color:var(--primary-deep);}
+  .quiz-actions{display:flex;align-items:center;gap:1rem;padding:0 1.15rem 1rem 3.6rem;}
+  .quiz-reveal{background:none;border:0;color:var(--primary-deep);font-family:inherit;font-size:.83rem;font-weight:600;cursor:pointer;padding:0;}
+  .quiz-reveal:hover{text-decoration:underline;}
+  .mastered{margin-left:auto;display:inline-flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-faint);cursor:pointer;user-select:none;}
+  .mastered input{accent-color:var(--primary);width:16px;height:16px;cursor:pointer;}
+  .quiz.done{border-color:var(--primary);background:var(--primary-soft);}
+
+  /* ---------- Takeaways ---------- */
+  .takeaways{margin:1.3rem 0;display:grid;gap:.7rem;}
+  .takeaway{display:flex;gap:.9rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1.05rem;box-shadow:var(--shadow-sm);}
+  .tk-num{flex:0 0 auto;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--primary);color:#fff;font-size:.78rem;font-weight:700;display:flex;align-items:center;justify-content:center;}
+  .takeaway p{margin:0;font-size:.94rem;color:var(--ink-soft);}
+  .takeaway strong{color:var(--ink);}
+
+  /* ---------- Glossary ---------- */
+  .glossary-tools{display:flex;flex-wrap:wrap;gap:.45rem;margin:1.2rem 0;}
+  .chip{border:1px solid var(--line-strong);background:var(--surface);border-radius:999px;padding:.36rem .85rem;font-family:inherit;font-size:.8rem;font-weight:600;color:var(--ink-soft);cursor:pointer;transition:.16s var(--ease);}
+  .chip:hover{background:var(--surface-2);}
+  .chip.active{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .terms{display:grid;gap:.8rem;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));}
+  .term-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.85rem 1rem;box-shadow:var(--shadow-sm);}
+  .term-card.hidden{display:none;}
+  .term-name{font-weight:700;color:var(--primary-deep);font-size:.95rem;margin-bottom:.2rem;}
+  .term-meaning{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .empty-note{color:var(--ink-faint);font-size:.9rem;display:none;}
+
+  /* ---------- Checklist ---------- */
+  .checklist{display:grid;gap:.5rem;margin:1.2rem 0;}
+  .check-item{display:flex;gap:.7rem;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-sm);padding:.7rem .95rem;font-size:.92rem;color:var(--ink-soft);cursor:pointer;}
+  .check-item input{margin-top:.28rem;accent-color:var(--primary);width:16px;height:16px;flex:0 0 auto;cursor:pointer;}
+  .check-item:has(input:checked){background:var(--primary-soft);border-color:var(--primary);color:var(--ink);}
+
+  /* ---------- Footer ---------- */
+  .site-footer{max-width:1280px;margin:0 auto;padding:2.2rem clamp(.9rem,3vw,2rem) 3.4rem;border-top:1px solid var(--line);color:var(--ink-faint);font-size:.84rem;}
+  .footer-nav{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:space-between;margin-bottom:1.2rem;}
+  .footer-nav a{display:inline-flex;align-items:center;gap:.45rem;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:.55rem 1rem;font-weight:600;color:var(--ink-soft);font-size:.85rem;transition:.16s var(--ease);}
+  .footer-nav a:hover{border-color:var(--primary);color:var(--primary-deep);text-decoration:none;transform:translateY(-1px);}
+  .footer-nav .spacer{flex:1;}
+  .to-top{position:fixed;right:1.2rem;bottom:1.2rem;z-index:90;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);font-size:1.1rem;cursor:pointer;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.25s var(--ease);}
+  .to-top.show{opacity:1;pointer-events:auto;}
+  .to-top:hover{color:var(--primary-deep);transform:translateY(-2px);}
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .layout{grid-template-columns:1fr;}
+    .menu-toggle{display:inline-flex;}
+    .sidebar{
+      position:fixed;top:0;left:0;z-index:130;height:100vh;width:min(86vw,320px);
+      background:var(--surface);border-right:1px solid var(--line);padding:4.4rem 1.1rem 2rem;
+      transform:translateX(-104%);transition:transform .28s var(--ease);box-shadow:var(--shadow-lg);
+    }
+    body.nav-open .sidebar{transform:translateX(0);}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(30,25,20,.42);z-index:125;opacity:0;pointer-events:none;transition:opacity .25s var(--ease);}
+    body.nav-open .scrim{opacity:1;pointer-events:auto;}
+    .content{padding-top:1.6rem;}
+  }
+  @media (max-width:600px){
+    body{font-size:16px;}
+    .search input{width:44vw;}
+    .brand-week{display:none;}
+    .hero{padding:1.4rem;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+    html{scroll-behavior:auto;}
+  }
+
+  /* ---------- Code blocks (added for ELEC3609) ---------- */
+  .code-block{position:relative;margin:1.2rem 0;}
+  .code-block pre{margin:0;background:var(--surface-3);border:1px solid var(--line);border-radius:var(--radius-sm);padding:1rem 1.1rem;overflow:auto;}
+  .code-block code{font-family:var(--font-mono);font-size:.84rem;line-height:1.62;background:none;padding:0;border-radius:0;color:var(--ink);white-space:pre;}
+  .code-copy{position:absolute;top:.55rem;right:.55rem;font-family:var(--font-body);font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:.25rem .55rem;cursor:pointer;transition:.16s var(--ease);}
+  .code-copy:hover{color:var(--primary-deep);border-color:var(--line-strong);}
+  .code-copy.done{color:var(--primary-deep);border-color:var(--primary);}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to content</a>
+<div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progressFill"></div></div>
+
+<header class="topbar">
+  <button class="icon-btn menu-toggle" id="menuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+  <a class="brand" href="../../../index.html">
+    <span class="brand-course">ELEC3609</span>
+    <span class="brand-week">Week 6</span>
+  </a>
+  <div class="topbar-tools">
+    <div class="search">
+      <span class="search-icon" aria-hidden="true">⌕</span>
+      <input id="searchInput" type="search" placeholder="Search guide…" aria-label="Search this study guide" autocomplete="off">
+      <div class="suggest" id="suggest" role="listbox" aria-label="Search results"></div>
+    </div>
+    <button class="icon-btn" id="themeToggle" aria-label="Toggle night mode" title="Toggle night mode">◐</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Table of contents">
+    <div class="sidebar-inner">
+      <div class="sidebar-progress">
+        <div class="sidebar-progress-label"><span>Recall progress</span><span id="masteryLabel">0 / 0</span></div>
+        <div class="bar"><div class="bar-fill" id="masteryFill"></div></div>
+      </div>
+      <p class="toc-title">On this page</p>
+      <nav class="toc" id="toc"></nav>
+      <div class="sidebar-links">
+        <a href="#takeaways">★ Key takeaways</a>
+        <a href="#glossary">▦ Glossary</a>
+        <a href="#practice">✎ Practice questions</a>
+        <a href="#checklist">☑ Confidence check</a>
+      </div>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" hidden></div>
+
+  <main class="content" id="content">
+<section class="hero" id="top">
+  <span class="hero-eyebrow">ELEC3609 · Week 6 · Pre-packaged Software, Containers &amp; Monitoring</span>
+  <h1 class="hero-title">Deploying from the Shoulders of Giants</h1>
+  <p class="hero-sub">How to take someone else's finished software — a CMS, a forum, a database, a container image — and run it safely on your own infrastructure. This week covers the three components every package ships with, the supply-chain risk you inherit, reverse proxies and WAFs as your safety layer, Docker containers and images, and the monitoring stack that tells you when something is going wrong.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> Pre-packaged software hands you the <em>application code for free</em>, but you own everything around it — the configuration, the database and the deployment. The week splits in two: <strong>deploy it safely</strong> (audit the code, lock down configuration and database, put a reverse proxy in front, run it in a container) and <strong>watch it</strong> (metrics, logs, errors and analytics). Master that split and the details fall into place.</div>
+  <div class="hero-meta"><span class="meta-chip">~22 min read</span><span class="meta-chip">14 teaching sections</span><span class="meta-chip">14 practice questions</span><span class="meta-chip">31 key terms</span></div>
+  <div class="hero-outcomes">
+    <h2>By the end you will be able to</h2>
+    <ul class="outcome-list">
+      <li>Explain what pre-packaged software is and name common examples.</li>
+      <li>List the three components every package needs and say who supplies each.</li>
+      <li>Describe the supply-chain risks of inherited dependencies, plugins and images.</li>
+      <li>Audit a package's application code, configuration and database before deploying.</li>
+      <li>Explain how a reverse proxy and a WAF protect an exposed application.</li>
+      <li>Describe HTTP Basic Authentication and its 401 challenge/response.</li>
+      <li>Distinguish virtual machines from Linux containers and say what Docker adds.</li>
+      <li>Describe Docker images, volumes and networking, and why containers do not keep state.</li>
+      <li>Explain container orchestration with Kubernetes and AWS ECS.</li>
+      <li>Choose the right monitoring tool for metrics, logs, errors and alerts.</li>
+      <li>Explain ETL and MapReduce as approaches to custom analytics.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="guide-section" id="prepackaged-software-the-trade" data-title="Pre-packaged Software: The Trade">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Pre-packaged Software: The Trade You Are Making</h2>
+  </div>
+  <p class="section-kicker">Pre-packaged software gets you running fast — but you are adopting someone else's code, and all of its baggage, into your system.</p>
+<p><strong>Pre-packaged web software</strong> is ready-made application software, commonly used to get something up and running quickly. Instead of writing a blog, a forum or a wiki from scratch, you install a project that already does it.</p>
+<h3 class="sub-title">Common examples</h3>
+<div class="grid grid-2">
+  <div class="card"><h3 class="card-title">📝 WordPress</h3><p>A <strong>content management system (CMS)</strong> — the software behind a large share of the web's blogs and business sites.</p></div>
+  <div class="card"><h3 class="card-title">💬 vBulletin</h3><p><strong>Internet forum software</strong> — discussion boards with threads, user accounts and moderation.</p></div>
+  <div class="card"><h3 class="card-title">📚 MediaWiki</h3><p>An <strong>open-source wiki platform</strong> — collaborative, versioned pages (the engine behind Wikipedia).</p></div>
+  <div class="card"><h3 class="card-title">🛠️ Phabricator</h3><p>A <strong>project management tool</strong> — task tracking, code review and planning in one package.</p></div>
+</div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Using someone else's software is a head start, not a free pass. The moment you run it in production, its security, configuration and updates become <em>your</em> responsibility.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> if the package hands you the application code, what is left for you to do before the site is genuinely safe to expose to the internet?</div></div>
+</section>
+
+<section class="guide-section" id="three-components-of-a-package" data-title="The Three Components Every Package Has">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Three Components Every Package Has</h2>
+  </div>
+  <p class="section-kicker">Like any website, a package is application code plus configuration plus a database — and the package only supplies the first part.</p>
+<p>Just like any other website, pre-packaged software typically consists of three parts. The package <em>provides</em> one of them; you must handle the other two.</p>
+<ol class="steps">
+  <li><strong>Application code</strong> — the program itself. This is the part the package gives you.</li>
+  <li><strong>Configuration files</strong> — the settings that tell the application how to behave in <em>your</em> environment.</li>
+  <li><strong>A database</strong> — where the application stores its data.</li>
+</ol>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> The prepacked software provides the application code, but <strong>it is up to the deployer to configure the application and the infrastructure.</strong> Downloading is the easy 10%; configuring is the real work.</div></div>
+<div class="def-card"><span class="dc-term">Memcached</span> — an in-memory caching service often added alongside a package to speed up dynamic sites by keeping frequently used data in RAM.</div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> a package's own web interface is usually general-purpose. What does that hint about how much of it you actually need to enable?</div></div>
+</section>
+
+<section class="guide-section" id="supply-chain-security" data-title="Supply-Chain Security">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Supply-Chain Security: You Inherit the Dependencies</h2>
+  </div>
+  <p class="section-kicker">When you deploy a package, you inherit not just its code but its entire dependency tree — and every weak link in it becomes your weak link.</p>
+<p>The first security question to ask about any package is not about the package itself, but about everything it drags in with it.</p>
+<h3 class="sub-title">The core risk</h3>
+<p>You are <strong>inheriting not just the main application code, but also all of its dependencies</strong>. Each layer is code someone else wrote and someone else could attack.</p>
+<h3 class="sub-title">Dependency management</h3>
+<ul>
+  <li><strong>Libraries &amp; frameworks</strong> — the supporting code the app is built on.</li>
+  <li><strong>Plugins / extensions</strong> — optional add-ons, often from third parties.</li>
+  <li><strong>Container images</strong> — pre-built images you pull rather than build.</li>
+  <li><strong>System packages</strong> — OS-level packages installed inside the host or image.</li>
+</ul>
+<h3 class="sub-title">Supply-chain risks to watch</h3>
+<div class="grid grid-3">
+  <div class="card"><h3 class="card-title">⛓️ Supply-chain attacks</h3><p>An attacker compromises a dependency or plugin upstream so that everyone who installs it inherits the malware.</p></div>
+  <div class="card"><h3 class="card-title">🕰️ Outdated dependencies</h3><p>Old libraries carry known, published vulnerabilities that attackers can look up and exploit directly.</p></div>
+  <div class="card"><h3 class="card-title">🧩 Plugin ecosystem</h3><p>Plugins are frequently the weakest link: written by many authors, with varying quality and update habits.</p></div>
+</div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Trust in public registries is not the same as trust in a specific package. A Docker Hub image or a plugin can be popular, abandoned, or malicious — popularity is not a security guarantee.</div></div>
+</section>
+
+<section class="guide-section" id="auditing-application-code" data-title="Auditing the Application Code">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Auditing the Application Code</h2>
+  </div>
+  <p class="section-kicker">It can be dangerous to blindly run other people's code — so before you deploy, investigate what you are actually running.</p>
+<p>It can be <strong>dangerous to blindly run other people's code</strong>, especially when it is old and complex. Auditing the application code is the first of three audits you should perform.</p>
+<h3 class="sub-title">Four questions to ask</h3>
+<ul>
+  <li>What is it <strong>written in</strong>?</li>
+  <li>Is the codebase <strong>mature</strong>?</li>
+  <li>How <strong>active</strong> is development on the project?</li>
+  <li>Does the software have a <strong>history of security vulnerabilities</strong>?</li>
+</ul>
+<h3 class="sub-title">Practical checks</h3>
+<ul>
+  <li><strong>Identify other users</strong> — if large companies have adopted the software, it is likely they reviewed it before deciding.</li>
+  <li><strong>Identify potential support avenues</strong> — is support available from the supplier? Do they provide direct support, and at what cost?</li>
+  <li><strong>Check the frequency of commits</strong> — for open-source software, look at the code repository. More frequent and recent commits mean more active development.</li>
+  <li><strong>Scan for vulnerabilities</strong> — use a static source-code vulnerability scanner appropriate to the language and tooling.</li>
+  <li><strong>Search for known vulnerabilities</strong> — check disclosure sites such as <code>cvedetails.com</code>.</li>
+</ul>
+<h3 class="sub-title">Tools to know</h3>
+<div class="table-wrap"><table><thead><tr><th>Tool</th><th>What it does</th></tr></thead><tbody>
+  <tr><td><strong>npm audit</strong></td><td>Audits Node/JavaScript dependencies for known vulnerabilities.</td></tr>
+  <tr><td><strong>pip-audit</strong></td><td>Audits Python package dependencies.</td></tr>
+  <tr><td><strong>OWASP Dependency-Check</strong></td><td>Scans project dependencies against known-vulnerability databases.</td></tr>
+  <tr><td><strong>Snyk Vulnerability DB</strong></td><td>A vulnerability database and scanner for dependencies.</td></tr>
+</tbody></table></div>
+<div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Do this:</strong> Treat a dependency scan as a pre-deployment checklist item, not an optional extra. Run it before you expose anything, and re-run it when dependencies change.</div></div>
+</section>
+
+<section class="guide-section" id="auditing-configuration-and-database" data-title="Auditing Configuration and the Database">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Auditing Configuration and the Database</h2>
+  </div>
+  <p class="section-kicker">Packages often ship with insecure defaults and more features than you need; the database deserves the same scrutiny.</p>
+<h3 class="sub-title">Configuration</h3>
+<p>While it is good practice to release software that is <strong>secure-by-default</strong>, many software packages come with <strong>insecure configuration</strong>. It is critical to review all configuration options before deployment.</p>
+<p>Questions to ask:</p>
+<ul>
+  <li>What configuration options are available?</li>
+  <li>Are the default values for these options secure?</li>
+  <li>Are there any features enabled that you are not using?</li>
+  <li>Can you disable these features?</li>
+</ul>
+<p>How to audit configuration:</p>
+<ul>
+  <li><strong>Identify all configuration options</strong> — read the documentation and view example configurations.</li>
+  <li><strong>Search the internet for example configurations</strong> — they are readily available, but do not blindly trust them; evaluate them.</li>
+  <li><strong>Identify all features and components</strong> — general-purpose software often has functionality beyond what you need.</li>
+  <li><strong>Disable unwanted features</strong> — this reduces complexity and the surface area for possible attacks.</li>
+</ul>
+<h3 class="sub-title">Database</h3>
+<p>It is usually the responsibility of the deployer to configure the database required by pre-packaged software. Care must be taken.</p>
+<p>Questions to ask:</p>
+<ul>
+  <li>Does the package need its own database, or can it share one?</li>
+  <li>What database permissions are required?</li>
+  <li>If the application is vulnerable, will a database compromise lead to system compromise?</li>
+</ul>
+<p>How to audit the database:</p>
+<ul>
+  <li><strong>Identify database requirements</strong> — does the software create a single database for all of its tables, or multiple databases?</li>
+  <li><strong>Evaluate database permissions</strong> — give the <em>minimum</em> set of permissions. Start minimal and extend only when necessary.</li>
+  <li><strong>Evaluate the scope of a DB compromise</strong> — an SQL injection could let an attacker run arbitrary commands on the database.</li>
+</ul>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> The golden rule for both configuration and database is <strong>least privilege</strong> — enable only what you use, and grant only the permissions you need.</div></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Disabling unused features does not just simplify the app; it removes entire categories of attack. A feature that is off cannot be exploited.</div></div>
+</section>
+
+<section class="guide-section" id="deployment-and-reverse-proxy" data-title="Deployment and the Reverse Proxy">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Deployment and the Reverse Proxy</h2>
+  </div>
+  <p class="section-kicker">Never expose a package's own HTTP interface directly to the internet — put a layer you control in front of it.</p>
+<p>Software packages can come with their own web/HTTP interface. We do <strong>not</strong> want that interface <em>directly</em> exposed to the internet. Instead, we want our own layer that we control sitting in between.</p>
+<p>A <strong>reverse proxy</strong> (Nginx, Apache) or a load balancer can give us finer control over which requests can reach the application. This is especially important if the application exposes an admin or control interface without authentication.</p>
+<div class="flow"><span class="flow-step">Internet</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Reverse proxy / load balancer</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Application</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Database</span></div>
+<h3 class="sub-title">What a reverse proxy buys you</h3>
+<div class="grid grid-3">
+  <div class="card"><h3 class="card-title">📈 Scaling</h3><p>Use the reverse proxy as a load balancer to increase concurrent connections. Run many instances of the app and scale horizontally. The <strong>database is still a bottleneck</strong> for shared state.</p></div>
+  <div class="card"><h3 class="card-title">🔐 Request authentication</h3><p>If the app is an internal service, perform <strong>basic authentication</strong> at the proxy so anonymous web users cannot reach it at all.</p></div>
+  <div class="card"><h3 class="card-title">🛡️ Web Application Firewall</h3><p>A <strong>WAF</strong> can inspect incoming requests and reject those that look like attack vectors.</p></div>
+</div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> A malicious user <em>cannot reach the application at all</em> if the reverse proxy blocks them first. The proxy is your choke point — the single place where you can observe and filter traffic.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> your package ships an admin panel with no login. Which single piece of infrastructure most improves your security posture, and why?</div></div>
+</section>
+
+<section class="guide-section" id="http-basic-auth-and-waf" data-title="HTTP Basic Auth and the WAF">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">HTTP Basic Auth and the Web Application Firewall</h2>
+  </div>
+  <p class="section-kicker">Basic auth is a simple challenge–response gate; a WAF is a rule engine that filters out malicious requests before they arrive.</p>
+<h3 class="sub-title">HTTP Basic Authentication</h3>
+<p>HTTP Basic Authentication requires HTTP requests to include a <strong>username and password</strong> to be considered authorised. If a request arrives without valid credentials, the server responds with <strong>401 Unauthorized</strong>.</p>
+<p>The mechanics happen in two steps:</p>
+<ol class="steps">
+  <li><strong>Server side:</strong> the server responds to the initial request with a <code>401 Unauthorized</code> response containing the header <code>WWW-Authenticate: Basic realm="User Visible Realm"</code>.</li>
+  <li><strong>Client side:</strong> the browser prompts the user for a username and password, combines them with a colon (<code>Aladdin:OpenSesame</code>), encodes that string in base64, and resends the request with an <code>Authorization</code> header.</li>
+</ol>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>Authorization: Basic QWxhZGRpbjpPcGVuU2VzYW1l</code></pre></div>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Basic auth is <em>encoding</em>, not encryption. Base64 is trivially reversible, so credentials are only safe over HTTPS.</div></div>
+<h3 class="sub-title">Web Application Firewall (WAF)</h3>
+<p>A WAF applies rules and/or filters to incoming HTTP requests. It tries to identify requests that appear to contain <strong>exploitation code</strong> and rejects them.</p>
+<ul>
+  <li>All requests should go through the WAF, so it usually sits at the <strong>edge / web layer</strong> in front of your application.</li>
+  <li>A WAF is only as good as the rules it evaluates — <strong>keep the rule/filter sets up to date.</strong></li>
+</ul>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> Reverse proxy <em>authentication</em> and WAF <em>filtering</em> are complementary. Basic auth decides <em>who</em> may enter; the WAF decides <em>what</em> requests are safe to pass through.</div></div>
+</section>
+
+<section class="guide-section" id="virtual-machines-vs-containers" data-title="Virtual Machines vs Linux Containers">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Virtual Machines vs Linux Containers</h2>
+  </div>
+  <p class="section-kicker">A virtual machine virtualises hardware and needs a whole guest OS; a container virtualises the operating system and needs only your app.</p>
+<p>Before Docker, the standard way to isolate software was the virtual machine. Understanding the difference explains why containers won.</p>
+<div class="compare"><div class="compare-col a"><h3>Virtual machine</h3><ul><li>A <strong>hypervisor</strong> enables execution of virtual machines inside a host OS.</li><li>Each VM installs a full <strong>guest operating system</strong>.</li><li>Heavier: more disk, more memory, slower to start.</li></ul></div><div class="compare-col b"><h3>Linux container</h3><ul><li><strong>Removes the need for a guest OS</strong>.</li><li>Allows multiple isolated Linux systems on a single host OS.</li><li>Lighter and faster to start; shares the host kernel.</li></ul></div></div>
+<h3 class="sub-title">Docker</h3>
+<p><strong>Docker</strong> is an open-source project that automates the deployment of applications inside Linux containers. It makes it easy to deploy packaged applications, including any necessary dependencies.</p>
+<p>Multiple services/containers can be combined using the tool <strong>Docker Compose</strong>.</p>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> A VM virtualises <strong>hardware</strong> (so it needs an OS). A container virtualises the <strong>operating system</strong> (so it needs only your app). Fewer layers means less weight.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> if ten containers share one host kernel, what is the main resource saving compared with ten virtual machines?</div></div>
+</section>
+
+<section class="guide-section" id="docker-images-volumes-networking" data-title="Docker Images, Volumes and Networking">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Docker Images, Volumes and Networking</h2>
+  </div>
+  <p class="section-kicker">A container is created from an image; it stores nothing permanently, so data lives in volumes, and containers talk to each other over controlled links.</p>
+<h3 class="sub-title">Containers and images</h3>
+<p>Instead of running virtual machines, Docker lets us run <strong>containers</strong>. A Docker container can be thought of as a minimalistic Linux host: you can install any application you like, and the container itself can be almost any Linux distribution.</p>
+<p>A container is created from a <strong>Docker image</strong>. The image describes the base operating system and any modifications that need to be made, such as dependencies.</p>
+<p>A sample image that uses Ubuntu 18.04, runs <code>make</code>, copies the app and sets the entry point:</p>
+<div class="code-block"><button class="code-copy" type="button">Copy</button><pre><code>FROM ubuntu:18.04
+RUN make /app
+COPY . /app
+CMD python /app/app.py</code></pre></div>
+<h3 class="sub-title">Volumes: solving statelessness</h3>
+<p>Containers are good for running applications but <strong>not</strong> good for storing data — they <strong>do not maintain state</strong>. We mount <strong>volumes</strong> into containers to allow persistence.</p>
+<ul>
+  <li>For a database container such as MySQL, the data directory should be stored in an attached volume.</li>
+  <li>The mounted volume is a folder on the <strong>host machine</strong>, outside the container.</li>
+  <li>We can now destroy the container without losing data.</li>
+</ul>
+<h3 class="sub-title">Networking</h3>
+<p>Docker containers can be <strong>linked</strong> to each other, and nominated ports can be forwarded from the host OS to a container.</p>
+<ul>
+  <li>Example: one container for a WordPress application and a separate container for its MySQL database.</li>
+  <li>By linking them, WordPress can talk to MySQL directly. No other container or system can reach the database unless explicitly allowed via Docker.</li>
+  <li>This segmentation <strong>significantly improves security and ease of deployment</strong>.</li>
+</ul>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Data written inside a container is lost when the container is destroyed. If it needs to survive, it belongs in a <strong>volume</strong>, not in the container's filesystem.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> you run a database in a container with no volume. What happens to the data when you upgrade by replacing the container?</div></div>
+</section>
+
+<section class="guide-section" id="docker-hub-and-orchestration" data-title="Docker Hub and Container Orchestration">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Docker Hub and Container Orchestration</h2>
+  </div>
+  <p class="section-kicker">You can start from pre-built images instead of writing your own — but at scale you need an orchestrator to manage the fleet.</p>
+<h3 class="sub-title">Docker Hub</h3>
+<p>Why re-create the wheel? The Docker project runs a service called <strong>Docker Hub</strong>, which contains pre-built Docker images that can be used as a starting point for building services.</p>
+<ul>
+  <li>Many large software companies and projects have released Docker Hub images for their software.</li>
+  <li><strong>Security is a factor to consider here</strong> — a pre-built image is still third-party code.</li>
+</ul>
+<h3 class="sub-title">Container orchestration</h3>
+<p>When running containers in production, it is common to have fleets of 10s to 1000s of containers. Managing them by hand does not scale, so we use orchestration:</p>
+<div class="grid grid-2">
+  <div class="card"><h3 class="card-title">☸️ Kubernetes (GKE)</h3><p>Google offers the <strong>Kubernetes Engine (GKE)</strong>, an open-source cluster management system for deploying and managing containerised applications on Google Cloud. Kubernetes can also run outside Google Cloud.</p></div>
+  <div class="card"><h3 class="card-title">🟧 AWS ECS</h3><p>AWS offers the <strong>Elastic Container Service (ECS)</strong> for deploying Linux containers within the AWS ecosystem.</p></div>
+</div>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> Orchestration answers "how do I run and manage many containers?" — scheduling, scaling, health checks and networking across a fleet.</div></div>
+</section>
+
+<section class="guide-section" id="what-to-monitor" data-title="Monitoring: What to Watch">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Monitoring: What to Watch</h2>
+  </div>
+  <p class="section-kicker">When running a large-scale website, you must monitor everything — user behaviour, errors, and infrastructure health.</p>
+<p>When running a large-scale website, it is essential to <strong>monitor everything</strong>. Four facets to consider:</p>
+<div class="grid grid-2">
+  <div class="card"><h3 class="card-title">🖱️ User interaction</h3><p>Who clicks on what?</p></div>
+  <div class="card"><h3 class="card-title">📊 User analytics</h3><p>What local time do users usually come online?</p></div>
+  <div class="card"><h3 class="card-title">🚨 HTTP error rate</h3><p>What pages are throwing 500s and impacting users?</p></div>
+  <div class="card"><h3 class="card-title">🖥️ Infrastructure metrics</h3><p>How is our infrastructure performing? Can we handle 2× load? 10×?</p></div>
+</div>
+<h3 class="sub-title">The toolset at a glance</h3>
+<div class="table-wrap"><table><thead><tr><th>Tool</th><th>Job</th></tr></thead><tbody>
+  <tr><td><strong>Prometheus</strong></td><td>Metrics — collecting and storing time-series data.</td></tr>
+  <tr><td><strong>Grafana</strong></td><td>Graphing metrics and dashboards.</td></tr>
+  <tr><td><strong>Elasticsearch, Logstash, Kibana (ELK)</strong></td><td>Logging — centralised ingestion and querying of logs.</td></tr>
+  <tr><td><strong>Nagios</strong></td><td>Infrastructure monitoring.</td></tr>
+  <tr><td><strong>Sentry</strong></td><td>Error detection — aggregating application errors.</td></tr>
+</tbody></table></div>
+<div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> You cannot fix what you cannot see. Monitoring converts "the site feels slow" into a specific metric, log line or error event you can act on.</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> a page starts returning 500 errors for some users. Which two monitoring tools would most directly reveal the problem, and what would each show?</div></div>
+</section>
+
+<section class="guide-section" id="prometheus-and-grafana" data-title="Prometheus and Grafana">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Prometheus and Grafana</h2>
+  </div>
+  <p class="section-kicker">Prometheus stores metrics by scraping services over HTTP; Grafana turns those metrics into dashboards and alerts.</p>
+<h3 class="sub-title">Prometheus</h3>
+<p><strong>Prometheus</strong> is an open-source system for storing and graphing highly dimensional data and metrics.</p>
+<ul>
+  <li>It efficiently stores metrics in a custom format and scales through functional <strong>sharding</strong> and <strong>federation</strong>.</li>
+  <li>Data is <strong>scraped from monitored services over HTTP</strong>, rather than the applications publishing metrics to Prometheus. This pull model is a defining feature.</li>
+  <li>Originally developed at SoundCloud, now a member of the <strong>Cloud Native Computing Foundation</strong>.</li>
+</ul>
+<h3 class="sub-title">Grafana</h3>
+<p><strong>Grafana</strong> lets you visualise, query and alert on key metrics, regardless of where they are stored. It can have <strong>multiple backend metrics systems</strong>, so it is not tied to Prometheus.</p>
+<div class="grid grid-2">
+  <div class="card"><h3 class="card-title">🖥️ System metrics</h3><ul><li>CPU usage</li><li>Memory usage</li><li>Disk space and I/O</li><li>Network traffic and bandwidth</li><li>Load averages</li><li>System uptime</li></ul></div>
+  <div class="card"><h3 class="card-title">📱 Application metrics</h3><ul><li>Response times</li><li>Throughput</li><li>Error rates</li><li>Requests per second</li><li>Latency</li><li>User activity metrics</li></ul></div>
+</div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>Prometheus pulls, Grafana draws.</strong> Prometheus is the store (and scrapes metrics); Grafana is the window (dashboards/alerts on top of any store).</div></div>
+</section>
+
+<section class="guide-section" id="logging-and-alerting" data-title="Logging and Alerting: ELK, Nagios, Sentry">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Logging and Alerting: ELK, Nagios, Sentry</h2>
+  </div>
+  <p class="section-kicker">At scale you cannot read logs host by host, so you centralise logs, watch infrastructure, and aggregate errors into one feed.</p>
+<h3 class="sub-title">ELK stack — centralised logging</h3>
+<p>Once a website reaches a certain size, manually looking at logs on each host is not feasible. The <strong>ELK stack</strong> (<strong>E</strong>lasticsearch, <strong>L</strong>ogstash, <strong>K</strong>ibana) is a commonly used industry pattern for ingesting and querying large volumes of logs (application, web access/error, etc.) in a <strong>centralised location</strong>.</p>
+<ul>
+  <li><strong>Elasticsearch</strong> — the service that stores and indexes your logs.</li>
+  <li><strong>Logstash</strong> — ingests and processes the logs.</li>
+  <li><strong>Kibana</strong> — an open-source data-visualisation plugin for Elasticsearch, offering a simple interface for querying your logs.</li>
+</ul>
+<h3 class="sub-title">Nagios — infrastructure monitoring</h3>
+<p><strong>Nagios</strong> is an open-source "industry standard" for monitoring infrastructure. Many custom metrics can be configured, including network transfer rates, server performance and application metrics. It has integrations that let it send email, integrate with chat programs and <strong>trigger alerts</strong> when metrics are exceeded.</p>
+<h3 class="sub-title">Sentry — error detection</h3>
+<p><strong>Sentry</strong> collects errors from your website, both front-end and back-end, and consolidates and aggregates them into a <strong>single feed of events</strong>. It allows real-time monitoring of errors experienced while using your website and is critical infrastructure for large-scale sites.</p>
+<div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Note:</strong> Each tool answers a different question. ELK: "what happened, across all hosts?" Nagios: "is the infrastructure healthy, and warn me before it fails?" Sentry: "what errors are users hitting, right now?"</div></div>
+<div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> why is hunting through logs on each individual host a losing strategy as a site grows?</div></div>
+</section>
+
+<section class="guide-section" id="tracking-etl-and-mapreduce" data-title="Tracking, ETL and MapReduce">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Tracking, ETL and MapReduce</h2>
+  </div>
+  <p class="section-kicker">Off-the-shelf analytics may be too heavy or too limited — in that case you build the beginnings of a data warehouse.</p>
+<h3 class="sub-title">Off-the-shelf tracking</h3>
+<p>Common products include <strong>Google Analytics</strong> and <strong>KISSmetrics</strong>. They are quick to adopt but may not fit every need.</p>
+<h3 class="sub-title">Custom tracking / analytics</h3>
+<p>You may find that readily available tracking systems are too heavy (performance) or do not meet your needs. In those cases you may need to build the beginnings of a <strong>data warehouse</strong> solution.</p>
+<p>The core problem: <strong>database schemas are generally optimised for user performance, not for analytics.</strong> Calculating one user's balance by summing their deposits is straightforward; calculating the balance for <em>all</em> users is far less bounded.</p>
+<p>The most common ways to deal with this are:</p>
+<ul>
+  <li><strong>Transform the database</strong> into a format better optimised for queries, or</li>
+  <li><strong>Import the data into another service</strong> dedicated to analytics.</li>
+</ul>
+<h3 class="sub-title">ETL — Extract, Transform, Load</h3>
+<p>When building a custom tracking system, a common approach is the <strong>ETL</strong> process:</p>
+<div class="flow"><span class="flow-step">Extract</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Transform</span><span class="flow-arrow" aria-hidden="true">→</span><span class="flow-step">Load</span></div>
+<ol class="steps">
+  <li><strong>Extract</strong> — pull data from various sources: user clicks from JavaScript, web access logs, database changes.</li>
+  <li><strong>Transform</strong> — put the data into a consistent format or structure.</li>
+  <li><strong>Load</strong> — load the transformed data into a final application.</li>
+</ol>
+<h3 class="sub-title">MapReduce — distributed analytics</h3>
+<p>For very computationally intensive analytics across a large data set, <strong>MapReduce</strong> is a useful technique. It performs the analytics in a distributed sense, split over two steps:</p>
+<ul>
+  <li><strong>Map</strong> — performs filtering and sorting.</li>
+  <li><strong>Reduce</strong> — consolidates data into a summary format.</li>
+</ul>
+<div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Do not run heavy analytics queries directly against your live application database. It is tuned for user transactions, and an analytics query can degrade the experience for everyone.</div></div>
+<div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>ETL</strong> moves and reshapes data into an analytics-friendly store; <strong>MapReduce</strong> then crunches that data in parallel (map = filter/sort, reduce = summarise).</div></div>
+</section>
+
+<section class="guide-section" id="takeaways" data-title="Key Takeaways">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
+  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="takeaways">
+    <div class="takeaway"><span class="tk-num">1</span><p>Pre-packaged software (WordPress, vBulletin, MediaWiki, Phabricator) gets you running fast, but you inherit the responsibility for securing and configuring it.</p></div>
+    <div class="takeaway"><span class="tk-num">2</span><p>Every package needs three things: <strong>application code</strong> (provided), <strong>configuration</strong> and a <strong>database</strong> (both up to you).</p></div>
+    <div class="takeaway"><span class="tk-num">3</span><p>You inherit the whole dependency tree — libraries, plugins, container images and system packages — so supply-chain attacks and outdated dependencies are real risks.</p></div>
+    <div class="takeaway"><span class="tk-num">4</span><p>Audit application code with npm audit, pip-audit, OWASP Dependency-Check and Snyk; check commit activity, other users and known CVEs.</p></div>
+    <div class="takeaway"><span class="tk-num">5</span><p>Audit configuration (defaults are often insecure; disable unused features) and the database (minimum permissions; know the scope of a compromise).</p></div>
+    <div class="takeaway"><span class="tk-num">6</span><p>Never expose a package directly. A reverse proxy or load balancer gives you scaling, request authentication and a place for a WAF.</p></div>
+    <div class="takeaway"><span class="tk-num">7</span><p>HTTP Basic Auth is a 401 challenge (<code>WWW-Authenticate</code>) answered with a base64 <code>Authorization</code> header — encoding, not encryption.</p></div>
+    <div class="takeaway"><span class="tk-num">8</span><p>A WAF filters malicious requests at the edge; its protection is only as good as its up-to-date rule set.</p></div>
+    <div class="takeaway"><span class="tk-num">9</span><p>Containers share the host kernel and skip the guest OS, so they are lighter than VMs; Docker automates deployment and Compose combines services.</p></div>
+    <div class="takeaway"><span class="tk-num">10</span><p>Containers are stateless — data that must persist goes in a volume on the host; containers are linked over controlled Docker networking.</p></div>
+    <div class="takeaway"><span class="tk-num">11</span><p>Docker Hub gives pre-built images (check their trust); orchestration tools like Kubernetes/GKE and AWS ECS manage large container fleets.</p></div>
+    <div class="takeaway"><span class="tk-num">12</span><p>Monitoring has four facets (interaction, analytics, error rate, infrastructure). Prometheus pulls metrics, Grafana draws them, ELK centralises logs, Nagios watches infrastructure and Sentry aggregates errors.</p></div>
+    <div class="takeaway"><span class="tk-num">13</span><p>When off-the-shelf analytics is too heavy or too limited, build a data warehouse using ETL; use MapReduce for large distributed computations.</p></div>
+  </div>
+</section>
+
+<section class="guide-section" id="glossary" data-title="Glossary">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
+  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="glossary-tools"><button class="chip active" type="button" data-cat="all">All</button><button class="chip" type="button" data-cat="tech">Technologies &amp; tools</button><button class="chip" type="button" data-cat="concept">Core concepts</button><button class="chip" type="button" data-cat="method">Methods &amp; process</button></div>
+  <div class="terms">
+    <div class="term-card" data-cat="concept"><div class="term-name">Pre-packaged software</div><div class="term-meaning">Ready-made application software used to get something up and running quickly, e.g. WordPress, vBulletin, MediaWiki, Phabricator.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Application code</div><div class="term-meaning">The program itself — the component a package supplies.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Configuration</div><div class="term-meaning">Settings that tell the application how to behave in your environment; the deployer's responsibility.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Dependency</div><div class="term-meaning">A library or extension a package needs in order to run; inherited along with the application.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Supply-chain attack</div><div class="term-meaning">Compromising an upstream dependency or plugin so everyone who installs it inherits the attack.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">npm audit</div><div class="term-meaning">A tool that audits Node/JavaScript dependencies for known vulnerabilities.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">pip-audit</div><div class="term-meaning">A tool that audits Python package dependencies for known vulnerabilities.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">OWASP Dependency-Check</div><div class="term-meaning">A tool that scans project dependencies against known-vulnerability databases.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">Snyk</div><div class="term-meaning">A vulnerability database and dependency scanner.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Least privilege</div><div class="term-meaning">Granting only the minimum permissions needed; applied to database users and application features.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">Reverse proxy</div><div class="term-meaning">A layer (Nginx, Apache) placed in front of an application to control which requests reach it; enables scaling, authentication and WAF.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">Web Application Firewall (WAF)</div><div class="term-meaning">A rule/filter engine that inspects incoming HTTP requests and rejects apparent exploitation attempts.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">HTTP Basic Authentication</div><div class="term-meaning">An auth scheme requiring username and password; the server issues a 401 with WWW-Authenticate and the client answers with a base64 Authorization header.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">WWW-Authenticate</div><div class="term-meaning">The response header in a 401 that tells the client which authentication scheme is required.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Hypervisor</div><div class="term-meaning">Software that enables virtual machines to run inside a host operating system.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Linux container</div><div class="term-meaning">An isolated Linux system that shares the host kernel and needs no guest OS.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">Docker</div><div class="term-meaning">An open-source project that automates deploying applications inside Linux containers, including dependencies.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">Docker Compose</div><div class="term-meaning">A tool for combining multiple services/containers into one deployment.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">Docker image</div><div class="term-meaning">A description of a base OS plus modifications (dependencies, files, entry point) from which a container is created.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">Docker volume</div><div class="term-meaning">A host folder mounted into a container to persist data outside the container's stateless filesystem.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">Docker Hub</div><div class="term-meaning">A registry of pre-built Docker images usable as a starting point; trust must be evaluated.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">Kubernetes / GKE</div><div class="term-meaning">An open-source cluster management system for deploying and managing containerised applications; GKE is Google's managed offering.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">AWS ECS / EKS</div><div class="term-meaning">AWS's managed container orchestration (ECS) and managed Kubernetes (EKS) services.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">Prometheus</div><div class="term-meaning">An open-source metrics system that scrapes data from monitored services over HTTP; a CNCF project.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">Grafana</div><div class="term-meaning">A tool for visualising, querying and alerting on metrics from multiple backend systems.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">ELK stack</div><div class="term-meaning">Elasticsearch, Logstash and Kibana — a pattern for centralised log ingestion and querying.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">Nagios</div><div class="term-meaning">Open-source infrastructure monitoring with configurable metrics and alert integrations.</div></div>
+    <div class="term-card" data-cat="tech"><div class="term-name">Sentry</div><div class="term-meaning">An error-detection service that aggregates front-end and back-end errors into a single feed.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">ETL</div><div class="term-meaning">Extract, Transform, Load — pulling data from sources, reshaping it, and loading it into an analytics application.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">MapReduce</div><div class="term-meaning">A distributed analytics technique with two steps: Map (filter/sort) and Reduce (consolidate into a summary).</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Data warehouse</div><div class="term-meaning">A store built for analytics queries, separate from the transaction-optimised application database.</div></div>
+  </div>
+  <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
+</section>
+
+<section class="guide-section" id="practice" data-title="Practice Questions">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
+  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="quiz-toolbar">
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <button class="btn" id="revealAll" type="button">Reveal all</button>
+    <button class="btn" id="hideAll" type="button">Hide all</button>
+    <button class="btn" id="resetProgress" type="button">Reset</button>
+  </div>
+  <article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">What is pre-packaged software, and give four examples with the category each belongs to.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Pre-packaged web software is ready-made application software commonly used to get something up and running quickly. Examples: WordPress (content management system), vBulletin (internet forum software), MediaWiki (open-source wiki platform), Phabricator (project management tool).</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Name the three components of a typical web package, and say which one the package provides and who handles the rest.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Application code, configuration files and a database. The prepackaged software provides the application code; it is up to the deployer to configure the application and the infrastructure (including the database).</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">Why is supply-chain security a concern with pre-packaged software, and what four kinds of dependency can you inherit?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> You inherit not just the main application code but all of its dependencies, so a weakness anywhere upstream becomes your weakness. The four dependency kinds are libraries &amp; frameworks, plugins/extensions, container images and system packages. Key risks: supply-chain attacks, outdated dependencies, plugin/extension ecosystem quality, and trust in Docker Hub images.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">List the four questions to ask when auditing application code, and name four vulnerability/dependency tools.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Questions: What is it written in? Is the codebase mature? How active is development? Does it have a history of security vulnerabilities? Tools: npm audit, pip-audit, OWASP Dependency-Check, Snyk Vulnerability DB. Also useful: check other users, support avenues, commit frequency, and known vulnerabilities on cvedetails.com.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">How should you audit a package's configuration, and why disable unused features?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Many packages ship with insecure configuration even though secure-by-default is best practice, so review every option before deployment. Ask what options exist, whether defaults are secure, whether features are enabled that you do not use, and whether those can be disabled. Identify all options from docs and examples, search for example configurations (but evaluate, don't blindly trust), identify all features/components, and disable unwanted ones — reducing complexity and the attack surface.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">What database questions and checks should you perform before deploying a package?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Questions: does the package need its own database or can it share? What DB permissions are required? If the application is vulnerable, will a DB compromise lead to system compromise? Checks: identify database requirements (single DB for all tables, or multiple), evaluate permissions (give the minimum, extend only when necessary), and evaluate the scope of a DB compromise (an SQL injection may allow arbitrary commands).</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">Why should a package not be exposed directly to the internet, and what three advantages does a reverse proxy provide?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Packages may come with their own web/HTTP interface, and exposing it directly is risky — especially if it exposes an admin/control interface without authentication. A reverse proxy (Nginx, Apache) or load balancer sits in between and gives finer control over which requests reach the application. Advantages: scaling (load balancing, horizontal scaling, though the database remains a shared-state bottleneck), request authentication (e.g. basic auth for an internal service), and Web Application Firewall (inspect and reject attack-like requests).</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">Explain the mechanics of HTTP Basic Authentication from the server's challenge to the client's response.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Server side: the server answers the initial request with 401 Unauthorized containing the header WWW-Authenticate: Basic realm="User Visible Realm". Client side: the browser prompts for username/password, combines them with a single colon (e.g. Aladdin:OpenSesame), encodes the string in the RFC2045-MIME variant of base64, and sets the Authorization header, e.g. Authorization: Basic QWxhZGRpbjpPcGVuU2VzYW1l. Basic auth encodes rather than encrypts, so HTTPS is essential.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">What is a WAF, where does it sit, and what limits its effectiveness?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> A Web Application Firewall applies rules and/or filters to incoming HTTP requests, trying to identify requests that appear to contain exploitation code and reject them. All requests should pass through it, so it usually sits at the edge/web layer in front of the application. A WAF is only as good as the rules it evaluates, so the rule/filter sets must be kept up to date.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">Contrast a virtual machine with a Linux container and state what Docker and Docker Compose add.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> A hypervisor runs virtual machines inside a host OS, and each VM installs a full guest operating system. Linux containers remove the need for a guest OS, letting multiple isolated Linux systems run on a single host OS. Docker is an open-source project that automates deploying applications inside Linux containers, including dependencies; Docker Compose combines multiple services/containers.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">Describe Docker images, volumes and networking, and explain why volumes are needed.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> A container is a minimalistic Linux host created from a Docker image; the image describes the base OS and modifications (e.g. dependencies, files, entry point), as in FROM ubuntu:18.04 / RUN make /app / COPY . /app / CMD python /app/app.py. Containers do not maintain state, so they are poor for storing data; we mount volumes (host folders outside the container) to persist data — e.g. a MySQL data directory. Networking: containers can be linked and ports forwarded from the host; a WordPress container can talk directly to a MySQL container, and no other container/system can reach the DB unless explicitly allowed via Docker, improving security.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">What is Docker Hub, and what two options exist for orchestrating containers at scale?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Docker Hub is a service containing pre-built Docker images usable as a starting point; many companies and projects publish images there. Security is a factor to consider — a pre-built image is still third-party code. Orchestration: Google's Kubernetes Engine (GKE), an open-source cluster management system (Kubernetes can also run outside Google Cloud), and AWS Elastic Container Service (ECS) for deploying Linux containers in the AWS ecosystem.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">Name the four facets of monitoring and match Prometheus, Grafana, ELK, Nagios and Sentry to their jobs.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Facets: user interaction (who clicks what), user analytics (when users come online), HTTP error rate (what pages throw 500s) and infrastructure metrics (how infrastructure performs, can it handle 2×/10× load). Prometheus: metrics (open-source, scrapes over HTTP, CNCF, originally SoundCloud). Grafana: visualise/query/alert on metrics with multiple backend systems. ELK (Elasticsearch, Logstash, Kibana): centralised logging. Nagios: infrastructure monitoring with alerts. Sentry: error detection, aggregating front-end and back-end errors into one feed.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">Why might you build custom tracking instead of using Google Analytics or KISSmetrics, and how do ETL and MapReduce help?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Available tracking systems may be too heavy (performance) or not meet your needs, so you build the beginnings of a data warehouse. The problem is that database schemas are optimised for user performance, not analytics — summing one user's deposits is easy, but the same for all users is far less bounded. Solutions: transform the database into a query-friendly format, or import the data into another service. ETL: Extract (clicks, web access logs, DB changes), Transform (consistent format), Load (into a final application). MapReduce: distributed analytics with Map (filter/sort) and Reduce (consolidate into a summary).</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+</section>
+
+<section class="guide-section" id="checklist" data-title="Confidence Check">
+  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
+  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="checklist">
+    <label class="check-item"><input type="checkbox"> I can define pre-packaged software and give four examples with their categories.</label>
+    <label class="check-item"><input type="checkbox"> I can name the three components of a package and say who supplies each.</label>
+    <label class="check-item"><input type="checkbox"> I can explain supply-chain risk and list the dependency types you inherit.</label>
+    <label class="check-item"><input type="checkbox"> I can list the application-code audit questions and four scanning tools.</label>
+    <label class="check-item"><input type="checkbox"> I can audit configuration defaults and database permissions using least privilege.</label>
+    <label class="check-item"><input type="checkbox"> I can explain why a reverse proxy sits in front of a package and what it provides.</label>
+    <label class="check-item"><input type="checkbox"> I can walk through HTTP Basic Auth, including the 401 challenge and base64 header.</label>
+    <label class="check-item"><input type="checkbox"> I can describe a WAF and why its rule set must stay current.</label>
+    <label class="check-item"><input type="checkbox"> I can contrast VMs and containers and describe Docker and Compose.</label>
+    <label class="check-item"><input type="checkbox"> I can explain Docker images, volumes and networking, and why volumes exist.</label>
+    <label class="check-item"><input type="checkbox"> I can describe Docker Hub and orchestration with Kubernetes/GKE and AWS ECS.</label>
+    <label class="check-item"><input type="checkbox"> I can match Prometheus, Grafana, ELK, Nagios and Sentry to their jobs.</label>
+    <label class="check-item"><input type="checkbox"> I can explain custom tracking, ETL and MapReduce.</label>
+  </div>
+</section>
+
+</main>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-nav">
+    <a href="../../../index.html">⌂ All guides</a>
+    <span class="spacer"></span>
+    <a href="../week_5/ELEC3609_week5_2026_study_guide.html">← Week 5</a>
+    <a href="../week_7/ELEC3609_week7_2026_study_guide.html">Week 7 →</a>
+  </div>
+  <p>ELEC3609/9609 Internet Software Platforms · Week 6 · Independent study guide for active recall. Always reconcile with the official lecture material.</p>
+</footer>
+
+<button class="to-top" id="toTop" aria-label="Back to top">↑</button>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Theme ---------- */
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('themeToggle');
+  try {
+    var saved = localStorage.getItem('elec3609-theme');
+    if (saved) root.setAttribute('data-theme', saved);
+    else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) root.setAttribute('data-theme','dark');
+  } catch(e){}
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('elec3609-theme', next); } catch(e){}
+  });
+
+  /* ---------- Mobile nav ---------- */
+  var menuBtn = document.getElementById('menuToggle');
+  var scrim = document.getElementById('scrim');
+  function setNav(open){
+    document.body.classList.toggle('nav-open', open);
+    if (menuBtn) menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (scrim) scrim.hidden = !open;
+  }
+  if (menuBtn) menuBtn.addEventListener('click', function(){ setNav(!document.body.classList.contains('nav-open')); });
+  if (scrim) scrim.addEventListener('click', function(){ setNav(false); });
+
+  /* ---------- Build table of contents ---------- */
+  var sections = Array.prototype.slice.call(document.querySelectorAll('.guide-section'));
+  var toc = document.getElementById('toc');
+  var tocLinks = [];
+  if (toc){
+    sections.forEach(function(sec){
+      var title = sec.getAttribute('data-title') || (sec.querySelector('.section-title') ? sec.querySelector('.section-title').textContent : 'Section');
+      if (!sec.id) sec.id = 'sec-' + tocLinks.length;
+      var a = document.createElement('a');
+      a.href = '#' + sec.id;
+      a.className = 'toc-link';
+      a.innerHTML = '<span class="n">' + String(tocLinks.length + 1).padStart(2,'0') + '</span>' + title;
+      a.addEventListener('click', function(){ setNav(false); });
+      toc.appendChild(a);
+      tocLinks.push(a);
+    });
+  }
+
+  /* ---------- Scrollspy + reading progress ---------- */
+  var fill = document.getElementById('progressFill');
+  var toTop = document.getElementById('toTop');
+  function onScroll(){
+    var doc = document.documentElement;
+    var max = doc.scrollHeight - doc.clientHeight;
+    var pct = max > 0 ? (doc.scrollTop / max) * 100 : 0;
+    if (fill) fill.style.width = pct + '%';
+    if (toTop) toTop.classList.toggle('show', doc.scrollTop > 500);
+  }
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+  if (toTop) toTop.addEventListener('click', function(){ window.scrollTo({top:0, behavior:'smooth'}); });
+
+  if ('IntersectionObserver' in window && tocLinks.length){
+    var visible = {};
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){ visible[en.target.id] = en.isIntersecting ? en.intersectionRatio : 0; });
+      var bestId = null, best = 0;
+      Object.keys(visible).forEach(function(id){ if (visible[id] > best){ best = visible[id]; bestId = id; } });
+      tocLinks.forEach(function(a){
+        var on = bestId && a.getAttribute('href') === '#' + bestId;
+        a.classList.toggle('active', !!on);
+      });
+    }, {rootMargin:'-80px 0px -55% 0px', threshold:[0, .12, .3, .6, 1]});
+    sections.forEach(function(s){ io.observe(s); });
+  }
+
+  /* ---------- Quizzes ---------- */
+  var quizzes = Array.prototype.slice.call(document.querySelectorAll('.quiz'));
+  var masteryKey = 'elec3609-ELEC3609_week6_2026_study_guide-mastery';
+  function updateMastery(){
+    var done = document.querySelectorAll('.quiz.done').length;
+    var label = document.getElementById('masteryLabel');
+    var mfill = document.getElementById('masteryFill');
+    if (label) label.textContent = done + ' / ' + quizzes.length;
+    if (mfill) mfill.style.width = (quizzes.length ? (done / quizzes.length) * 100 : 0) + '%';
+  }
+  quizzes.forEach(function(q, i){
+    if (!q.id) q.id = 'q' + (i + 1);
+    var head = q.querySelector('.quiz-head');
+    var reveal = q.querySelector('.quiz-reveal');
+    var box = q.querySelector('.mastered input');
+    function toggle(){ q.classList.toggle('open'); }
+    if (head) { head.style.cursor = 'pointer'; head.addEventListener('click', toggle); }
+    if (reveal) { reveal.addEventListener('click', function(e){ e.stopPropagation(); toggle(); }); }
+    if (box){
+      try { if (localStorage.getItem(masteryKey + ':' + q.id) === '1'){ box.checked = true; q.classList.add('done'); } } catch(e){}
+      box.addEventListener('change', function(){
+        q.classList.toggle('done', box.checked);
+        try { localStorage.setItem(masteryKey + ':' + q.id, box.checked ? '1' : '0'); } catch(e){}
+        updateMastery();
+      });
+    }
+  });
+  updateMastery();
+
+  var revealAll = document.getElementById('revealAll');
+  var hideAll = document.getElementById('hideAll');
+  var resetProgress = document.getElementById('resetProgress');
+  if (revealAll) revealAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.add('open'); }); });
+  if (hideAll) hideAll.addEventListener('click', function(){ quizzes.forEach(function(q){ q.classList.remove('open'); }); });
+  if (resetProgress) resetProgress.addEventListener('click', function(){
+    quizzes.forEach(function(q){
+      q.classList.remove('open','done');
+      var b = q.querySelector('.mastered input');
+      if (b) b.checked = false;
+      try { localStorage.removeItem(masteryKey + ':' + q.id); } catch(e){}
+    });
+    updateMastery();
+  });
+
+  /* ---------- Glossary filter ---------- */
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip[data-cat]'));
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      chips.forEach(function(c){ c.classList.remove('active'); });
+      chip.classList.add('active');
+      var cat = chip.getAttribute('data-cat');
+      var shown = 0;
+      document.querySelectorAll('.term-card').forEach(function(card){
+        var ok = cat === 'all' || card.getAttribute('data-cat') === cat;
+        card.classList.toggle('hidden', !ok);
+        if (ok) shown++;
+      });
+      var note = document.getElementById('glossaryEmpty');
+      if (note) note.style.display = shown ? 'none' : 'block';
+    });
+  });
+
+  /* ---------- Search ---------- */
+  var input = document.getElementById('searchInput');
+  var suggest = document.getElementById('suggest');
+  function runSearch(){
+    if (!suggest) return;
+    var q = (input.value || '').trim().toLowerCase();
+    suggest.innerHTML = '';
+    if (!q){ suggest.classList.remove('open'); return; }
+    var hits = [];
+    sections.forEach(function(sec){
+      var t = (sec.getAttribute('data-title') || '') + ' ' + sec.textContent;
+      if (t.toLowerCase().indexOf(q) !== -1){
+        hits.push({href:'#' + sec.id, label: sec.getAttribute('data-title') || sec.id});
+      }
+    });
+    document.querySelectorAll('.term-card').forEach(function(card){
+      if (card.textContent.toLowerCase().indexOf(q) !== -1){
+        var name = card.querySelector('.term-name');
+        hits.push({href:'#glossary', label:'Term: ' + (name ? name.textContent : '')});
+      }
+    });
+    var seen = {}; var out = [];
+    hits.forEach(function(h){ if (!seen[h.label]){ seen[h.label] = 1; out.push(h); } });
+    out = out.slice(0, 12);
+    if (!out.length){
+      suggest.innerHTML = '<div class="none">No matches for “' + q.replace(/[<>&]/g,'') + '”.</div>';
+    } else {
+      out.forEach(function(h){
+        var a = document.createElement('a');
+        a.href = h.href; a.textContent = h.label;
+        a.addEventListener('click', function(){ suggest.classList.remove('open'); input.value=''; });
+        suggest.appendChild(a);
+      });
+    }
+    suggest.classList.add('open');
+  }
+  if (input){
+    input.addEventListener('input', runSearch);
+    input.addEventListener('focus', runSearch);
+  }
+  document.addEventListener('click', function(e){
+    if (suggest && !e.target.closest('.search')) suggest.classList.remove('open');
+  });
+
+  /* ---------- Checklist persistence ---------- */
+  document.querySelectorAll('.checklist input[type="checkbox"]').forEach(function(box, i){
+    var key = 'elec3609-ELEC3609_week6_2026_study_guide-check-' + i;
+    try { if (localStorage.getItem(key) === '1') box.checked = true; } catch(e){}
+    box.addEventListener('change', function(){ try { localStorage.setItem(key, box.checked ? '1' : '0'); } catch(e){} });
+  });
+})();
+</script>
+
+<script>
+(function(){
+  "use strict";
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.code-copy');
+    if (!btn) return;
+    var code = btn.parentElement.querySelector('code');
+    if (!code) return;
+    var text = code.innerText;
+    var done = function(){ btn.textContent = 'Copied'; btn.classList.add('done'); setTimeout(function(){ btn.textContent='Copy'; btn.classList.remove('done'); }, 1400); };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, done); }
+    else { var ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(err){} document.body.removeChild(ta); done(); }
+  });
+})();
+</script>
+
+</body>
+</html>
