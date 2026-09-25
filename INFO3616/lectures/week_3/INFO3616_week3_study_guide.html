@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Access control explained: DAC and MAC, Unix permissions, middleware, sandboxing, hardware rings, and the Bell-LaPadula and Biba policy models.">
+<meta name="description" content="INFO3616 Week 3 study guide — access control models, policy, reference monitors, DAC/MAC/RBAC/ABAC and the principles behind them.">
 <title>INFO3616 Week 3 — Access Control</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -464,664 +464,538 @@
   </aside>
   <div class="scrim" id="scrim" hidden></div>
 
-  <main class="content" id="content">
-<section class="hero" id="top">
+  <main class="content" id="content"><section class="hero" id="top">
   <span class="hero-eyebrow">INFO3616 · Week 3 · Access Control</span>
-  <h1 class="hero-title">Access Control: Who Gets In, and Why the System Says No</h1>
-  <p class="hero-sub">Every computer system has to answer one blunt question over and over: is this principal allowed to do this thing to this resource? This week shows you how that decision is made — from the tiny permission bits on a Unix file, through databases, browsers, sandboxes and virtual machines, all the way down to the privilege rings built into the CPU — and finishes with the formal policy models (Bell-LaPadula and Biba) that security architects use to reason about it.</p>
-  <div class="hero-lead"><strong>Read this first:</strong> hold onto one mental model — <em>access control is a layered gatekeeper.</em> <strong>Authentication</strong> proves who you are, <strong>authorisation</strong> decides what you may do, and <strong>mechanisms</strong> (passwords, ACLs, permission bits, rings) enforce that decision at every layer of the stack. The same idea wears different clothes at each layer, but it is always the same idea.</div>
+  <h1 class="hero-title">Who Gets In, and What May They Touch? The Machinery of Access Control</h1>
+  <p class="hero-sub">Every system must repeatedly answer one question: is this principal allowed to perform this operation on this object? This week we build the vocabulary for that question, meet discretionary and mandatory access control, tour the access control built into operating systems, middleware and hardware, and finish with the formal models, Bell-LaPadula and Biba.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> hold one mental model all week — <em>access control decides a triple: subject, object, operation.</em> A subject (user, process or machine) tries an operation (read, write, execute) on an object (a file, port, record or device). Everything else is machinery for making that decision quickly, safely, with the right authority behind it. When you meet a new mechanism, ask: who decides, and how is it enforced?</div>
   <div class="hero-meta">
-    <span class="meta-chip"><span class="dot"></span>~32 min read</span>
+    <span class="meta-chip"><span class="dot"></span>~20 min read</span>
     <span class="meta-chip">16 teaching sections</span>
-    <span class="meta-chip">12 practice questions</span>
+    <span class="meta-chip">15 practice questions</span>
     <span class="meta-chip">30 key terms</span>
   </div>
   <div class="hero-outcomes">
     <h2>By the end you will be able to</h2>
     <ul class="outcome-list">
-      <li>Define access control, authentication and authorisation, and explain how they differ.</li>
-      <li>Place access control inside the policy → incentives → mechanisms → assurances framework, and read a simple access control matrix.</li>
-      <li>Contrast Discretionary Access Control (DAC) with Mandatory Access Control (MAC) and give a real example of each.</li>
-      <li>Read a Unix permission string such as <code>-rwxr-xr-x</code>, and explain UID, GID, root, sudo and the special SUID, SGID and sticky bits.</li>
-      <li>Describe how macOS, Windows, iOS and Android each implement access control, and how they differ.</li>
-      <li>Explain middleware, database and browser access control, including the same-origin policy and the confused deputy problem.</li>
-      <li>Explain sandboxing, virtualisation and containers, and why they raise the bar for attackers.</li>
-      <li>Describe hardware protections: memory segmentation, privilege rings, the principle of least privilege, TPMs, Intel rings and ARM's CHERI.</li>
-      <li>State the rules of the Bell-LaPadula and Biba models, apply them to a clearance table, and list their strengths and weaknesses.</li>
+      <li>Define access control and separate it from authentication and authorization.</li>
+      <li>Read and write an access control matrix using subjects, objects, operations and rights.</li>
+      <li>Explain policy versus mechanism and the three reference monitor requirements.</li>
+      <li>Contrast discretionary and mandatory access control with a real example of each.</li>
+      <li>Describe access control lists and capability lists and their relation to the matrix.</li>
+      <li>Decode Unix permissions in symbolic and octal form, including SUID, SGID and the sticky bit.</li>
+      <li>Explain access control in macOS, Windows, iOS and Android.</li>
+      <li>Describe middleware, browser, sandboxing, virtualisation and hardware access control.</li>
+      <li>State and apply the Bell-LaPadula and Biba properties, including star and invocation.</li>
+      <li>Relate roles, attributes and least privilege to real organisational access control.</li>
     </ul>
   </div>
 </section>
 
-<section class="guide-section" id="access-control-basics" data-title="Access Control, Authentication &amp; Authorization">
+<section class="guide-section" id="what-is-access-control" data-title="What Is Access Control?">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Access Control, Authentication and Authorization</h2>
+    <h2 class="section-title">What Is Access Control?</h2>
   </div>
-  <p class="section-kicker">Three words that are constantly confused. Get them straight now and the rest of the week falls into place.</p>
-  <p><strong>Access control</strong> is an important element of a <strong>security policy</strong>. Its aim is to control access to <strong>resources and assets</strong>: which <strong>principals</strong> (users, user groups, processes, machines and so on) may reach which resources, which files they can read, which programs they can execute, and how they share data with one another.</p>
-  <p>Concrete questions that access control answers:</p>
+  <p class="section-kicker">Access control is the part of a security policy that decides who may do what to which resources.</p>
+  <div class="def-card"><span class="dc-term">Access control</span> — an important element of a <strong>security policy</strong>, aiming to control access to resources and assets. It governs which <strong>principals</strong> (users, user groups, processes, machines) have access to which resources: which files they can read, which programs they can execute, and how they share data.</div>
+  <p>The lecture opens with two questions. <em>Can a customer of a bank access the bank vault?</em> And <em>can a program access the passwords of other users?</em> One is physical, one digital, but both ask whether somebody may reach a resource they may or may not be entitled to.</p>
+  <h3 class="sub-title">Three words people mix up</h3>
   <ul>
-    <li>Can a customer of a bank access the bank vault?</li>
-    <li>Can a program access the passwords of other users?</li>
+    <li><strong>Authentication</strong> — acquiring <strong>evidence of the identity</strong> of another party, such as a password or fingerprint. It answers <em>who you are</em>.</li>
+    <li><strong>Authorization</strong> — the <strong>allocation of a privilege</strong> to a party (notes), or verifying whether an entity is allowed an action (slides). It answers <em>what you may do</em>.</li>
+    <li><strong>Access control</strong> — the machinery that <strong>restricts access</strong> to resources, turning an authorization decision into an enforced outcome.</li>
   </ul>
-  <p>Notice how broad that is. Access control is not only about people; it is equally about <em>programs</em> acting on behalf of people. That is why the neutral word <strong>principal</strong> is used — a principal is any entity that can be granted or denied access.</p>
-  <h3 class="sub-title">Authentication vs authorisation</h3>
-  <div class="compare">
-    <div class="compare-col a">
-      <h3>Authentication</h3>
-      <p>The process of <strong>acquiring evidence of the identity</strong> of another party. It answers: <em>who are you?</em> Passwords, fingerprints and security protocols are authentication mechanisms.</p>
-    </div>
-    <div class="compare-col b">
-      <h3>Authorization</h3>
-      <p>The process of verifying whether an entity is <strong>allowed an action</strong> — or, in the notes' wording, the <strong>allocation of a privilege</strong> to a party. It answers: <em>what may you do?</em></p>
-    </div>
-  </div>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Order matters:</strong> authentication normally comes first. You cannot sensibly decide what someone is allowed to do until you know who they are. This is why an operating system authenticates a principal with a password or fingerprint <em>before</em> it authorises access to files and ports.</div></div>
-  <div class="mnemonic">
-    <div class="mnemonic-letters">A · A</div>
-    <div class="mnemonic-phrase">"Authentication asks who; Authorisation asks what"</div>
-    <div class="mnemonic-expand"><strong>A</strong>uthentication = identity (evidence). <strong>A</strong>uthorisation = permission (privilege). Access control is the whole system that enforces the answer.</div>
-  </div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> You type your password to log in to a laptop. Is that authentication, authorisation, or both? (Answer: typing the password is authentication; the rules that then let you open some files and not others are authorisation.)</div></div>
+  <p>They form a pipeline: identify, authenticate, authorize, then access the resource. Within the reference framework, access control is <em>specified in the policy</em>; it <em>counters the incentives</em> of an attacker who wants a resource; it is <em>implemented by one or more mechanisms</em>, such as a password; and every mechanism gives a level of <strong>assurance</strong>. Passwords are the example: password strength relates directly to the assurance provided.</p>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> separating policy from mechanism prevents a common confusion. "Only managers may read payroll" is a <em>policy</em>; a password plus a permission check is a <em>mechanism</em>. Insecurity often comes from a mismatch between the two.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Your phone unlocks with your face, then allows only some apps. Which of the three words covers the unlocking, and which covers the app restrictions?</div></div>
 </section>
 
-<section class="guide-section" id="reference-framework" data-title="The Reference Framework &amp; the Matrix">
+<section class="guide-section" id="access-control-matrix" data-title="The Access Control Matrix">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">The Reference Framework and the Access Control Matrix</h2>
+    <h2 class="section-title">The Access Control Matrix</h2>
   </div>
-  <p class="section-kicker">Access control is not a standalone gadget — it sits in a cycle of policy, incentives, mechanisms and assurance.</p>
-  <p>The course uses a small <strong>reference framework</strong> to place every security topic. Access control fits into it like this:</p>
-  <ul>
-    <li>Access control is <strong>specified in the policy</strong> — the policy says who may do what.</li>
-    <li>It <strong>counters the incentives of the attacker</strong>, who wants to access a resource or asset.</li>
-    <li>It is <strong>implemented by one or more mechanisms</strong> — for example, passwords.</li>
-    <li>Those mechanisms give us a certain level of <strong>assurance</strong> — how much we can trust that the control actually holds.</li>
-  </ul>
-  <div class="flow">
-    <span class="flow-step">Policy</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Incentives (attacker)</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Mechanisms</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Assurance</span>
-  </div>
-  <p>A password is the textbook example: the <strong>password is the mechanism</strong>, and the <strong>strength of the password relates directly to the assurance</strong> it provides. A four-character password gives weak assurance; a long passphrase with a second factor gives strong assurance.</p>
-  <h3 class="sub-title">Modelling access as a matrix</h3>
-  <p>Access controls are often modelled as a <strong>matrix of access permissions</strong>: columns are objects (such as files), rows are users, and each cell says what that user may do to that object. The convention is <code>r</code> for read, <code>w</code> for write, <code>x</code> for execute, and <code>-</code> for no access at all.</p>
+  <p class="section-kicker">The cleanest picture of access control is a grid: subjects down the side, objects across the top, rights in the cells.</p>
+  <p>Access controls can be modelled as a <strong>matrix of access permissions</strong>, with columns for files (objects) and rows for users (subjects). The lecture writes <code>r</code> for read, <code>w</code> for write, <code>x</code> for execute, and <code>-</code> for no access. Cells can also hold read, append, read-write, execute, or the empty set.</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>User</th><th>Operating System</th><th>Accounts Program</th><th>Accounting Data</th><th>Audit Trail</th></tr></thead>
       <tbody>
-        <tr><td><strong>Sam</strong> (system administrator)</td><td>rwx</td><td>rwx</td><td>rw</td><td>r</td></tr>
-        <tr><td><strong>Alice</strong> (manager)</td><td>x</td><td>x</td><td>rw</td><td>-</td></tr>
-        <tr><td><strong>Bob</strong> (auditor)</td><td>rx</td><td>r</td><td>r</td><td>r</td></tr>
+        <tr><td><strong>Sam</strong></td><td>rwx</td><td>rwx</td><td>rw</td><td>r</td></tr>
+        <tr><td><strong>Alice</strong></td><td>x</td><td>x</td><td>rw</td><td>-</td></tr>
+        <tr><td><strong>Bob</strong></td><td>rx</td><td>r</td><td>r</td><td>r</td></tr>
       </tbody>
     </table>
   </div>
-  <p>Read the story the matrix tells:</p>
   <ul>
-    <li><strong>Sam</strong> is the administrator and has universal access — <em>except</em> the audit trail, which even he should only be able to read, never alter.</li>
-    <li><strong>Alice</strong> needs to <em>execute</em> the operating system and applications, but only through the approved interfaces — she must not be able to tamper with them, so she has <code>x</code> but no <code>w</code>. She does need to read and write the data.</li>
-    <li><strong>Bob</strong> the auditor can read everything (read plus execute on the OS, read on the rest).</li>
+    <li><strong>Sam</strong>, the system administrator, has universal access except the audit trail, which even he should only <em>read</em>: the admin may not quietly alter the logs.</li>
+    <li><strong>Alice</strong>, the manager, needs to execute the OS and applications but only through approved interfaces, so she has no write access to the OS or programs. She does need to read and write the data.</li>
+    <li><strong>Bob</strong>, the auditor, can read everything. No cell in his row contains a <code>w</code>.</li>
   </ul>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why the matrix matters:</strong> it is the simplest mental picture of access control and it reappears all week. An ACL is essentially one column of the matrix; a capability is essentially one row. When you meet a new mechanism, ask: <em>is this storing columns (objects) or rows (subjects)?</em></div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Why should even the all-powerful Sam only <em>read</em> the audit trail? (Answer: if administrators could rewrite the audit trail, they could erase evidence of their own misuse — so the trail is deliberately read-only for everyone.)</div></div>
+  <p>Each row is a job description expressed as permissions. The four nouns to keep: a <strong>subject</strong> is an active entity that requests access (a person, group, process or machine), forming the <strong>rows</strong>; an <strong>object</strong> is a passive thing (a file, process, port, record or device), forming the <strong>columns</strong>; an <strong>operation</strong> is a kind of action such as read, write or execute, and may be <strong>coarse</strong> (read/write/execute) or very <strong>fine-grained</strong>; and a <strong>right</strong> is the permission a subject holds over an object, living in a matrix cell.</p>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember:</strong> rows are <em>subjects</em>, columns are <em>objects</em>, cells are <em>rights</em>. Every real mechanism this week is a way of storing or compressing that grid.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Alice resigns and Dan replaces her. What is the minimal set of cells you must change? This management problem is why large matrices hurt.</div></div>
 </section>
 
-<section class="guide-section" id="dac-mac" data-title="DAC &amp; MAC">
+<section class="guide-section" id="policy-mechanism-reference-monitor" data-title="Policy, Mechanism &amp; Reference Monitor">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Discretionary vs Mandatory Access Control</h2>
+    <h2 class="section-title">Policy, Mechanism and the Reference Monitor</h2>
   </div>
-  <p class="section-kicker">The single most examinable contrast of the week: who gets to decide access — the owner, or a central authority?</p>
-  <p>Access control always involves two kinds of thing:</p>
+  <p class="section-kicker">A policy says what is allowed; a mechanism enforces it; a trusted reference monitor is the checkpoint every request must pass.</p>
+  <p>When analysing a system's security, the lecture recommends a fixed order: <strong>analyse incentives and build a threat model</strong> describing the attacker's motivations and capabilities; <strong>analyse the security policy</strong>, the goals to be achieved, which is relatively verbose; then <strong>analyse the security mechanisms</strong> that implement the policy and mitigate, detect and respond to threats. The <strong>policy</strong> is the "what"; the <strong>mechanism</strong> is the "how". You can have a perfect policy and a broken mechanism, or a flawless mechanism enforcing a careless policy.</p>
+  <div class="def-card"><span class="dc-term">Security policy model</span> — a highly precise, succinct statement about the protection properties of a system. It can be highly formal and drives engineering. Bell-LaPadula and Biba are famous examples.</div>
+  <h3 class="sub-title">The reference monitor</h3>
+  <p>How do we ensure the policy is applied every time, not skipped when inconvenient? The classic answer is a <strong>reference monitor</strong>: an abstract gatekeeper between subjects and objects that validates every request. The lecture gives two concrete faces of it. In <strong>mandatory access control</strong>, a <em>'security kernel'</em> checks via security attributes whether a subject may interact with an object. In <strong>Windows</strong>, access is enforced via a <em>Security Reference Monitor (SRM)</em>, a trusted component providing fine-grained security. A reference monitor must satisfy three standard requirements: <strong>complete mediation</strong> (every access to every object is checked, with no side door), <strong>tamper-proof</strong> (untrusted code cannot modify or disable it), and <strong>verifiable</strong> (small and simple enough to analyse).</p>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> complete mediation separates real access control from security theatre. A lock checked only when the door is closed, never when it is ajar, is not access control. This is why the kernel and hypervisor get so much attention: natural places for a small, tamper-proof, verifiable monitor.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A web app hides the "delete" button but never re-checks permissions on the server. Which requirement has been violated?</div></div>
+</section>
+
+<section class="guide-section" id="discretionary-access-control" data-title="Discretionary Access Control">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Discretionary Access Control (DAC)</h2>
+  </div>
+  <p class="section-kicker">In DAC the owner decides, and can pass privileges on at will.</p>
+  <p>Historically, anyone with physical access to a computer controlled all of it: you could load any software, inspect everything in memory or on disk, and change anything. You start your computer in supervisor mode and, as administrator, make less-privileged accounts available for less-trusted tasks, such as running apps from companies you do not entirely trust, or giving remote logon access to others.</p>
+  <div class="def-card"><span class="dc-term">Discretionary Access Control (DAC)</span> — access to objects is determined by the <strong>identity of the subject that owns them</strong>. Subjects can transfer privileges over their objects to other subjects unless constraints exist, such as those defined by Mandatory Access Control. DAC offers high flexibility and considerable control to the subjects.</div>
+  <p><em>Discretionary</em> means the owner uses their own judgement, so the answer to "may you read this file?" depends on who you are relative to the owner.</p>
+  <h3 class="sub-title">DAC in the wild: Microsoft OneDrive</h3>
   <ul>
-    <li><strong>Objects</strong> — the things being protected: files, processes, records and so on.</li>
-    <li><strong>Subjects</strong> — the things that act on objects: people, groups, processes and so on. (Objects are owned by subjects.)</li>
+    <li><strong>Ownership</strong> — the creator of a file or folder is the owner by default, and owners can transfer ownership.</li>
+    <li><strong>Sharing options</strong> — <em>Private</em> (private by default), <em>Specific People</em> (share via email), <em>Anyone with the Link</em> (viewing or editing), and <em>Public</em> (accessible to anyone).</li>
+    <li><strong>Permission levels</strong> — <em>View</em> can see the file; <em>Edit</em> can see and modify it.</li>
   </ul>
-  <p>The spectrum of access control runs from complete owner freedom to complete central control.</p>
+  <p>Every one of those is the owner's choice; the system supplies options but does not dictate the decision.</p>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Do this:</strong> when a user can decide who gets access and hand that access on, you are looking at DAC. Always ask the follow-up a security engineer asks: <em>at scale, who tracks all these individual decisions?</em> That leads straight to MAC.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A departing employee shared a folder "Anyone with the Link" months earlier and nobody revoked it. Was the failure in the policy, the mechanism, or the management of discretion?</div></div>
+</section>
+
+<section class="guide-section" id="mandatory-access-control" data-title="Mandatory Access Control">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Mandatory Access Control (MAC)</h2>
+  </div>
+  <p class="section-kicker">In MAC a central authority sets the rules, and no ordinary user can override them — not even the system administrator.</p>
+  <p>DAC hardens badly at scale and leaves final authority with the machine's owner or admin. In the 1970s the US military began a large computer-security research program to protect classified information: ensure a file marked <em>Top Secret</em> would never be made available to a user with only <em>Secret</em> clearance, <strong>regardless of the actions of any ordinary user or even of the supervisor</strong>.</p>
+  <div class="def-card"><span class="dc-term">Mandatory Access Control (MAC)</span> — an external entity, the <strong>security policy administrator</strong>, defines access. A <strong>'security kernel'</strong> checks via security attributes whether a subject may interact with an object. MAC offers a high level of rigour.</div>
+  <p>In a <strong>multilevel secure (MLS)</strong> system the sysadmin is no longer the boss: ultimate control rests with a <strong>remote government authority</strong> that sets policy, and root access itself is under remote control.</p>
+  <h3 class="sub-title">MAC in the wild: OneDrive in an enterprise</h3>
+  <p>Microsoft 365 admins set <strong>sharing and access policies</strong>, for example restricting sharing to specific domains, and <strong>Data Loss Prevention (DLP)</strong> automatically protects sensitive information and restricts access based on policies. The individual no longer decides whether a sensitive document can be shared externally. OneDrive primarily uses DAC for personal use, with MAC elements in enterprise environments; many real systems mix the two.</p>
   <div class="compare">
     <div class="compare-col a">
-      <h3>Discretionary Access Control (DAC)</h3>
+      <h3>Discretionary (DAC)</h3>
       <ul>
-        <li>Access is controlled by the <strong>resource owner</strong>.</li>
-        <li>Access to an object is based on the <strong>identity of the owning subject</strong>.</li>
-        <li>Users can <strong>grant or revoke permissions</strong> to others at their discretion, and can pass on a privilege over their object — unless constraints exist (such as those imposed by MAC).</li>
-        <li>Gives a <strong>high level of flexibility</strong> and control to subjects.</li>
+        <li>Decided by the object's <strong>owner</strong></li>
+        <li>Based on the <strong>identity</strong> of the owning subject</li>
+        <li>Subjects can <strong>transfer</strong> privileges, unless constrained</li>
+        <li>High flexibility, hard to manage at scale</li>
       </ul>
     </div>
     <div class="compare-col b">
-      <h3>Mandatory Access Control (MAC)</h3>
+      <h3>Mandatory (MAC)</h3>
       <ul>
-        <li>Access is <strong>enforced by a central authority</strong> based on <strong>security labels</strong> (such as classification levels).</li>
-        <li>An external entity (a <strong>security policy administrator</strong>) defines access.</li>
-        <li>A <strong>security kernel</strong> checks, via security attributes, whether a subject is allowed to interact with an object.</li>
-        <li>Users <strong>cannot change permissions themselves</strong>; gives a <strong>high level of rigour</strong>.</li>
+        <li>Defined by an <strong>external authority</strong></li>
+        <li>Enforced by a <strong>security kernel</strong> using security attributes</li>
+        <li>Users <strong>cannot change</strong> permissions</li>
+        <li>High rigour; root is under remote control</li>
       </ul>
     </div>
   </div>
-  <h3 class="sub-title">Where DAC and MAC came from</h3>
-  <p>In the early days of computing, anyone with <strong>physical access</strong> to a computer controlled all of it: you could load any software, inspect everything in memory or on disk, and change anything. This is the model behind <strong>DAC</strong> — you start the machine in <strong>supervisor mode</strong> and, as administrator, you create less-privileged accounts for less-trusted tasks, such as running apps from companies you do not fully trust or giving others remote logon access.</p>
-  <p>DAC, however, is <strong>hard to manage at scale</strong>. In the 1970s the US military launched a large computer-security research program to protect classified information: a file marked <em>Top Secret</em> must never become available to a user with only <em>Secret</em> clearance — <strong>regardless of what any ordinary user, or even the supervisor, does</strong>. In such a <strong>multilevel secure (MLS)</strong> system, the sysadmin is no longer the boss: ultimate control rests with a remote government authority that sets the policy. The supervisor, or root access, is under remote control. Mechanisms of this kind became known as <strong>Mandatory Access Control</strong>.</p>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Microsoft OneDrive — a familiar example.</strong> In personal use, OneDrive is <strong>DAC</strong>: the creator of a file or folder is the owner, ownership can be transferred, and the owner shares with <em>Specific People</em>, via <em>Anyone with the Link</em>, or <em>Public</em>, at permission levels <em>View</em> or <em>Edit</em>. In an enterprise, OneDrive adds <strong>MAC</strong> elements: Microsoft 365 admins set sharing and access policies (for example restricting sharing to specific domains), and <strong>Data Loss Prevention (DLP)</strong> automatically protects sensitive information by restricting access according to central policy. So OneDrive is primarily DAC for personal use, with MAC elements in enterprise settings.</div></div>
-  <div class="mnemonic">
-    <div class="mnemonic-letters">D · M</div>
-    <div class="mnemonic-phrase">"DAC = Do As you Choose; MAC = Mandated by Authority"</div>
-    <div class="mnemonic-expand"><strong>D</strong>iscretionary: the owner decides. <strong>M</strong>andatory: a central authority decides, enforced by the security kernel via labels.</div>
-  </div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Your company's IT team blocks you from emailing a spreadsheet outside the organisation, and you cannot override it. Is that DAC or MAC? (Answer: MAC — a central policy, not your discretion, decides.)</div></div>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> do not define MAC as "access control done by the operating system". DAC is also implemented by the OS. The defining feature is <em>who holds ultimate authority</em>: MAC's rules are imposed from outside the owner's control, typically through labels and clearances.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> On a MAC system, an administrator with only Secret clearance tries to read a Top Secret file. Should it be allowed? Saying yes because admins can do anything re-applies the DAC model by mistake.</div></div>
 </section>
 
-<section class="guide-section" id="acls" data-title="Access Control Lists (ACLs)">
+<section class="guide-section" id="acls-capabilities" data-title="ACLs &amp; Capability Lists">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Access Control Lists (ACLs)</h2>
+    <h2 class="section-title">Access Control Lists and Capability Lists</h2>
   </div>
-  <p class="section-kicker">One column of the access matrix, attached directly to the object it protects.</p>
-  <p><strong>ACLs define the access of subjects to objects.</strong> Each object is associated with an <strong>access control list</strong>. An <strong>ACL entry</strong> consists of a user ID plus a mapping to allowed operations. Key properties:</p>
+  <p class="section-kicker">The matrix can be stored two ways: a list attached to each object, or a set of tickets held by each subject.</p>
+  <h3 class="sub-title">Access Control Lists (ACLs)</h3>
+  <div class="def-card"><span class="dc-term">Access Control List (ACL)</span> — a list attached to an <strong>object</strong> defining which subjects may access it and how. It can be global or more fine-grained. An entry consists of a <strong>user ID</strong> and a <strong>mapping to allowed operations</strong>, from coarse (read/write/execute) to very fine-grained permissions.</div>
+  <p>ACLs are a widespread mechanism, common in all UNIX systems (the POSIX standards) and present in Windows. They are also used in social networking sites, content management systems and enterprise resource management. The lecture's example ACL for one object is Sam <code>rw</code>, Alice <code>rw</code>, Bob <code>r</code> — the <strong>Accounting Data column</strong> of the earlier matrix, stored beside that object. To learn who can touch the accounting data, you read one list.</p>
+  <h3 class="sub-title">Capability lists</h3>
+  <p>The complement stores a <strong>row</strong> on each subject: a list of unforgeable tickets, each naming an object and the operations that subject may perform on it. Holding the ticket <em>is</em> the authority. The lecture shows capabilities in several places: Android's permissions "are in effect capabilities" granting access to services such as SMSes, the camera and the address book; iOS grants apps capabilities through APIs; and ARM's CHERI adds fine-grained capability support so a subthread can be granted access to specific memory ranges.</p>
+  <div class="compare">
+    <div class="compare-col a">
+      <h3>ACL (object side)</h3>
+      <ul>
+        <li>Stored with each <strong>object</strong></li>
+        <li>Answers: <em>who may access this thing?</em></li>
+        <li>Easy to audit one object; hard to answer "what can Alice reach?"</li>
+      </ul>
+    </div>
+    <div class="compare-col b">
+      <h3>Capability list (subject side)</h3>
+      <ul>
+        <li>Stored with each <strong>subject</strong></li>
+        <li>Answers: <em>what may this subject access?</em></li>
+        <li>Easy to revoke a whole user's access; hard to audit one object</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember:</strong> an ACL is the matrix <em>column</em> (object-centric: "who can touch me?"). A capability list is the <em>row</em> (subject-centric: "what can I touch?"). Both store identical information; they differ in which question is cheap to answer.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> You must instantly revoke all of one employee's access after dismissal. Which storage style makes that easier, and why?</div></div>
+</section>
+
+<section class="guide-section" id="unix-file-permissions" data-title="Unix File Permissions">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Unix and Linux File Permissions</h2>
+  </div>
+  <p class="section-kicker">Unix compresses access control into nine bits: three permissions for three audiences.</p>
+  <p>An OS typically authenticates principals with passwords or fingerprints, then authorises access to files, ports and other system resources. In Unix, each file and directory carries three permissions — <strong>read (r)</strong>, <strong>write (w)</strong> and <strong>execute (x)</strong> — assigned to three categories: the <strong>owner</strong>, the <strong>group</strong> and <strong>others</strong>.</p>
+  <p>Each user has a <strong>User ID (UID)</strong> and a <strong>Group ID (GID)</strong>, and may belong to extra groups such as <code>sudo</code>. Two files show this: <code>/etc/passwd</code>, whose entry <code>sam:x:1000:1000:Sam Jones,,,:/home/sam:/usr/bin/zsh</code> also states the login shell, and <code>/etc/group</code>, whose entry <code>sudo:x:27:sam,alice</code> states the group name, GID and members.</p>
+  <h3 class="sub-title">The nine bits</h3>
   <ul>
-    <li>An ACL can be defined <strong>globally</strong> (one list for many objects) or be much more <strong>fine-grained</strong> (a list per object).</li>
-    <li>Operations can be <strong>coarse</strong> — the familiar read/write/execute — or very fine-grained.</li>
-    <li>ACLs are a <strong>widespread mechanism</strong>: common in all UNIX systems (per the <strong>POSIX</strong> standards) and also present in <strong>Windows</strong>.</li>
-    <li>They are found beyond operating systems too: on <strong>social networking sites</strong>, in <strong>content management</strong> and <strong>enterprise resource management</strong> systems, and elsewhere.</li>
+    <li><strong>Owner ID</strong> — the user that owns the file. <strong>Group ID</strong> — the group that 'relates to' the file.</li>
+    <li><strong>Owner R/W/X</strong> — R means read, W write, X execute. <strong>Directories with X set can be traversed.</strong></li>
+    <li><strong>Group R/W/X</strong> — for the group. <strong>Other R/W/X</strong> — for everyone else.</li>
   </ul>
-  <p>Here is a tiny ACL for a single object, the accounting data:</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>User</th><th>Accounting Data</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Sam</strong></td><td>rw</td></tr>
-        <tr><td><strong>Alice</strong></td><td>rw</td></tr>
-        <tr><td><strong>Bob</strong></td><td>r</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>Compare this with the full matrix from earlier: the ACL is just the <em>Accounting Data</em> column lifted out and stored with the object. That is the essential idea — the permissions live <strong>with the thing being protected</strong>, not in a central table.</p>
-  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Coarse or fine?</strong> Coarse operations (read/write/execute) are simple and fast to check. Fine-grained operations give precise control but are harder to manage. Choosing the right granularity is a recurring theme: too coarse and you cannot express the policy; too fine and the system becomes impossible to administer.</div></div>
+  <p>Permissions appear in <strong>symbolic notation</strong> (<code>rwxr-xr-x</code>) or <strong>octal notation</strong> (<code>755</code>), and are modified with commands such as <code>chmod</code>, <code>chown</code> and <code>chgrp</code>. Consider <code>-rw-r--r-- 1 sam sam 24K Jun 12 10:20 email.png</code>: the first <code>-</code> marks a regular file, then <code>rw-</code> gives the owner read and write, <code>r--</code> gives the group read, and <code>r--</code> gives others read. So all three audiences can read, but <strong>only the owner can write</strong>.</p>
+  <h3 class="sub-title">Octal notation</h3>
+  <p>Octal sums the bits in each triple: <strong>r = 4, w = 2, x = 1</strong>. So <code>rwx</code> = 7, <code>rw-</code> = 6, <code>r-x</code> = 5 and <code>r--</code> = 4. <code>rwxr-xr-x</code> therefore becomes <code>755</code>: owner 7, group 5, others 5. A dangerous example is <code>rwxrwxrwx</code> (<code>777</code>): readable, writable <em>and</em> executable by owner, group and everyone, which is normally far too open.</p>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Do this:</strong> split a permission string into the file-type character and three triples. "Owner, group, others" never changes; only the letters do. Convert each triple to a digit by adding 4, 2 and 1.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A directory has permissions <code>rwxrwxrwx</code>. What can an outsider do inside it? (Hint: what does X mean for a directory?)</div></div>
 </section>
 
-<section class="guide-section" id="unix-users" data-title="Unix/Linux: Users, Groups &amp; Root">
+<section class="guide-section" id="special-bits-process-identity" data-title="Special Bits &amp; Process Identity">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Unix/Linux: Users, Groups and Root</h2>
+    <h2 class="section-title">Special Bits, Process Identity, Root and sudo</h2>
   </div>
-  <p class="section-kicker">Before you can read permissions, you need to know who the players are.</p>
-  <p>Each Unix/Linux user has a <strong>User ID (UID)</strong> and a <strong>Group ID (GID)</strong>. A user can also belong to additional groups — for example the <code>sudo</code> group, which carries the right to run commands as the superuser.</p>
-  <h3 class="sub-title">Where users and groups are stored</h3>
-  <p>The file <code>/etc/passwd</code> holds user accounts. A sample entry is:</p>
-  <div class="formula"><div class="formula-label">A /etc/passwd entry</div><div class="math">sam:x:1000:1000:Sam Jones,,,:/home/sam:/usr/bin/zsh</div></div>
-  <p>Reading left to right: the username, a placeholder for the password, the UID (1000), the GID (1000), the full name, the home directory, and the <strong>login shell</strong> (<code>/usr/bin/zsh</code>).</p>
-  <p>The file <code>/etc/group</code> holds groups. A sample entry is:</p>
-  <div class="formula"><div class="formula-label">A /etc/group entry</div><div class="math">sudo:x:27:sam,pnappa</div></div>
-  <p>That is: the group name (<code>sudo</code>), a password placeholder, the GID (27), and the list of users in the group.</p>
+  <p class="section-kicker">Three extra bits and three flavours of user ID decide what a program may do the moment it runs.</p>
+  <ul>
+    <li><strong>Set-user-ID (SUID)</strong> — the owner can mark a program so it runs with the <strong>privilege of its owner</strong> rather than the invoking user. Useful for specific privileged programs without being a privileged user; <code>mount</code> is an example.</li>
+    <li><strong>Set-group-ID (SGID)</strong> — on a file, it executes as the <strong>group</strong> that owns the file. On a directory, files created inside inherit the group of the directory owner.</li>
+    <li><strong>Sticky bit</strong> — does not affect individual files. At the <strong>directory</strong> level it restricts deletion: only the owner (and root) may remove a file. Common example: <code>/tmp</code>.</li>
+  </ul>
+  <h3 class="sub-title">Processes inherit permissions, with three IDs</h3>
+  <ul>
+    <li><strong>Real UID/GID</strong> — the actual user and group that initiated the process.</li>
+    <li><strong>Effective UID/GID (eUID/eGID)</strong> — determines the permissions the process runs with. SUID or SGID makes it run as the file's owner or group rather than the launcher.</li>
+    <li><strong>Saved UID/GID</strong> — used by the kernel so the process can revert to its original ID after temporarily assuming different privileges.</li>
+  </ul>
+  <p>Read that as a small state machine: a process starts as its real user, may climb to a powerful effective identity thanks to SUID or SGID, and keeps the saved ID so it can climb back down.</p>
   <h3 class="sub-title">Root: the all-powerful user</h3>
-  <p><strong>Root</strong> has UID and GID of <strong>0</strong>. Root can do what it likes — access any file, become any user — and certain actions <em>only</em> root can perform, such as starting particular communication processes. Root is normally the account made available to the system administrator on a system with discretionary access control.</p>
-  <ul>
-    <li>The <code>sudo</code> command lets you run a command as root.</li>
-    <li>It works only if the invoking user is part of the <code>sudo</code> group, and it <strong>usually requires a password</strong>.</li>
-    <li>Non-sudo users can still run <em>some</em> commands with <code>sudo</code> if this is explicitly permitted in the <strong>sudoers file</strong>.</li>
-  </ul>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> root is not a normal user with extra rights — it is effectively unrestricted. That is exactly why the <strong>principle of least privilege</strong> (coming later) says code should run with only the minimum privilege it needs, never as root unless unavoidable.</div></div>
+  <p><strong>Root</strong> has UID and GID of <strong>0</strong>. Root can access any file, become any user, and do things only root may do, such as starting certain communication processes. The root userid is typically made available to the system administrator in systems with discretionary access control. The <code>sudo</code> command runs a command as root; it works only if the invoking user is in the <code>sudo</code> group and usually requires a password. Non-sudo users can still run some commands via <code>sudo</code> if the <strong>sudoers file</strong> permits them.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> SUID is a privilege-escalation risk by design. A program that runs as root while processing attacker-controlled input turns a small bug into full system compromise. That is why SUID binaries are few and audited, and why <code>/tmp</code> uses the sticky bit so strangers cannot delete each other's files.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A root-owned SUID helper lets any user edit its configuration file. Which special bit is at work, and why does the editable configuration turn a convenience into a risk?</div></div>
 </section>
 
-<section class="guide-section" id="unix-permissions" data-title="Unix/Linux: File Permissions">
+<section class="guide-section" id="other-operating-systems" data-title="Other Operating Systems">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Unix/Linux: File Permissions</h2>
+    <h2 class="section-title">Access Control in Other Operating Systems</h2>
   </div>
-  <p class="section-kicker">Nine bits, three audiences. Once you can read them, you can read any Unix system at a glance.</p>
-  <p>The Linux/Unix permission model is hierarchical and gives each file and directory three permission types — <strong>read (r)</strong>, <strong>write (w)</strong> and <strong>execute (x)</strong> — assigned to three categories of user:</p>
-  <ol class="steps">
-    <li><strong>Owner R/W/X</strong> — three bits saying what the file's owner can do. Bit R set means read, W means write, X means execute.</li>
-    <li><strong>Group R/W/X</strong> — three bits saying what members of the file's group can do.</li>
-    <li><strong>Other R/W/X</strong> — three bits saying what everyone else can do.</li>
-  </ol>
-  <p>Each file records an <strong>Owner ID</strong> (the user that owns the file) and a <strong>Group ID</strong> (the group that 'relates to' the file).</p>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Execute on a directory means traverse.</strong> Directories that have the X bit set can be <em>traversed</em> — you can pass through them to reach files inside. This is why a directory often shows <code>x</code> where you might not expect it.</div></div>
-  <h3 class="sub-title">Reading the permission string</h3>
-  <p>Permissions are shown in a symbolic notation, for example <code>rwxr-xr-x</code>, or an octal notation, for example <code>755</code>. They can be changed with commands such as <code>chmod</code>, <code>chown</code> and <code>chgrp</code>.</p>
-  <p>Take a real listing:</p>
-  <div class="formula"><div class="formula-label">Example listing</div><div class="math">-rw-r--r-- 1 sam sam 24K Jun 12 10:20 email.png</div></div>
-  <p>The leading <code>-</code> means this is a regular file. The next nine characters are the permissions in three blocks of three:</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Block</th><th>Value</th><th>Meaning</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Owner</strong></td><td><code>rw-</code></td><td>Can read and write, cannot execute.</td></tr>
-        <tr><td><strong>Group</strong></td><td><code>r--</code></td><td>Can read only.</td></tr>
-        <tr><td><strong>Other</strong></td><td><code>r--</code></td><td>Can read only.</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>So in this example the owner, group and others can all <em>read</em> the file, but <strong>only the owner (sam) can write to it</strong>.</p>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A file shows <code>rwxrwxrwx</code>. Can the owner, the group and everyone else all read, write and execute it? (Answer: yes — all nine bits are set. This is normally far too permissive and dangerous.)</div></div>
-</section>
-
-<section class="guide-section" id="unix-special-bits" data-title="Unix/Linux: Special Bits &amp; Process IDs">
-  <div class="section-head">
-    <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Unix/Linux: Special Bits and Process Identity</h2>
-  </div>
-  <p class="section-kicker">Three extra bits that change who a program runs as — and the three IDs that let the kernel track it.</p>
-  <h3 class="sub-title">The three special bits</h3>
-  <div class="grid grid-3">
-    <div class="card">
-      <h3 class="card-title">🔑 Set-user-ID (SUID)</h3>
-      <p>The owner of a program can mark the file as <strong>suid</strong>, enabling it to run with the privilege of its <strong>owner</strong> rather than the privilege of the user who invoked it. Useful for running specific programs with extra permissions without being a privileged user. The <code>mount</code> command is an example.</p>
-    </div>
-    <div class="card">
-      <h3 class="card-title">👥 Set-group-ID (SGID)</h3>
-      <p>On a <strong>file</strong>, it behaves like SUID but with the group: the file executes with the privilege of the group that owns it. On a <strong>directory</strong>, any files created inside inherit the group ownership of the directory.</p>
-    </div>
-    <div class="card">
-      <h3 class="card-title">📌 Sticky bit</h3>
-      <p>Does not affect individual files. At the <strong>directory</strong> level it restricts deletion: only the owner (and root) of a file can remove that file from the directory. The classic example is <code>/tmp</code>.</p>
-    </div>
-  </div>
-  <h3 class="sub-title">Processes inherit permissions</h3>
-  <p>A process in Unix/Linux inherits permissions from the user who runs it, tracked through three pairs of IDs:</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>ID pair</th><th>What it means</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Real UID / GID</strong></td><td>The actual user and group that initiated the process — who owns it.</td></tr>
-        <tr><td><strong>Effective UID / GID (eUID / eGID)</strong></td><td>Determines the permissions the process actually runs with. SUID and SGID affect this: the process may run with the file owner's or group's privileges rather than the launcher's.</td></tr>
-        <tr><td><strong>Saved UID / GID</strong></td><td>Used by the kernel so the process can revert to its original identity after temporarily assuming different privileges.</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why three IDs?</strong> Real identity, effective identity and a saved copy give a program a safe way to <em>borrow</em> extra privilege for a moment (say, to open a protected file), then drop back to normal. Without the saved ID, the kernel would have no record of what to switch back to.</div></div>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> SUID programs are a classic attack surface. If an SUID program can be tricked into doing the wrong thing, it does that wrong thing <em>as its privileged owner</em>. This links directly to the confused deputy problem later this week.</div></div>
-</section>
-
-<section class="guide-section" id="other-oses" data-title="macOS, Windows, iOS &amp; Android">
-  <div class="section-head">
-    <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Other Operating Systems: macOS, Windows, iOS and Android</h2>
-  </div>
-  <p class="section-kicker">Same idea, four very different implementations — and the mobile ones show where access control is heading.</p>
+  <p class="section-kicker">macOS, Windows, iOS and Android reuse the same core ideas, then trade them off differently.</p>
   <h3 class="sub-title">macOS</h3>
-  <ul>
-    <li>macOS is a fork of <strong>BSD (Unix)</strong>, so it has similar permissions.</li>
-    <li>The BSD layer provides <strong>memory protection</strong>: applications cannot access system memory, or each other's memory, unless running with advanced permissions. This is why you can 'Force Quit' a wedged application without rebooting the whole system.</li>
-    <li>At the file-system level it is almost standard Unix: files have <strong>attributes and ACLs</strong>.</li>
-    <li>It also has the <strong>Keychain</strong>, which stores extra passwords and some ACLs, and built-in network authentication such as <strong>Kerberos</strong>.</li>
-    <li>The default install has the <strong>root account disabled</strong>, but admin users are in a group called <strong>wheel</strong> that allows them to <code>su</code> to root. Installing programs asks for the root password.</li>
-    <li>Since version 10.5 (Leopard), macOS has been based on <strong>TrustedBSD</strong>, a BSD variant that incorporates <strong>mandatory access control</strong>, used to protect core system components against tampering by malware.</li>
-  </ul>
+  <p>macOS is based on the FreeBSD version of Unix, so it has similar permissions. The BSD layer provides <strong>memory protection</strong>: applications cannot access system memory (or each other's) unless running with advanced permissions, which is why you can Force Quit a wedged application without rebooting. Files have attributes and ACLs. It also has the <strong>Keychain</strong>, storing extra passwords and some ACLs, and built-in network authentication such as <strong>Kerberos</strong>. The default installation has the <strong>root account disabled</strong>, but administrators belong to a group called <code>wheel</code> that lets them <code>su</code> to root; installing programs asks for the root password. Since version 10.5 (Leopard), macOS has been based on <strong>TrustedBSD</strong>, a BSD variant incorporating <strong>mandatory access control</strong> to protect core system components against tampering by malware.</p>
   <h3 class="sub-title">Windows</h3>
-  <ul>
-    <li>Very powerful and complex. It shares similarities with Unix, but instead of RWX it features a much larger set of permissions — the notes say <strong>13 kinds</strong>, the slides quote <strong>15–16 attributes</strong>. Examples include <em>Traverse Folder / Execute File</em>, <em>List Folder / Read Data</em> and <em>Read Attributes</em>.</li>
-    <li>That intricacy can lead to <strong>errors despite secure default settings</strong>.</li>
-    <li>Enforcement is via the <strong>Security Reference Monitor (SRM)</strong>, a trusted component that provides fine-grained security.</li>
-  </ul>
+  <p>Windows is powerful and shares similarities with Unix. Instead of RWX permissions it features about <strong>thirteen kinds of permissions</strong> (the notes give that figure; the slides say 15 to 16), such as Traverse Folder/Execute File, List Folder/Read Data and Read Attributes. This complexity can lead to errors despite secure default settings. Windows enforces access via a <strong>Security Reference Monitor (SRM)</strong>, a trusted component providing fine-grained security.</p>
   <h3 class="sub-title">Apple iOS</h3>
-  <ul>
-    <li>Based on Unix. Apps have many user permissions, often for privacy: they request a capability to access device services such as the mobile network, phone, SMSes and camera the first time they attempt to use them, and this is granted only if the user consents.</li>
-    <li>Those many device services open up possible <strong>side-channel attacks</strong> — for example, an app denied access to the keyboard could still deduce keypresses using the accelerometer and gyro.</li>
-    <li><strong>Sensor values are read-only</strong>, reflecting principles similar to the Biba model (you will meet Biba later this week).</li>
-    <li>Extensive access control: <strong>hardware support</strong>, <strong>signed software</strong> and <strong>encryption</strong>.</li>
-    <li><strong>Sandboxing</strong>: apps cannot access files of other apps; apps get specific <strong>capabilities via APIs</strong>; they execute in a <strong>non-privileged mode</strong>; and the OS itself is <strong>read-only to the app</strong>.</li>
-  </ul>
+  <p>iOS is based on Unix. Apps have many user permissions, often for privacy, and request a <strong>capability</strong> to access device services such as the mobile network, phone, SMSes and camera the first time they attempt to use them; it is granted if the user consents. The many services open possible <strong>side-channel attacks</strong>: an app denied keyboard access could deduce keypresses using the accelerometer and gyro. <strong>Sensor values are read-only</strong>, reflecting principles similar to the Biba model. iOS uses <strong>sandboxing</strong> so apps cannot access other apps' files, grants capabilities through APIs, runs apps in non-privileged mode, keeps the OS read-only to apps, and implements hardware support, signed software and encryption.</p>
   <h3 class="sub-title">Android</h3>
+  <p>Android is based on Linux, and apps from different vendors run under <strong>different userids</strong>. Linux mechanisms control file-level access, preventing one app reading another's data and preventing apps exhausting shared resources such as memory and CPU. As in iOS, app permissions are in effect <strong>capabilities</strong> granting access to services such as SMSes, the camera and the address book. Android supports many hardware platforms, but a concession is that developers cannot assume uniform features across devices. Apps are signed <code>.apk</code> packages; while iOS apps are signed by Apple, Android verification keys are <strong>self-signed certificates</strong> acting as the developer's name, supporting integrity of updates while keeping an open ecosystem.</p>
   <ul>
-    <li>Based on Linux. Apps from different vendors run under <strong>different user IDs</strong>, and the Linux mechanisms control access at the file level — preventing one app from reading another's data or exhausting shared resources such as memory and CPU.</li>
-    <li>As in iOS, apps hold <strong>permissions that are effectively capabilities</strong>, granting access to device services such as SMSes, the camera and the address book.</li>
-    <li>Android supports a wide range of hardware platforms, but a <strong>concession</strong> follows: developers cannot assume uniform features across all devices.</li>
-    <li>Apps ship as <strong>signed packages (<code>.apk</code> files)</strong>. Where iOS apps are signed by Apple, Android's verification keys come in <strong>self-signed certificates</strong> that function as the developer's name — supporting integrity of updates while keeping an open ecosystem.</li>
-    <li>Each package has a <strong>manifest</strong> demanding a set of permissions, and users must approve the <em>dangerous</em> ones (those that can spend money or compromise personal data). In early Android the user had to approve everything at install or not run the app; experience showed most users would click anything, and even flashlight apps demanded address-book access to sell. So <strong>Android 6 moved to the Apple model of 'trust on first use'</strong> — though apps compiled for earlier versions still demand capabilities at installation.</li>
+    <li>Each package has a <strong>manifest</strong> demanding permissions, and users must approve the 'dangerous' ones, roughly those that can spend money or compromise personal data.</li>
+    <li>Early Android required approving everything at installation or not running the app. Users clicked through, so even flashlight apps demanded the address book to sell. <strong>Android 6 moved to the Apple model of trust on first use</strong>; apps built for earlier versions still demand capabilities at installation.</li>
+    <li><strong>Storage</strong> is a well-known problem: app-internal and 'public storage'. Developers often misuse public storage because it is easier, since it allows write access to everyone — but everyone can read it too.</li>
+    <li>The API is more permissive; apps can send SMS messages on your behalf. The Google Play Store is less tightly controlled than Apple's, but apps are still screened for malware.</li>
   </ul>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Android's well-known storage problem.</strong> There are two forms: <strong>app-internal</strong> storage and <strong>'public storage'</strong>. Evidence suggests developers often misuse public storage because it is easier — everyone can write to it. Unfortunately, that also means <strong>everyone can read from it</strong>. Add a more permissive API (apps can send SMS messages on your behalf), and you can see why the Google Play Store is less tightly controlled than Apple's App Store — although apps are still screened for malware.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A flashlight app asks for access to your contacts and SMS. On modern Android, when is that permission granted? (Answer: on first use, when the app tries the service and you consent — not automatically at install.)</div></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Platform</th><th>Base</th><th>Signature access-control idea</th></tr></thead>
+      <tbody>
+        <tr><td><strong>macOS</strong></td><td>FreeBSD / Unix</td><td>Unix permissions, ACLs, Keychain, Kerberos, TrustedBSD MAC</td></tr>
+        <tr><td><strong>Windows</strong></td><td>Its own lineage</td><td>Many fine-grained permissions enforced by a Security Reference Monitor</td></tr>
+        <tr><td><strong>iOS</strong></td><td>Unix</td><td>Sandboxing, signed software, capabilities, read-only OS and sensors</td></tr>
+        <tr><td><strong>Android</strong></td><td>Linux</td><td>Apps as separate users, manifest permissions, signed packages, public storage pitfall</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> mobile platforms are where most of us meet access control daily. A good permission prompt is not enough — users click through prompts, so the system must confine apps by construction through sandboxing and separate user IDs, not rely on user vigilance.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> An Android app wants your address book. Which design feature lets you grant the camera but deny contacts, and which early-Android decision made that impossible?</div></div>
 </section>
 
-<section class="guide-section" id="middleware" data-title="Middleware &amp; Database Access Control">
+<section class="guide-section" id="middleware-access-control" data-title="Middleware Access Control">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
     <h2 class="section-title">Middleware Access Control</h2>
   </div>
-  <p class="section-kicker">The messy middle layer — often overlooked, frequently misconfigured, and regularly left open to probing.</p>
-  <p><strong>Middleware</strong> is the glue software that sits between applications and the operating system, whether on a single host or distributed across several. Examples include <strong>message brokering</strong> (such as <strong>AMQP</strong>) and various forms of <strong>Remote Procedure Calls (RPCs)</strong> — <strong>Java RMI</strong>, <strong>CORBA</strong>, <strong>XML-RPC</strong> and others.</p>
-  <p>Middleware access control is genuinely hard, for three reasons:</p>
-  <ul>
-    <li><strong>Huge complexity:</strong> you must define the granularity of access well, keep track of permissions, and enforce them consistently.</li>
-    <li><strong>It is easily misconfigured</strong>, and these components are <strong>often left open to probing by outsiders</strong>.</li>
-    <li><strong>Policy languages</strong> exist to define access control, but they are themselves <strong>hard to use</strong>.</li>
-  </ul>
-  <p>Where possible, <strong>protect middleware from external access</strong>. That at least guards against random, remote exploitation. But note the limit: <strong>malware that starts inside one participating system can still try to exploit the middleware</strong>, so perimeter protection alone is not enough.</p>
+  <p class="section-kicker">Middleware is a rich but risky place to enforce access control, because it is complex, exposed and easy to misconfigure.</p>
+  <p><strong>Middleware</strong>, on one host or distributed, covers message brokering (for example AMQP) and Remote Procedure Calls including Java RMI, CORBA and XML-RPC. These components are often exposed to probing by external entities, increasing risk. Managing them is substantial: you must define access <strong>granularity</strong> precisely, monitor and enforce permissions meticulously, and face configuration challenges. Policy languages exist, but are hard to use effectively. One mitigation is to protect middleware from external access, which guards against random remote exploitation — though malware originating inside a participating system can still try to exploit it.</p>
   <h3 class="sub-title">Database access control</h3>
-  <p><strong>Database Management Systems (DBMSes)</strong> that support multiple users and processes have their own access control — but the actual data still often sits on disk or in RAM, so <strong>operating-system protections remain necessary</strong>. Key points:</p>
-  <ul>
-    <li>Connecting to a database requires a <strong>username and password</strong>.</li>
-    <li>There is <strong>internal privilege management</strong>: users on the OS are mapped to <strong>roles</strong> inside the database. This is <strong>role-based access control (RBAC)</strong> — a user's permissions come from the role they hold (for example, a Database Administrator has more privileges than a Database Manager).</li>
-    <li>The <strong>SQL standard</strong> defines fine-grained methods for access control, and in theory <em>any</em> kind of object can be access-controlled.</li>
-    <li>That flexibility can lead to <strong>overkill in complexity</strong>, making the system cumbersome to manage and understand.</li>
-    <li>DBMSes also allow specific <strong>integrity controls</strong>, but these are <strong>computationally heavy to check</strong>.</li>
-  </ul>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why DBMS access control is not enough on its own:</strong> the database's rules only govern queries through the DBMS. Someone who reads the raw files on disk, or the memory pages, bypasses them entirely — which is exactly why the OS layer still matters.</div></div>
-</section>
-
-<section class="guide-section" id="browsers-confused-deputy" data-title="Browsers &amp; the Confused Deputy">
-  <div class="section-head">
-    <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Browsers and the Confused Deputy Problem</h2>
-  </div>
-  <p class="section-kicker">A browser is an access-control device that runs untrusted code all day — and its main rule has a famous loophole.</p>
-  <p>The web browser is another middleware platform on which we rely for access control, and whose complexity often lets us down. Its main rule is the <strong>same-origin policy</strong>: JavaScript or other active content on a web page is only allowed to communicate with the <strong>IP address it originally came from</strong>. Code is run in a <strong>sandbox</strong> so it cannot alter the host system.</p>
-  <p>By now there is a realisation that we should probably have treated browsers as access-control devices all along: the browser is where you run code written by people you do not trust, who will occasionally be malicious. That is why <strong>Google Chrome runs each tab in its own separate operating-system process</strong> — so a hanging script in one tab does not take down the whole browser.</p>
-  <p>Even so, the modern web environment is extremely hard to control:</p>
-  <ul>
-    <li>Bugs in browsers are exploited in <strong>drive-by download attacks</strong>, where simply visiting a malicious page can infect your machine.</li>
-    <li>Many pages are full of <strong>trackers</strong> supplied by multiple ad networks and data brokers, which make a mockery of the intent behind the same-origin policy.</li>
-    <li>Attackers can <strong>launder origin</strong>: they make a mash-up of the target site plus their own evil scripts, then get the victim to view it through a proxy such as Google Translate.</li>
-    <li>A prudent person types their bank's URL directly or uses a bookmark — but marketing trains everyone to click links in emails.</li>
-  </ul>
+  <p>Database Management Systems (DBMSes) supporting multiple users and processes have their own access control. The data often resides on disk or in RAM, so OS protections remain essential. Connecting typically requires a username and password, which makes internal privilege management important, including <strong>mapping users on the OS to roles within the database</strong> (role-based access control). The SQL standard defines fine-grained methods, theoretically letting any kind of object be controlled, though this can overcomplicate a system. DBMSes also provide integrity controls, crucial for accuracy but computationally intensive to verify.</p>
+  <h3 class="sub-title">Browsers</h3>
+  <p>The web browser is another middleware platform we rely on for access control, and whose complexity often lets us down. Its main rule is the <strong>same-origin policy</strong>: JavaScript or other active content on a page may only communicate with the IP address it originally came from, and it runs in a <strong>sandbox</strong> to prevent it altering the host system.</p>
+  <p>We should probably have treated browsers as access control devices all along: the browser is where you run code written by people you do not trust, who are occasionally malicious. Mobile OSes handle this by running different apps as different users; even without malice, you do not want to reboot your browser because a script in one tab hangs, which is why Chrome runs each tab in a <strong>separate operating-system process</strong>.</p>
+  <p>Browser bugs are exploited in <strong>drive-by download attacks</strong>, where visiting a page can infect your machine. The modern web is also full of trackers from ad networks and data brokers that make a mockery of the same-origin policy's intent, and attackers can launder origin by mashing up a target site with evil scripts and having the victim view it through a proxy such as Google Translate. A prudent person types their bank URL or uses a bookmark, but marketing trains everyone to click links in email.</p>
   <h3 class="sub-title">The confused deputy problem</h3>
-  <div class="def-card"><span class="dc-term">Confused deputy problem</span> — when a <strong>privileged program (the 'deputy') is tricked by a less-privileged entity into misusing its authority</strong> on the attacker's behalf. The browser is 'confused' about who the real requester is, mistakenly attributing the malicious site's request to a trusted one, which can lead to unauthorised actions and data breaches.</div>
-  <p>In browsers, this typically appears through <strong>Cross-Site Scripting (XSS)</strong>, where a malicious script is injected into a trusted website. The attack runs in three steps:</p>
-  <ol class="steps">
-    <li><strong>Malicious script injection:</strong> a user visits a trusted website that has an XSS vulnerability, and the attacker injects malicious JavaScript into it.</li>
-    <li><strong>Executing malicious actions:</strong> when the user interacts with the site, the injected script runs in the browser <em>with the website's permissions</em>.</li>
-    <li><strong>Exploiting trust:</strong> the script can now act on the user's behalf — sending authenticated requests or accessing sensitive data — because the browser believes these actions came from the trusted site.</li>
-  </ol>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Coming up later:</strong> the confused deputy problem and XSS are covered in more depth in the web security lecture. <strong>Cross-Site Request Forgery (CSRF)</strong> is another classic example of a confused deputy.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A script on a shopping site submits a request to the bank using the victim's logged-in session. Who is the 'deputy', and who is the attacker? (Answer: the browser is the deputy; the malicious script — injected into a trusted site — is the attacker, abusing the trust the browser places in that site.)</div></div>
+  <div class="def-card"><span class="dc-term">Confused deputy problem</span> — a privileged program (the "deputy") is tricked by a less-privileged entity into misusing its authority on the attacker's behalf. The deputy is "confused" about who the real requester is and misattributes its authority.</div>
+  <p>In browsers this happens through <strong>Cross-Site Scripting (XSS)</strong>, where a malicious script is injected into a trusted site. First, <strong>malicious script injection</strong>: a user visits a trusted site with an XSS vulnerability, and the attacker injects malicious JavaScript. Second, <strong>executing malicious actions</strong>: the script runs in the browser with the website's permissions. Third, <strong>exploiting trust</strong>: the script performs actions on the user's behalf, such as authenticated requests, because the browser believes they originate from the trusted site. Subcomponents such as scripting, add-ons and cookies are especially vulnerable. <strong>Cross-Site Request Forgery (CSRF)</strong>, covered later, is a typical example.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> the confused deputy is not a broken program; it is <em>too helpful</em>. It holds real authority and can be induced to spend it for someone else. The fix is to check the authority of the <em>requesting principal</em>, not just the deputy's own rights.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Server code runs with broad database rights and trusts any request carrying a valid session cookie, even when another site forged it. Which problem is this, and which later-week attack does it resemble?</div></div>
 </section>
 
-<section class="guide-section" id="sandboxing" data-title="Sandboxing">
+<section class="guide-section" id="sandboxing-virtualisation" data-title="Sandboxing &amp; Virtualisation">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Sandboxing</h2>
+    <h2 class="section-title">Sandboxing, Virtualisation and Confinement</h2>
   </div>
-  <p class="section-kicker">Put untrusted code in a box with only the doors it truly needs — then hope the box holds.</p>
-  <p><strong>Sandboxing</strong> creates a <strong>shielded environment</strong> where malicious applications cannot interfere with the surrounding system. The sandbox typically provides a <strong>limited API</strong> for interaction, striking a balance between functionality and security.</p>
-  <p>A sandbox provides a restricted environment in which code has <strong>no access to the local hard disk</strong> (or at most only temporary access to a restricted directory), and is only allowed to communicate with the host it came from — the same-origin policy again.</p>
-  <h3 class="sub-title">Examples</h3>
-  <div class="grid grid-3">
-    <div class="card"><h3 class="card-title">☕ Java applets</h3><p>Running inside the browser. A historical example — almost obsolete today.</p></div>
-    <div class="card"><h3 class="card-title">🟨 JavaScript in the browser</h3><p>Active content confined to the sandbox and limited by the same-origin policy.</p></div>
-    <div class="card"><h3 class="card-title">🧭 Google Chrome tabs</h3><p>Each tab runs in its own separate process, isolating a crash or a compromise.</p></div>
-  </div>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>The catch:</strong> the sandbox is <strong>hard to secure</strong>. There are methods by which it can be 'broken out of', compromising the intended isolation. Treat a sandbox as one layer of defence, not a guarantee.</div></div>
-</section>
-
-<section class="guide-section" id="virtualisation" data-title="Virtualisation &amp; Containers">
-  <div class="section-head">
-    <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Virtualisation and Containers</h2>
-  </div>
-  <p class="section-kicker">Not designed for access control, yet the effort needed to escape a virtual machine raises the bar for every attacker.</p>
-  <h3 class="sub-title">Virtual machines</h3>
-  <p>The primary use case of <strong>virtualisation</strong> is <strong>Virtual Machines (VMs)</strong> that emulate a computer system. It is old technology — invented around the 1960s, when IBM's VM/370 let a single machine be partitioned into multiple virtual machines. A VM allows software to run even when the real environment it was written for is not available, and the operating system inside the VM sees only its 'own' hardware. At the client end, virtualisation lets you run a <strong>guest operating system</strong> on top of a <strong>host</strong> — for example, Windows on top of macOS.</p>
-  <p>Virtualisation comes in varying degrees:</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Degree</th><th>What it means</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Full virtualisation</strong></td><td>Complete emulation of hardware — even across different hardware architectures.</td></tr>
-        <tr><td><strong>Para-virtualisation</strong></td><td>The guest OS must be modified to support being virtualised.</td></tr>
-        <tr><td><strong>Containers and jails</strong></td><td>A form of <strong>light-weight virtualisation</strong> — an isolated environment for running applications.</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>A <strong>hypervisor</strong> manages and runs the VMs, with hardware support at the <strong>ring -1</strong> level (rings are explained in the hardware section). Examples include <strong>VirtualBox, VMware, Xen and QEMU</strong>.</p>
-  <p>Virtualisation is <em>not</em> designed for access control, but the typically high effort required to 'break out' of a VM raises the bar for attackers. Keep three cautions in mind:</p>
-  <ul>
-    <li><strong>VM execution is detectable:</strong> a VM does not perfectly imitate a real environment, so malware can detect that it is inside one and act differently.</li>
-    <li><strong>Hypervisors have vulnerabilities</strong> that can be exploited.</li>
-    <li>Therefore: <strong>always keep hypervisor software up to date, and never use virtualisation as a single defence.</strong></li>
-  </ul>
+  <p class="section-kicker">When you cannot trust code, confine it: sandboxes limit what it touches, and virtual machines raise the cost of escape.</p>
+  <p>Two strategies let a system run untrusted code without trusting it: a <strong>sandbox</strong>, or a <strong>virtual machine</strong>. Both are forms of <strong>confinement</strong>.</p>
+  <h3 class="sub-title">Sandboxing</h3>
+  <div class="def-card"><span class="dc-term">Sandboxing</span> — creating a shielded environment where malicious applications cannot interfere with the surrounding system. It usually offers a limited API, striking a balance between functionality and security.</div>
+  <p>Java applets, now largely obsolete, are a historical example. A sandbox gives code no access to the local hard disk (or at most temporary access to a restricted directory) and allows it to communicate only with the host it came from — the same-origin policy again. Other examples are JavaScript in browsers and Chrome's approach of isolating tabs in separate processes. Securing a sandbox is genuinely hard, and there are methods to break out of it, so confinement is layered rather than relied on alone.</p>
+  <h3 class="sub-title">Virtualisation</h3>
+  <p><strong>Virtual Machines (VMs)</strong> emulate a computer system. Virtualisation was invented in the 1960s by IBM; a single machine could be partitioned with VM/370 into multiple virtual machines. VMs let software run even when its original environment is unavailable, because the OS inside perceives only its designated "own" hardware. On the client end they let you run a guest OS on a host, for example Windows on macOS. The degrees are <strong>full virtualisation</strong> (complete hardware emulation, even across architectures), <strong>para-virtualisation</strong> (the guest OS must support it), and <strong>containers and jails</strong> (lightweight virtualisation giving an isolated environment).</p>
+  <p>A <strong>hypervisor</strong> manages and runs VMs with hardware support at the <strong>ring -1</strong> level; examples are VirtualBox, VMware, Xen and QEMU. Virtualisation is not primarily designed for access control, but the significant effort required to break out raises the bar for attackers. Caveats: VM execution is <strong>detectable</strong>, because a VM does not perfectly imitate a real environment, so malware can tell it is inside one and act differently; hypervisors themselves have vulnerabilities. Keep hypervisor software up to date and never use it as the sole defence.</p>
   <h3 class="sub-title">Example: Docker</h3>
-  <p><strong>Docker</strong> started as a tool for <strong>continuous integration and delivery (CI/CD)</strong>. It offers an abstraction over containers, supporting several operating systems through their native <strong>jail</strong> implementations. It builds <strong>images</strong> out of applications and their supporting libraries, is fast to spin up and delete, and is easy on resources. Management systems such as <strong>Kubernetes</strong> are available to orchestrate many containers.</p>
-  <ul>
-    <li>Docker <strong>sandboxes the app</strong> in the container: an app cannot communicate with an app in another container.</li>
-    <li>However, the <strong>Docker daemon</strong> acts as broker and <strong>runs as root</strong>. That means any user who can start or stop containers can interact with the daemon — an expanded <strong>attack surface</strong>.</li>
-    <li>While not designed for access control, containers provide an extra degree of separation and <strong>raise the bar for attacks</strong>.</li>
-  </ul>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>The pattern to notice:</strong> sandboxes, VMs and containers are all <em>isolation</em> technologies. None was built as an access-control mechanism, but each makes an attacker's life harder by adding a boundary that must be crossed — which is exactly what access control is for.</div></div>
+  <p>Docker was initially developed for continuous integration and delivery. It abstracts over containers, supporting operating systems through their native jail implementations, and builds <strong>images</strong> packaging applications with their supporting libraries, which makes it efficient and resource-friendly. Containers spin up or delete quickly, and management systems such as <strong>Kubernetes</strong> simplify orchestration. Docker containers sandbox the app, preventing direct communication between apps in different containers. The sharp edge: the <strong>Docker daemon</strong> acts as broker but runs with <strong>root privileges</strong>, so any user who can start or stop containers can interact with it, expanding the attack surface.</p>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember:</strong> sandboxes and VMs are speed bumps, not walls. They raise the cost of an attack and buy time, but each has known escape routes and detection tricks. Use them as part of a layered defence, never as the only line.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A container platform lets any developer start and stop containers. Given how the Docker daemon runs, what privilege does each developer effectively hold?</div></div>
 </section>
 
-<section class="guide-section" id="hardware" data-title="Hardware Access Control">
+<section class="guide-section" id="hardware-access-control" data-title="Hardware Access Control">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
     <h2 class="section-title">Hardware Access Control</h2>
   </div>
-  <p class="section-kicker">The bottom of the stack: how the CPU itself keeps processes apart and enforces privilege.</p>
-  <p>Hardware protections enhance system security through several mechanisms: <strong>memory protection</strong>, <strong>privileged execution</strong> and <strong>isolated cryptographic components</strong>.</p>
+  <p class="section-kicker">Hardware is the bottom of the trust stack: it keeps processes apart and enforces privilege in silicon.</p>
+  <p>Software access control rests on hardware support, grouped into memory protection, privileged execution and isolated cryptographic components.</p>
   <h3 class="sub-title">Memory protection</h3>
-  <p>CPUs support the operating system in keeping processes' memory allocations apart. This is primarily achieved through <strong>segment addressing</strong>: memory is addressed using two registers — a <strong>segment register</strong> pointing to a segment of memory, and an <strong>address register</strong> pointing to a location within that segment. If a process tries to access memory outside its address space, a <strong>segmentation fault</strong> (<code>SIGSEGV</code>) is raised. This protects against both unauthorised <strong>read and write</strong> operations.</p>
-  <h3 class="sub-title">Privileged execution</h3>
-  <p>CPUs have layered modes called <strong>rings</strong>, organised into different privilege classes. ARM goes further, with <strong>separate registers</strong> for different privilege classes. This ensures critical operations are safeguarded by restricting access according to privilege level.</p>
-  <p>In the interaction between kernel and hardware:</p>
-  <ul>
-    <li>Code runs in one of the available CPU modes, the rings.</li>
-    <li>CPUs <strong>enforce access control from higher-privileged rings to lower ones</strong>. A process running in a higher ring cannot directly interact with a process in a lower ring.</li>
-    <li>The <strong>principle of least privilege</strong> states that <strong>all code should run only with the minimal required privilege, never more</strong>.</li>
-    <li>The number of pathways for communication with the kernel should be limited to the required minimum and well controlled.</li>
-  </ul>
-  <div class="formula"><div class="formula-label">Principle of least privilege</div><div class="math">run every piece of code with the minimum privilege it needs — and no more</div></div>
-  <h3 class="sub-title">Isolated cryptographic components</h3>
-  <p>Keys can be stored <strong>in hardware</strong>, with functionality that uses them exposed through a dedicated interface. This restricts access to the keys so only authorised functionality can use them. The classic example is the <strong>Intel TPM (Trusted Platform Module)</strong>, which was originally conceived for <strong>Digital Rights Management (DRM)</strong>. The TPM provides a secure environment for cryptographic operations, minimising exposure to malicious software.</p>
+  <p>CPUs help the OS keep processes' memory allocations apart, primarily through <strong>segment addressing</strong>: memory is addressed using a <strong>segment register</strong> that identifies a segment and an <strong>address register</strong> that pinpoints a location within it. If a process accesses memory outside its address space, a <strong>segmentation fault (SIGSEGV)</strong> is triggered, protecting against unauthorised read and write operations.</p>
+  <h3 class="sub-title">Privileged execution and cryptographic isolation</h3>
+  <p>CPUs have layered modes, or <strong>rings</strong>, organised into distinct privilege classes that delineate the operations permissible in each. ARM goes further with separate registers for each privilege class. Storing cryptographic keys in hardware restricts access to them, allowing only authorised functionality to use them through a dedicated interface: an example is the Intel <strong>Trusted Platform Module (TPM)</strong>, initially conceived for Digital Rights Management.</p>
+  <h3 class="sub-title">Kernel, rings and least privilege</h3>
+  <p>Code runs in one of the available CPU modes, called rings, which are hierarchical levels of privilege. CPUs enforce strict access control, preventing processes in higher-privileged rings from directly interacting with those in lower rings. This embodies the <strong>principle of least privilege</strong>: all code should run only with the minimal required privilege, never more, and the number of ways to communicate with the kernel should be limited to the required minimum and well controlled. A <strong>protection domain</strong> is this idea made concrete: the set of objects and rights a piece of code may touch. A ring is a hardware protection domain; a sandbox is a software one.</p>
   <h3 class="sub-title">Intel processors</h3>
   <ul>
-    <li>The <strong>Intel 80286</strong> introduced <strong>segment addressing and rings</strong>.</li>
-    <li>The <strong>Intel 80386</strong> added <strong>built-in virtual memory</strong> and a memory segment of <strong>4 GB</strong>.</li>
-    <li>Rings of protection are supported by several mechanisms. The current privilege level can only be changed by a process in <strong>ring 0</strong> (the kernel). Procedures cannot access objects in lower-level rings directly, but <strong>gates</strong> allow execution of code at a different privilege level and manage supporting infrastructure such as multiple stack segments.</li>
-    <li>Modern Intel CPUs have <strong>nine rings</strong>: rings <strong>0–3 for normal code</strong>, below which is a further set of rings <strong>0–3 in VMM root mode</strong> for the hypervisor, and at the bottom <strong>System Management Mode (SMM)</strong> for the BIOS. In practice the four levels actually used are SMM, ring 0 of VMX root mode, the normal ring 0 for the OS, and ring 3 for applications.</li>
+    <li>The <strong>Intel 80286</strong> introduced segment addressing and protection rings. The <strong>80386</strong> added built-in virtual memory and expanded memory segments to 4 GB.</li>
+    <li>The current privilege level can only be changed by a process in <strong>ring 0</strong>, the kernel. Procedures cannot access objects in lower-level rings directly, but <strong>gates</strong> allow execution at a different privilege level and manage infrastructure such as multiple stack segments.</li>
+    <li>Modern CPUs have <strong>nine rings</strong>: rings 0 to 3 for normal code, a further 0 to 3 in <strong>VMM root mode</strong> for the hypervisor, and <strong>System Management Mode (SMM)</strong> for the BIOS. In practice the four levels used are SMM, ring 0 of VMX root mode, normal ring 0 for the OS, and ring 3 for applications.</li>
   </ul>
-  <h3 class="sub-title">ARM processors</h3>
-  <ul>
-    <li>ARM is the processor core most commonly used in <strong>phones, tablets and IoT devices</strong>. Unlike Intel, ARM <strong>licenses a range of processor cores</strong> that chip designers include in their products.</li>
-    <li>The core initially contained no memory management, so ARM-based designs could be <strong>extensively customised</strong>. There are now variants with <strong>memory protection units (MPUs)</strong> and others with <strong>memory management units (MMUs)</strong> that also handle virtual memory.</li>
-    <li>ARM's latest offering is <strong>CHERI (Capability Hardware Enhanced RISC Instructions)</strong>, which adds fine-grained capability support to ARM CPUs. CHERI lets a process spawning a subthread allocate it read and write access to <strong>specific ranges of memory</strong>, so multiple sandboxes can run in the same process.</li>
-    <li>The long-term promise: if used thoroughly in operating systems such as Windows, Android or iOS, CHERI has the potential to prevent most of the <strong>zero-day exploits</strong> of recent years by providing fine-grained spatial memory safety at the hardware level.</li>
-  </ul>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Ring numbering, explained.</strong> Lower number = more privilege. Ring 0 is the kernel; ring 3 is ordinary applications. The hypervisor's ring -1 sits <em>below</em> ring 0 (more privileged than the kernel), and SMM is lower still. That is why a VM can be managed without the guest OS being able to tamper with the hypervisor.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Why does the principle of least privilege also tell us to limit the number of ways a program can talk to the kernel? (Answer: every communication pathway is a potential attack vector; fewer, well-controlled pathways mean a smaller surface for an attacker to exploit.)</div></div>
+  <div class="flow">
+    <span class="flow-step">Ring 3 · Applications</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Ring 0 · OS kernel</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Ring −1 · Hypervisor</span><span class="flow-arrow">→</span>
+    <span class="flow-step">SMM · BIOS</span>
+  </div>
+  <h3 class="sub-title">ARM processors and CHERI</h3>
+  <p>ARM is the processor core most used in phones, tablets and IoT devices. Unlike Intel, it licenses cores that chip designers include in their products. The core initially had no memory management, so ARM designs could have their hardware protection extensively customised; there are now variants with <strong>memory protection units (MPUs)</strong> and others with <strong>memory management units (MMUs)</strong> handling virtual memory. ARM's latest offering is <strong>CHERI</strong> (Capability Hardware Enhanced RISC Instructions), adding fine-grained capability support so a process spawning a subthread can allocate it read and write access to specific memory ranges, letting multiple sandboxes run in the same process. Used thoroughly in operating systems such as Windows, Android or iOS, it has the potential to prevent most of the zero-day exploits of recent years.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Context:</strong> notice the pattern across the week. Access control starts as a matrix in a textbook, but every serious mechanism is an attempt to shrink that matrix into something small, fast and impossible to bypass — often with hardware help.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Why is a memory protection unit on a phone-sized device an important access control feature, even though it never appears in a permission prompt?</div></div>
 </section>
 
-<section class="guide-section" id="policy-models" data-title="Security Policy Models &amp; MLS">
+<section class="guide-section" id="multilevel-security" data-title="Multilevel Security">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Security Policy Models and Multilevel Security</h2>
+    <h2 class="section-title">Multilevel Security, Labels and Clearances</h2>
   </div>
-  <p class="section-kicker">Before you build mechanisms, you write down precisely what 'secure' means — that is a policy model.</p>
-  <p><strong>Multilevel security (MLS)</strong> is a foundational form of access control. The idea is that information must be handled at different levels of classification — <strong>Top Secret, Secret, Confidential</strong> and so on. MLS has enormous importance in military and government, where access must be strictly controlled by classification.</p>
-  <p>Yet MLS is <strong>surprisingly difficult to implement while maintaining high utility</strong>. Consider the example: how can a system provide an automated means to <em>reduce</em> a document's classification from Top Secret to Secret, so that other dependent principals at the lower level can read it? Getting that declassification right, safely and automatically, is genuinely hard.</p>
-  <h3 class="sub-title">How to analyse a system's security</h3>
-  <p>When analysing security, the usual order is:</p>
-  <ol class="steps">
-    <li><strong>Analyse incentives and create a threat model</strong> — a model describing the attacker's motivations and capabilities.</li>
-    <li><strong>Analyse the security policy</strong> — the policy describes the goals to be achieved. It is relatively verbose.</li>
-    <li><strong>Analyse the security mechanisms</strong> that implement the policy.</li>
-  </ol>
-  <p>A <strong>Security Policy Model</strong> is a <strong>highly precise and succinct statement about the protection properties of the system</strong>. It can be highly formal, and it drives engineering — it is the specification that mechanisms must satisfy.</p>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why models matter even though pure implementations are rare:</strong> you will almost never meet a system that implements a policy model exactly. But the models give you the vocabulary to discuss real-world access control — and, as you will see, variants of one of them (Biba) are surprisingly common in real operating systems.</div></div>
+  <p class="section-kicker">Multilevel security labels every object and every person, then lets the labels, not the users, decide.</p>
+  <div class="def-card"><span class="dc-term">Multilevel security (MLS)</span> — a foundational access control model that handles information across different levels of classification, such as Top Secret, Secret and Confidential. Every object carries a classification label, every subject holds a clearance, and the relationship between them decides access.</div>
+  <p>MLS holds enormous importance in military and government. Yet implementing it while maintaining high utility is surprisingly challenging. The lecture's example shows why: how can a system provide automated means to reduce a document's classification from Top Secret to Secret, so that dependent principals at a lower classification can read it? Lowering a label is deliberate and hard to automate, and if you cannot do it, work grinds to a halt.</p>
+  <p>In general, labels can be arranged into an ordering or <strong>lattice</strong>, where one label <em>dominates</em> another. A subject's clearance dominates an object's classification exactly when access is allowed: Top Secret dominates Secret, which dominates Confidential, which dominates Unclassified.</p>
+  <h3 class="sub-title">A worked example</h3>
+  <p>The lecture builds a small household scenario; only these mappings exist.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>User</th><th>Clearance</th><th>Object</th><th>Required clearance</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Bart</strong></td><td>None</td><td>fridgecodes.txt</td><td>Ultimate</td></tr>
+        <tr><td><strong>Homer</strong></td><td>Low</td><td>tvlockcodes.txt</td><td>Medium</td></tr>
+        <tr><td><strong>Lisa</strong></td><td>Medium</td><td>playstationcodes.txt</td><td>Low</td></tr>
+        <tr><td><strong>Marge</strong></td><td>Ultimate</td><td></td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>Under Bell-LaPadula.</strong> Homer cannot get the TV lock codes: with Low clearance he cannot read the Medium-level file (<em>no read up</em>). Homer also cannot enlist Marge, because she cannot write down, so she cannot copy the file to him. Bart <em>can</em> change all the codes, since with no clearance he can write <em>up</em>. This extreme example shows Bell-LaPadula focuses only on confidentiality, not integrity.</p>
+  <p><strong>Under Biba.</strong> Homer <em>can</em> obtain the TV lock codes, because read up is allowed, and Marge <em>can</em> change all the codes, because write down is allowed. The same scenario gives opposite answers depending on which property you protect.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Context:</strong> keep the two pairs straight, because exam questions love them. Bell-LaPadula cares about secrets leaking <em>down</em>. Biba cares about corrupt data flowing <em>up</em>. Protecting one does not automatically protect the other.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Why is it sensible that Bart can change fridge codes he cannot read? Justify "no read up, no write down" as a way to stop secrets leaking, even though it lets low users tamper with high data.</div></div>
 </section>
 
-<section class="guide-section" id="bell-lapadula" data-title="Bell-LaPadula">
+<section class="guide-section" id="bell-lapadula" data-title="Bell-LaPadula Model">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
     <h2 class="section-title">The Bell-LaPadula Model</h2>
   </div>
-  <p class="section-kicker">The classic confidentiality model: information may not flow downwards.</p>
-  <p>The <strong>Bell-LaPadula (BLP)</strong> model is the classic security policy model for MLS, proposed in <strong>1973</strong>. In the 1970s there was a growing realisation that operating systems would always contain vulnerabilities that users could work around. That underscored the need to implement <strong>MAC that could not be bypassed</strong>. BLP's basic property is that <strong>information cannot flow downwards</strong>.</p>
-  <p>It enforces <strong>two mandatory properties</strong> and includes <strong>one discretionary form</strong> of access control:</p>
-  <div class="grid grid-2">
-    <div class="card">
-      <h3 class="card-title">1. No read up <span class="tag">simple security</span></h3>
-      <p>No subject may <strong>read</strong> data at a <em>higher</em> security level. Equivalently, a subject can read their own level or down.</p>
-    </div>
-    <div class="card">
-      <h3 class="card-title">2. No write down <span class="tag">star property</span></h3>
-      <p>No subject may <strong>write</strong> data to a <em>lower</em> security level. Equivalently, a subject can write to their own level or up.</p>
-    </div>
+  <p class="section-kicker">Bell-LaPadula stops secrets leaking downwards: no read up, no write down.</p>
+  <p>The classic multilevel security policy model that gained wide acceptance was proposed in 1973. In the 1970s came a growing recognition that operating systems would always contain vulnerabilities that even users could work around, underscoring the need for <strong>mandatory access control</strong> that could not be easily bypassed. Its basic property is that <strong>information cannot flow downwards</strong>. Formally it enforces two properties, both forms of MAC, plus one discretionary form.</p>
+  <div class="formula">
+    <div class="formula-label">Bell-LaPadula · confidentiality</div>
+    <div class="math">Simple Security: no read up  ·  ∗-property: no write down</div>
   </div>
-  <h3 class="sub-title">Why 'no write down' is crucial</h3>
-  <p>The <em>star</em>-property (the no-write-down rule) is the subtle and crucial one. Picture the attack it blocks:</p>
-  <ol class="steps">
-    <li>A user at a <strong>low</strong> security level writes a program designed to <strong>exfiltrate data</strong>.</li>
-    <li>The user waits for an administrator or user at a <strong>high</strong> security level to accidentally execute it.</li>
-    <li>If the high-level user could then write the secret data down to the low level, the secret would leak.</li>
-  </ol>
-  <p>'No write down' prevents higher-level entities from writing to lower-level objects, closing this indirect exfiltration path. Enforcing it effectively requires <strong>MAC</strong>.</p>
-  <h3 class="sub-title">The discretionary part</h3>
-  <p>BLP also has one <strong>discretionary</strong> form of access control: an external entity defines the access of subjects to objects in a matrix. For example:</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Subject</th><th>o1</th><th>o2</th><th>o3</th><th>o4</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Sam</strong></td><td>read</td><td>append</td><td>—</td><td>read</td></tr>
-        <tr><td><strong>Bert</strong></td><td>—</td><td>read-write</td><td>append</td><td>execute</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <h3 class="sub-title">Innovations and criticisms</h3>
+  <p>The <strong>simple security property</strong> says no subject may read data at a higher level (<strong>no read up</strong>); implicitly, a subject may read at their own level or down. The <strong>∗ (star) property</strong> says no subject may write data to a lower level (<strong>no write down</strong>); implicitly, a subject may write at their own level or up.</p>
+  <p>The star property is crucial. A low-level user wanting to exfiltrate high-level data writes a program, then waits for an administrator or higher-level user to accidentally execute it. If they do, it runs with higher privilege and could copy secrets down. The ∗ property prevents higher-level entities writing to lower-level objects, blocking this indirect exfiltration. Bell-LaPadula also has one <strong>discretionary</strong> form: an external entity defines subjects' access to objects in a matrix, for example Sam (read, append, ∅, read) and Bert (∅, read-write, append, execute) across objects o1 to o4.</p>
+  <h3 class="sub-title">Strengths and criticisms</h3>
   <div class="compare">
     <div class="compare-col a">
       <h3>Innovations</h3>
       <ul>
-        <li>Blends well with <strong>formal analysis</strong>.</li>
-        <li><strong>Combines DAC and MAC</strong> in a single model.</li>
+        <li>Blends well with <strong>formal analysis</strong></li>
+        <li>Combines <strong>DAC and MAC</strong></li>
       </ul>
     </div>
     <div class="compare-col b">
       <h3>Criticisms</h3>
       <ul>
-        <li>Administration is via one <strong>omnipotent Trusted Principal</strong> — how do you secure that?</li>
-        <li>Defined with <strong>confidentiality</strong> in mind, <strong>not integrity</strong>.</li>
-        <li>Does not consider <strong>covert channels</strong>.</li>
-        <li>Two BLP-secure systems combined are <strong>not necessarily</strong> BLP-secure.</li>
+        <li>Administration via one omnipotent <strong>Trusted Principal</strong> — how do you secure that?</li>
+        <li>Defined with <strong>confidentiality</strong> in mind, not integrity</li>
+        <li>Does not consider <strong>covert channels</strong></li>
+        <li>A system of two Bell-LaPadula-secure systems is <strong>not necessarily</strong> secure</li>
       </ul>
     </div>
   </div>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Covert channel example:</strong> a program can encode a <em>1</em> as high CPU load and a <em>0</em> as low load. A program at a lower level can estimate the CPU load and thereby infer the secret — a channel BLP simply does not address.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Under BLP, can a user with <em>Secret</em> clearance write a file that is <em>Top Secret</em>? (Answer: yes — writing up is allowed. 'No write down' only forbids writing to <em>lower</em> levels.)</div></div>
+  <p>The covert channel criticism is best seen with an example: one program encodes a 1 as high CPU load and a 0 as low CPU load, and a lower-level program estimates the load to read off the bits. No ordinary write down occurred, yet information crossed the boundary.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> a <em>covert channel</em> is a method used to pass information that is not normally used for communication, such as hiding a message in images (steganography) or in CPU load. A <em>side channel</em> is different: the attacker infers what is inside a protected communication by observing artefacts such as packet lengths, timing or CPU heat, without changing the message.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A Secret file is encrypted and sent over the internet — is that a covert channel? Now suppose the sender varies packet timing to encode bits. Is <em>that</em> a covert channel?</div></div>
 </section>
 
-<section class="guide-section" id="biba" data-title="Biba &amp; Using the Models">
+<section class="guide-section" id="biba-model" data-title="Biba Model">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">The Biba Model and Using the Models</h2>
+    <h2 class="section-title">The Biba Model</h2>
   </div>
-  <p class="section-kicker">Bell-LaPadula reversed: now the goal is integrity — stopping malicious change, not stopping leaks.</p>
-  <p>The <strong>Biba model</strong> addresses <strong>integrity</strong>, not confidentiality: it aims to prevent <strong>malicious change</strong>. It can be seen as a <strong>reverse of Bell-LaPadula</strong>, and it has three core principles:</p>
-  <div class="grid grid-3">
-    <div class="card"><h3 class="card-title">1. Read up <span class="tag">simple integrity</span></h3><p>A subject may only read data at its own level or <strong>higher</strong> (no read down).</p></div>
-    <div class="card"><h3 class="card-title">2. Write down <span class="tag">star integrity</span></h3><p>A subject may only write data at its own level or <strong>lower</strong> (no write up).</p></div>
-    <div class="card"><h3 class="card-title">3. Invocation property</h3><p>A process from below cannot request higher access — it can only invoke subjects at an equal or lower level.</p></div>
-  </div>
-  <p>The first two rules control direct read and write access to data. The <strong>invocation property</strong> controls the ability of processes to <em>call or execute</em> other processes. It prevents a low-integrity process from invoking a high-integrity process to do its work for it, which could lead to an integrity breach.</p>
-  <h3 class="sub-title">Examples that make it click</h3>
+  <p class="section-kicker">Biba is Bell-LaPadula flipped: it protects integrity instead of confidentiality.</p>
+  <p>The Biba model focuses on <strong>data integrity</strong> rather than confidentiality, aiming to prevent malicious modifications. It can be seen as a <strong>reverse of Bell-LaPadula</strong>. Its three core properties are: the <strong>simple integrity property</strong> (a subject may only read data at their own level or higher — <strong>no read down</strong>), the <strong>∗ integrity property</strong> (a subject may only write data at their own level or lower — <strong>no write up</strong>), and the <strong>invocation property</strong> (a process from below cannot request higher access; it may only invoke subjects at an equal or lower level).</p>
+  <p>The <strong>invocation property</strong> is the one students skip. Usually a <em>subject</em> means any user, program or process. Biba's first two rules use the word <em>subject</em>; the third uses <em>processes</em>. While the simple and star integrity properties control direct read and write access to data, the invocation property controls the ability of processes to call or execute other processes. It stops a low-integrity process invoking a high-integrity process to act on its behalf.</p>
+  <h3 class="sub-title">Two everyday examples</h3>
   <ul>
-    <li>An aircraft's <strong>in-flight entertainment system</strong> can read data from the avionics (such as airspeed) but <strong>cannot alter any avionics data</strong> — so entertainment-system vulnerabilities cannot compromise flight controls.</li>
-    <li>An <strong>odometer</strong> can display mileage but cannot change it, preserving the integrity of the vehicle's mileage data.</li>
+    <li>An aircraft's <strong>in-flight entertainment system</strong> can read avionics data such as airspeed but cannot alter it, so a vulnerability in the entertainment system cannot compromise flight controls.</li>
+    <li>An <strong>odometer</strong> can display mileage without the capability to alter it, ensuring the integrity of the mileage data.</li>
   </ul>
-  <h3 class="sub-title">Worked example: applying both models</h3>
-  <p>Suppose users have clearances and three files each require a clearance, and <em>no other rules exist</em>:</p>
+  <p>In both cases a low-integrity, easily attacked component may <em>read</em> trusted data but may never <em>write</em> it — the mirror image of Bell-LaPadula.</p>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>User</th><th>Clearance</th><th>Required clearance</th><th>Object</th></tr></thead>
+      <thead><tr><th>Question</th><th>Bell-LaPadula</th><th>Biba</th></tr></thead>
       <tbody>
-        <tr><td><strong>Bart</strong></td><td>None</td><td>Ultimate</td><td>fridgecodes.txt</td></tr>
-        <tr><td><strong>Homer</strong></td><td>Low</td><td>Medium</td><td>tvlockcodes.txt</td></tr>
-        <tr><td><strong>Lisa</strong></td><td>Medium</td><td>Low</td><td>playstationcodes.txt</td></tr>
-        <tr><td><strong>Marge</strong></td><td>Ultimate</td><td>—</td><td>—</td></tr>
+        <tr><td>Protects</td><td>Confidentiality</td><td>Integrity</td></tr>
+        <tr><td>Simple property</td><td>No <strong>read up</strong></td><td>No <strong>read down</strong></td></tr>
+        <tr><td>Star property</td><td>No <strong>write down</strong></td><td>No <strong>write up</strong></td></tr>
+        <tr><td>Extra property</td><td>Discretionary matrix</td><td>Invocation property</td></tr>
+        <tr><td>Intuition</td><td>Secrets must not leak down</td><td>Bad data must not corrupt up</td></tr>
       </tbody>
     </table>
   </div>
-  <p><strong>In a Bell-LaPadula model:</strong></p>
-  <ul>
-    <li><em>Can Homer obtain the TV lock codes?</em> <strong>No</strong> — a 'Low' clearance cannot read a 'Medium' object (no read up).</li>
-    <li><em>Can Homer enlist Marge to get them?</em> <strong>No</strong> — Marge cannot write down, so she cannot pass the codes down.</li>
-    <li><em>Can Bart change all codes as he wishes?</em> <strong>Yes</strong> — with 'None' clearance he can write up, changing any document above him. This is an extreme example, but it highlights that BLP focuses only on <strong>confidentiality, not integrity</strong>.</li>
-  </ul>
-  <p><strong>In a Biba model:</strong></p>
-  <ul>
-    <li><em>Can Homer obtain the TV lock codes?</em> <strong>Yes</strong> — read up is allowed.</li>
-    <li><em>Can Marge change all codes as she wishes?</em> <strong>Yes</strong> — write down is allowed.</li>
-  </ul>
-  <h3 class="sub-title">Which models are actually used?</h3>
-  <p>Pure Bell-LaPadula implementations — or pure implementations of any single model — are <strong>rare</strong>. Variants of <strong>Biba</strong>, however, are much more common:</p>
-  <ul>
-    <li><strong>Windows Vista</strong>.</li>
-    <li><strong>UNIX</strong>: SELinux, some Red Hat versions, and a FreeBSD module.</li>
-  </ul>
-  <p>Even when pure models are absent, the <strong>concepts are useful</strong> for discussing real-world access control. That is why the lecture then shifts focus to real-world concepts in mobile, desktop and server operating systems and hardware.</p>
   <div class="mnemonic">
-    <div class="mnemonic-letters">BLP · BIBA</div>
-    <div class="mnemonic-phrase">"BLP: no read up, no write down. Biba: no read down, no write up."</div>
-    <div class="mnemonic-expand"><strong>B</strong>ell-LaPadula protects <strong>confidentiality</strong> (stop secrets leaking down). <strong>B</strong>iba protects <strong>integrity</strong> (stop bad data flowing up). Biba is BLP flipped.</div>
+    <div class="mnemonic-letters">BLP ⇄ Biba</div>
+    <div class="mnemonic-phrase">"LaPadula locks secrets in; Biba blocks bad data."</div>
+    <div class="mnemonic-expand"><strong>BLP</strong>: no read up, no write down — confidentiality. · <strong>Biba</strong>: no read down, no write up — integrity. · Each adds one extra rule: BLP a discretionary matrix, Biba the invocation property.</div>
   </div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Which model would you choose for a system where an untrusted sensor must never corrupt trusted control data? (Answer: Biba — its no-write-up rule stops low-integrity input from flowing into high-integrity systems.)</div></div>
+  <p>Pure Bell-LaPadula, or any single security model, is rare in practice. However, <strong>variants of Biba</strong>, emphasising data integrity, find more application: Windows Vista, certain UNIX systems such as SELinux, some versions of Red Hat, and a FreeBSD module. Even where models are not implemented purely, their concepts are crucial for understanding and discussing real-world access control, which is why the rest of the lecture focuses on mobile, desktop and server operating systems and hardware.</p>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> confidentiality means Bell-LaPadula; integrity or preventing malicious modification means Biba; roles assigned to users means RBAC; an owner sharing at will means DAC.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> An app can read your step count to draw a graph but cannot edit the raw sensor value. Which model's shape does that resemble, and which single property does it embody?</div></div>
+</section>
+
+<section class="guide-section" id="rbac-abac-least-privilege" data-title="Roles, Attributes &amp; Least Privilege">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Roles, Attributes and Least Privilege</h2>
+  </div>
+  <p class="section-kicker">Organisations rarely grant access to individuals; they grant it to roles, match attributes, and give everyone the least privilege that works.</p>
+  <h3 class="sub-title">Role-based access control (RBAC)</h3>
+  <div class="def-card"><span class="dc-term">Role-based access control (RBAC)</span> — permissions are attached to <strong>roles</strong> rather than individual identities. Users are assigned roles and gain exactly the permissions their roles carry. The lecture meets it in databases, where DBMSes <strong>map users on the OS to roles in the database</strong>.</div>
+  <p>RBAC scales because you manage a handful of roles rather than thousands of individuals: the "Database Administrator" has more privileges than the "Database Manager". Three features make it practical: a <strong>role hierarchy</strong>, where senior roles inherit the permissions of roles beneath them so each permission is defined once; <strong>constraints</strong>, rules restricting how roles combine, such as a maximum number of users in a powerful role; and <strong>separation of duties</strong>, splitting a sensitive process across roles so no single person can complete it alone. The classic case is payments: whoever creates a payment must not also approve it.</p>
+  <h3 class="sub-title">Attribute-based access control (ABAC)</h3>
+  <div class="def-card"><span class="dc-term">Attribute-based access control (ABAC)</span> — access decisions evaluate <strong>attributes</strong> of the subject, object, operation and environment against a policy, rather than relying on identity or a fixed role alone.</div>
+  <p>ABAC is the fine-grained end of the spectrum that began with coarse read/write/execute rights. A policy might allow access when the subject's department is Finance <em>and</em> the object is Internal <em>and</em> the operation is read <em>and</em> the environment is a managed device during business hours. Every attribute can be tested, so ABAC expresses very precise rules at the cost of more complexity to design and audit — the same trade-off the lecture flags for SQL's fine-grained access control.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Model</th><th>Decision rests on</th><th>Best at</th></tr></thead>
+      <tbody>
+        <tr><td><strong>DAC</strong></td><td>Owner's discretion and identity</td><td>Flexible sharing</td></tr>
+        <tr><td><strong>MAC</strong></td><td>Central policy and labels</td><td>Rigorous, non-bypassable control</td></tr>
+        <tr><td><strong>RBAC</strong></td><td>The user's role</td><td>Manageable organisational permissions</td></tr>
+        <tr><td><strong>ABAC</strong></td><td>Many subject, object and context attributes</td><td>Fine-grained, context-aware rules</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3 class="sub-title">Least privilege and privilege escalation</h3>
+  <p>A <strong>privilege</strong> is authority to perform an action ordinary users cannot. The <strong>principle of least privilege</strong> says all code should run only with the minimal required privilege, never more. It shapes every choice above: give a role only what it needs, run a process in its own protection domain, and limit the kernel's communication paths. <strong>Privilege escalation</strong> is gaining more privilege than intended; watch for <strong>SUID and SGID</strong> programs that mishandle input, the <strong>confused deputy</strong> being tricked into spending its authority, <strong>sandbox and VM escape</strong> reaching the surrounding system, and <strong>root and sudo</strong>, where control of <code>sudo</code> membership and the sudoers file matters as much as any password. All point to one design idea: a <strong>protection domain</strong>. A process should live in the smallest domain that lets it do its job and cross into a more privileged domain only through a narrow, controlled gate.</p>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> least privilege is the cheapest security control you can apply. It costs nothing at run time and shrinks the blast radius of every mistake. Most privilege escalation is not a broken model but a system granted more than it needed.</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A payroll system lets one finance officer both create and approve payments. Which principle is missing, and what risk does that create?</div></div>
 </section>
 
 <section class="guide-section" id="takeaways" data-title="Key Takeaways">
-  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
-  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Key Takeaways</h2>
+  </div>
+  <p class="section-kicker">If you remember nothing else from this week, hold onto these twelve points.</p>
   <div class="takeaways">
-    <div class="takeaway"><span class="tk-num">1</span><p><strong>Access control</strong> controls which principals reach which resources. <strong>Authentication</strong> proves identity; <strong>authorisation</strong> allocates privileges. Authentication comes first.</p></div>
-    <div class="takeaway"><span class="tk-num">2</span><p><strong>Access can be modelled as a matrix</strong> of subjects against objects; cells hold r, w, x or no access. An ACL is one column; a capability is one row.</p></div>
-    <div class="takeaway"><span class="tk-num">3</span><p><strong>DAC</strong> = the owner decides (flexible, e.g. personal OneDrive). <strong>MAC</strong> = a central authority decides via security labels, checked by the security kernel (rigorous, e.g. enterprise DLP).</p></div>
-    <div class="takeaway"><span class="tk-num">4</span><p><strong>ACLs</strong> attach to objects and map user IDs to allowed operations. They are widespread: POSIX/UNIX, Windows, social networks and enterprise systems.</p></div>
-    <div class="takeaway"><span class="tk-num">5</span><p><strong>Unix uses nine permission bits</strong> — rwx for owner, group and others. Read <code>-rw-r--r--</code> as owner read/write, group read, others read. X on a directory means traverse.</p></div>
-    <div class="takeaway"><span class="tk-num">6</span><p><strong>SUID</strong> runs a program as its owner; <strong>SGID</strong> as its group (or sets directory group inheritance); the <strong>sticky bit</strong> restricts deletion (used on <code>/tmp</code>). Processes carry real, effective and saved UID/GID.</p></div>
-    <div class="takeaway"><span class="tk-num">7</span><p><strong>Root has UID/GID 0</strong> and is all-powerful; <code>sudo</code> (with the sudo group, usually a password, and the sudoers file) grants controlled root access.</p></div>
-    <div class="takeaway"><span class="tk-num">8</span><p><strong>Other OSes differ:</strong> macOS (BSD, Keychain, Kerberos, TrustedBSD MAC), Windows (13–16 permissions, enforced by the Security Reference Monitor), iOS (read-only sensors, signed software, sandboxing) and Android (apps as separate users, .apk signing, the public-storage problem).</p></div>
-    <div class="takeaway"><span class="tk-num">9</span><p><strong>Middleware and databases</strong> add their own controls — role-based access control maps OS users to database roles — but the OS layer is still needed because data lives on disk and in RAM.</p></div>
-    <div class="takeaway"><span class="tk-num">10</span><p><strong>Browsers</strong> enforce the <strong>same-origin policy</strong> and run code in a sandbox, yet suffer the <strong>confused deputy problem</strong> — a privileged program tricked into misusing its authority, classically via XSS.</p></div>
-    <div class="takeaway"><span class="tk-num">11</span><p><strong>Hardware enforces the bottom layer:</strong> memory segmentation (SIGSEGV on violation), privilege rings, the principle of least privilege, isolated cryptographic components such as TPMs, Intel's nine rings, and ARM's CHERI for fine-grained memory safety.</p></div>
-    <div class="takeaway"><span class="tk-num">12</span><p><strong>Bell-LaPadula</strong> protects confidentiality: <em>no read up, no write down</em>. <strong>Biba</strong> protects integrity and reverses it: <em>no read down, no write up</em>, plus the invocation property. Biba variants are common in real systems (SELinux, FreeBSD, Windows Vista).</p></div>
+    <div class="takeaway"><span class="tk-num">1</span><p><strong>Access control decides a triple</strong> — a subject performing an operation on an object — to protect resources and assets as part of a security policy.</p></div>
+    <div class="takeaway"><span class="tk-num">2</span><p><strong>Authentication proves identity; authorization allocates or verifies privilege;</strong> access control enforces the outcome. The pipeline is identify, authenticate, authorize, access.</p></div>
+    <div class="takeaway"><span class="tk-num">3</span><p><strong>The access control matrix</strong> has subjects as rows, objects as columns and rights in cells. ACLs are its columns; capability lists are its rows.</p></div>
+    <div class="takeaway"><span class="tk-num">4</span><p><strong>Policy says what is allowed; mechanisms enforce it</strong> and provide assurance. A reference monitor must mediate completely, be tamper-proof, and be verifiable.</p></div>
+    <div class="takeaway"><span class="tk-num">5</span><p><strong>DAC lets owners decide and transfer privileges</strong> (flexible, hard at scale). <strong>MAC imposes labels from a central authority</strong> that even root cannot override.</p></div>
+    <div class="takeaway"><span class="tk-num">6</span><p><strong>Unix permissions are nine bits:</strong> read, write and execute for owner, group and others, shown symbolically (<code>rwxr-xr-x</code>) or in octal (<code>755</code>), where r = 4, w = 2, x = 1.</p></div>
+    <div class="takeaway"><span class="tk-num">7</span><p><strong>SUID, SGID and the sticky bit</strong> change program identity or protect shared directories such as <code>/tmp</code>. Processes carry real, effective and saved UIDs/GIDs.</p></div>
+    <div class="takeaway"><span class="tk-num">8</span><p><strong>Root has UID 0 and can do anything;</strong> <code>sudo</code> grants root power to the sudo group or to commands in the sudoers file.</p></div>
+    <div class="takeaway"><span class="tk-num">9</span><p><strong>Mobile systems confine apps by construction:</strong> iOS uses signed software, capabilities, read-only sensors and sandboxing; Android runs apps as separate users with manifest permissions, though public storage is a weakness.</p></div>
+    <div class="takeaway"><span class="tk-num">10</span><p><strong>Middleware, databases and browsers have their own access control.</strong> The browser's same-origin policy runs code in a sandbox, but the confused deputy problem, XSS and CSRF turn a helpful privileged program against its owner.</p></div>
+    <div class="takeaway"><span class="tk-num">11</span><p><strong>Sandboxes and virtual machines are confinement, not guaranteed isolation.</strong> They can be broken out of and detected, and hypervisors have vulnerabilities, so use them as one layer.</p></div>
+    <div class="takeaway"><span class="tk-num">12</span><p><strong>Bell-LaPadula protects confidentiality</strong> (no read up, no write down); <strong>Biba protects integrity</strong> (no read down, no write up, plus invocation).</p></div>
   </div>
 </section>
 
 <section class="guide-section" id="glossary" data-title="Glossary">
-  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
-  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Glossary</h2>
+  </div>
+  <p class="section-kicker">Thirty terms from Week 3, grouped so you can filter to what you need.</p>
   <div class="glossary-tools">
     <button class="chip active" type="button" data-cat="all">All</button>
-    <button class="chip" type="button" data-cat="core">Core concepts</button>
-    <button class="chip" type="button" data-cat="os">OS &amp; mechanisms</button>
-    <button class="chip" type="button" data-cat="model">Policy models</button>
-    <button class="chip" type="button" data-cat="threat">Attacks &amp; concepts</button>
+    <button class="chip" type="button" data-cat="concept">Core concepts</button>
+    <button class="chip" type="button" data-cat="models">Security models</button>
+    <button class="chip" type="button" data-cat="os">OS &amp; platform</button>
+    <button class="chip" type="button" data-cat="hardware">Hardware &amp; isolation</button>
   </div>
   <div class="terms">
-    <div class="term-card" data-cat="core"><div class="term-name">Access control</div><div class="term-meaning">The element of a security policy that controls which principals may access which resources and assets — which files they can read, which programs they can execute, and how they share data.</div></div>
-    <div class="term-card" data-cat="core"><div class="term-name">Authentication</div><div class="term-meaning">The process of acquiring evidence of the identity of another party. It answers 'who are you?' and normally precedes authorisation.</div></div>
-    <div class="term-card" data-cat="core"><div class="term-name">Authorization</div><div class="term-meaning">The process of verifying whether an entity is allowed an action, or the allocation of a privilege to a party. It answers 'what may you do?'.</div></div>
-    <div class="term-card" data-cat="core"><div class="term-name">Discretionary Access Control (DAC)</div><div class="term-meaning">Access controlled by the resource owner, based on the identity of the owning subject. Owners may grant or revoke permissions and pass privileges on, giving high flexibility.</div></div>
-    <div class="term-card" data-cat="core"><div class="term-name">Mandatory Access Control (MAC)</div><div class="term-meaning">Access enforced by a central authority based on security labels. A security kernel checks security attributes; users cannot change permissions themselves. Gives high rigour.</div></div>
-    <div class="term-card" data-cat="os"><div class="term-name">Access Control List (ACL)</div><div class="term-meaning">A list attached to an object that defines which subjects may perform which operations. Entries map a user ID to allowed operations, coarse or fine-grained.</div></div>
-    <div class="term-card" data-cat="os"><div class="term-name">User ID (UID) and Group ID (GID)</div><div class="term-meaning">The numeric identifiers of a Unix/Linux user and group, recorded in /etc/passwd and /etc/group. Root has UID and GID 0.</div></div>
-    <div class="term-card" data-cat="os"><div class="term-name">Root</div><div class="term-meaning">The all-powerful Unix/Linux user with UID and GID 0, able to access any file and become any user. Reached via su or sudo.</div></div>
-    <div class="term-card" data-cat="os"><div class="term-name">sudo and sudoers</div><div class="term-meaning">The command that runs a command as root. It requires membership of the sudo group and usually a password; the sudoers file can permit specific commands for non-sudo users.</div></div>
-    <div class="term-card" data-cat="os"><div class="term-name">Set-user-ID (SUID)</div><div class="term-meaning">A bit that lets a program run with the privilege of its owner rather than the invoking user — useful for granting narrow extra permissions (for example, mount).</div></div>
-    <div class="term-card" data-cat="os"><div class="term-name">Set-group-ID (SGID)</div><div class="term-meaning">Like SUID but for the group. On a directory, files created inside inherit the directory's group ownership.</div></div>
-    <div class="term-card" data-cat="os"><div class="term-name">Sticky bit</div><div class="term-meaning">A directory-level bit restricting deletion so only a file's owner (and root) can remove it. Used on /tmp.</div></div>
-    <div class="term-card" data-cat="os"><div class="term-name">Effective UID/GID</div><div class="term-meaning">The identity a process actually runs with, which SUID/SGID can change. Real IDs identify the launcher; saved IDs let the kernel switch back.</div></div>
-    <div class="term-card" data-cat="os"><div class="term-name">Role-based access control (RBAC)</div><div class="term-meaning">Granting permissions through roles — for example mapping OS users to database roles such as Database Administrator or Database Manager.</div></div>
-    <div class="term-card" data-cat="os"><div class="term-name">Ring</div><div class="term-meaning">A CPU privilege level. Lower number means more privilege: ring 0 is the kernel, ring 3 ordinary applications, ring -1 the hypervisor, and SMM sits at the bottom.</div></div>
-    <div class="term-card" data-cat="os"><div class="term-name">Principle of least privilege</div><div class="term-meaning">All code should run only with the minimal required privilege, never more, and kernel communication pathways should be minimised and controlled.</div></div>
-    <div class="term-card" data-cat="os"><div class="term-name">Trusted Platform Module (TPM)</div><div class="term-meaning">An isolated hardware component storing cryptographic keys and exposing them through an interface. Intel's TPM was originally conceived for DRM.</div></div>
-    <div class="term-card" data-cat="os"><div class="term-name">CHERI</div><div class="term-meaning">Capability Hardware Enhanced RISC Instructions — ARM's fine-grained capability support, letting subthreads be granted access to specific memory ranges and offering hardware-level memory safety.</div></div>
-    <div class="term-card" data-cat="threat"><div class="term-name">Sandboxing</div><div class="term-meaning">A shielded environment that stops malicious applications interfering with the surrounding system, typically exposing only a limited API. Hard to secure; can be broken out of.</div></div>
-    <div class="term-card" data-cat="threat"><div class="term-name">Same-origin policy</div><div class="term-meaning">The browser rule that JavaScript or other active content may only communicate with the IP address it originally came from.</div></div>
-    <div class="term-card" data-cat="threat"><div class="term-name">Confused deputy problem</div><div class="term-meaning">When a privileged program is tricked by a less-privileged entity into misusing its authority on the attacker's behalf, because it is confused about who the real requester is.</div></div>
-    <div class="term-card" data-cat="threat"><div class="term-name">Cross-Site Scripting (XSS)</div><div class="term-meaning">An attack that injects malicious script into a trusted website; the script then runs with the site's permissions, a classic confused deputy scenario.</div></div>
-    <div class="term-card" data-cat="threat"><div class="term-name">Virtualisation</div><div class="term-meaning">Emulating computer systems as virtual machines. Degrees range from full virtualisation through para-virtualisation to light-weight containers and jails.</div></div>
-    <div class="term-card" data-cat="threat"><div class="term-name">Docker</div><div class="term-meaning">A container abstraction that packages apps with their libraries, supports native jails, and sandboxes apps from one another. Its daemon runs as root, expanding the attack surface.</div></div>
-    <div class="term-card" data-cat="model"><div class="term-name">Multilevel security (MLS)</div><div class="term-meaning">A foundational access-control model handling information at different classification levels (Top Secret, Secret, Confidential), of great importance in military and government.</div></div>
-    <div class="term-card" data-cat="model"><div class="term-name">Security policy model</div><div class="term-meaning">A highly precise, succinct statement about the protection properties of a system. It can be highly formal and it drives engineering.</div></div>
-    <div class="term-card" data-cat="model"><div class="term-name">Bell-LaPadula (BLP)</div><div class="term-meaning">The classic confidentiality model for MLS: no read up (simple security) and no write down (the star property), plus one discretionary matrix. Information cannot flow downwards.</div></div>
-    <div class="term-card" data-cat="model"><div class="term-name">Biba model</div><div class="term-meaning">An integrity model that reverses Bell-LaPadula: read up (no read down), write down (no write up), and the invocation property. Variants are common in real systems.</div></div>
-    <div class="term-card" data-cat="model"><div class="term-name">Invocation property</div><div class="term-meaning">The Biba rule that a process from below cannot request higher access — preventing a low-integrity process from invoking a high-integrity one to act on its behalf.</div></div>
-    <div class="term-card" data-cat="model"><div class="term-name">Covert channel</div><div class="term-meaning">A method of passing information that is not normally used for communication — for example, encoding a bit as high or low CPU load. Bell-LaPadula does not address these.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Access control</div><div class="term-meaning">The element of a security policy controlling which principals may access which resources. Specified in the policy, implemented by mechanisms.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Subject / principal</div><div class="term-meaning">An active entity that can request access: a user, group, process or machine. The matrix rows.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Object</div><div class="term-meaning">A passive thing that is accessed: a file, process, port, record or device. The matrix columns.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Authentication</div><div class="term-meaning">Acquiring evidence of identity, such as a password or fingerprint. Answers "who are you?".</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Authorization</div><div class="term-meaning">Allocating a privilege to a party (notes), or verifying whether an entity is allowed an action (slides).</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Least privilege</div><div class="term-meaning">All code should run only with the minimal required privilege, and kernel communication paths should be minimised.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Role-based access control (RBAC)</div><div class="term-meaning">Permissions attached to roles rather than identities; users gain permissions by assignment. Used to map OS users to database roles.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Attribute-based access control (ABAC)</div><div class="term-meaning">Decisions evaluate attributes of subject, object, operation and environment against a policy, allowing context-aware rules.</div></div>
+    <div class="term-card" data-cat="models"><div class="term-name">Access control matrix</div><div class="term-meaning">A table with subjects as rows, objects as columns and rights in the cells (r, w, x, -).</div></div>
+    <div class="term-card" data-cat="models"><div class="term-name">Access control list (ACL)</div><div class="term-meaning">A list attached to an object giving each subject's permitted operations, coarse or fine-grained.</div></div>
+    <div class="term-card" data-cat="models"><div class="term-name">Capability list</div><div class="term-meaning">The subject-side view: a list of objects each subject may access. Holding the capability grants access.</div></div>
+    <div class="term-card" data-cat="models"><div class="term-name">Discretionary access control (DAC)</div><div class="term-meaning">The owner decides who may access an object and may transfer privileges. Flexible and identity-based, hard at scale.</div></div>
+    <div class="term-card" data-cat="models"><div class="term-name">Mandatory access control (MAC)</div><div class="term-meaning">An external administrator defines access; a security kernel enforces it using security attributes. No user can override it.</div></div>
+    <div class="term-card" data-cat="models"><div class="term-name">Reference monitor</div><div class="term-meaning">The trusted gatekeeper validating every access. It must mediate completely, be tamper-proof and be verifiable.</div></div>
+    <div class="term-card" data-cat="models"><div class="term-name">Multilevel security (MLS)</div><div class="term-meaning">A foundational model for information at classification levels (Top Secret, Secret, Confidential), central to military and government systems.</div></div>
+    <div class="term-card" data-cat="models"><div class="term-name">Bell-LaPadula model</div><div class="term-meaning">A 1973 model protecting confidentiality: no read up (simple security) and no write down (star property), plus a discretionary matrix.</div></div>
+    <div class="term-card" data-cat="models"><div class="term-name">Star (∗) property</div><div class="term-meaning">The Bell-LaPadula rule of no write down. It blocks indirect exfiltration by higher-level entities.</div></div>
+    <div class="term-card" data-cat="models"><div class="term-name">Biba model</div><div class="term-meaning">A model protecting integrity: no read down, no write up, plus the invocation property. Variants appear in Vista, SELinux, Red Hat and FreeBSD.</div></div>
+    <div class="term-card" data-cat="os"><div class="term-name">Unix file permissions</div><div class="term-meaning">Nine bits giving r, w, x rights to owner, group and others, shown symbolically (rwxr-xr-x) or in octal (755).</div></div>
+    <div class="term-card" data-cat="os"><div class="term-name">SUID (set-user-ID)</div><div class="term-meaning">A file bit making a program run with its owner's privilege rather than the invoking user. A privilege-escalation risk.</div></div>
+    <div class="term-card" data-cat="os"><div class="term-name">SGID (set-group-ID)</div><div class="term-meaning">On a file, execute as the owning group; on a directory, new files inherit the parent directory's group.</div></div>
+    <div class="term-card" data-cat="os"><div class="term-name">Sticky bit</div><div class="term-meaning">A directory setting so only a file's owner (and root) can remove it. Used on /tmp.</div></div>
+    <div class="term-card" data-cat="os"><div class="term-name">sudo</div><div class="term-meaning">Lets a user run a command as root. Needs sudo-group membership and usually a password; the sudoers file can allow specific commands.</div></div>
+    <div class="term-card" data-cat="os"><div class="term-name">Same-origin policy</div><div class="term-meaning">The browser's main rule: active content may only communicate with the IP address it originally came from, and runs in a sandbox.</div></div>
+    <div class="term-card" data-cat="os"><div class="term-name">Confused deputy problem</div><div class="term-meaning">When a privileged program is tricked into misusing its authority on an attacker's behalf, as in browser cross-site scripting (XSS).</div></div>
+    <div class="term-card" data-cat="os"><div class="term-name">Sandboxing</div><div class="term-meaning">Running code in a shielded environment with a limited API. Examples: Java applets, browser JavaScript, Chrome's per-tab processes.</div></div>
+    <div class="term-card" data-cat="hardware"><div class="term-name">Protection domain</div><div class="term-meaning">The set of objects and rights within which code runs. A ring is a hardware domain; a sandbox is a software one.</div></div>
+    <div class="term-card" data-cat="hardware"><div class="term-name">Ring</div><div class="term-meaning">A layered CPU privilege mode. Modern Intel CPUs have nine: rings 0 to 3, VMM root mode 0 to 3, and System Management Mode.</div></div>
+    <div class="term-card" data-cat="hardware"><div class="term-name">Trusted Platform Module (TPM)</div><div class="term-meaning">An isolated cryptographic component storing keys in hardware and exposing only authorised functionality. Originally for DRM.</div></div>
+    <div class="term-card" data-cat="hardware"><div class="term-name">CHERI</div><div class="term-meaning">Capability Hardware Enhanced RISC Instructions: an ARM technology giving subthreads fine-grained access to specific memory ranges.</div></div>
   </div>
   <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
 </section>
 
 <section class="guide-section" id="practice" data-title="Practice Questions">
-  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
-  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Practice Questions</h2>
+  </div>
+  <p class="section-kicker">Fifteen open-ended questions covering the whole week. Answer aloud first, then reveal.</p>
   <div class="quiz-toolbar">
     <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
     <button class="btn" id="revealAll" type="button">Reveal all</button>
@@ -1129,122 +1003,106 @@
     <button class="btn" id="resetProgress" type="button">Reset</button>
   </div>
   <article class="quiz" id="q1">
-    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">Define access control, authentication and authorisation, and explain the relationship between them.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Access control is an element of a security policy that controls access to resources and assets — which principals may reach which resources, read which files, execute which programs, and share data how. Authentication is the process of acquiring evidence of the identity of another party ('who are you?'). Authorisation is verifying whether an entity is allowed an action, or allocating a privilege to a party ('what may you do?'). Authentication normally comes first, because you cannot sensibly decide permissions before you know the identity.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">Define access control and give two contrasting examples. How does it differ from authentication and authorization?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Access control controls which principals may reach which resources, such as whether a bank customer can access the vault or a program can read other users' passwords. It is specified in the policy, counters the attacker's incentives, and is implemented by mechanisms giving a certain assurance. Authentication acquires evidence of identity; authorization allocates a privilege or verifies allowed actions.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
   <article class="quiz" id="q2">
-    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Place access control in the reference framework and explain the password example.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Access control is specified in the policy; it counters the incentives of the attacker who wants to access a resource or asset; it is implemented by one or more mechanisms; and those mechanisms give a certain level of assurance. A password is the mechanism, and the strength of the password relates directly to the assurance provided — a weak password gives weak assurance.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Draw the lecture's naive access control matrix for Sam, Alice and Bob. Explain one cell per person in terms of their job.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Rows are users; columns are Operating System, Accounts Program, Accounting Data and Audit Trail; cells hold r, w, x or -. Sam the sysadmin has rwx on the OS and accounts program, rw on accounting data and only r on the audit trail, because even he should only read it. Alice the manager can x the OS and accounts program but not write them, has rw on accounting data and no audit-trail access. Bob the auditor has r or rx everywhere.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
   <article class="quiz" id="q3">
-    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">Read the naive access control matrix: why does Sam have universal access except read-only on the audit trail, and why does Alice have execute but not write on the operating system?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Sam is the system administrator, so he needs broad access to run the system — but even he should only be able to read the audit trail, never rewrite it, so evidence of misuse cannot be erased. Alice the manager needs to execute the operating system and applications, but only through the approved interfaces: she must not be able to tamper with them, so she has x but no w. She does need to read and write the data.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">Distinguish an access control policy from a mechanism. What is a reference monitor, and what three properties must it have?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> A policy states the goals and rules; a mechanism is the concrete control enforcing them. A reference monitor is the trusted component mediating access requests between subjects and objects. It must provide <strong>complete mediation</strong> (every access is checked, with no bypass), be <strong>tamper-proof</strong>, and be <strong>verifiable</strong>. MAC implements it as a security kernel; Windows calls its implementation the Security Reference Monitor.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
   <article class="quiz" id="q4">
-    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">Contrast DAC and MAC, and use Microsoft OneDrive to illustrate both.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> DAC is controlled by the resource owner: access is based on the identity of the owning subject, and owners can grant, revoke and pass on privileges unless constrained (for example by MAC). It is highly flexible. MAC is enforced by a central authority based on security labels; an external security policy administrator defines access, and a security kernel checks security attributes. It is highly rigorous. In OneDrive, personal use is DAC — the creator owns the file, can transfer ownership, and shares with specific people, anyone with the link, or publicly, at View or Edit levels. In enterprises, MAC elements appear: Microsoft 365 admins set sharing and access policies (for example restricting sharing to specific domains), and DLP automatically restricts access to sensitive information.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">Contrast discretionary and mandatory access control, using Microsoft OneDrive to illustrate both.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> In DAC, access depends on the identity of the object's owner, who can transfer privileges unless constrained; it is flexible but hard at scale. In MAC, an external security policy administrator defines access and a security kernel enforces it via security attributes, with even the supervisor under remote control. In OneDrive, DAC appears in personal use (creator owns the file, can transfer ownership, and share privately, with specific people, by link, or publicly), while MAC appears in the enterprise through admin sharing policies and Data Loss Prevention.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
   <article class="quiz" id="q5">
-    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">What is an ACL, what does an entry contain, and where are ACLs used?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> ACLs define the access of subjects to objects. An object is associated with an ACL, which can be global or fine-grained. An ACL entry consists of a user ID plus a mapping to allowed operations, which may be coarse (read/write/execute) or very fine-grained. ACLs are common in all UNIX systems (POSIX standards), exist in Windows, and are also found on social networking sites and in content management and enterprise resource management systems.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">Explain what an ACL is. How does a capability list differ, and when would you prefer each?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> An ACL is a list attached to an object defining which subjects may access it and with what operations; an entry pairs a user ID with a mapping to operations, coarse or very fine-grained. ACLs are common in all UNIX systems (POSIX), exist in Windows, and are used in social networking, content management and enterprise resource management. A capability list is the subject-side complement: each subject holds a list of objects it may access. ACLs are matrix columns, capabilities are rows.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
   <article class="quiz" id="q6">
-    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">A file is listed as <code>-rw-r--r--</code>. Who can do what? Then explain what the X bit means for a directory.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> The nine bits split into three blocks: owner <code>rw-</code> (read and write, no execute), group <code>r--</code> (read only) and others <code>r--</code> (read only). So the owner, group and others can all read, but only the owner can write. For a directory, the X bit means the directory can be traversed — you can pass through it to reach files inside.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">A file shows <code>-rw-r--r--</code>. Who can do what? Convert <code>rwxr-xr-x</code> to octal and explain the arithmetic.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The leading <code>-</code> marks a regular file. The triple <code>rw-</code> gives the owner read and write but not execute; <code>r--</code> gives the group read only; <code>r--</code> gives others read only. So all three audiences can read, but only the owner can write. For octal, r = 4, w = 2 and x = 1: <code>rwx</code> = 7, <code>r-x</code> = 5, <code>r-x</code> = 5, so <code>rwxr-xr-x</code> is <code>755</code>. By contrast <code>rwxrwxrwx</code> (777) lets everyone read, write and execute.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
   <article class="quiz" id="q7">
-    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">Explain SUID, SGID and the sticky bit, and give an example of each.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> SUID lets an owner mark a program so it runs with the privilege of its owner rather than the invoking user — useful for granting narrow extra permissions without being a privileged user; mount is an example. SGID on a file is like SUID but with the group (the file executes with the owning group's privilege); on a directory, new files inherit the directory's group ownership. The sticky bit does not affect individual files; at the directory level it restricts deletion so only the owner (and root) can remove a file — used in /tmp.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">Describe SUID, SGID and the sticky bit. Which one protects files in <code>/tmp</code>, and how?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> SUID lets an owner mark a program to run with the privilege of its owner rather than the invoking user; it is useful for privileged programs such as <code>mount</code>. SGID does the same as the file's group, and on a directory makes new files and subdirectories inherit the parent directory's group. The sticky bit does not affect individual files: at the directory level it restricts deletion so only the file's owner (and root) can remove it, which is why it is used on <code>/tmp</code>.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
   <article class="quiz" id="q8">
-    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">What is the confused deputy problem, and how does XSS demonstrate it in a browser?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> The confused deputy problem occurs when a privileged program (the deputy) is tricked by a less-privileged entity into misusing its authority on the attacker's behalf. The browser is confused about who the real requester is, wrongly attributing the malicious site's authority. Via XSS: an attacker injects malicious JavaScript into a trusted site that has an XSS vulnerability; when the user interacts, the script runs in the browser with the website's permissions; and because the browser believes the actions originate from the trusted site, the script can send authenticated requests or access sensitive data. CSRF is another example.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">What are the real, effective and saved UIDs/GIDs of a process? Explain what root and <code>sudo</code> allow.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Processes inherit permissions from the running user through three IDs. The <strong>real</strong> UID/GID identify the actual user and group that initiated the process. The <strong>effective</strong> UID/GID determine the permissions it runs with; SUID or SGID makes it run as the file's owner or group instead of the launcher. The <strong>saved</strong> UID/GID let the kernel restore the original identity afterwards. <strong>Root</strong> has UID and GID 0 and can access any file, become any user, and do things only root may do. <code>sudo</code> runs a command as root, needing sudo-group membership and usually a password, though the sudoers file can allow specific commands for non-sudo users.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
   <article class="quiz" id="q9">
-    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">Why are virtualisation and containers relevant to access control even though they were not designed for it? Include their limitations.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> They add an isolation boundary that an attacker must cross, so the typically high effort to 'break out' raises the bar. But limitations matter: VM execution is detectable because a VM does not perfectly imitate a real environment, so malware can detect it and act differently; hypervisors have vulnerabilities that can be exploited; and the Docker daemon runs as root, so any user who can start or stop containers can interact with the daemon, expanding the attack surface. Keep hypervisors up to date and never rely on virtualisation as a single defence.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">Mobile OSes use sandboxing for apps. Which are features of that sandboxing: (a) each app runs as a separate user, (b) apps communicate only via controlled APIs, (c) the OS is read-only to an app, (d) apps can access any part of main storage?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (a), (b) and (c) are correct; (d) is incorrect. Each app running as a separate user, communicating only through controlled APIs, and seeing the OS as read-only are features of mobile sandboxing, analogous to user permissions in Linux. Free access to any part of main storage would defeat the isolation: iOS sandboxing stops apps accessing other apps' files, and Android's Linux mechanisms stop one app reading another's data.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
   <article class="quiz" id="q10">
-    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">State the Bell-LaPadula properties and explain why the star property is crucial, using the exfiltration example.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Bell-LaPadula enforces no read up (simple security) — no subject may read data at a higher level — and no write down (the star property) — no subject may write data to a lower level. The star property is crucial because a user at a low level could write a program to exfiltrate data and wait for an admin at a high level to accidentally execute it; if the high-level user could write down, the secret would leak. No write down closes this path and requires MAC to enforce effectively. BLP also has one discretionary form of access control: an external entity defines access in a matrix.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">Describe the Android storage problem and how Android's permission model changed over time.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Android runs apps from different vendors under different userids. Its storage has two forms: app-internal and 'public storage'. Developers often misuse public storage because it is easier, since it allows write access to everyone — but everyone can read it too. Apps come in signed <code>.apk</code> packages whose self-signed certificates act as the developer's name, and each package has a manifest demanding permissions; users must approve the 'dangerous' ones. Early Android required approving everything at installation and users clicked through; Android 6 moved to the Apple model of trust on first use.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
   <article class="quiz" id="q11">
-    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">State the Biba properties and explain the invocation property. Then apply Biba and Bell-LaPadula to Homer and Marge.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Biba protects integrity: read up (simple integrity, no read down), write down (star integrity, no write up), and the invocation property — a process from below cannot request higher access, preventing a low-integrity process from invoking a high-integrity one to act for it. In the clearance example: under Bell-LaPadula, Homer (Low) cannot read the Medium TV codes, and cannot use Marge to get them because Marge cannot write down; under Biba, Homer can read up and get the TV codes, and Marge can write down and change the codes.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">Why does the lecture call the browser an access control device? Explain the same-origin policy and two ways its intent is undermined.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The browser is where you run code written by people you do not trust and who are occasionally malicious, so its job is fundamentally about mediating access. The same-origin policy is its main rule: JavaScript or other active content may only communicate with the IP address it originally came from, and it runs in a sandbox so it cannot alter the host system. Its intent is undermined first by bugs exploited in drive-by download attacks, where merely visiting a page can infect a machine, and second by trackers from ad networks and data brokers; attackers can also launder origin through a proxy such as Google Translate.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
   <article class="quiz" id="q12">
-    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">List the criticisms of Bell-LaPadula, and say which model is more commonly seen in real operating systems.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Criticisms: it relies on administration by one omnipotent Trusted Principal (how is that secured?); it is defined with confidentiality in mind, not integrity; it does not consider covert channels (for example encoding a bit as high or low CPU load); and a system composed of two Bell-LaPadula-secure systems is not necessarily Bell-LaPadula-secure. Its innovations are that it blends well with formal analysis and combines DAC and MAC. Pure BLP implementations are rare; variants of Biba are more common — for example Windows Vista, SELinux, some Red Hat versions and a FreeBSD module.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">What is the confused deputy problem? Show how it plays out through cross-site scripting in a browser.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The confused deputy problem occurs when a privileged program (the deputy) is tricked by a less-privileged entity into misusing its authority on the attacker's behalf; it misattributes its authority because it is confused about the real requester. Through XSS: first, <strong>malicious script injection</strong> — a user visits a trusted site with an XSS vulnerability and the attacker injects malicious JavaScript; second, <strong>executing malicious actions</strong> — the script runs with the website's permissions; third, <strong>exploiting trust</strong> — it performs actions on the user's behalf, such as authenticated requests, because the browser believes they come from the trusted site. Subcomponents such as scripting, add-ons and cookies are especially vulnerable; CSRF is a typical example.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q13">
+    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">Compare sandboxing and virtualisation as access control. Use Docker as your example and name the risks of each.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Sandboxing creates a shielded environment where malicious applications cannot interfere with the surrounding system, offering a limited API; examples are Java applets, browser JavaScript, and Chrome running each tab in a separate OS process. Its weakness is that the sandbox is hard to secure and can be broken out of. Virtualisation emulates a computer system (invented by IBM in the 1960s with VM/370) in degrees: full virtualisation (complete hardware emulation, even across architectures), para-virtualisation (the guest OS must support it), and containers and jails (lightweight). A hypervisor manages VMs with hardware support at ring -1, for example VirtualBox, VMware, Xen and QEMU. Breaking out is hard, raising the bar, though VM execution is detectable and hypervisors have vulnerabilities, so never rely on them alone. Docker packages apps and libraries into images and is orchestrated by Kubernetes; containers stop apps communicating directly, but the Docker daemon runs as root, so anyone who can start or stop containers can interact with it, expanding the attack surface.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q14">
+    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">State the Bell-LaPadula and Biba properties. Why is the star property crucial for Bell-LaPadula, and what is a covert channel?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Bell-LaPadula protects confidentiality with the simple security property (no read up) and the ∗ (star) property (no write down), plus one discretionary access matrix. Biba protects integrity with the simple integrity property (no read down), the ∗ integrity property (no write up) and the invocation property (a process from below cannot request higher access). The star property blocks indirect exfiltration: a low-level user might write a program to copy secrets down and wait for a high-level administrator to accidentally execute it, but no write down prevents high-level entities writing to lower-level objects. A covert channel is a method of passing information not normally used for communication, such as encoding data in CPU load or images; a side channel instead infers content by observing artefacts such as timing or heat.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
+  </article>
+  <article class="quiz" id="q15">
+    <div class="quiz-head"><span class="quiz-qnum">Q15</span><p class="quiz-q">Using the clearance example — Bart (None), Homer (Low), Lisa (Medium), Marge (Ultimate), with fridgecodes needing Ultimate, tvlockcodes Medium and playstationcodes Low — answer under both models: can Homer read the TV codes? Can Bart change the fridge codes? Can Homer enlist Marge to fetch the TV codes?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Under Bell-LaPadula: Homer cannot read the TV lock codes, because no read up forbids reading a Medium object with Low clearance. Homer cannot enlist Marge, because no write down stops her copying the file down to him. Bart <em>can</em> change all the codes, including the fridge codes, because no write down lets a lower-clearance subject write up — showing BLP protects confidentiality, not integrity. Under Biba: Homer <em>can</em> obtain the TV lock codes, because read up is allowed, and Marge <em>can</em> change all the codes, because write down is allowed.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
 </section>
 
 <section class="guide-section" id="checklist" data-title="Confidence Check">
-  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
-  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
-  <div class="checklist">
-    <label class="check-item"><input type="checkbox"> I can define access control, authentication and authorisation, and explain how they relate.</label>
-    <label class="check-item"><input type="checkbox"> I can place access control in the policy, incentives, mechanisms and assurances framework.</label>
-    <label class="check-item"><input type="checkbox"> I can contrast DAC and MAC and give an example of each, including the OneDrive case.</label>
-    <label class="check-item"><input type="checkbox"> I can describe ACLs and say where they are used.</label>
-    <label class="check-item"><input type="checkbox"> I can read a Unix permission string and explain UID, GID, root and sudo.</label>
-    <label class="check-item"><input type="checkbox"> I can explain SUID, SGID, the sticky bit, and the real, effective and saved process IDs.</label>
-    <label class="check-item"><input type="checkbox"> I can compare access control in macOS, Windows, iOS and Android.</label>
-    <label class="check-item"><input type="checkbox"> I can explain middleware and database access control, including role-based access control.</label>
-    <label class="check-item"><input type="checkbox"> I can explain the same-origin policy and the confused deputy problem with XSS.</label>
-    <label class="check-item"><input type="checkbox"> I can describe sandboxing, virtualisation and containers, with their limitations.</label>
-    <label class="check-item"><input type="checkbox"> I can describe hardware protections: segmentation, rings, least privilege, TPMs, Intel rings and ARM's CHERI.</label>
-    <label class="check-item"><input type="checkbox"> I can state the Bell-LaPadula and Biba rules and apply them to a clearance table.</label>
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Confidence Check</h2>
   </div>
-</section>
-  </main>
+  <p class="section-kicker">Tick each statement only when you could say it aloud without notes.</p>
+  <div class="checklist">
+    <label class="check-item"><input type="checkbox"> I can define access control and distinguish it from authentication and authorization.</label>
+    <label class="check-item"><input type="checkbox"> I can draw an access control matrix and explain subjects, objects, operations and rights.</label>
+    <label class="check-item"><input type="checkbox"> I can explain policy versus mechanism and name the three reference monitor requirements.</label>
+    <label class="check-item"><input type="checkbox"> I can contrast DAC and MAC and give a OneDrive example of each.</label>
+    <label class="check-item"><input type="checkbox"> I can explain ACLs and capability lists and say which slice of the matrix each stores.</label>
+    <label class="check-item"><input type="checkbox"> I can decode a Unix permission string and convert between symbolic and octal notation.</label>
+    <label class="check-item"><input type="checkbox"> I can explain SUID, SGID and the sticky bit, and which applies to <code>/tmp</code>.</label>
+    <label class="check-item"><input type="checkbox"> I can describe real, effective and saved UIDs/GIDs and what root and <code>sudo</code> allow.</label>
+    <label class="check-item"><input type="checkbox"> I can compare access control in macOS, Windows, iOS and Android.</label>
+    <label class="check-item"><input type="checkbox"> I can explain middleware access control, including DBMS roles and the same-origin policy.</label>
+    <label class="check-item"><input type="checkbox"> I can describe the confused deputy problem and how XSS exploits it.</label>
+    <label class="check-item"><input type="checkbox"> I can explain sandboxing, virtualisation, hypervisors and Docker, including their risks.</label>
+    <label class="check-item"><input type="checkbox"> I can describe hardware access control: memory protection, rings, TPM and CHERI.</label>
+    <label class="check-item"><input type="checkbox"> I can state the Bell-LaPadula and Biba properties and apply them to a clearance scenario.</label>
+    <label class="check-item"><input type="checkbox"> I can explain RBAC, ABAC, separation of duties and least privilege in an organisation.</label>
+  </div>
+</section>  </main>
 </div>
 
 <footer class="site-footer">
@@ -1252,6 +1110,7 @@
     <a href="../../../index.html">&#8962; All guides</a>
     <span class="spacer"></span>
     <a href="../week_2/INFO3616_week2_study_guide.html">&#8592; Week 2</a>
+    <span class="spacer"></span>
     <a href="../week_4/INFO3616_week4_study_guide.html">Week 4 &#8594;</a>
   </div>
   <p>INFO3616 Security Engineering &#183; Week 3 &#183; Independent study guide for active recall. Always reconcile with the official lecture material.</p>

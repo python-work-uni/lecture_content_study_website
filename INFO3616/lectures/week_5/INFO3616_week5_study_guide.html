@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Public-key cryptography explained: RSA key generation and attacks, padding and hybrid encryption, Diffie-Hellman, elliptic curves, and post-quantum risks.">
+<meta name="description" content="INFO3616 Week 5 study guide — public-key cryptography, RSA, Diffie-Hellman key exchange and the hard problems that make it work.">
 <title>INFO3616 Week 5 — Asymmetric Cryptography</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -464,173 +464,173 @@
   </aside>
   <div class="scrim" id="scrim" hidden></div>
 
-  <main class="content" id="content">
-<section class="hero" id="top">
+  <main class="content" id="content"><section class="hero" id="top">
   <span class="hero-eyebrow">INFO3616 · Week 5 · Asymmetric Cryptography</span>
-  <h1 class="hero-title">Two Keys, One Secret: How Asymmetric Cryptography Works</h1>
-  <p class="hero-sub">This week we leave shared-secret cryptography behind and meet a new paradigm: every user owns a <strong>public key</strong> that anyone can see and a <strong>private key</strong> only they know. We build RSA out of prime numbers, use it to protect messages and prove who sent them, exchange keys with Diffie-Hellman, then finish with elliptic curves and the quantum threat on the horizon.</p>
-  <div class="hero-lead"><strong>Read this first:</strong> Hold one mental model — <em>asymmetric cryptography is a trapdoor.</em> Going one way through the door is easy for everyone; coming back the other way is impossible unless you know the secret latch (the private key). RSA, Diffie-Hellman and elliptic curves are three different "doors", but they all rest on a maths problem that is easy to compute forwards and believed to be infeasible to reverse.</div>
+  <h1 class="hero-title">Two Keys, One Secret: How Public-Key Cryptography Solves What Symmetric Cannot</h1>
+  <p class="hero-sub">Symmetric cryptography gave us fast, strong ciphers, but it left a hole: two strangers who have never met must still agree on one shared secret key, over a channel an attacker may be watching. This week we change the paradigm. Each person gets a <strong>public key</strong> anyone can use and a <strong>private key</strong> only they hold, built from mathematical problems we believe are one-way unless you hold a trapdoor. We derive <strong>RSA</strong> from scratch, break it in every way the lecture lists, repair it with padding, glue it to symmetric ciphers as <strong>hybrid encryption</strong>, exchange keys with <strong>Diffie-Hellman</strong>, watch that exchange fall to a person in the middle, survey <strong>elliptic-curve cryptography</strong>, and finish on the quantum cliff edge: <strong>Shor</strong>, <strong>Grover</strong> and post-quantum cryptography.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> public-key cryptography is a <em>trapdoor one-way function</em> in disguise. Going forwards is easy (encrypt, verify, compute a key) and going backwards is believed to be computationally infeasible, unless you possess a secret extra piece of information, the trapdoor. Hold that single idea and every scheme this week, RSA, Diffie-Hellman and ECC, is just a different hard problem wearing the same coat.</div>
   <div class="hero-meta">
-    <span class="meta-chip"><span class="dot"></span>~32 min read</span>
+    <span class="meta-chip"><span class="dot"></span>~42 min read</span>
     <span class="meta-chip">16 teaching sections</span>
-    <span class="meta-chip">14 practice questions</span>
-    <span class="meta-chip">32 key terms</span>
+    <span class="meta-chip">12 practice questions</span>
+    <span class="meta-chip">24 key terms</span>
   </div>
   <div class="hero-outcomes">
     <h2>By the end you will be able to</h2>
     <ul class="outcome-list">
-      <li>Explain how public-key cryptography differs from symmetric cryptography, and why it is also called asymmetric cryptography.</li>
-      <li>Describe confidentiality, origin authentication and digital signatures, and state which algorithms provide encryption, signatures and key exchange.</li>
-      <li>Define a trapdoor one-way function and state the requirements for public-key cryptography.</li>
-      <li>Recap coprimes, the set &#8484;*<sub>n</sub> and Euler's totient function, including ɸ(n) = (p − 1)(q − 1).</li>
-      <li>Carry out RSA key generation, encryption and decryption on small numbers, and explain why RSA works over &#8484;/n&#8484;.</li>
-      <li>Explain the security of RSA, its five attack families, and why padding (OAEP) is essential.</li>
-      <li>Explain hybrid encryption and why almost all public-key encryption uses it.</li>
-      <li>Walk through Diffie-Hellman key exchange, show both sides get the same key, and explain the person-in-the-middle attack.</li>
-      <li>Outline elliptic curve cryptography, ECDH, EC ElGamal, and the threat posed by Shor's and Grover's algorithms.</li>
+      <li>Explain the key-distribution problem and why public-key cryptography changes the game for strangers.</li>
+      <li>Use a key pair correctly for confidentiality and for origin authentication (digital signatures), and state the six requirements for public-key cryptography.</li>
+      <li>Define a one-way function and a trapdoor one-way function, and name the two classic candidate problems: discrete logarithms and the RSA problem.</li>
+      <li>Run RSA end to end: generate keys, encrypt, decrypt, and check the maths on the lecture's worked examples.</li>
+      <li>State exactly what RSA's security rests on, list the five attack families, and calculate a private key from a small public key.</li>
+      <li>Explain malleability, why vanilla RSA fails, and how OAEP padding restores semantic security.</li>
+      <li>Describe hybrid encryption and reconstruct the four steps for sending an encrypted session key.</li>
+      <li>Execute Diffie-Hellman, prove both sides reach the same key, and explain the person-in-the-middle attack and its fix.</li>
+      <li>Sketch elliptic-curve cryptography, ECDH, EC ElGamal, and post-quantum cryptography under Shor and Grover.</li>
     </ul>
   </div>
 </section>
 
-<section class="guide-section" id="why-asymmetric" data-title="Why Asymmetric Cryptography?">
+<section class="guide-section" id="key-distribution" data-title="The Key-Distribution Problem">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Why Asymmetric Cryptography?</h2>
+    <h2 class="section-title">The Key-Distribution Problem</h2>
   </div>
-  <p class="section-kicker">One shared key becomes two linked keys — a public one anyone may use and a private one only you hold.</p>
-  <p>So far in this unit, cryptography has been <strong>symmetric</strong>: Alice and Bob share <em>one</em> secret key and use the same key to encrypt and decrypt. Symmetric ciphers achieve their security through <strong>confusion</strong> (substitution) and <strong>diffusion</strong> (permutation). That model works well, but it has a famous weakness — how do two people who have never met agree on the shared key in the first place?</p>
-  <p><strong>Public-key cryptography</strong> answers that question by changing the paradigm in two important ways.</p>
-  <ol class="steps">
-    <li><strong>Each participant has a key pair.</strong> A <strong>public key</strong> that is distributed openly, and a <strong>private key</strong> that is kept secret.</li>
-    <li><strong>Encryption and decryption use different keys.</strong> Anyone may use the receiver's public key to encrypt a message, but only the receiver — the owner of the private key — can decrypt it.</li>
-  </ol>
-  <p>Because the two keys are different, this is also called <strong>asymmetric cryptography</strong> ("a-symmetric" = not symmetric).</p>
-  <div class="def-card"><span class="dc-term">Asymmetric (public-key) cryptography</span> — a form of cryptography that uses two distinct but mathematically related keys: a public key for one direction and a private key for the other. It relies on mathematical functions with special properties, beyond simple substitution and permutation.</div>
+  <p class="section-kicker">Symmetric cryptography works beautifully once two parties share a key, and falls apart precisely because they have to get that key to each other first.</p>
+  <p>Last week we built symmetric cryptography: one <strong>shared key</strong> does both encryption and decryption, and the cipher scrambles the message using two classic tricks, <strong>substitution</strong> (which creates confusion) and <strong>permutation</strong> (which creates diffusion). This is efficient and it protects the bulk of the internet's traffic. But it leaves an awkward gap.</p>
+  <p>Enter <span class="keyterm">public-key cryptography</span>, also called <span class="keyterm">asymmetric cryptography</span>. It is a genuine change of paradigm in two respects:</p>
   <div class="compare">
-    <div class="compare-col a">
-      <h3>Symmetric cryptography</h3>
-      <ul>
-        <li>One shared key for both encryption and decryption.</li>
-        <li>Security from substitution (confusion) and permutation (diffusion).</li>
-        <li>Fast, but key distribution is a problem.</li>
-      </ul>
-    </div>
-    <div class="compare-col b">
-      <h3>Asymmetric cryptography</h3>
-      <ul>
-        <li>Two keys: a public key and a private key.</li>
-        <li>Security from mathematical problems with special properties.</li>
-        <li>Slower, but solves key distribution.</li>
-      </ul>
-    </div>
+    <div class="compare-col a"><h3>Symmetric cryptography</h3><ul>
+      <li>One shared key for both directions.</li>
+      <li>Built from substitution (confusion) and permutation (diffusion).</li>
+      <li>Fast, ideal for bulk data.</li>
+      <li>Assumes the key is already shared over a secure channel.</li>
+    </ul></div>
+    <div class="compare-col b"><h3>Public-key cryptography</h3><ul>
+      <li>Two distinct keys: one to encrypt, one to decrypt.</li>
+      <li>Built from mathematical functions with special properties beyond substitution and permutation.</li>
+      <li>Slower, used to establish keys and to sign.</li>
+      <li>Lets strangers who never met communicate securely.</li>
+    </ul></div>
   </div>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why this matters:</strong> public-key cryptography is built on mathematical problems that are believed to have the right properties. A number of such problems are thought to work, <strong>but there is no proof yet</strong> that they are truly hard. Security here is a well-tested belief, not a theorem.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If anyone can use your public key to encrypt a message to you, why can't an eavesdropper simply use the same public key to decrypt it? (Hold that thought — the answer is the trapdoor in the next few sections.)</div></div>
+  <p>The key insight is that each participant holds a <strong>public key</strong>, which is distributed freely, and a <strong>private key</strong>, which is kept secret. Anyone may use the receiver's public key to encrypt a message, but only the receiver, the owner of the matching private key, can decrypt it. You no longer have to arrange a secret meeting first; you can publish the half of the key pair that is safe to publish.</p>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> every time your browser opens an <code>https</code> connection it solves the key-distribution problem this way. It fetches the server's public key, uses it to agree on a symmetric session key, and then switches to fast symmetric encryption for the rest of the conversation. Public-key cryptography is the key-exchange machinery, not usually the bulk cipher.</div></div>
+  <p>One honest caveat runs through this whole week. Public-key cryptography rests on mathematical problems that are <em>believed</em> to have the required properties. A number of candidate problems are believed to be hard, but there is no proof yet. We build on computational assumptions, not mathematical certainty.</p>
 </section>
 
-<section class="guide-section" id="two-directions" data-title="Confidentiality vs Origin Authentication">
+<section class="guide-section" id="public-key-basics" data-title="Public-Key Cryptography">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Two Directions of Trust</h2>
+    <h2 class="section-title">Public-Key Cryptography: Two Keys, Two Jobs</h2>
   </div>
-  <p class="section-kicker">Swap which key does the locking and you get a completely different security service.</p>
-  <p>Because there are two keys, there are two useful ways to combine them. Think of the key you use to <em>lock</em> (encrypt) as separate from the key you use to <em>unlock</em> (decrypt).</p>
-  <div class="grid grid-2">
-    <div class="card">
-      <h3 class="card-title">🔒 Confidentiality</h3>
-      <p><strong>Encrypt with the public key, decrypt with the private key.</strong> Anyone can encrypt a message for the receiver, but only the receiver can decrypt it, because only they hold the private key. This keeps the message secret.</p>
-    </div>
-    <div class="card">
-      <h3 class="card-title">✍️ Origin Authentication</h3>
-      <p><strong>Encrypt with the private key, decrypt with the public key.</strong> Anyone can decrypt, but only the true owner could have encrypted it, because only they hold the private key. This proves who sent the message.</p>
-    </div>
+  <p class="section-kicker">A key pair does two different jobs, and the direction you apply the keys in is what decides whether you get secrecy or proof of origin.</p>
+  <p>The essential steps of using public-key cryptography are simple to state:</p>
+  <ol class="steps">
+    <li><strong>Generate a pair of keys</strong> per user: a private key and a public key.</li>
+    <li><strong>Publish the public key</strong> as a publicly accessible file. Keep the companion private key confidential.</li>
+    <li><strong>Confidentiality</strong> — if Bob wants to send a secret to Alice, he encrypts with Alice's <em>public</em> key, and Alice decrypts with her <em>private</em> key. Only Alice has that private key, so only Alice can read it.</li>
+  </ol>
+  <div class="formula">
+    <div class="formula-label">Confidentiality — protect the message</div>
+    <div class="math">encrypt with the receiver's PUBLIC key &nbsp;→&nbsp; only the receiver's PRIVATE key can decrypt</div>
   </div>
-  <p>Origin authentication is the idea behind <strong>digital signatures</strong>, a key application of public-key cryptography. With a signature, not only the intended recipient but <em>anyone</em> with access to the sender's public key can verify the origin of the message.</p>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Conceptual, not literal:</strong> the confidentiality and origin-authentication descriptions show the <em>concept</em> of key usage. In practice we do <strong>not</strong> use the same key pair simultaneously for both purposes — real systems use separate keys for encryption and for signing.</div></div>
-  <h3 class="sub-title">What each algorithm can do</h3>
-  <p>Overall, all participants can see each other's public keys, while each keeps their private key confidential. Different public-key algorithms offer different services:</p>
+  <div class="formula">
+    <div class="formula-label">Origin authentication — prove the sender</div>
+    <div class="math">encrypt with the sender's PRIVATE key &nbsp;→&nbsp; anyone with the sender's PUBLIC key can decrypt/verify</div>
+  </div>
+  <p>Notice how clever the mirror image is. In confidentiality, <em>anyone can encrypt but only the receiver can decrypt</em>. In origin authentication, <em>anyone can decrypt but only the sender could have encrypted</em>. That second property is exactly what a <span class="keyterm">digital signature</span> gives you, and signatures are a key application of public-key cryptography. In the authentication case, not only Alice but anyone holding Bob's public key can verify the origin of the message.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> those two uses are <em>conceptual</em>. In practice we do <strong>not</strong> simultaneously use the same key pair for both confidentiality and origin authentication. Real systems use separate key pairs for encryption and for signing, and real signatures hash the message first rather than encrypting it whole.</div></div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Algorithm</th><th>Encryption/Decryption</th><th>Digital Signature</th><th>Key Exchange</th></tr></thead>
+      <thead><tr><th>Algorithm</th><th>Encryption / Decryption</th><th>Digital Signature</th><th>Key Exchange</th></tr></thead>
       <tbody>
         <tr><td><strong>RSA</strong></td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
         <tr><td><strong>Elliptic Curve</strong></td><td>Yes</td><td>Yes</td><td>Yes</td></tr>
         <tr><td><strong>Diffie-Hellman</strong></td><td>No</td><td>No</td><td>Yes</td></tr>
-        <tr><td><strong>DSS</strong> (Digital Signature Standard)</td><td>No</td><td>Yes</td><td>No</td></tr>
+        <tr><td><strong>DSS</strong></td><td>No</td><td>Yes</td><td>No</td></tr>
       </tbody>
     </table>
   </div>
-  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>Diffie-Hellman</strong> is the specialist — it only does key exchange. <strong>DSS</strong> is the specialist that only signs. <strong>RSA</strong> and <strong>Elliptic Curve</strong> are the all-rounders that can do all three.</div></div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember:</strong> Diffie-Hellman is the odd one out. It is famous, but it is <strong>not used for encryption and cannot sign</strong>. Its one job is key exchange. DSS is the other specialist: signature only.</div></div>
 </section>
 
-<section class="guide-section" id="trapdoor" data-title="Trapdoor Functions">
+<section class="guide-section" id="requirements" data-title="Requirements &amp; Trapdoors">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Trapdoor One-Way Functions</h2>
+    <h2 class="section-title">Requirements and Trapdoor One-Way Functions</h2>
   </div>
-  <p class="section-kicker">Easy to compute forwards, infeasible to reverse — unless you hold the secret information that springs the trap.</p>
-  <p>To build a public-key system, we need a very particular kind of function. It must be:</p>
-  <ul>
-    <li><strong>Computationally fast</strong> to compute the function value <strong>f(x) = y</strong>.</li>
-    <li><strong>Computationally infeasible</strong> to compute the inverse <strong>f<sup>−1</sup>(y) = x</strong>.</li>
-    <li><strong>Unless</strong> you possess a piece of information that lets you reverse it dramatically faster.</li>
-  </ul>
-  <p>That secret piece of information is the <strong>trapdoor</strong>, and the function is called a <strong>trapdoor function</strong>.</p>
+  <p class="section-kicker">For a scheme to count as public-key cryptography, six conditions must hold, and together they describe a single object: a trapdoor one-way function.</p>
+  <p>These are the conditions an algorithm must meet to be usable in public-key cryptography. Read them as a contract between the legitimate users and the adversary.</p>
+  <ol class="steps">
+    <li><strong>Easy key generation</strong> — it is computationally easy for a party <span class="math">B</span> to generate a key pair (public key <span class="math">PU<sub>b</sub></span>, private key <span class="math">PR<sub>b</sub></span>).</li>
+    <li><strong>Easy encryption</strong> — it is computationally easy for a sender <span class="math">A</span>, knowing the public key and the message <span class="math">M</span>, to produce the ciphertext <span class="math">C = E(PU<sub>b</sub>, M)</span>.</li>
+    <li><strong>Easy decryption</strong> — it is computationally easy for the receiver <span class="math">B</span> to decrypt using the private key: <span class="math">M = D(PR<sub>b</sub>, C) = D[PR<sub>b</sub>, E(PU<sub>b</sub>, M)]</span>.</li>
+    <li><strong>Private key stays private</strong> — it is computationally infeasible for an adversary who knows the public key <span class="math">PU<sub>b</sub></span> to determine the private key <span class="math">PR<sub>b</sub></span>.</li>
+    <li><strong>Recovering the message is hard</strong> — it is computationally infeasible for an adversary who knows the public key and a ciphertext <span class="math">C</span> to recover <span class="math">M</span> without the private key.</li>
+    <li><strong>Optional: order freedom</strong> — the two keys can be applied in either order. This is beneficial but not essential for all applications.</li>
+  </ol>
+  <p>Requirements 1 to 5 aggregate into one demand: we want a <span class="keyterm">trapdoor one-way function</span>. Before defining that, meet its simpler cousin.</p>
+  <div class="def-card"><span class="dc-term">One-way function</span> — a function mapping a domain into a range such that every function value has a unique inverse, with the property that calculating the function is easy while calculating the inverse is infeasible. In symbols, <span class="math">Y = f(X)</span> is easy, but finding <span class="math">X</span> from <span class="math">Y</span> is not.</div>
+  <div class="def-card"><span class="dc-term">Trapdoor one-way function</span> — a function that is relatively easy to compute in one direction but computationally difficult to invert <em>without</em> additional information called the <strong>trapdoor</strong>. With the trapdoor, inversion becomes easy again.</div>
   <div class="formula">
-    <div class="formula-label">Trapdoor one-way function</div>
+    <div class="formula-label">The three faces of a trapdoor function</div>
     <div class="math">Y = f<sub>k</sub>(X) &nbsp;→&nbsp; easy when k and X are known<br>X = f<sub>k</sub><sup>−1</sup>(Y) &nbsp;→&nbsp; easy when k and Y are known<br>X = f<sub>k</sub><sup>−1</sup>(Y) &nbsp;→&nbsp; infeasible when k is unknown</div>
   </div>
-  <div class="def-card"><span class="dc-term">One-way function</span> — a function that maps a domain into a range such that every value has a unique inverse, where computing the function is easy but computing the inverse is infeasible.</div>
-  <div class="def-card"><span class="dc-term">Trapdoor one-way function</span> — a function that is easy to compute in one direction but hard to invert <em>without</em> additional information called the "trapdoor".</div>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Corollary (and the whole point):</strong> it must be <strong>computationally infeasible to compute the private key from the public key</strong> without the trapdoor information. That is what lets you publish your public key to the whole world safely.</div></div>
-  <h3 class="sub-title">Requirements for public-key cryptography</h3>
-  <p>Any algorithm used for public-key cryptography should satisfy these conditions. Here B is the key owner and A is a sender.</p>
-  <ol class="steps">
-    <li>It is computationally <strong>easy for B to generate a key pair</strong> (public key PU<sub>b</sub>, private key PR<sub>b</sub>).</li>
-    <li>It is computationally <strong>easy for a sender A</strong>, knowing the public key and the message M, to generate the ciphertext: <strong>C = E(PU<sub>b</sub>, M)</strong>.</li>
-    <li>It is computationally <strong>easy for the receiver B to decrypt</strong> using the private key: <strong>M = D(PR<sub>b</sub>, C) = D[PR<sub>b</sub>, E(PU<sub>b</sub>, M)]</strong>.</li>
-    <li>It is computationally <strong>infeasible for an adversary who knows PU<sub>b</sub></strong> to determine the private key PR<sub>b</sub>.</li>
-    <li>It is computationally <strong>infeasible for an adversary who knows PU<sub>b</sub> and a ciphertext C</strong> to recover the original message M without knowing PR<sub>b</sub>.</li>
-    <li><strong>(Optional, sixth requirement)</strong> The two keys can be applied in <strong>either order</strong> — which is what enables signatures as well as confidentiality.</li>
-  </ol>
-  <p>All of these requirements can be summarised as the requirement of a <strong>trapdoor one-way function</strong>.</p>
-  <h3 class="sub-title">Classic trapdoor candidate problems</h3>
-  <p>Two mathematical problems are believed to have the desired trapdoor properties.</p>
-  <div class="grid grid-2">
-    <div class="card">
-      <h3 class="card-title">📐 Discrete Logarithms in Modular Arithmetic</h3>
-      <p>It is computationally infeasible to compute the discrete logarithm modulo p, for certain primes p. (Diffie and Hellman, 1976)</p>
-      <p><strong>DLP:</strong> Given <strong>y, p, g</strong> satisfying <strong>y = g<sup>x</sup> mod p</strong> — where p is prime and g is a primitive root of p — how do you find <strong>x</strong>?</p>
-    </div>
-    <div class="card">
-      <h3 class="card-title">🔑 The RSA Problem</h3>
-      <p>It is computationally infeasible to compute the e<sup>th</sup> root of an integer modulo n, for certain n.</p>
-      <p><strong>RSA problem:</strong> When <strong>c = m<sup>e</sup> mod n</strong> and <strong>c, e</strong> and <strong>n</strong> are known, can you find <strong>m</strong>?</p>
-    </div>
-  </div>
-  <p>Both the discrete logarithm problem and the RSA problem have the property "computationally infeasible". However, they become <strong>easy to compute with additional information</strong> — namely the private key.</p>
-  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> be ready to write both problems out symbolically and state exactly which values are given and which are unknown. The DLP gives you y, p and g and asks for x; the RSA problem gives you c, e and n and asks for m.</div></div>
+  <p>Here <span class="math">k</span> is the trapdoor, which in every scheme this week is simply the <strong>private key</strong>. The corollary is immediate and worth stating plainly: it must be computationally infeasible to compute the private key from the public key, without the trapdoor information.</p>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Key idea:</strong> the six requirements are not six separate features. They are the two directions of one function: forward easy for everyone, backward easy only for the holder of the trapdoor, and backward infeasible for the attacker. Every scheme we meet is just a concrete choice of such a function.</div></div>
 </section>
 
-<section class="guide-section" id="number-theory" data-title="Number Theory Toolkit">
+<section class="guide-section" id="hard-problems" data-title="Two Hard Problems">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Number Theory Toolkit</h2>
+    <h2 class="section-title">The Two Classic Trapdoor Problems</h2>
   </div>
-  <p class="section-kicker">Three small ideas — coprimes, the set &#8484;*<sub>n</sub>, and Euler's phi function — unlock all of RSA.</p>
-  <h3 class="sub-title">Coprime numbers</h3>
-  <p>Two numbers are <strong>coprime</strong> (or relatively prime) if they share only one divisor, and that divisor is 1.</p>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Example:</strong> 8 and 27 are coprime. Factorising, 8 = 2 · 2 · 2 and 27 = 3 · 3 · 3. They have no prime factor in common, so their only common divisor is 1.</div></div>
-  <h3 class="sub-title">The set &#8484;*<sub>n</sub> and Euler's totient</h3>
-  <p>We define <strong>&#8484;*<sub>n</sub></strong> as all the non-negative integers less than n that are <strong>coprime to n</strong>.</p>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Example:</strong> let n = 12. The numbers less than 12 and coprime to 12 are 1, 5, 7 and 11 — so &#8484;*<sub>12</sub> = {1, 5, 7, 11}. The set is useful because it forms an <strong>Abelian group under multiplication</strong>.</div></div>
-  <p><strong>Euler's Phi function</strong> (also called the <strong>totient function</strong>, written ɸ) counts how many elements are in &#8484;*<sub>n</sub>. For example, ɸ(12) = 4.</p>
+  <p class="section-kicker">Cryptography keeps proposing hard problems; this week's two candidates are the discrete logarithm problem and the RSA problem, and both flip from infeasible to easy the moment you hold the private key.</p>
+  <h3 class="sub-title">1. Discrete logarithms in modular arithmetic</h3>
+  <p>Diffie and Hellman, back in 1976, observed that it is computationally infeasible to compute a discrete logarithm modulo <span class="math">p</span>, for certain primes <span class="math">p</span>.</p>
+  <div class="def-card"><span class="dc-term">Discrete Logarithm Problem (DLP)</span> — given <span class="math">y</span>, <span class="math">p</span> and <span class="math">g</span> satisfying <span class="math">y = g<sup>x</sup> mod p</span>, where <span class="math">p</span> is a prime number and <span class="math">g</span> is a primitive root of <span class="math">p</span>, how do we find <span class="math">x</span>?</div>
+  <p>Going forwards is easy: pick <span class="math">x</span>, compute <span class="math">g<sup>x</sup> mod p</span>. Going backwards is the hard part: see <span class="math">y</span>, and work out which exponent <span class="math">x</span> produced it. There is no known efficient method for large primes.</p>
+  <h3 class="sub-title">2. The RSA problem</h3>
+  <p>Independently, it is believed computationally impossible to compute the <span class="math">e<sup>th</sup></span> root of an integer modulo <span class="math">n</span>, for certain <span class="math">n</span>.</p>
+  <div class="def-card"><span class="dc-term">RSA problem</span> — when <span class="math">c = m<sup>e</sup> mod n</span> and the values <span class="math">c</span>, <span class="math">e</span> and <span class="math">n</span> are known, can you find the original message <span class="math">m</span>?</div>
   <div class="formula">
-    <div class="formula-label">When n is a product of two distinct primes</div>
-    <div class="math">If n = p · q, where p and q are prime and p ≠ q, then<br>ɸ(n) = (p − 1)(q − 1)</div>
+    <div class="formula-label">The two candidates side by side</div>
+    <div class="math">Forward: y = g<sup>x</sup> mod p &nbsp;&nbsp;&nbsp; Backward: find x &nbsp;(discrete log)<br>Forward: c = m<sup>e</sup> mod n &nbsp;&nbsp;&nbsp; Backward: find m &nbsp;(e<sup>th</sup> root)</div>
   </div>
-  <p>This shortcut is the engine room of RSA: because n is the product of two primes, ɸ(n) is trivial to compute <em>if you know p and q</em> — but effectively impossible if you only know n.</p>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If p = 7 and q = 11, what is n, and what is ɸ(n)? (You will use both numbers in the RSA toy example in two sections' time.)</div></div>
+  <p>Both share the property that "computationally infeasible" becomes "easy to compute" once you have the additional information, the private key. That is what makes them trapdoors rather than plain one-way functions: the house has a back door, and only the legitimate owner carries its key.</p>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember the pairing:</strong> <strong>Diffie-Hellman relies on the discrete logarithm problem</strong>. <strong>RSA relies on the difficulty of finding an <span class="math">e<sup>th</sup></span> root, which is equivalent in effort to factoring the modulus.</strong> When an exam asks which scheme rests on which problem, this is the pair to reach for.</div></div>
+</section>
+
+<section class="guide-section" id="maths-toolkit" data-title="Maths Toolkit">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Maths Toolkit: Coprime Numbers, ℤ*ₙ and Euler's Totient</h2>
+  </div>
+  <p class="section-kicker">Three small ideas, coprimality, the multiplicative group ℤ*ₙ, and Euler's totient function, are all the number theory RSA actually needs.</p>
+  <p>You cannot read RSA's key generation without these. The good news is that each one is small and concrete.</p>
+  <h3 class="sub-title">Coprime numbers</h3>
+  <p>Two numbers are <span class="keyterm">coprime</span> if they share only one divisor, and that divisor is 1. In other words, their greatest common divisor is 1, written <span class="math">gcd(a, b) = 1</span>.</p>
+  <div class="formula">
+    <div class="formula-label">Worked example</div>
+    <div class="math">8 = 2 · 2 · 2 &nbsp;&nbsp;&nbsp; 27 = 3 · 3 · 3 &nbsp;&nbsp;&nbsp; no shared factor → 8 and 27 are coprime</div>
+  </div>
+  <h3 class="sub-title">The group ℤ*ₙ</h3>
+  <p>We define <span class="math">ℤ<sup>*</sup><sub>n</sub></span> as all non-negative integers less than <span class="math">n</span> that are coprime to <span class="math">n</span>. This half-open set has a lovely property: it forms an <strong>Abelian group under multiplication</strong> (modulo <span class="math">n</span>). Being a group means you can multiply any two members, get another member, and every member has a multiplicative inverse inside the set.</p>
+  <div class="formula">
+    <div class="formula-label">Example: n = 12</div>
+    <div class="math">ℤ<sup>*</sup><sub>12</sub> = {1, 5, 7, 11} &nbsp;&nbsp;&nbsp; (the integers below 12 that share no factor with 12)</div>
+  </div>
+  <h3 class="sub-title">Euler's totient function</h3>
+  <p>Euler's Phi function, also called the <span class="keyterm">totient function</span>, simply <em>counts</em> the elements of <span class="math">ℤ<sup>*</sup><sub>n</sub></span>. For <span class="math">n = 12</span> we saw four elements, so <span class="math">ɸ(12) = 4</span>.</p>
+  <p>Counting elements one by one would be hopeless for the enormous numbers RSA uses, but there is a shortcut that RSA leans on entirely. When <span class="math">n</span> is the product of two distinct primes <span class="math">p</span> and <span class="math">q</span> with <span class="math">p ≠ q</span>, then:</p>
+  <div class="formula">
+    <div class="formula-label">Euler's totient for a product of two primes</div>
+    <div class="math">ɸ(n) = (p − 1)(q − 1)</div>
+  </div>
+  <p>This is why RSA can compute <span class="math">ɸ(n)</span> instantly for a modulus with hundreds of digits: knowing the two prime factors is enough. An attacker who cannot factor <span class="math">n</span> cannot compute <span class="math">ɸ(n)</span>, and that gap is the whole game.</p>
+  <h3 class="sub-title">Fast exponentiation, and the modular inverse</h3>
+  <p>Two computational facts keep RSA practical. First, <strong>exponentiation in ℤ/nℤ is fast</strong>. Using the technique of <strong>exponentiation by squaring</strong>, you can compute a number as enormous as <span class="math">m<sup>e</sup> mod n</span> with only a few hundred multiplications, even when the exponents have thousands of bits.</p>
+  <p>Second, you can always find a <strong>modular inverse</strong>. If <span class="math">e</span> is coprime to <span class="math">ɸ(n)</span>, there exists a unique <span class="math">d</span> with <span class="math">d ≡ e<sup>−1</sup> mod ɸ(n)</span>, meaning <span class="math">e · d ≡ 1 mod ɸ(n)</span>. Finding that <span class="math">d</span> is easy once you know <span class="math">ɸ(n)</span>, and hard otherwise, again because it needs the factorisation.</p>
 </section>
 
 <section class="guide-section" id="rsa-keygen" data-title="RSA Key Generation">
@@ -638,172 +638,179 @@
     <span class="sec-num" aria-hidden="true"></span>
     <h2 class="section-title">RSA Key Generation</h2>
   </div>
-  <p class="section-kicker">Pick two primes, multiply them, then choose an exponent and its modular inverse. That inverse is your private key.</p>
-  <p><strong>RSA</strong> (Rivest–Shamir–Adleman) was developed in 1977 by Ron Rivest, Adi Shamir and Len Adleman at MIT. It is the most widely accepted and implemented general-purpose approach to public-key encryption, and it encrypts plaintext in <strong>blocks</strong>, each block having a binary value less than n.</p>
-  <p>Here is the full key-generation recipe. The steps are numbered so you can follow the worked examples.</p>
+  <p class="section-kicker">RSA keys are made from two secret primes, and the instant you multiply them into a modulus the primes themselves must be destroyed.</p>
+  <p>The <strong>Rivest-Shamir-Adleman (RSA)</strong> scheme was developed by Ron Rivest, Adi Shamir and Len Adleman at MIT in 1977, and it remains the most widely accepted and implemented general-purpose approach to public-key encryption. RSA is defined for a particular class of functions and lets us build a trapdoor function. It encrypts plaintext in <strong>blocks</strong>, with each block having a binary value less than some number <span class="math">n</span>.</p>
+  <p>Here is the full key-derivation recipe. In practice we use <strong>very</strong> large numbers, but the shape is exactly this.</p>
   <ol class="steps">
-    <li>Let <strong>p</strong> and <strong>q</strong>, with p ≠ q, be <strong>prime</strong>. In practice these are <strong>very</strong> large numbers.</li>
-    <li>Define <strong>n = p · q</strong>. We call n the <strong>modulus</strong>.</li>
-    <li>Use Euler's totient function: <strong>ɸ(n) = (p − 1)(q − 1)</strong>.</li>
-    <li>Choose <strong>e</strong> such that <strong>1 &lt; e &lt; ɸ(n)</strong> and <strong>gcd(e, ɸ(n)) = 1</strong> — that is, e is coprime with ɸ(n). One way is to choose e &gt; max(p, q) and prime; testing whether an integer is prime is fast.</li>
-    <li>Calculate <strong>d</strong> such that <strong>d ≡ e<sup>−1</sup> mod ɸ(n)</strong>. In words, d is the <strong>modular inverse of e</strong> modulo ɸ(n).</li>
-    <li>Now we have the keys:
-      <ul>
-        <li><strong>(e, n)</strong> is the <strong>public key</strong>.</li>
-        <li><strong>(d, n)</strong> is the <strong>private key</strong>.</li>
-      </ul>
-    </li>
+    <li><strong>Choose two distinct primes</strong> <span class="math">p</span> and <span class="math">q</span>, with <span class="math">p ≠ q</span>.</li>
+    <li><strong>Compute the modulus</strong> <span class="math">n = p · q</span>. We call <span class="math">n</span> the modulus.</li>
+    <li><strong>Compute Euler's totient</strong> <span class="math">ɸ(n) = (p − 1)(q − 1)</span>.</li>
+    <li><strong>Choose the public exponent</strong> <span class="math">e</span> with <span class="math">1 &lt; e &lt; ɸ(n)</span> and <span class="math">gcd(e, ɸ(n)) = 1</span>, i.e. <span class="math">e</span> is coprime to <span class="math">ɸ(n)</span>. One convenient way: choose <span class="math">e &gt; max(p, q)</span> to be prime. Testing whether an integer is prime is fast.</li>
+    <li><strong>Compute the private exponent</strong> <span class="math">d</span> such that <span class="math">d ≡ e<sup>−1</sup> mod ɸ(n)</span>, i.e. <span class="math">d</span> is the modular inverse of <span class="math">e</span>.</li>
+    <li><strong>Now we have the keys:</strong> <span class="math">(e, n)</span> is the <strong>public key</strong>, and <span class="math">(d, n)</span> is the <strong>private key</strong>. At this point we delete <span class="math">p</span>, <span class="math">q</span> and <span class="math">ɸ(n)</span> permanently.</li>
+    <li><strong>Encryption:</strong> <span class="math">c = m<sup>e</sup> mod n</span>.</li>
+    <li><strong>Decryption:</strong> <span class="math">m = c<sup>d</sup> mod n</span>.</li>
   </ol>
-  <p>At this point we <strong>delete p, q and ɸ(n) permanently</strong>. Anyone who knew p and q could compute d, so they must never be stored or shared.</p>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why delete p and q?</strong> The whole security of RSA rests on n being hard to factor. If p and q leaked, an attacker would compute ɸ(n) = (p − 1)(q − 1), then invert e to find d, and every message would be readable.</div></div>
-  <h3 class="sub-title">Worked example: key generation with p = 7, q = 11</h3>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Step</th><th>Working</th><th>Result</th></tr></thead>
-      <tbody>
-        <tr><td>1</td><td>Choose primes p = 7, q = 11</td><td>p ≠ q ✓</td></tr>
-        <tr><td>2</td><td>n = p · q = 7 × 11</td><td>n = 77</td></tr>
-        <tr><td>3</td><td>ɸ(n) = (7 − 1)(11 − 1) = 6 × 10</td><td>ɸ(n) = 60</td></tr>
-        <tr><td>4</td><td>Choose e = 13 (less than 60 and coprime with 60)</td><td>e = 13</td></tr>
-        <tr><td>5</td><td>Find d such that 13d mod 60 = 1</td><td>d = 37</td></tr>
-        <tr><td>6</td><td>Public key (e, n); private key (d, n)</td><td>(13, 77) and (37, 77)</td></tr>
-      </tbody>
-    </table>
+  <div class="formula">
+    <div class="formula-label">The keys RSA produces</div>
+    <div class="math">Public key = (e, n) &nbsp;&nbsp;&nbsp;&nbsp; Private key = (d, n) &nbsp;&nbsp;&nbsp;&nbsp; Secret, then destroyed: p, q, ɸ(n)</div>
   </div>
-  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Check your d:</strong> verify the modular inverse by multiplying back. Here 13 × 37 = 481 = (8 × 60) + 1, so 13 × 37 ≡ 1 mod 60. If your d does not give remainder 1, it is wrong.</div></div>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> "delete <span class="math">p</span>, <span class="math">q</span> and <span class="math">ɸ(n)</span> permanently" is not a throwaway line. If any of them leaks, an attacker can compute <span class="math">ɸ(n)</span>, then <span class="math">d</span>, and decrypt everything. The security of the whole scheme lives in the secrecy of the factorisation.</div></div>
 </section>
 
-<section class="guide-section" id="rsa-encrypt" data-title="RSA Encryption &amp; Decryption">
+<section class="guide-section" id="rsa-working" data-title="How RSA Encrypts">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">RSA Encryption and Decryption</h2>
+    <h2 class="section-title">How RSA Encrypts and Why It Works</h2>
   </div>
-  <p class="section-kicker">Encryption raises the message to the power e; decryption raises the ciphertext to the power d. The maths cancels perfectly.</p>
-  <p>Once the keys exist, using them is beautifully simple. Let <strong>m</strong> be the plaintext and <strong>c</strong> the ciphertext.</p>
+  <p class="section-kicker">RSA works because raising to a power modulo n is cheap in one direction and believed hopeless in reverse, and because the two exponents cancel inside the ring of integers modulo n.</p>
+  <p>RSA encryption is defined as a function from <span class="math">ℤ/nℤ</span> to <span class="math">ℤ/nℤ</span>. Recall that <span class="math">ℤ/nℤ</span> is a <strong>commutative ring</strong>. Crucially, <span class="math">n</span> is <em>not</em> prime, but a product of two primes. That choice of playground is deliberate:</p>
+  <div class="grid grid-2">
+    <div class="card"><h3 class="card-title">⚡ Forwards is fast</h3><p>Exponentiation in <span class="math">ℤ/nℤ</span> is fast (exponentiation by squaring), so computing <span class="math">c = m<sup>e</sup> mod n</span> is very efficient. This satisfies the requirement that encryption be easy.</p></div>
+    <div class="card"><h3 class="card-title">🧱 Backwards is hard</h3><p>Getting the <span class="math">e<sup>th</sup></span> root of <span class="math">c</span> to recover <span class="math">m</span>, without <span class="math">d</span>, is believed to be infeasible. This satisfies the requirement that recovery be hard.</p></div>
+  </div>
+  <p>Why does decryption recover the message? Because of how <span class="math">d</span> was chosen. We set <span class="math">e · d ≡ 1 mod ɸ(n)</span>, so <span class="math">e · d = 1 + k·ɸ(n)</span> for some integer <span class="math">k</span>. Applying both exponents in turn therefore returns the message to its starting point:</p>
   <div class="formula">
-    <div class="formula-label">RSA encryption and decryption</div>
-    <div class="math">Encryption: c = m<sup>e</sup> mod n<br>Decryption: m = c<sup>d</sup> mod n</div>
+    <div class="formula-label">Correctness of RSA</div>
+    <div class="math">(m<sup>e</sup>)<sup>d</sup> = m<sup>e·d</sup> = m<sup>1 + k·ɸ(n)</sup> ≡ m<sup>1</sup> ≡ m &nbsp;(mod n)</div>
   </div>
-  <h3 class="sub-title">Worked example: encrypting 3 with (13, 77)</h3>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember:</strong> the encryption exponent and the decryption exponent are modular inverses of each other modulo <span class="math">ɸ(n)</span>. That single congruence, <span class="math">e · d ≡ 1 mod ɸ(n)</span>, is the heart of RSA. Everything else is bookkeeping.</div></div>
+  <h3 class="sub-title">Two honest limitations</h3>
+  <p>First, RSA <strong>cannot uniquely encrypt values greater than <span class="math">n</span></strong>. Such values are reduced modulo <span class="math">n</span>, so decryption returns a value less than <span class="math">n</span>, not the original input. This is why RSA encrypts in blocks smaller than <span class="math">n</span>.</p>
+  <p>Second, by its mathematical nature RSA can encrypt <strong>only numbers</strong>, more specifically only numbers in <span class="math">ℤ/nℤ</span>. That means sender and receiver must agree on a mapping of numbers to characters to make it useful: <span class="math">a ⇒ 1</span>, <span class="math">b ⇒ 2</span>, and so on. This is an inconvenience the lecture returns to when it explains why we use padding and hybrid encryption.</p>
+</section>
+
+<section class="guide-section" id="rsa-examples" data-title="Worked RSA Examples">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Worked RSA Examples</h2>
+  </div>
+  <p class="section-kicker">Numbers make RSA click, so walk through all four examples the lecture gives, including the one that hides in the quiz.</p>
+  <h3 class="sub-title">Toy example: p = 7, q = 11</h3>
+  <div class="grid grid-2">
+    <div class="card"><h3 class="card-title">🔧 Build the keys</h3>
+      <p>1) <span class="math">p = 7</span>, <span class="math">q = 11</span>.<br>
+      2) <span class="math">n = p · q = 77</span>.<br>
+      3) <span class="math">ɸ(n) = (7 − 1)(11 − 1) = 6 × 10 = 60</span>.<br>
+      4) Pick <span class="math">e = 13</span>: it is less than 60 and coprime with 60.<br>
+      5) Find <span class="math">d</span> with <span class="math">13d mod 60 = 1</span>, so <span class="math">d = 37</span>.</p>
+    </div>
+    <div class="card"><h3 class="card-title">🔐 Encrypt and decrypt</h3>
+      <p>Keys: public <span class="math">(13, 77)</span>, private <span class="math">(37, 77)</span>.<br>
+      Let the plaintext be 3 and the ciphertext <span class="math">c</span>.<br>
+      7) Encryption: <span class="math">c = 3<sup>13</sup> mod 77 = 38</span>.<br>
+      8) Decryption: <span class="math">m = 38<sup>37</sup> mod 77 = 3</span>. ✓</p>
+    </div>
+  </div>
+  <h3 class="sub-title">Lecture notes example: p = 17, q = 11, M = 88</h3>
+  <div class="formula">
+    <div class="formula-label">Key generation</div>
+    <div class="math">n = 17 × 11 = 187 &nbsp;&nbsp; ɸ(n) = (17 − 1)(11 − 1) = 16 × 10 = 160<br>Choose e = 7 (coprime to 160, and e &lt; ɸ(n))<br>Solve d × 7 ≡ 1 mod 160: &nbsp; 23 × 7 = 161 = (1 × 160) + 1 → d = 23<br>PU = {7, 187} &nbsp;&nbsp; PR = {23, 187}</div>
+  </div>
+  <div class="formula">
+    <div class="formula-label">Encrypt then decrypt</div>
+    <div class="math">Encryption: C = 88<sup>7</sup> mod 187 = 11<br>Decryption: M = 11<sup>23</sup> mod 187 = 88 ✓</div>
+  </div>
+  <h3 class="sub-title">Quiz-style example: p = 11, q = 17, e = 7</h3>
+  <p>Given <span class="math">p = 11</span>, <span class="math">q = 17</span> and <span class="math">e = 7</span>, find the ciphertext for plaintext <span class="math">M = 88</span>.</p>
+  <div class="formula">
+    <div class="formula-label">Encryption without needing d</div>
+    <div class="math">n = pq = 187 &nbsp;&nbsp; ɸ(n) = (11 − 1)(17 − 1) = 160<br>C = M<sup>e</sup> mod n = 88<sup>7</sup> mod 187 = 11</div>
+  </div>
+  <p>You can encrypt knowing only the public key, so you do not need <span class="math">d</span> or even <span class="math">ɸ(n)</span>.</p>
+  <h3 class="sub-title">Recover a private key: e = 31, n = 3599</h3>
+  <p>Here the question runs backwards and is the best test of whether you understand the machinery.</p>
   <ol class="steps">
-    <li>Plaintext <strong>m = 3</strong>; public key (e, n) = (13, 77).</li>
-    <li>Encrypt: <strong>c = 3<sup>13</sup> mod 77 = 38</strong>.</li>
-    <li>Decrypt with the private key (d, n) = (37, 77): <strong>m = 38<sup>37</sup> mod 77 = 3</strong>.</li>
+    <li><strong>Factor the modulus.</strong> <span class="math">3599 = 59 × 61</span>, so <span class="math">p = 59</span> and <span class="math">q = 61</span>.</li>
+    <li><strong>Compute the totient.</strong> <span class="math">ɸ(n) = (59 − 1)(61 − 1) = 58 × 60 = 3480</span>.</li>
+    <li><strong>Solve the congruence.</strong> We need <span class="math">ed ≡ 1 mod ɸ(n)</span>, i.e. <span class="math">31d ≡ 1 mod 3480</span>.</li>
+    <li><strong>Check candidates.</strong> <span class="math">31 × 3031 mod 3480 = 1</span>, so <span class="math">d = 3031</span>. As a sanity check, <span class="math">31 × 2412 mod 3480 = 1692</span>, not 1.</li>
   </ol>
-  <p>The message comes back exactly. In practice, of course, p and q are <strong>very</strong> large, so n, e and d are enormous.</p>
-  <h3 class="sub-title">Worked example from the notes: p = 17, q = 11</h3>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Stage</th><th>Working</th><th>Result</th></tr></thead>
-      <tbody>
-        <tr><td>Modulus</td><td>n = p · q = 17 × 11</td><td>n = 187</td></tr>
-        <tr><td>Totient</td><td>ɸ(n) = (17 − 1)(11 − 1) = 16 × 10</td><td>ɸ(n) = 160</td></tr>
-        <tr><td>Public exponent</td><td>Choose e = 7 (coprime to 160 and less than it)</td><td>e = 7</td></tr>
-        <tr><td>Private exponent</td><td>d × 7 ≡ 1 mod 160; note 23 × 7 = 161 = (1 × 160) + 1</td><td>d = 23</td></tr>
-        <tr><td>Keys</td><td>PU = {7, 187}, PR = {23, 187}</td><td>—</td></tr>
-        <tr><td>Encrypt M = 88</td><td>C = 88<sup>7</sup> mod 187</td><td>C = 11</td></tr>
-        <tr><td>Decrypt C = 11</td><td>M = 11<sup>23</sup> mod 187</td><td>M = 88</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <h3 class="sub-title">Why RSA works over &#8484;/n&#8484;</h3>
-  <p>RSA encryption is defined as a function from <strong>&#8484;/n&#8484; to &#8484;/n&#8484;</strong>:</p>
-  <div class="formula">
-    <div class="formula-label">RSA as a function</div>
-    <div class="math">RSA : &#8484;/n&#8484; → &#8484;/n&#8484;</div>
-  </div>
-  <p>Recall that &#8484;/n&#8484; is a <strong>commutative ring</strong>, and note that n is <em>not</em> prime but the product of two primes. There was a very good reason to work here:</p>
-  <ul>
-    <li><strong>Exponentiation in &#8484;/n&#8484; is fast to compute</strong> (using exponentiation by squaring). In other words, computing c = m<sup>e</sup> mod n is very efficient.</li>
-    <li>But getting the <strong>e<sup>th</sup> root</strong> of c to recover the original m is believed to be <strong>infeasible</strong> without d.</li>
-  </ul>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Important limitation:</strong> RSA cannot uniquely encrypt values greater than n. Such values are reduced modulo n, so decryption returns a value less than n, <em>not</em> the original input. This is why plaintext is split into blocks smaller than n.</div></div>
-  <p>Because of its mathematical nature, <strong>RSA can encrypt only numbers</strong> — more specifically, only numbers in &#8484;/n&#8484;. So sender and receiver must use a <strong>mapping from characters to numbers</strong> to make it useful: for example a ⇒ 1, b ⇒ 2, and so on.</p>
-  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>e</strong> for <em>encrypt</em> (public), <strong>d</strong> for <em>decrypt</em> (private), <strong>n</strong> for the <em>modulus</em> shared by both keys. Encryption is public knowledge; decryption needs the secret.</div></div>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Do this in the exam:</strong> for "find the private key" questions, always start by factoring <span class="math">n</span> into two primes, then compute <span class="math">ɸ(n) = (p − 1)(q − 1)</span>, then solve <span class="math">ed ≡ 1 mod ɸ(n)</span>. Factorisation is the only hard step, which is exactly why real RSA uses primes with hundreds of digits.</div></div>
 </section>
 
 <section class="guide-section" id="rsa-security" data-title="Security of RSA">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Security of RSA</h2>
+    <h2 class="section-title">The Security of RSA</h2>
   </div>
-  <p class="section-kicker">RSA is only as strong as two hard problems — taking e-th roots and factoring n — plus a long list of practical cautions.</p>
-  <p>The security of RSA rests on two beliefs:</p>
-  <ul>
-    <li>Obtaining the <strong>e<sup>th</sup> root</strong> of a number in &#8484;/n&#8484; is computationally infeasible <strong>unless you know d</strong>.</li>
-    <li><strong>Factoring n = p · q</strong>, for very large p and q, is computationally infeasible. If you could factor n, you could easily calculate d.</li>
-  </ul>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> the defence against brute-forcing d is to use a <strong>large key space</strong>. The more bits in d, the more secure the system — but the slower it becomes, because key generation, encryption and decryption all involve more complex calculations.</div></div>
-  <h3 class="sub-title">Practical rules for choosing p and q</h3>
-  <ul>
-    <li><strong>p and q (with p ≠ q) must be very large.</strong> Encoding n needs thousands of bits — typical RSA key lengths are <strong>2048 bits and more</strong>.</li>
-    <li><strong>p and q must not be too close together</strong>, because that allows forms of fast factoring.</li>
-    <li>In practice there are <strong>many more limiting factors</strong> — not every key is a good key.</li>
-    <li><strong>Never implement RSA yourself</strong> and use it in production. Use well-tested libraries.</li>
-  </ul>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Quantum risks later:</strong> RSA is secure "for now". Quantum computers running Shor's algorithm would break it, and <strong>Australia plans to get rid of RSA by 2030</strong>. We return to this in the final section.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If an attacker somehow learned p and q, which one line of working would hand them your private key d? (Answer: they would compute ɸ(n) = (p − 1)(q − 1), then find d = e<sup>−1</sup> mod ɸ(n).)</div></div>
+  <p class="section-kicker">RSA's security rests on two believed-hard problems, finding the eth root and factoring the modulus, and both crumble if the primes are chosen carelessly.</p>
+  <p>The security of RSA rests on two facts:</p>
+  <div class="grid grid-2">
+    <div class="card"><h3 class="card-title">🌱 The e<sup>th</sup> root</h3><p>Obtaining the <span class="math">e<sup>th</sup></span> root of a number in <span class="math">ℤ/nℤ</span> is computationally infeasible <em>unless</em> you know <span class="math">d</span>.</p></div>
+    <div class="card"><h3 class="card-title">🧩 Factoring n</h3><p>Factoring <span class="math">n = pq</span>, for very large <span class="math">p</span> and <span class="math">q</span>, is computationally infeasible. If it were easy, <span class="math">d</span> could be calculated trivially from <span class="math">ɸ(n)</span>.</p></div>
+  </div>
+  <p>That is true for now. The lecture flags the quantum risk: Australia plans to get rid of RSA by 2030. Keep that in your back pocket for the post-quantum section.</p>
+  <h3 class="sub-title">Key size is a balance</h3>
+  <p>The defence against brute-forcing <span class="math">d</span> is to use a large key space. The larger the number of bits in <span class="math">d</span>, the more secure the system becomes. But increasing key size slows everything down, because key generation, encryption and decryption all get more computationally complex. Security and performance pull in opposite directions.</p>
+  <h3 class="sub-title">Rules for choosing p and q</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Rule</th><th>Reason</th></tr></thead>
+      <tbody>
+        <tr><td><strong>p and q must be very large</strong></td><td>So that factoring <span class="math">n = pq</span> is computationally infeasible.</td></tr>
+        <tr><td><strong>Encoding n needs thousands of bits</strong></td><td>RSA key lengths of 2048 bits and more are the secure norm today.</td></tr>
+        <tr><td><strong>p and q must not be too close together</strong></td><td>Close primes allow forms of fast factoring.</td></tr>
+        <tr><td><strong>Never choose small primes</strong></td><td>Small factors fall instantly to trial division and related attacks.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>In practice there are many more limiting factors, and not every key is a good key. The lecture is blunt about the consequence: it is <strong>not recommended to implement RSA yourself</strong> for use in production environments. Use a vetted library written by people who have already been bitten by the corner cases.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> students often say "RSA is secure regardless of key size". That is false. A 512-bit RSA key is breakable today; only key sizes above 2048 bits are considered safe. Security is a function of key size, not an intrinsic property of the algorithm.</div></div>
 </section>
 
 <section class="guide-section" id="rsa-attacks" data-title="Attacks on RSA">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Five Ways to Attack RSA</h2>
+    <h2 class="section-title">Attacks on RSA</h2>
   </div>
-  <p class="section-kicker">Brute force, mathematics, timing, hardware faults and chosen ciphertext — know the family tree.</p>
-  <p>There are five possible approaches to attacking RSA. Notice that only one is purely mathematical; the rest exploit how RSA is <em>implemented</em>.</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Attack</th><th>How it works</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Brute force</strong></td><td>Try all possible private keys — feasible only against smaller keys.</td></tr>
-        <tr><td><strong>Mathematical attacks</strong></td><td>Several approaches, all equivalent in effort to <strong>factoring the product of two primes</strong>.</td></tr>
-        <tr><td><strong>Timing attacks</strong></td><td>Depend on the <strong>running time</strong> of the decryption algorithm.</td></tr>
-        <tr><td><strong>Hardware fault-based attack</strong></td><td>Induce hardware faults in the processor that is generating digital signatures.</td></tr>
-        <tr><td><strong>Chosen ciphertext attacks</strong></td><td>Exploit properties of the RSA algorithm itself — for example <strong>malleability</strong>.</td></tr>
-      </tbody>
-    </table>
+  <p class="section-kicker">There are five recognised families of attack on RSA, and only one of them is the obvious brute force you might guess first.</p>
+  <p>The lecture lists five possible approaches to attacking RSA. Learn them as a set, because exam questions tend to ask you to name or distinguish them.</p>
+  <div class="grid grid-2">
+    <div class="card"><h3 class="card-title">💥 Brute force</h3><p>Try all possible private keys. Feasible only against smaller keys, which is exactly why key size matters.</p></div>
+    <div class="card"><h3 class="card-title">➗ Mathematical attacks</h3><p>Several approaches exist, but they are all <strong>equivalent in effort to factoring the product of two primes</strong>. Breaking the maths means factoring <span class="math">n</span>.</p></div>
+    <div class="card"><h3 class="card-title">⏱️ Timing attacks</h3><p>These depend on the running time of the decryption algorithm. Tiny variations in how long operations take can leak information about the key.</p></div>
+    <div class="card"><h3 class="card-title">🔌 Hardware fault-based attacks</h3><p>Involves inducing hardware faults in the processor that is generating digital signatures, then exploiting the faulty outputs.</p></div>
+    <div class="card"><h3 class="card-title">🎯 Chosen ciphertext attacks</h3><p>Exploits properties of the RSA algorithm itself, such as <strong>malleability</strong>, which the next section unpacks in detail.</p></div>
   </div>
-  <div class="mnemonic">
-    <div class="mnemonic-letters">B · M · T · H · C</div>
-    <div class="mnemonic-phrase">"Brute, Maths, Timing, Hardware, Chosen"</div>
-    <div class="mnemonic-expand"><strong>B</strong>rute force · <strong>M</strong>athematical (≈ factoring) · <strong>T</strong>iming · <strong>H</strong>ardware fault-based · <strong>C</strong>hosen ciphertext.</div>
-  </div>
-  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> if asked to list attacks on RSA, give all five with one line each. If asked which are "side-channel" style, that is timing and hardware fault-based — they leak information through how the machine behaves, not through the maths.</div></div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>B</strong>rute, <strong>M</strong>athematical, <strong>T</strong>iming, <strong>H</strong>ardware, <strong>C</strong>hosen ciphertext. "Big Maths Teachers Have Class." Five families, one mnemonic.</div></div>
 </section>
 
-<section class="guide-section" id="rsa-padding" data-title="RSA Padding &amp; Malleability">
+<section class="guide-section" id="rsa-padding" data-title="Padding &amp; Malleability">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
     <h2 class="section-title">Never Use RSA Without Padding</h2>
   </div>
-  <p class="section-kicker">Vanilla RSA preserves structure, so an attacker can tamper with a ciphertext and predictably bend the plaintext. Randomness is the fix.</p>
-  <p>Plain ("vanilla", or "textbook") RSA is <strong>not secure on its own</strong>. Two related problems show why.</p>
-  <h3 class="sub-title">Problem 1: Malleability (a chosen ciphertext attack)</h3>
-  <div class="def-card"><span class="dc-term">Malleability</span> — in RSA, the property that an attacker can modify a ciphertext in a predictable way so that the decrypted plaintext also changes in a related, predictable way, <em>without knowing the private key</em>.</div>
-  <p>Here is the attack. Eve intercepts a ciphertext c and computes a modified ciphertext c′ by multiplying by a value raised to e:</p>
-  <div class="formula">
-    <div class="formula-label">The malleability trick</div>
-    <div class="math">c′ ≡ c · 2<sup>e</sup> mod n<br>(c′)<sup>d</sup> mod n ≡ (c · 2<sup>e</sup> mod n)<sup>d</sup> mod n ≡ 2m</div>
-  </div>
+  <p class="section-kicker">Textbook RSA leaks structure, so an attacker can tamper with a ciphertext and predict the effect, and it produces identical ciphertexts for identical plaintexts, which is exactly what padding fixes.</p>
+  <h3 class="sub-title">Malleability: tampering with a predictable outcome</h3>
+  <div class="def-card"><span class="dc-term">Malleability</span> — an attacker can modify a ciphertext in a predictable way so that the decrypted plaintext is also changed in a related, predictable way, all without knowing the private key.</div>
+  <p>Here is the attack, step by step.</p>
   <ol class="steps">
-    <li>Eve intercepts the ciphertext <strong>c</strong>.</li>
-    <li>She computes the modified ciphertext <strong>c′ ≡ c · 2<sup>e</sup> mod n</strong> and sends it to the receiver.</li>
-    <li>The receiver decrypts c′ and obtains <strong>2m</strong> — a valid-looking result, not random garbage.</li>
-    <li>Because the result is valid-looking, the <strong>receiver cannot detect that the message was altered</strong>.</li>
-    <li>Eve recovers the original plaintext by dividing by 2 (or more generally by the value she used).</li>
+    <li><strong>Intercept.</strong> The attacker, Eve, listens for a ciphertext <span class="math">c</span> that she wants to crack.</li>
+    <li><strong>Modify predictably.</strong> She computes a modified ciphertext and sends it to the receiver: <span class="math">c' ≡ c · r<sup>e</sup> mod n</span>, for example using <span class="math">r = 2</span>, so <span class="math">c' ≡ c · 2<sup>e</sup> mod n</span>.</li>
+    <li><strong>Collect the decryption.</strong> The receiver decrypts <span class="math">c'</span> and obtains <span class="math">r·m</span> (for example <span class="math">2m</span>):</li>
   </ol>
-  <p><strong>Key idea:</strong> vanilla RSA preserves structure, so tampering yields a predictable, manipulated plaintext rather than garbage. This is a generic result — the scalar multiplication can be <em>any</em> number, not just 2. Because the attacker gets a chosen ciphertext decrypted, this is a <strong>Chosen Ciphertext Attack (CCA)</strong>.</p>
-  <h3 class="sub-title">Problem 2: No semantic security (a chosen plaintext attack)</h3>
-  <ul>
-    <li>An attacker can <strong>forward-compute likely messages</strong> and see whether any matches a given ciphertext.</li>
-    <li>RSA is <strong>deterministic</strong>: the same plaintext encrypted with the same public key always produces the same ciphertext. There is <strong>no randomness</strong>.</li>
-    <li>Because encryption is deterministic and the public key is out in the open, RSA is vulnerable to <strong>Chosen Plaintext Attacks (CPA)</strong>.</li>
-  </ul>
-  <div class="def-card"><span class="dc-term">Semantic security</span> — a cryptosystem is semantically secure when only a small amount of information about the plaintext can be extracted from the ciphertext. Textbook RSA has none, because it lacks randomness.</div>
+  <div class="formula">
+    <div class="formula-label">Why the tampering works</div>
+    <div class="math">(c')<sup>d</sup> mod n ≡ (c · r<sup>e</sup> mod n)<sup>d</sup> mod n ≡ r·m</div>
+  </div>
+  <p>The result looks valid, not random. The receiver cannot detect that the message was altered. The detailed derivation in the notes shows why:</p>
+  <div class="formula">
+    <div class="formula-label">Full derivation</div>
+    <div class="math">(c')<sup>d</sup> = (c × r<sup>e</sup>)<sup>d</sup> = (m<sup>e</sup> × r<sup>e</sup>)<sup>d</sup> = m<sup>e×d</sup> × r<sup>e×d</sup> = m × r</div>
+  </div>
+  <p>since <span class="math">(m<sup>e</sup>)<sup>d</sup> mod n</span> must equal <span class="math">m<sup>1</sup> mod n</span>. Eve then obtains the original plaintext by simply dividing the result by <span class="math">r</span>.</p>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Context:</strong> note the <strong>Chosen Ciphertext Attack (CCA)</strong> assumption here. We are assuming the attacker has the ability to get <span class="math">c'</span> decrypted by the victim. This is a realistic model: think of an attacker who can submit tampered ciphertexts to a server and observe whether decryption succeeds.</div></div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Key idea:</strong> vanilla RSA preserves structure, so tampering yields a predictable, manipulated plaintext rather than garbage. This is a generic result: the multiplier can be any number, not just 2.</div></div>
+  <h3 class="sub-title">No semantic security</h3>
+  <p>RSA has a second, deeper problem.</p>
+  <p>Textbook RSA has none. An attacker can forward-compute likely messages and see whether they match a given ciphertext. And because RSA is <strong>deterministic</strong>, the same plaintext encrypted with the same public key always produces the same ciphertext, an adversary can encrypt likely messages and compare the results. Deterministic encryption with a public key means the scheme is open to <strong>Chosen Plaintext Attacks (CPA)</strong>. The root cause is a lack of randomness.</p>
   <h3 class="sub-title">The solution: padding</h3>
-  <p>Modern RSA implementations add <strong>sophisticated padding</strong>, which adds randomness on encryption and removes it on decryption. This ensures that the same plaintext encrypted multiple times produces <em>different</em> ciphertexts. Padding is crucial, but non-trivial: today we use <strong>OAEP</strong> (Optimal Asymmetric Encryption Padding).</p>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Never use RSA without padding.</strong> Unpadded RSA is malleable (vulnerable to CCA) and deterministic (vulnerable to CPA). Padding with OAEP is what makes RSA semantically secure.</div></div>
+  <p>Modern RSA implementations incorporate sophisticated <strong>padding</strong>, which adds randomness on encryption and removes it on decryption. With padding, the same plaintext encrypted multiple times produces <em>different</em> ciphertexts, restoring semantic security. The padding is crucial, but non-trivial to get right. Today we use <span class="keyterm">OAEP (Optimal Asymmetric Encryption Padding)</span>.</p>
+  <div class="formula">
+    <div class="formula-label">The fix in one line</div>
+    <div class="math">textbook RSA is deterministic → add random padding → encrypt the padded block → strip padding after decryption</div>
+  </div>
 </section>
 
 <section class="guide-section" id="hybrid" data-title="Hybrid Encryption">
@@ -811,547 +818,339 @@
     <span class="sec-num" aria-hidden="true"></span>
     <h2 class="section-title">Hybrid Encryption</h2>
   </div>
-  <p class="section-kicker">Use slow public-key crypto once, to share a fast symmetric key. Then switch to the fast lane.</p>
-  <p>RSA has two key problems in practice.</p>
+  <p class="section-kicker">Public-key encryption is slow and clumsy, so almost every real system uses it only to deliver a symmetric key and then switches to a fast symmetric cipher.</p>
+  <p>RSA has two key problems that stop us using it for bulk data:</p>
   <div class="grid grid-2">
-    <div class="card">
-      <h3 class="card-title">🐌 Problem 1: Public-key crypto is slow</h3>
-      <p>Long keys make it slow. RSA is <strong>100–1000 times slower than AES</strong>.</p>
-    </div>
-    <div class="card">
-      <h3 class="card-title">🔢 Problem 2: It needs a character-to-number mapping</h3>
-      <p>RSA encrypts numbers, so a mapping from characters to numbers is needed to make it useful for real messages.</p>
-    </div>
+    <div class="card"><h3 class="card-title">🐌 Problem 1: it is slow</h3><p>Public-key cryptography is slow, especially with the long keys needed for security. RSA is roughly <strong>100 to 1000 times slower than AES</strong>.</p></div>
+    <div class="card"><h3 class="card-title">🔤 Problem 2: it needs a mapping</h3><p>It requires a mechanism to map characters to numbers for practical use, adding complexity to every message.</p></div>
   </div>
-  <p>The solution is <strong>hybrid encryption</strong>. In general we do <em>not</em> use RSA continuously. Instead, we use RSA briefly to <strong>establish a symmetric key</strong>, then secure the actual conversation with fast symmetric encryption. <strong>Almost all public-key encryption uses hybrid encryption in practice.</strong></p>
+  <p>The solution is <span class="keyterm">hybrid encryption</span>. Public-key encryption like RSA quickly establishes a symmetric key, and subsequent communication is secured with symmetric encryption. Almost all public-key encryption in practice uses hybrid encryption, so this is one of the most practically important ideas of the week.</p>
+  <ol class="steps">
+    <li><strong>Generate a random symmetric key</strong> <span class="math">k</span>.</li>
+    <li><strong>Encrypt the actual message</strong> with the symmetric key: <span class="math">c<sub>m</sub> = Enc<sub>k</sub>(m)</span>.</li>
+    <li><strong>Encrypt the key</strong> with the receiver's public key: <span class="math">c<sub>k</sub> = Enc<sub>PK</sub>(k)</span>.</li>
+    <li><strong>Send the pair</strong> <span class="math">(c<sub>k</sub>, c<sub>m</sub>)</span>. The receiver decrypts <span class="math">c<sub>k</sub></span> with the private key to recover <span class="math">k</span>, then decrypts <span class="math">c<sub>m</sub></span>.</li>
+  </ol>
   <div class="flow">
-    <span class="flow-step">Generate random symmetric key k</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Encrypt message: c<sub>m</sub> = Enc<sub>k</sub>(m)</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Encrypt k: c<sub>k</sub> = Enc<sub>PK</sub>(k)</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Random key k</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Enc<sub>k</sub>(message) = c<sub>m</sub></span><span class="flow-arrow">→</span>
+    <span class="flow-step">Enc<sub>PK</sub>(k) = c<sub>k</sub></span><span class="flow-arrow">→</span>
     <span class="flow-step">Send (c<sub>k</sub>, c<sub>m</sub>)</span>
   </div>
-  <ol class="steps">
-    <li><strong>Generate a random symmetric key k.</strong></li>
-    <li><strong>Encrypt the actual message</strong> as c<sub>m</sub> = Enc<sub>k</sub>(m) using the symmetric key.</li>
-    <li><strong>Encrypt k</strong> as c<sub>k</sub> = Enc<sub>PK</sub>(k) using the receiver's public key.</li>
-    <li><strong>Send (c<sub>k</sub>, c<sub>m</sub>)</strong> — the encrypted key and the encrypted message.</li>
-  </ol>
-  <p>The receiver decrypts c<sub>k</sub> with their private key to recover k, then uses k to decrypt c<sub>m</sub>. The heavy lifting is done by the fast symmetric cipher; the public-key cipher only ever handles the small session key.</p>
-  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> public-key crypto is the <em>courier who delivers the key</em>; symmetric crypto is the <em>fast car that carries the cargo</em>. You would not send the courier for every parcel.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> In hybrid encryption, why is it safe to send c<sub>k</sub> and c<sub>m</sub> together over an insecure channel? (Because k is encrypted under the receiver's public key, so only the receiver can unwrap it.)</div></div>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam tip:</strong> the classic true/false statement is "Hybrid cryptography uses asymmetric cryptography to establish a symmetric key between two parties that can be used for subsequent communications." The answer is <strong>TRUE</strong>. It assumes the receiver's public key is already shared with the sender.</div></div>
 </section>
 
-<section class="guide-section" id="dh" data-title="Diffie-Hellman Key Exchange">
+<section class="guide-section" id="diffie-hellman" data-title="Diffie-Hellman">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
     <h2 class="section-title">Diffie-Hellman Key Exchange</h2>
   </div>
-  <p class="section-kicker">Two strangers publicly swap numbers and quietly arrive at the same secret — without ever sending it.</p>
-  <p>There are many public-key cryptosystems besides RSA. One of the best known is <strong>not used for encryption</strong>, but for <strong>key exchange</strong>. The question it solves is: <em>can Alice and Bob establish a shared symmetric key without a purely listening attacker being able to obtain it?</em> Finite fields come to our aid.</p>
-  <p><strong>Diffie-Hellman</strong> is the first published algorithm that implemented the public-key (trapdoor) principle. It became the basis for:</p>
-  <ul>
-    <li><strong>Diffie-Hellman Key Exchange</strong></li>
-    <li><strong>ElGamal</strong> encryption/decryption</li>
-    <li>The <strong>Digital Signature Standard (DSA/DSS)</strong></li>
-  </ul>
-  <h3 class="sub-title">The Discrete Logarithm Problem</h3>
-  <p>Just as with factorisation and the e<sup>th</sup> root before, there is another trapdoor problem. It is computationally infeasible to compute a logarithm over a finite field, if the prime number used to construct the field is large enough.</p>
+  <p class="section-kicker">Two people who share nothing secret can each combine a public value with their own private value and arrive at the same secret number, and an eavesdropper who sees everything still cannot.</p>
+  <p>There are many public-key cryptosystems besides RSA, and one of the best known is <strong>not used for encryption at all</strong>. It answers a sharper question: <em>can Alice and Bob establish a shared symmetric key without a purely listening attacker being able to obtain it?</em> Finite fields come to our aid.</p>
+  <p>Diffie-Hellman is the first published algorithm that implemented the public-key (trapdoor) principle, published by Diffie and Hellman in 1976. Its best-known application is secure key exchange, which can then feed symmetric encryption. It also became the basis for <strong>ElGamal encryption/decryption</strong> and the <strong>Digital Signature Standard (DSA/DSS)</strong>.</p>
+  <p>Its security relies on the difficulty of computing discrete logarithms. It is considered computationally infeasible to compute a discrete logarithm over a finite field, provided the prime defining the field is sufficiently large. With additional information, the private key, the computation becomes feasible. And we have already met the problem it rests on.</p>
   <div class="formula">
-    <div class="formula-label">Discrete Logarithm Problem (DLP)</div>
-    <div class="math">Given y, p, g with y = g<sup>x</sup> mod p,<br>where p is prime and g is a primitive root of p,<br>find x.</div>
+    <div class="formula-label">Recap: Discrete Logarithm Problem (DLP)</div>
+    <div class="math">Given y, p, g with y = g<sup>x</sup> mod p, where p is prime and g a primitive root of p, find x.</div>
   </div>
-  <p>But if you have one extra piece of information (the "private key"), it suddenly becomes easy. How do we make use of that?</p>
   <h3 class="sub-title">Finite fields revisited: primitive roots</h3>
-  <p>Let p be prime. We know &#8484;/p&#8484; is a finite field, with elements {0, 1, ..., p − 1}. We can define a new group over the non-zero numbers, &#8484;<sub>p</sub>* = {1, ..., p − 1}, under multiplication.</p>
-  <p>It can be shown that there is a special element <strong>g ∈ &#8484;<sub>p</sub></strong> such that <strong>every</strong> number a ∈ &#8484;<sub>p</sub>* is a power of g. So:</p>
+  <p>Let <span class="math">p</span> be prime. We know <span class="math">ℤ/pℤ</span> is a finite field, whose elements are <span class="math">{0, 1, …, p − 1}</span>. You can define a new group over the non-zero numbers, <span class="math">ℤ<sup>*</sup><sub>p</sub> = {1, …, p − 1}</span>, with multiplication. There is a special element <span class="math">g ∈ ℤ<sub>p</sub></span> such that every number <span class="math">a ∈ ℤ<sup>*</sup><sub>p</sub></span> is a power of <span class="math">g</span>. So:</p>
   <div class="formula">
-    <div class="formula-label">The group generated by g</div>
-    <div class="math">&#8484;<sub>p</sub>* = {g<sup>0</sup> = 1, g<sup>1</sup>, ..., g<sup>p−2</sup>}</div>
+    <div class="formula-label">Primitive root (generator)</div>
+    <div class="math">ℤ<sup>*</sup><sub>p</sub> = {g<sup>0</sup> = 1, g<sup>1</sup>, g<sup>2</sup>, …, g<sup>p−2</sup>} &nbsp;&nbsp; g is called a primitive root of ℤ<sub>p</sub></div>
   </div>
-  <p>The element g is called a <strong>primitive root</strong> (or <strong>generator</strong>) of &#8484;<sub>p</sub>.</p>
-  <h3 class="sub-title">The algorithm</h3>
-  <p>Let p be prime and g a generator for &#8484;<sub>p</sub>*. Both values are publicly known.</p>
-  <div class="flow">
-    <span class="flow-step">Alice picks a &lt; p</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Computes X = g<sup>a</sup> mod p</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Sends X to Bob</span>
-  </div>
-  <div class="flow">
-    <span class="flow-step">Bob picks b &lt; p</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Computes Y = g<sup>b</sup> mod p</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Sends Y to Alice</span>
-  </div>
-  <ol class="steps">
-    <li>Alice chooses a random private value <strong>a &lt; p</strong> and computes <strong>X = g<sup>a</sup> mod p</strong>, then sends X to Bob.</li>
-    <li>Bob chooses a random private value <strong>b &lt; p</strong> and computes <strong>Y = g<sup>b</sup> mod p</strong>, then sends Y to Alice.</li>
-    <li>Alice computes <strong>k = Y<sup>a</sup> mod p</strong>.</li>
-    <li>Bob computes <strong>k = X<sup>b</sup> mod p</strong>.</li>
-  </ol>
-  <p>Both sides get the <em>same</em> k, because the exponents commute:</p>
-  <div class="formula">
-    <div class="formula-label">Why both keys match</div>
-    <div class="math">Y<sup>a</sup> mod p = (g<sup>b</sup>)<sup>a</sup> = g<sup>ab</sup> = (g<sup>a</sup>)<sup>b</sup> = X<sup>b</sup> mod p</div>
-  </div>
-  <p>Here a and b are the private keys; X and Y are the public keys. An adversary who only passively observes the exchange knows p, g, X and Y, and is forced to solve a discrete logarithm (find b such that Y = g<sup>b</sup> mod p) to get the key. For large primes this is computationally infeasible. So DH allows key establishment over an insecure channel — <strong>under a passive attacker</strong>.</p>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Why the shared k is secret:</strong> the eavesdropper sees g, p, g<sup>a</sup> and g<sup>b</sup>, but recovering g<sup>ab</sup> from those values is exactly the hard problem. This is sometimes called the computational Diffie-Hellman assumption.</div></div>
-</section>
-
-<section class="guide-section" id="dh-mitm" data-title="Person-in-the-Middle">
-  <div class="section-head">
-    <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Person-in-the-Middle Attack</h2>
-  </div>
-  <p class="section-kicker">DH has no idea who it is talking to. An active attacker can sit in the middle and hold two separate keys.</p>
-  <p>When the attacker is <strong>active</strong>, standard DH key exchange is not secure. The attacker, Mallory, does not just listen — she <strong>intercepts and replaces</strong> messages, running two independent key exchanges at once.</p>
-  <div class="flow">
-    <span class="flow-step">Alice → X</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Mallory intercepts</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Bob sees X′</span>
-  </div>
-  <div class="flow">
-    <span class="flow-step">Bob → Y</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Mallory intercepts</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Alice sees Y′</span>
-  </div>
-  <ol class="steps">
-    <li>Mallory chooses random private values <strong>c &lt; p</strong> and <strong>d &lt; p</strong>, and computes public values <strong>X′ = g<sup>c</sup> mod p</strong> and <strong>Y′ = g<sup>d</sup> mod p</strong>.</li>
-    <li>When Alice sends X, Mallory keeps it and sends <strong>X′</strong> to Bob instead.</li>
-    <li>When Bob sends Y, Mallory keeps it and sends <strong>Y′</strong> to Alice instead.</li>
-    <li>Alice computes <strong>k<sub>1</sub> = (Y′)<sup>a</sup> mod p</strong>; Bob computes <strong>k<sub>2</sub> = (X′)<sup>b</sup> mod p</strong>.</li>
-    <li>Mallory computes <strong>k<sub>1</sub> = X<sup>c</sup> mod p</strong> (shared with Alice) and <strong>k<sub>2</sub> = Y<sup>d</sup> mod p</strong> (shared with Bob).</li>
-  </ol>
-  <p>Now Alice and Bob each think they share a key with the other, but in reality Alice shares k<sub>1</sub> with Mallory and Bob shares k<sub>2</sub> with Mallory. Mallory can decrypt, read, modify and re-encrypt every future message — a person-in-the-middle attack.</p>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Root cause:</strong> the protocol does <strong>not authenticate the participants</strong>. DH proves you agreed on a key, not who you agreed with.</div></div>
-  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Solution:</strong> use <strong>digital signatures</strong> and <strong>public-key certificates</strong> — each party signs their public key with their private key, and the other party verifies it with the corresponding public key, ensuring the exchanged keys have not been tampered with. This is the <strong>signed Diffie-Hellman</strong> variant, and we discuss signatures and certificates in the next lecture.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> DH is secure against a passive attacker but not an active one. Why can a signature fix this, when the key exchange maths itself is unchanged? (Because it binds each public key to an authenticated identity.)</div></div>
-</section>
-
-<section class="guide-section" id="ecc-intro" data-title="Elliptic Curves: The Idea">
-  <div class="section-head">
-    <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Elliptic Curve Cryptography: Same Idea, Different Group</h2>
-  </div>
-  <p class="section-kicker">Replace modular multiplication with adding points on a curve and you get the same trapdoor with much shorter keys. This topic is non-examinable — for information only.</p>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Scope note:</strong> the following is a very brief introduction to elliptic curve cryptography (ECC). It is marked <strong>non-examinable (for information only)</strong> in the slides, but it is worth understanding because it is where modern cryptography is heading.</div></div>
-  <p>Our schemes so far are defined for rings and fields built with the help of the mod operation — that is, modular arithmetic. <strong>Elliptic curves</strong> E(a, b) are defined by equations of the form:</p>
-  <div class="formula">
-    <div class="formula-label">An elliptic curve</div>
-    <div class="math">y<sup>2</sup> = x<sup>3</sup> + ax + b</div>
-  </div>
-  <p>When defined over a finite field, an elliptic curve produces a <strong>finite set of points</strong>. A <strong>group</strong> can be defined over these points using <strong>point addition</strong>. This lets us define a <strong>Discrete Logarithm Problem for elliptic curves (ECDLP)</strong>, and ECDLP is <strong>harder per bit</strong> than the classical DLP.</p>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why that matters:</strong> because the problem is harder per bit, ECC achieves the <strong>same security with much shorter keys</strong>. Typical ECC keys are <strong>256 bits</strong> (very common) or <strong>384 bits</strong> (high security) — far smaller than RSA's 2048+ bits.</div></div>
-  <h3 class="sub-title">Key transition: classical DH versus ECC</h3>
+  <h3 class="sub-title">The Diffie-Hellman algorithm</h3>
+  <p>Alice and Bob have already agreed on two publicly known values: a prime <span class="math">p</span>, and a primitive root <span class="math">g</span> of <span class="math">p</span>. Then:</p>
   <div class="compare">
-    <div class="compare-col a">
-      <h3>Diffie-Hellman (classical)</h3>
-      <ul>
-        <li><strong>Group:</strong> &#8484;<sub>p</sub>*</li>
-        <li><strong>Operation:</strong> multiplication mod p</li>
-        <li><strong>Computation:</strong> a<sup>k</sup> mod p (repeated multiplication)</li>
-        <li><strong>Security from:</strong> the Discrete Logarithm Problem</li>
-      </ul>
-    </div>
-    <div class="compare-col b">
-      <h3>Elliptic Curve Cryptography</h3>
-      <ul>
-        <li><strong>Elements:</strong> points on a curve over a finite field &#8484;<sub>p</sub></li>
-        <li><strong>Operation:</strong> point addition, kP = P + P + ⋯ + P</li>
-        <li><strong>Hard problem:</strong> given P and Q = kP, recover k</li>
-        <li><strong>Note:</strong> all arithmetic is done modulo p (implicitly)</li>
-      </ul>
-    </div>
+    <div class="compare-col a"><h3>Alice</h3><ul>
+      <li>Choose a random value <span class="math">a &lt; p</span> (kept private).</li>
+      <li>Compute <span class="math">X = g<sup>a</sup> mod p</span>.</li>
+      <li>Send <span class="math">X</span> to Bob.</li>
+      <li>Compute the shared key <span class="math">k = Y<sup>a</sup> mod p</span>.</li>
+    </ul></div>
+    <div class="compare-col b"><h3>Bob</h3><ul>
+      <li>Choose a random value <span class="math">b &lt; p</span> (kept private).</li>
+      <li>Compute <span class="math">Y = g<sup>b</sup> mod p</span>.</li>
+      <li>Send <span class="math">Y</span> to Alice.</li>
+      <li>Compute the shared key <span class="math">k = X<sup>b</sup> mod p</span>.</li>
+    </ul></div>
   </div>
-  <h3 class="sub-title">Geometric intuition</h3>
-  <p>Consider E(1, 1), which is y<sup>2</sup> = x<sup>3</sup> + x + 1. We define <strong>O, the point at infinity</strong>, which acts as the identity element — an imaginary point added to make the maths complete.</p>
-  <p><strong>Point addition</strong> works like this:</p>
-  <ol class="steps">
-    <li>Take two points <strong>P</strong> and <strong>Q</strong> on the curve.</li>
-    <li>Draw the <strong>line through P and Q</strong>.</li>
-    <li>The line intersects the curve at a <strong>third point</strong>.</li>
-    <li><strong>Reflect</strong> that third point across the x-axis. The result is <strong>P + Q</strong>.</li>
-  </ol>
-  <p>Two key properties follow:</p>
-  <ul>
-    <li>The <strong>negative of a point</strong> is −P = (x, −y) — a reflection across the x-axis.</li>
-    <li><strong>Three points on a line sum to zero:</strong> P + Q + R = 0.</li>
-  </ul>
-  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Special case — doubling:</strong> what if P = Q? Then use the <strong>tangent line at P</strong>. The tangent intersects the curve at another point; reflect it across the x-axis and you get <strong>2P</strong>. This is how repeated addition (scalar multiplication) is defined.</div></div>
+  <p>Both sides obtain the same <span class="math">k</span> value, and the algebra shows exactly why:</p>
+  <div class="formula">
+    <div class="formula-label">Why both sides agree</div>
+    <div class="math">Y<sup>a</sup> mod p = (g<sup>b</sup>)<sup>a</sup> = g<sup>(ab)</sup> = (g<sup>a</sup>)<sup>b</sup> = X<sup>b</sup> mod p</div>
+  </div>
+  <p>The numbers <span class="math">a</span> and <span class="math">b</span> are the private keys of A and B, kept secret. The values <span class="math">X</span> and <span class="math">Y</span> are publicly exchanged, so they act as the public keys. Each user selects a random integer less than <span class="math">p</span> and computes their public value. After the exchange, each independently calculates the same key <span class="math">K = Y<sup>a</sup> mod p = X<sup>b</sup> mod p</span>, typically used as a symmetric key.</p>
+  <h3 class="sub-title">Why a passive attacker fails</h3>
+  <p>An adversary who can only passively observe the exchange knows <span class="math">p</span>, <span class="math">g</span>, <span class="math">X</span> and <span class="math">Y</span>, and is forced to take a discrete logarithm to recover one of the private keys. For instance, to find <span class="math">b</span> the adversary needs to solve <span class="math">Y = g<sup>b</sup> mod p</span>, which is the DLP. For large primes this is computationally infeasible, so the shared secret <span class="math">K</span> is considered secure from a passive observer. DH key exchange therefore allows key establishment over an insecure channel, <strong>under a passive attacker</strong>.</p>
 </section>
 
-<section class="guide-section" id="ecc-fields" data-title="Elliptic Curves over Fields">
+<section class="guide-section" id="mitm" data-title="Person-in-the-Middle">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Elliptic Curves over Finite Fields</h2>
+    <h2 class="section-title">The Person-in-the-Middle Attack</h2>
   </div>
-  <p class="section-kicker">Modular arithmetic makes the smooth curve become a scattered set of points — and polynomials can replace numbers entirely.</p>
-  <h3 class="sub-title">Curves over &#8484;<sub>p</sub></h3>
-  <p>We now define elliptic curves over a finite field &#8484;<sub>p</sub>. The curve equation becomes E<sub>p</sub>(a, b):</p>
+  <p class="section-kicker">Diffie-Hellman never checks who is on the other end, so an active attacker can quietly run two separate exchanges and sit in the middle reading everything.</p>
+  <p>While Diffie-Hellman is secure against passive eavesdroppers, it is vulnerable to a <span class="keyterm">person-in-the-middle attack</span> (often called man-in-the-middle). When the attacker is active, standard DH key exchange is not secure.</p>
+  <p>The attacker first observes the publicly shared values of <span class="math">p</span> and <span class="math">g</span>, then generates two separate sets of private and public key pairs. Positioning themselves between Alice and Bob, the attacker intercepts and replaces the messages transmitted during the key exchange:</p>
+  <ol class="steps">
+    <li><strong>Attacker sets up two identities.</strong> Choose random values <span class="math">c, d &lt; p</span>; compute <span class="math">X' = g<sup>c</sup> mod p</span> and <span class="math">Y' = g<sup>d</sup> mod p</span>; send <span class="math">X'</span> to Alice and <span class="math">Y'</span> to Bob.</li>
+    <li><strong>Alice thinks she is talking to Bob.</strong> She chooses random <span class="math">a &lt; p</span>, computes <span class="math">X = g<sup>a</sup> mod p</span>, sends <span class="math">X</span>, and computes <span class="math">k<sub>1</sub> = (X')<sup>a</sup> mod p</span>.</li>
+    <li><strong>Bob thinks he is talking to Alice.</strong> He chooses random <span class="math">b &lt; p</span>, computes <span class="math">Y = g<sup>b</sup> mod p</span>, sends <span class="math">Y</span>, and computes <span class="math">k<sub>2</sub> = (Y')<sup>b</sup> mod p</span>.</li>
+    <li><strong>Attacker completes both exchanges.</strong> The attacker computes <span class="math">k<sub>1</sub> = X<sup>c</sup> mod p</span> and <span class="math">k<sub>2</sub> = Y<sup>d</sup> mod p</span>.</li>
+  </ol>
+  <p>By doing this, the attacker performs two independent key exchanges, one with Alice and one with Bob. At the end, the attacker shares a separate secret key with each of them, <span class="math">K<sub>2</sub></span> with Alice and <span class="math">K<sub>1</sub></span> with Bob, and can use these keys to intercept, read, and replace messages on future communications.</p>
   <div class="formula">
-    <div class="formula-label">Elliptic curve over &#8484;<sub>p</sub></div>
-    <div class="math">y<sup>2</sup> = x<sup>3</sup> + ax + b (mod p)</div>
+    <div class="formula-label">The structural flaw</div>
+    <div class="math">the protocol does NOT authenticate the participants &nbsp;→&nbsp; Alice cannot tell Bob's key from the attacker's key</div>
   </div>
-  <p><strong>Example curve over &#8484;<sub>23</sub>:</strong> consider E<sub>23</sub>(1, 1), that is y<sup>2</sup> = x<sup>3</sup> + x + 1 (mod 23). Check whether the point (x, y) = (9, 7) lies on the curve:</p>
-  <div class="formula">
-    <div class="formula-label">Testing a point</div>
-    <div class="math">7<sup>2</sup> ≡ 9<sup>3</sup> + 1·9 + 1 (mod 23)<br>49 ≡ 739 (mod 23)<br>3 ≡ 3 ✓</div>
-  </div>
-  <p>Since both sides agree, (9, 7) is on the curve. The curve consists of <strong>all pairs (x, y)</strong> satisfying the equation, <strong>plus O</strong>, the point at infinity. This forms a finite set of points.</p>
-  <h3 class="sub-title">Curves over a binary field GF(2<sup>m</sup>)</h3>
-  <p>Previously we used prime fields &#8484;<sub>p</sub>. Now we define curves over <strong>binary fields GF(2<sup>m</sup>)</strong> — we did something similar in AES. Here the elements are <strong>polynomials with coefficients in GF(2)</strong>, i.e. bit strings, and arithmetic is done <strong>modulo an irreducible polynomial</strong>.</p>
-  <div class="formula">
-    <div class="formula-label">Curve equation over GF(2<sup>m</sup>)</div>
-    <div class="math">y<sup>2</sup> + xy = x<sup>3</sup> + ax<sup>2</sup> + b</div>
-  </div>
-  <p>Addition and multiplication happen in GF(2<sup>m</sup>). Let g be a <strong>primitive element (generator)</strong> of GF(2<sup>4</sup>). Every non-zero field element can be expressed as a power of g:</p>
-  <div class="formula">
-    <div class="formula-label">The multiplicative group GF(2<sup>4</sup>)*</div>
-    <div class="math">GF(2<sup>4</sup>)* = {g<sup>0</sup>, g<sup>1</sup>, g<sup>2</sup>, ..., g<sup>14</sup>}</div>
-  </div>
-  <h3 class="sub-title">Example curve and point over GF(2<sup>4</sup>)</h3>
-  <p>Consider the curve y<sup>2</sup> + xy = x<sup>3</sup> + ax<sup>2</sup> + b where a = g<sup>4</sup> and b = 1. Test the point (x, y) = (g<sup>5</sup>, g<sup>3</sup>):</p>
-  <div class="formula">
-    <div class="formula-label">Verification</div>
-    <div class="math">y<sup>2</sup> + xy = x<sup>3</sup> + ax<sup>2</sup> + b<br>(g<sup>3</sup>)<sup>2</sup> + g<sup>5</sup>g<sup>3</sup> = (g<sup>5</sup>)<sup>3</sup> + g<sup>4</sup>(g<sup>5</sup>)<sup>2</sup> + 1<br>g<sup>6</sup> + g<sup>8</sup> = g<sup>15</sup> + g<sup>14</sup> + 1</div>
-  </div>
-  <p>Converting each side to binary and remembering that addition in GF(2) is XOR:</p>
-  <div class="formula">
-    <div class="formula-label">In bits</div>
-    <div class="math">1100 + 0101 = 0001 + 1001 + 001<br>1001 = 1001 ✓</div>
-  </div>
-  <p>Both sides equal 1001, so the point (x, y) = (g<sup>5</sup>, g<sup>3</sup>) is on the curve.</p>
-  <h3 class="sub-title">Properties of GF(2<sup>4</sup>)</h3>
-  <p>We select f(x) = x<sup>4</sup> + x + 1 as the <strong>irreducible polynomial</strong> and g as 0010 (that is, g = x). Now we can develop powers of g. For example, to calculate g<sup>4</sup> which is x<sup>4</sup>: since x<sup>4</sup> is a higher degree than the largest polynomial supported by 4 bits (which is x<sup>3</sup>), we reduce it modulo the irreducible polynomial.</p>
-  <div class="formula">
-    <div class="formula-label">Reducing x<sup>4</sup></div>
-    <div class="math">x<sup>4</sup> = x<sup>4</sup> mod (x<sup>4</sup> + x + 1)<br>= x<sup>4</sup> − (x<sup>4</sup> + x + 1) = x<sup>4</sup> + (x<sup>4</sup> + x + 1) = x + 1<br>so g<sup>4</sup> = 0011</div>
-  </div>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Two GF(2) rules to remember:</strong> (1) in GF(2), addition and subtraction are the same thing — both are <strong>XOR</strong>; (2) adding the same element twice gives zero (a + a = 0). That is why x<sup>4</sup> − (x<sup>4</sup> + x + 1) and x<sup>4</sup> + (x<sup>4</sup> + x + 1) give the same answer, x + 1.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Using g = 0010 and reduction by x<sup>4</sup> + x + 1, what is g<sup>5</sup>? (Multiply g<sup>4</sup> = 0011 by g = 0010: x(x + 1) = x<sup>2</sup> + x = 0110.)</div></div>
+  <p>The key exchange protocol is vulnerable because it does not authenticate the participants. Nothing in the messages proves who generated <span class="math">X</span> or <span class="math">Y</span>, so a forged value is indistinguishable from a genuine one.</p>
+  <h3 class="sub-title">The fix: authentication, signatures and certificates</h3>
+  <p>The solution is <strong>digital signatures and public-key certificates</strong>. Each party signs their public key with their private key, so the other party can verify the authenticity of the exchanged key with the corresponding public key. That guarantees the exchanged values have not been tampered with by an attacker. The result is called <strong>signed Diffie-Hellman</strong>, and the machinery of certificates, a public key plus a trusted signature binding it to an identity, is the basis of <span class="keyterm">Public Key Infrastructure (PKI)</span>, which the lecture discusses next time.</p>
 </section>
 
-<section class="guide-section" id="ecc-crypto" data-title="ECC in Practice">
+<section class="guide-section" id="ecc" data-title="Elliptic Curve Cryptography">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">ECC in Practice: ECDLP, ECDH and EC ElGamal</h2>
+    <h2 class="section-title">Elliptic Curve Cryptography (Non-Examinable)</h2>
   </div>
-  <p class="section-kicker">The same three tricks — hard problem, key exchange, encryption — now played on a group of curve points.</p>
-  <h3 class="sub-title">The elliptic curve discrete logarithm problem</h3>
-  <p>Consider the equation Q = kP, where Q and P are points in E<sub>p</sub>(a, b) and k &lt; p. It is hard to determine k given P and Q — this is the <strong>discrete logarithm problem for elliptic curves</strong>.</p>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Worked example:</strong> consider the group E<sub>23</sub>(9, 17), defined by y<sup>2</sup> mod 23 = (x<sup>3</sup> + 9x + 17) mod 23. Find the discrete logarithm k of Q = (4, 5) to base P = (16, 5). The only way is brute force:<br>P = (16, 5) ⇒ 2P = (20, 20) ⇒ 3P = (14, 14) ⇒ 4P = (19, 20) ⇒ 5P = (13, 10) ⇒ 6P = (7, 3) ⇒ 7P = (8, 7) ⇒ 8P = (12, 17) ⇒ 9P = (4, 5). Since 9P = Q, <strong>k = 9</strong>.</div></div>
-  <p>In practice k would be very large, so brute force is infeasible. That hardness is the security of ECC.</p>
-  <h3 class="sub-title">Elliptic Curve Diffie-Hellman (ECDH)</h3>
-  <p>Both users A and B — and any attacker — know the system-wide public parameters a, b, q, G and n. Here <strong>G is a base point (generator)</strong> on the curve, and <strong>n is the order of G</strong>, meaning nG = O (usually n is chosen to be a large prime).</p>
-  <ol class="steps">
-    <li>Each user computes a public key by scalar multiplication: <strong>P<sub>A</sub> = n<sub>A</sub> × G</strong> and <strong>P<sub>B</sub> = n<sub>B</sub> × G</strong>. This scalar multiplication is efficient.</li>
-    <li>The private keys <strong>n<sub>A</sub></strong> and <strong>n<sub>B</sub></strong> are kept secret.</li>
-    <li>Even knowing P<sub>A</sub> and G, an attacker cannot compute n<sub>A</sub> — that is the ECDLP.</li>
-    <li>Both parties compute the same shared key:
-      <div class="formula">
-        <div class="formula-label">ECDH shared secret</div>
-        <div class="math">n<sub>A</sub> × P<sub>B</sub> = n<sub>A</sub> × (n<sub>B</sub> × G) = n<sub>B</sub> × (n<sub>A</sub> × G) = n<sub>B</sub> × P<sub>A</sub></div>
-      </div>
-    </li>
-  </ol>
-  <p>Security relies on the hardness of the Elliptic Curve Discrete Logarithm Problem.</p>
-  <h3 class="sub-title">EC ElGamal encryption</h3>
-  <p><strong>Public parameters:</strong> an elliptic curve E<sub>q</sub>(a, b), a generator point G with large order n, and the message encoded as a curve point P<sub>m</sub>.</p>
-  <div class="grid grid-2">
-    <div class="card">
-      <h3 class="card-title">👩 Alice (sender)</h3>
-      <ol class="steps">
-        <li>Select private key n<sub>A</sub> where n<sub>A</sub> &lt; n.</li>
-        <li>Compute public key P<sub>A</sub> = n<sub>A</sub> × G.</li>
-        <li>Choose a random integer k (new for each message).</li>
-        <li>Send ciphertext: <strong>C<sub>m</sub> = {kG, P<sub>m</sub> + kP<sub>B</sub>}</strong>.</li>
-      </ol>
-    </div>
-    <div class="card">
-      <h3 class="card-title">👨 Bob (receiver)</h3>
-      <ol class="steps">
-        <li>Select private key n<sub>B</sub> where n<sub>B</sub> &lt; n.</li>
-        <li>Compute public key P<sub>B</sub> = n<sub>B</sub> × G (shared publicly).</li>
-        <li>Receive C<sub>m</sub> = {kG, P<sub>m</sub> + kP<sub>B</sub>}.</li>
-        <li>Recover: <strong>P<sub>m</sub> = (P<sub>m</sub> + kP<sub>B</sub>) − n<sub>B</sub> × (kG)</strong>.</li>
-      </ol>
-    </div>
+  <p class="section-kicker">ECC keeps the public-key idea but swaps the group: instead of multiplying numbers modulo a prime, it adds points on a curve, and the same discrete-log hardness returns with far shorter keys.</p>
+  <p>This section is non-examinable and for information only. Elliptic curves <span class="math">E(a, b)</span> are defined by <span class="math">y<sup>2</sup> = x<sup>3</sup> + ax + b</span>. Over a finite field they produce a finite set of points, and a group can be defined on those points using <strong>point addition</strong>, giving a Discrete Logarithm Problem for elliptic curves (ECDLP). Because ECDLP is harder per bit than the classical DLP, ECC reaches the same security with much shorter keys, typically <strong>256 bits</strong> (very common) or <strong>384 bits</strong> (high security).</p>
+  <div class="compare">
+    <div class="compare-col a"><h3>Diffie-Hellman (classical)</h3><ul>
+      <li>Group: <span class="math">&#8484;<sup>*</sup><sub>p</sub></span>.</li>
+      <li>Operation: multiplication mod <span class="math">p</span>.</li>
+      <li>Computation: <span class="math">a<sup>k</sup> mod p</span>.</li>
+      <li>Security from the DLP.</li>
+    </ul></div>
+    <div class="compare-col b"><h3>ECC (same idea, new group)</h3><ul>
+      <li>Elements: points on a curve over <span class="math">&#8484;<sub>p</sub></span>.</li>
+      <li>Operation: point addition, <span class="math">kP = P + P + &#8943; + P</span>.</li>
+      <li>Given <span class="math">P</span> and <span class="math">Q = kP</span>, recovering <span class="math">k</span> is infeasible.</li>
+    </ul></div>
   </div>
-  <p>Here kP<sub>B</sub> acts as a <strong>one-time mask</strong> on P<sub>m</sub> — the embedded ECDH shared secret. It works because n<sub>B</sub> × (kG) = k × (n<sub>B</sub>G) = kP<sub>B</sub>, so the mask cancels out.</p>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Why k must be random and fresh each time:</strong> reusing k for two different messages leaks information. An attacker can XOR the two ciphertexts and eliminate the mask, exposing the relationship between the messages. A fresh k per message prevents this.</div></div>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Worked example:</strong> global parameters E<sub>257</sub>(0, −4): y<sup>2</sup> = x<sup>3</sup> − 4, with G(2, 2). Bob's private key n<sub>B</sub> = 101 gives public key P<sub>B</sub> = 101(2, 2) = (197, 167). Alice wants to send P<sub>m</sub> = (112, 26) and chooses k = 41. She computes kG = 41(2, 2) = (136, 128) and kP<sub>B</sub> = 41(197, 167) = (68, 84), so P<sub>m</sub> + kP<sub>B</sub> = (112, 26) + (68, 84) = (246, 174). She sends C<sub>m</sub> = {(136, 128), (246, 174)}. Bob recovers (246, 174) − 101(136, 128) = (246, 174) − (68, 84) = (112, 26) = P<sub>m</sub>.</div></div>
-  <h3 class="sub-title">Security of ECC and key sizes</h3>
-  <p>The security of ECC depends on how difficult it is to determine k given kP — the elliptic curve logarithm problem. Comparison tables of algorithms show <strong>comparable key sizes in terms of the computational effort needed for cryptanalysis</strong>. The headline point to remember is the <strong>key length difference between RSA and ECC</strong>: to reach the same security level, ECC needs far fewer bits than RSA.</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Property</th><th>RSA</th><th>ECC</th></tr></thead>
-      <tbody>
-        <tr><td>Hard problem</td><td>Factoring / e<sup>th</sup> roots</td><td>Elliptic curve discrete log</td></tr>
-        <tr><td>Typical key size</td><td>2048 bits and more</td><td>256 bits (common), 384 bits (high security)</td></tr>
-        <tr><td>Hardness per bit</td><td>Lower</td><td>Higher — ECDLP is harder per bit</td></tr>
-      </tbody>
-    </table>
+  <h3 class="sub-title">The idea, and a worked check</h3>
+  <p>Add an imaginary point <span class="math">O</span>, the <strong>point at infinity</strong>, as the identity. To add points <span class="math">P</span> and <span class="math">Q</span>, draw the line through them, find where it meets the curve a third time, and reflect that point across the x-axis. The negative of a point is its reflection, <span class="math">&#8722;P = (x, &#8722;y)</span>, and three points on a line sum to zero, <span class="math">P + Q + R = 0</span>. When <span class="math">P = Q</span>, use the tangent at <span class="math">P</span> to get <span class="math">2P</span>; repeated doubling computes <span class="math">kP</span> efficiently.</p>
+  <p>Over a finite field the curve is <span class="math">E<sub>p</sub>(a,b): y<sup>2</sup> = x<sup>3</sup> + ax + b (mod p)</span>. On <span class="math">E<sub>23</sub>(1,1): y<sup>2</sup> = x<sup>3</sup> + x + 1 (mod 23)</span>, the point <span class="math">(9,7)</span> lies on the curve because <span class="math">7<sup>2</sup> &#8801; 9<sup>3</sup> + 9 + 1</span>, i.e. both sides equal <span class="math">3 (mod 23)</span>. The curve is all such pairs plus <span class="math">O</span>. ECC also works over binary fields <span class="math">GF(2<sup>m</sup>)</span> (recall AES), where elements are polynomials, arithmetic is modulo an irreducible polynomial, and the curve is <span class="math">y<sup>2</sup> + xy = x<sup>3</sup> + ax<sup>2</sup> + b</span>.</p>
+  <p>For the ECDLP, take <span class="math">Q = kP</span> with <span class="math">P, Q &#8712; E<sub>p</sub>(a,b)</span> and <span class="math">k &lt; p</span>; finding <span class="math">k</span> is hard. On <span class="math">E<sub>23</sub>(9,17)</span> the discrete log of <span class="math">Q = (4,5)</span> to base <span class="math">P = (16,5)</span> can only be brute-forced:</p>
+  <div class="formula">
+    <div class="formula-label">Walking the group to reach Q</div>
+    <div class="math">P=(16,5) &#8594; 2P=(20,20) &#8594; 3P=(14,14) &#8594; 4P=(19,20) &#8594; 5P=(13,10)<br>&#8594; 6P=(7,3) &#8594; 7P=(8,7) &#8594; 8P=(12,17) &#8594; 9P=(4,5) &#8658; k = 9</div>
   </div>
+  <h3 class="sub-title">ECDH and EC ElGamal</h3>
+  <p>In <strong>ECDH</strong> the parameters <span class="math">a, b, q, G, n</span> are system-wide; <span class="math">G</span> is a base point and <span class="math">n</span> its order (<span class="math">nG = O</span>). Each side computes a public point <span class="math">P<sub>A</sub> = n<sub>A</sub> &#215; G</span> or <span class="math">P<sub>B</sub> = n<sub>B</sub> &#215; G</span> and keeps the scalar secret; an attacker with <span class="math">P<sub>A</sub></span> and <span class="math">G</span> cannot compute <span class="math">n<sub>A</sub></span>. Both reach the same key:</p>
+  <div class="formula">
+    <div class="formula-label">ECDH shared secret</div>
+    <div class="math">n<sub>A</sub> &#8727; P<sub>B</sub> = n<sub>A</sub> &#8727; (n<sub>B</sub> &#8727; G) = n<sub>B</sub> &#8727; (n<sub>A</sub> &#8727; G) = n<sub>B</sub> &#8727; P<sub>A</sub></div>
+  </div>
+  <p><strong>EC ElGamal</strong> encrypts a message encoded as a curve point <span class="math">P<sub>m</sub></span>: Alice sends <span class="math">C<sub>m</sub> = {kG, P<sub>m</sub> + kP<sub>B</sub>}</span> with a fresh random <span class="math">k</span>, and Bob recovers <span class="math">P<sub>m</sub> = (P<sub>m</sub> + kP<sub>B</sub>) &#8722; n<sub>B</sub> &#215; (kG)</span>. The term <span class="math">kP<sub>B</sub></span> is a one-time mask, the embedded ECDH shared secret, and it cancels because <span class="math">n<sub>B</sub> &#215; (kG) = k &#215; (n<sub>B</sub>G) = kP<sub>B</sub></span>. Reusing <span class="math">k</span> lets an attacker combine two ciphertexts and strip the mask, so <span class="math">k</span> is fresh per message.</p>
+  <p>ECC's security depends on the hardness of finding <span class="math">k</span> given <span class="math">kP</span> and <span class="math">P</span>, and its keys are far shorter than RSA's for the same strength, so "a considerably larger key size can be used for ECC compared to RSA" is <strong>FALSE</strong>.</p>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">&#9989;</div><div class="callout-body"><strong>Key idea:</strong> ECC is the same trapdoor story in a richer group. The hard problem is the elliptic-curve discrete log, the payoff is small keys, and it powers ECDH and EC ElGamal. It is non-examinable, so focus on the big picture.</div></div>
 </section>
-
 <section class="guide-section" id="pqc" data-title="Post-Quantum Cryptography">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
     <h2 class="section-title">Post-Quantum Cryptography</h2>
   </div>
-  <p class="section-kicker">Quantum computers break asymmetric crypto outright and merely weaken symmetric crypto — so we halve the damage by doubling key sizes and design new algorithms.</p>
-  <h3 class="sub-title">Breaking asymmetric cryptography</h3>
-  <ul>
-    <li><strong>Shor's algorithm</strong> can efficiently <strong>factor large numbers</strong> and <strong>compute discrete logarithms</strong>.</li>
-    <li>Therefore <strong>RSA, Diffie-Hellman key exchange and ECC will all be vulnerable</strong> once a sufficiently powerful quantum computer exists.</li>
-  </ul>
-  <h3 class="sub-title">Symmetric cryptography is more resilient</h3>
-  <ul>
-    <li><strong>Grover's algorithm</strong> provides only a <strong>quadratic speedup</strong> for brute-forcing the keys of symmetric ciphers.</li>
-    <li>So a symmetric key's effective security level is <strong>halved</strong>: a 256-bit key would offer security comparable to a 128-bit key against a quantum adversary.</li>
-    <li>The solution is <strong>doubling key sizes</strong>.</li>
-  </ul>
+  <p class="section-kicker">Quantum computers do not break all cryptography equally: they gut the asymmetric schemes this whole week is built on, while only halving the strength of symmetric ciphers.</p>
+  <p>Post-Quantum Cryptography (PQC) focuses on developing algorithms that remain secure even in the presence of quantum computational power. The threat splits neatly along the symmetric/asymmetric fault line.</p>
   <div class="compare">
-    <div class="compare-col a">
-      <h3>Asymmetric under quantum attack</h3>
-      <ul>
-        <li>Broken by <strong>Shor's algorithm</strong>.</li>
-        <li>RSA, DH and ECC all vulnerable.</li>
-        <li>No easy fix by enlarging keys.</li>
-      </ul>
-    </div>
-    <div class="compare-col b">
-      <h3>Symmetric under quantum attack</h3>
-      <ul>
-        <li>Weakened (not broken) by <strong>Grover's algorithm</strong>.</li>
-        <li>Effective security is halved.</li>
-        <li>Fix: <strong>double the key length</strong>.</li>
-      </ul>
-    </div>
+    <div class="compare-col a"><h3>Asymmetric: badly broken</h3><ul>
+      <li><strong>Shor's algorithm</strong> can efficiently factor large numbers and compute discrete logarithms.</li>
+      <li>So <strong>RSA, Diffie-Hellman key exchange and ECC will be vulnerable</strong>.</li>
+      <li>The hard problems we relied on all week stop being hard.</li>
+    </ul></div>
+    <div class="compare-col b"><h3>Symmetric: merely weakened</h3><ul>
+      <li><strong>Grover's algorithm</strong> gives only a quadratic speedup for brute-forcing symmetric keys.</li>
+      <li>A symmetric key's effective security level is <strong>halved</strong>.</li>
+      <li>A 256-bit key offers security comparable to 128 bits against a quantum adversary.</li>
+      <li><strong>Doubling key sizes</strong> is the solution.</li>
+    </ul></div>
   </div>
-  <h3 class="sub-title">Post-quantum cryptography (PQC)</h3>
-  <p>PQC focuses on developing algorithms that remain secure even in the presence of quantum computational power. Key families include:</p>
+  <div class="formula">
+    <div class="formula-label">The quantum scoreboard</div>
+    <div class="math">Shor: factor + discrete log → RSA / DH / ECC broken<br>Grover: quadratic speedup → symmetric security halved → double key size</div>
+  </div>
+  <p>This is why the lecture says Australia plans to get rid of RSA by 2030, and why "this is for now" was attached to RSA's security. A record of encrypted traffic captured today could be decrypted later once a capable quantum computer exists.</p>
+  <h3 class="sub-title">The candidate replacements</h3>
   <div class="grid grid-3">
-    <div class="card">
-      <h3 class="card-title">🧱 Lattice-based</h3>
-      <p>Based on the hardness of problems related to <strong>lattice structures in high-dimensional spaces</strong>.</p>
-    </div>
-    <div class="card">
-      <h3 class="card-title">🧮 Code-based</h3>
-      <p>Relies on the hardness of <strong>decoding random linear codes</strong>.</p>
-    </div>
-    <div class="card">
-      <h3 class="card-title">#️⃣ Hash-based</h3>
-      <p>Leverages the <strong>security properties of hash functions</strong> for cryptographic tasks.</p>
-    </div>
+    <div class="card"><h3 class="card-title">🔷 Lattice-based</h3><p>Based on the hardness of problems related to lattice structures in high-dimensional spaces.</p></div>
+    <div class="card"><h3 class="card-title">🧱 Code-based</h3><p>Relies on the hardness of decoding random linear codes.</p></div>
+    <div class="card"><h3 class="card-title">#️⃣ Hash-based</h3><p>Leverages the security properties of hash functions for cryptographic tasks.</p></div>
   </div>
-  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> <strong>Shor</strong> <em>shatters</em> asymmetric crypto; <strong>Grover</strong> only <em>halves</em> symmetric crypto. "Shor = shatter, Grover = halve."</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A 128-bit symmetric key would have how much effective security against a quantum adversary? (About 64 bits — so you would double it to 256 bits.)</div></div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember:</strong> <strong>Shor kills the asymmetric world</strong> (factorisation, discrete logs, elliptic curves) and <strong>Grover merely tires the symmetric world</strong> (halve the security level, double the keys). If an exam asks which is more vulnerable to quantum computing, the answer is asymmetric cryptography.</div></div>
 </section>
 
 <section class="guide-section" id="takeaways" data-title="Key Takeaways">
-  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
-  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Key Takeaways</h2>
+  </div>
+  <p class="section-kicker">If you remember nothing else from this week, hold on to these twelve points.</p>
   <div class="takeaways">
-    <div class="takeaway"><span class="tk-num">1</span><p><strong>Public-key (asymmetric) cryptography uses two keys:</strong> a public key anyone may use and a private key only the owner holds. It is built on mathematical problems with special properties — but there is <strong>no proof</strong> they are hard.</p></div>
-    <div class="takeaway"><span class="tk-num">2</span><p><strong>Two directions of trust:</strong> encrypt with the public key and decrypt with the private key for <strong>confidentiality</strong>; encrypt with the private key and decrypt with the public key for <strong>origin authentication</strong> and digital signatures.</p></div>
-    <div class="takeaway"><span class="tk-num">3</span><p><strong>RSA and Elliptic Curve do all three jobs</strong> (encryption, signatures, key exchange); <strong>Diffie-Hellman only does key exchange</strong>; <strong>DSS only signs</strong>.</p></div>
-    <div class="takeaway"><span class="tk-num">4</span><p><strong>A trapdoor one-way function</strong> is easy forwards, infeasible to reverse, and easy to reverse with the trapdoor. The classic candidates are the <strong>Discrete Logarithm Problem</strong> and the <strong>RSA problem</strong>.</p></div>
-    <div class="takeaway"><span class="tk-num">5</span><p><strong>Number theory toolkit:</strong> coprimes share only 1; &#8484;*<sub>n</sub> is the set of integers less than n coprime to n; Euler's totient ɸ counts them, and for n = p · q, <strong>ɸ(n) = (p − 1)(q − 1)</strong>.</p></div>
-    <div class="takeaway"><span class="tk-num">6</span><p><strong>RSA key generation:</strong> pick primes p ≠ q; n = p · q; ɸ(n) = (p − 1)(q − 1); choose e coprime to ɸ(n); find d = e<sup>−1</sup> mod ɸ(n). Public key (e, n), private key (d, n), then delete p, q and ɸ(n).</p></div>
-    <div class="takeaway"><span class="tk-num">7</span><p><strong>RSA encryption is c = m<sup>e</sup> mod n and decryption is m = c<sup>d</sup> mod n.</strong> It works over &#8484;/n&#8484; because exponentiation there is fast, while the e<sup>th</sup> root is infeasible. RSA only encrypts numbers, so characters must be mapped to numbers.</p></div>
-    <div class="takeaway"><span class="tk-num">8</span><p><strong>RSA security rests on</strong> the infeasibility of e<sup>th</sup> roots and of factoring n. Use very large, well-separated primes (2048+ bits), never implement RSA yourself, and note that Australia plans to phase it out by 2030.</p></div>
-    <div class="takeaway"><span class="tk-num">9</span><p><strong>Five attacks on RSA:</strong> brute force, mathematical (≈ factoring), timing, hardware fault-based, and chosen ciphertext (malleability).</p></div>
-    <div class="takeaway"><span class="tk-num">10</span><p><strong>Never use RSA without padding.</strong> Vanilla RSA is malleable (a CCA) and deterministic (a CPA, no semantic security). Padding with <strong>OAEP</strong> adds randomness and makes it secure.</p></div>
-    <div class="takeaway"><span class="tk-num">11</span><p><strong>Hybrid encryption</strong> uses RSA to share a fast symmetric key, then encrypts the message symmetrically. Almost all real public-key encryption works this way.</p></div>
-    <div class="takeaway"><span class="tk-num">12</span><p><strong>Diffie-Hellman</strong> lets two parties agree on a shared key using finite fields and the DLP. It is secure against passive attackers but not <strong>person-in-the-middle</strong> attacks; digital signatures and certificates (signed DH) fix that. <strong>ECC</strong> achieves the same security with far shorter keys, and <strong>Shor's algorithm</strong> threatens RSA, DH and ECC alike.</p></div>
+    <div class="takeaway"><span class="tk-num">1</span><p><strong>Public-key cryptography solves the key-distribution problem.</strong> Two parties who have never met can communicate securely because a public key can be published while the private key stays secret.</p></div>
+    <div class="takeaway"><span class="tk-num">2</span><p><strong>One key pair, two jobs.</strong> Encrypt with the receiver's public key for <strong>confidentiality</strong>; encrypt with your own private key for <strong>origin authentication</strong> (digital signatures). Do not use the same pair for both in practice.</p></div>
+    <div class="takeaway"><span class="tk-num">3</span><p><strong>Everything rests on a trapdoor one-way function:</strong> easy forwards for everyone, easy backwards only with the trapdoor (the private key), infeasible backwards without it.</p></div>
+    <div class="takeaway"><span class="tk-num">4</span><p><strong>Two classic hard problems:</strong> the <strong>discrete logarithm problem</strong> (Diffie-Hellman) and the <strong>RSA problem</strong>, finding the <span class="math">e<sup>th</sup></span> root (RSA), which is equivalent to factoring.</p></div>
+    <div class="takeaway"><span class="tk-num">5</span><p><strong>Busy maths toolkit:</strong> coprime numbers, the group <span class="math">ℤ<sup>*</sup><sub>n</sub></span>, Euler's totient <span class="math">ɸ(pq) = (p − 1)(q − 1)</span>, exponentiation by squaring, and the modular inverse.</p></div>
+    <div class="takeaway"><span class="tk-num">6</span><p><strong>RSA key generation:</strong> pick primes <span class="math">p, q</span>; set <span class="math">n = pq</span> and <span class="math">ɸ(n) = (p − 1)(q − 1)</span>; choose <span class="math">e</span> coprime to <span class="math">ɸ(n)</span>; set <span class="math">d ≡ e<sup>−1</sup> mod ɸ(n)</span>; delete <span class="math">p, q, ɸ(n)</span>. Public <span class="math">(e, n)</span>, private <span class="math">(d, n)</span>.</p></div>
+    <div class="takeaway"><span class="tk-num">7</span><p><strong>RSA encryption is <span class="math">c = m<sup>e</sup> mod n</span>, decryption is <span class="math">m = c<sup>d</sup> mod n</span>.</strong> Correct because <span class="math">e·d ≡ 1 mod ɸ(n)</span>, so <span class="math">(m<sup>e</sup>)<sup>d</sup> ≡ m</span>. It encrypts numbers in blocks below <span class="math">n</span>.</p></div>
+    <div class="takeaway"><span class="tk-num">8</span><p><strong>RSA security needs large, well-chosen primes:</strong> 2048 bits and above, <span class="math">p</span> and <span class="math">q</span> far apart in size. Never implement RSA yourself for production.</p></div>
+    <div class="takeaway"><span class="tk-num">9</span><p><strong>Five attack families:</strong> brute force, mathematical (equivalent to factoring), timing, hardware fault-based, and chosen ciphertext (malleability).</p></div>
+    <div class="takeaway"><span class="tk-num">10</span><p><strong>Never use RSA without padding.</strong> Vanilla RSA is deterministic and malleable, vulnerable to CPA and CCA. Modern RSA uses <strong>OAEP</strong> to add randomness and restore semantic security.</p></div>
+    <div class="takeaway"><span class="tk-num">11</span><p><strong>Almost all real use is hybrid:</strong> RSA establishes a random symmetric key, which then encrypts the bulk data. This sidesteps RSA's slowness (100–1000× slower than AES) and its character-to-number mapping problem.</p></div>
+    <div class="takeaway"><span class="tk-num">12</span><p><strong>Diffie-Hellman exchanges a key but authenticates nobody.</strong> It is secure against passive attackers (who must solve the DLP) but falls to an active person-in-the-middle attack, fixed by digital signatures and public-key certificates. Quantum computing, via Shor and Grover, threatens all of it.</p></div>
   </div>
 </section>
 
 <section class="guide-section" id="glossary" data-title="Glossary">
-  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
-  <p class="section-kicker">Every term you need to speak this week's language.</p>
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Glossary</h2>
+  </div>
+  <p class="section-kicker">Every load-bearing term from this week, grouped so you can filter to what you need.</p>
   <div class="glossary-tools">
     <button class="chip active" type="button" data-cat="all">All</button>
     <button class="chip" type="button" data-cat="concept">Core concepts</button>
-    <button class="chip" type="button" data-cat="rsa">RSA &amp; attacks</button>
-    <button class="chip" type="button" data-cat="keyexchange">Key exchange</button>
-    <button class="chip" type="button" data-cat="ecc">Elliptic curves &amp; PQC</button>
+    <button class="chip" type="button" data-cat="algorithm">Algorithms &amp; protocols</button>
+    <button class="chip" type="button" data-cat="attack">Attacks</button>
+    <button class="chip" type="button" data-cat="math">Maths</button>
   </div>
   <div class="terms">
-    <div class="term-card" data-cat="concept"><div class="term-name">Symmetric cryptography</div><div class="term-meaning">Cryptography that uses the same shared key for both encryption and decryption, relying on substitution (confusion) and permutation (diffusion) to secure data.</div></div>
-    <div class="term-card" data-cat="concept"><div class="term-name">Asymmetric (public-key) cryptography</div><div class="term-meaning">Cryptography that uses two distinct but related keys — a public key and a private key — and relies on mathematical functions with special properties beyond substitution and permutation.</div></div>
-    <div class="term-card" data-cat="concept"><div class="term-name">Public key</div><div class="term-meaning">The key that is distributed openly to everyone. Anyone may use it to encrypt a message to its owner, or to verify the owner's signature.</div></div>
-    <div class="term-card" data-cat="concept"><div class="term-name">Private key</div><div class="term-meaning">The companion key that is kept secret. Only its owner can use it to decrypt a message encrypted with the public key, or to create a signature.</div></div>
-    <div class="term-card" data-cat="concept"><div class="term-name">Confidentiality</div><div class="term-meaning">The security service achieved by encrypting with the receiver's public key and decrypting with their private key. Anyone can encrypt; only the receiver can decrypt.</div></div>
-    <div class="term-card" data-cat="concept"><div class="term-name">Origin authentication</div><div class="term-meaning">The security service achieved by encrypting (signing) with the sender's private key and decrypting (verifying) with their public key. Anyone can verify, but only the true owner could have produced it.</div></div>
-    <div class="term-card" data-cat="concept"><div class="term-name">Digital signature</div><div class="term-meaning">A key application of public-key cryptography in which a sender signs with their private key so that anyone with the public key can verify the origin of a message.</div></div>
-    <div class="term-card" data-cat="concept"><div class="term-name">Trapdoor one-way function</div><div class="term-meaning">A function that is easy to compute in one direction but computationally difficult to invert without additional information called the trapdoor (the private key).</div></div>
-    <div class="term-card" data-cat="concept"><div class="term-name">Coprime</div><div class="term-meaning">Two numbers are coprime if they share only one divisor, and that divisor is 1. For example, 8 and 27.</div></div>
-    <div class="term-card" data-cat="concept"><div class="term-name">Euler's totient function (ɸ)</div><div class="term-meaning">Also called the phi function, it counts the number of elements in &#8484;*<sub>n</sub>. When n = p · q with p ≠ q prime, ɸ(n) = (p − 1)(q − 1).</div></div>
-    <div class="term-card" data-cat="concept"><div class="term-name">Discrete Logarithm Problem (DLP)</div><div class="term-meaning">Given y, p and g satisfying y = g<sup>x</sup> mod p, where p is prime and g is a primitive root of p, find x. It is believed infeasible for large p.</div></div>
-    <div class="term-card" data-cat="concept"><div class="term-name">RSA problem</div><div class="term-meaning">Given c = m<sup>e</sup> mod n and the known values c, e and n, find m. It is equivalent in difficulty to taking an e<sup>th</sup> root modulo n.</div></div>
-    <div class="term-card" data-cat="rsa"><div class="term-name">Modulus (n)</div><div class="term-meaning">In RSA, the value n = p · q that both the public and private keys share. Its hardness to factor is what protects the scheme.</div></div>
-    <div class="term-card" data-cat="rsa"><div class="term-name">RSA</div><div class="term-meaning">The Rivest–Shamir–Adleman scheme, developed in 1977 at MIT. It encrypts plaintext in blocks with a binary value less than n, using c = m<sup>e</sup> mod n and m = c<sup>d</sup> mod n.</div></div>
-    <div class="term-card" data-cat="rsa"><div class="term-name">Malleability</div><div class="term-meaning">In RSA, the property that an attacker can modify a ciphertext in a predictable way so the decrypted plaintext changes predictably, without knowing the private key. It enables chosen ciphertext attacks.</div></div>
-    <div class="term-card" data-cat="rsa"><div class="term-name">Semantic security</div><div class="term-meaning">A cryptosystem is semantically secure when only a small amount of information about the plaintext can be extracted from the ciphertext. Textbook RSA lacks it because it has no randomness.</div></div>
-    <div class="term-card" data-cat="rsa"><div class="term-name">Chosen ciphertext attack (CCA)</div><div class="term-meaning">An attack where the adversary can get chosen ciphertexts decrypted. RSA's malleability makes unpadded RSA vulnerable to it.</div></div>
-    <div class="term-card" data-cat="rsa"><div class="term-name">Chosen plaintext attack (CPA)</div><div class="term-meaning">An attack where the adversary can encrypt likely messages and compare the results to a given ciphertext. RSA's determinism makes it vulnerable.</div></div>
-    <div class="term-card" data-cat="rsa"><div class="term-name">OAEP (Optimal Asymmetric Encryption Padding)</div><div class="term-meaning">The modern padding scheme for RSA. It adds randomness on encryption and removes it on decryption, giving semantic security.</div></div>
-    <div class="term-card" data-cat="rsa"><div class="term-name">Hybrid encryption</div><div class="term-meaning">Using public-key encryption to share a fast symmetric key, then encrypting the actual message symmetrically. Almost all public-key encryption in practice works this way.</div></div>
-    <div class="term-card" data-cat="keyexchange"><div class="term-name">Diffie-Hellman key exchange</div><div class="term-meaning">The first published public-key algorithm (1976). It lets two parties agree on a shared secret over an insecure channel using finite fields and the DLP, without ever transmitting the secret.</div></div>
-    <div class="term-card" data-cat="keyexchange"><div class="term-name">Primitive root (generator)</div><div class="term-meaning">An element g of &#8484;<sub>p</sub> such that every non-zero element of the field is a power of g. So &#8484;<sub>p</sub>* = {g<sup>0</sup>, g<sup>1</sup>, ..., g<sup>p−2</sup>}.</div></div>
-    <div class="term-card" data-cat="keyexchange"><div class="term-name">Finite field</div><div class="term-meaning">A field with a finite number of elements, such as &#8484;/p&#8484; for prime p. Diffie-Hellman is based on finite fields.</div></div>
-    <div class="term-card" data-cat="keyexchange"><div class="term-name">Person-in-the-middle attack</div><div class="term-meaning">An active attack on Diffie-Hellman where the adversary intercepts and replaces public values, running two separate key exchanges and establishing separate keys with each party.</div></div>
-    <div class="term-card" data-cat="keyexchange"><div class="term-name">Signed Diffie-Hellman</div><div class="term-meaning">A modified Diffie-Hellman exchange in which each party signs their public key with their private key, so the other party can verify authenticity and resist person-in-the-middle attacks.</div></div>
-    <div class="term-card" data-cat="ecc"><div class="term-name">Elliptic curve</div><div class="term-meaning">A curve defined by y<sup>2</sup> = x<sup>3</sup> + ax + b. Over a finite field it yields a finite set of points on which a group can be defined using point addition.</div></div>
-    <div class="term-card" data-cat="ecc"><div class="term-name">Point at infinity (O)</div><div class="term-meaning">The imaginary identity element of the elliptic curve group, added so that three collinear points sum to zero and the group is complete.</div></div>
-    <div class="term-card" data-cat="ecc"><div class="term-name">Point addition</div><div class="term-meaning">The elliptic curve group operation. To add P and Q, draw the line through them, find the third intersection with the curve, and reflect it across the x-axis. If P = Q, use the tangent at P to get 2P.</div></div>
-    <div class="term-card" data-cat="ecc"><div class="term-name">ECDLP</div><div class="term-meaning">The Elliptic Curve Discrete Logarithm Problem: given points P and Q = kP, recover k. It is harder per bit than the classical DLP, which is why ECC keys are shorter.</div></div>
-    <div class="term-card" data-cat="ecc"><div class="term-name">ECDH</div><div class="term-meaning">Elliptic Curve Diffie-Hellman: the curve-based analogue of DH, where public keys are P<sub>A</sub> = n<sub>A</sub> × G and P<sub>B</sub> = n<sub>B</sub> × G, and both sides compute the same shared secret.</div></div>
-    <div class="term-card" data-cat="ecc"><div class="term-name">EC ElGamal</div><div class="term-meaning">An elliptic curve encryption scheme in which the ciphertext is C<sub>m</sub> = {kG, P<sub>m</sub> + kP<sub>B</sub>}, with kP<sub>B</sub> acting as a one-time mask that Bob can cancel using his private key.</div></div>
-    <div class="term-card" data-cat="ecc"><div class="term-name">Post-quantum cryptography (PQC)</div><div class="term-meaning">Algorithms designed to remain secure against quantum computers. Families include lattice-based, code-based and hash-based cryptography.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Public-key cryptography</div><div class="term-meaning">A paradigm using two distinct keys, one published and one secret, instead of one shared key. Also called asymmetric cryptography.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Public key</div><div class="term-meaning">The half of a key pair distributed freely and used to encrypt, or to verify a signature.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Private key</div><div class="term-meaning">The half of a key pair kept confidential. It decrypts what the public key encrypted and signs to prove origin. Also called the trapdoor.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Digital signature</div><div class="term-meaning">A key application of public-key cryptography giving origin authentication: the sender signs with their private key and anyone verifies with the public key.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Hybrid encryption</div><div class="term-meaning">Using public-key encryption to establish a random symmetric key, then using that key to encrypt the bulk data. Used by almost all practical systems.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Key-distribution problem</div><div class="term-meaning">Getting a shared symmetric key to both parties securely over an insecure channel; public-key cryptography is the standard solution.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">RSA</div><div class="term-meaning">The Rivest-Shamir-Adleman public-key scheme (1977): keys from two primes, encrypt c = m^e mod n, decrypt m = c^d mod n. Security rests on factoring n and the e-th root.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">OAEP</div><div class="term-meaning">Optimal Asymmetric Encryption Padding: modern RSA padding that adds randomness on encryption and removes it on decryption, so the same plaintext encrypts differently each time.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">Diffie-Hellman key exchange</div><div class="term-meaning">The first published public-key algorithm (1976). Two parties combine public values with private exponents to derive the same shared key over an insecure channel.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">Elliptic Curve Cryptography (ECC)</div><div class="term-meaning">Public-key cryptography over point addition on elliptic curves. Same ideas as RSA and DH but with much shorter keys (256 or 384 bits). Non-examinable.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">ECDH</div><div class="term-meaning">Elliptic Curve Diffie-Hellman: each side computes a public point nG and both reach n_A&#183;P_B = n_B&#183;P_A, secure under the ECDLP.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">Post-quantum cryptography (PQC)</div><div class="term-meaning">Algorithms designed to stay secure against quantum computers, drawn from lattice-based, code-based and hash-based cryptography.</div></div>
+    <div class="term-card" data-cat="attack"><div class="term-name">Person-in-the-middle attack</div><div class="term-meaning">An active attack on Diffie-Hellman in which the adversary runs two separate key exchanges, one with each party, and relays messages between them.</div></div>
+    <div class="term-card" data-cat="attack"><div class="term-name">Malleability</div><div class="term-meaning">An attacker modifies a ciphertext predictably (c' = c&#183;r^e mod n) so the decrypted plaintext changes predictably (to r&#183;m), without knowing the private key.</div></div>
+    <div class="term-card" data-cat="attack"><div class="term-name">Chosen ciphertext attack (CCA)</div><div class="term-meaning">An attack in which the adversary submits chosen ciphertexts and observes their decryptions. Vanilla RSA is vulnerable because of malleability.</div></div>
+    <div class="term-card" data-cat="attack"><div class="term-name">Chosen plaintext attack (CPA)</div><div class="term-meaning">An attack in which the adversary encrypts chosen plaintexts and compares the results. Deterministic textbook RSA is vulnerable.</div></div>
+    <div class="term-card" data-cat="math"><div class="term-name">Discrete logarithm problem (DLP)</div><div class="term-meaning">Given prime p, primitive root g and y, find x with g^x &#8801; y (mod p). Easy forwards, believed infeasible backwards for large p. Underpins Diffie-Hellman.</div></div>
+    <div class="term-card" data-cat="math"><div class="term-name">RSA problem</div><div class="term-meaning">Given c = m^e mod n along with c, e and n, find m. Believed infeasible for suitable n, and equivalent in effort to factoring n.</div></div>
+    <div class="term-card" data-cat="math"><div class="term-name">Coprime</div><div class="term-meaning">Two numbers are coprime when their only shared divisor is 1, i.e. gcd(a, b) = 1. For example, 8 and 27.</div></div>
+    <div class="term-card" data-cat="math"><div class="term-name">&#8484;*<sub>n</sub></div><div class="term-meaning">The non-negative integers below n that are coprime to n. It forms an Abelian group under multiplication modulo n; e.g. {1, 5, 7, 11} for n = 12.</div></div>
+    <div class="term-card" data-cat="math"><div class="term-name">Euler's totient function</div><div class="term-meaning">&#966;(n) counts the elements of the multiplicative group. For distinct primes, &#966;(pq) = (p &#8722; 1)(q &#8722; 1). RSA depends on this shortcut.</div></div>
+    <div class="term-card" data-cat="math"><div class="term-name">Primitive root</div><div class="term-meaning">An element g of the multiplicative group modulo prime p whose powers generate the whole group: {g^0, g^1, &#8230;, g^(p&#8722;2)}. Also called a generator.</div></div>
+    <div class="term-card" data-cat="math"><div class="term-name">ECDLP</div><div class="term-meaning">The Elliptic Curve Discrete Logarithm Problem: given P and Q = kP on a curve, find k. Harder per bit than the classical DLP, so ECC keys can be shorter.</div></div>
+    <div class="term-card" data-cat="math"><div class="term-name">Trapdoor one-way function</div><div class="term-meaning">A function easy to compute forwards and infeasible to invert, unless you hold secret extra information (the trapdoor). The idea behind RSA, DH and ECC.</div></div>
   </div>
   <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
 </section>
-
 <section class="guide-section" id="practice" data-title="Practice Questions">
-  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
-  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Practice Questions</h2>
+  </div>
+  <p class="section-kicker">Cover the answer, write your own version first, then reveal and compare.</p>
   <div class="quiz-toolbar">
-    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick "Mastered". Your progress is saved.</span>
     <button class="btn" id="revealAll" type="button">Reveal all</button>
     <button class="btn" id="hideAll" type="button">Hide all</button>
     <button class="btn" id="resetProgress" type="button">Reset</button>
   </div>
-  <article class="quiz" id="q1">
-    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">How does public-key cryptography differ from symmetric cryptography, and why is it also called asymmetric cryptography?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Symmetric cryptography uses one shared key for both encryption and decryption, relying on substitution (confusion) and permutation (diffusion). Public-key cryptography uses two distinct but related keys: each participant has a public key (distributed openly) and a private key (kept secret). Anyone may encrypt with the receiver's public key, but only the receiver — who holds the private key — can decrypt. Because the two keys differ, it is also called asymmetric cryptography.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+
+<article class="quiz" id="q1">
+    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">What is the key-distribution problem, and in what two respects is public-key cryptography a change of paradigm?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The key-distribution problem: symmetric cryptography needs both parties to share one secret key, yet delivering it over an insecure channel exposes it, and every pair of users needs its own key. Public-key cryptography changes the paradigm twice: each user has a freely distributed public key and a secret private key, so anyone can encrypt with the receiver's public key while only the receiver decrypts; and it uses two distinct keys built on mathematical functions with special properties, not only substitution and permutation.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
-  <article class="quiz" id="q2">
-    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Contrast confidentiality and origin authentication in public-key cryptography. Which key does what in each case?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> For confidentiality, encrypt with the receiver's public key and decrypt with the receiver's private key: anyone can encrypt, but only the receiver can decrypt. For origin authentication, encrypt (sign) with the sender's private key and decrypt (verify) with the sender's public key: anyone can verify, but only the true owner could have created it. In practice we do not use the same key pair for both purposes — separate keys are used.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+
+<article class="quiz" id="q2">
+    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Explain how a key pair is used for confidentiality and for origin authentication, and state the practical caveat.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Confidentiality: Bob encrypts with Alice's public key and Alice decrypts with her private key, so anyone can encrypt but only Alice can read it. Origin authentication: Bob encrypts with his own private key and Alice verifies with Bob's public key, so anyone can verify but only Bob could have produced it; this is the basis of digital signatures. Caveat: these are conceptual uses; in practice we do not use the same key pair for both, and signatures normally hash the message first.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
-  <article class="quiz" id="q3">
-    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">Which public-key algorithms can do encryption/decryption, digital signatures and key exchange? Give the table from memory.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> RSA: yes to all three. Elliptic Curve: yes to all three. Diffie-Hellman: key exchange only (no encryption, no signatures). DSS (Digital Signature Standard): digital signature only (no encryption, no key exchange).</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+
+<article class="quiz" id="q3">
+    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">State the discrete logarithm problem and the RSA problem, and say which scheme depends on which.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> The Discrete Logarithm Problem (DLP): given y, p and g with y = g^x mod p, where p is prime and g a primitive root of p, find x. The RSA problem: when c = m^e mod n and c, e and n are known, find m, i.e. compute the e-th root, which is equivalent in effort to factoring n. Diffie-Hellman (and DSA/ElGamal) rely on the DLP; RSA relies on the difficulty of the e-th root and of factoring n. Both become easy once the private key is known, which makes them trapdoors.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
-  <article class="quiz" id="q4">
-    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">Define a trapdoor one-way function and state the two classic trapdoor candidate problems with their equations.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> A trapdoor one-way function is easy to compute forwards but infeasible to invert without extra information (the trapdoor). Formally, Y = f<sub>k</sub>(X) is easy, X = f<sub>k</sub><sup>−1</sup>(Y) is easy if k is known, and infeasible if k is unknown. The two classic problems are the Discrete Logarithm Problem — given y, p, g with y = g<sup>x</sup> mod p, find x — and the RSA problem — given c = m<sup>e</sup> mod n and known c, e, n, find m. Both become easy with the private key.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+
+<article class="quiz" id="q4">
+    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">Write out RSA key generation step by step, and say which values are public, which are private, and which are destroyed.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) Choose distinct primes p and q. (2) Set the modulus n = p&#183;q. (3) Compute &#966;(n) = (p &#8722; 1)(q &#8722; 1). (4) Choose e with 1 &lt; e &lt; &#966;(n) and gcd(e, &#966;(n)) = 1; a convenient method is a prime e &gt; max(p, q). (5) Compute d &#8801; e^&#8722;1 mod &#966;(n), the modular inverse of e. (6) The public key is (e, n); the private key is (d, n); p, q and &#966;(n) are then deleted permanently. (7) Encryption: c = m^e mod n. (8) Decryption: m = c^d mod n.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
-  <article class="quiz" id="q5">
-    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">What does &#8484;*<sub>n</sub> mean, what is Euler's totient function, and how do you compute ɸ(n) when n is a product of two distinct primes?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> &#8484;*<sub>n</sub> is the set of all non-negative integers less than n that are coprime to n; it forms an Abelian group under multiplication. Euler's totient function ɸ counts the number of elements in &#8484;*<sub>n</sub>. For example &#8484;*<sub>12</sub> = {1, 5, 7, 11}, so ɸ(12) = 4. When n = p · q with p and q distinct primes, ɸ(n) = (p − 1)(q − 1).</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+
+<article class="quiz" id="q5">
+    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">In an RSA system the public key is e = 31, n = 3599. Find the private key.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Factor n: 3599 = 59 &#215; 61, so p = 59 and q = 61. Then &#966;(n) = (59 &#8722; 1)(61 &#8722; 1) = 58 &#215; 60 = 3480. Solve ed &#8801; 1 mod &#966;(n), i.e. 31d &#8801; 1 mod 3480. Checking candidates, 31 &#215; 3031 mod 3480 = 1, so d = 3031. (By contrast 31 &#215; 2412 mod 3480 = 1692, not 1.) The bottleneck is finding the prime factors; for real 2048-bit moduli that is infeasible.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
-  <article class="quiz" id="q6">
-    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">Generate RSA keys for p = 7 and q = 11 with e = 13. Give n, ɸ(n), d, the public key and the private key.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> n = p · q = 7 × 11 = 77. ɸ(n) = (7 − 1)(11 − 1) = 6 × 10 = 60. Choose e = 13 (less than 60 and coprime with it). Find d such that 13d mod 60 = 1: d = 37 (since 13 × 37 = 481 = 8 × 60 + 1). Public key (e, n) = (13, 77); private key (d, n) = (37, 77). Then delete p, q and ɸ(n).</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+
+<article class="quiz" id="q6">
+    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">What does the security of RSA rest on, and what rules must p and q satisfy?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> RSA's security rests on two assumed-hard facts: obtaining the e-th root of a number in the integers mod n is infeasible unless you know d, and factoring n = pq is computationally infeasible for very large p and q (otherwise d follows easily from &#966;(n)). To keep factoring hard, p and q must be very large, n must need thousands of bits (RSA keys of 2048 bits and more), and p and q must not be too close together, since close primes allow fast factoring. Larger keys are stronger but slower, and there are many other constraints, so never implement RSA yourself for production.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
-  <article class="quiz" id="q7">
-    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">Using p = 7, q = 11, e = 13, encrypt the plaintext m = 3 and then decrypt it.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Encryption: c = m<sup>e</sup> mod n = 3<sup>13</sup> mod 77 = 38. Decryption: m = c<sup>d</sup> mod n = 38<sup>37</sup> mod 77 = 3. The plaintext comes back exactly. Note that RSA can only encrypt numbers, so characters must be mapped to numbers first.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+
+<article class="quiz" id="q7">
+    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">Name and briefly describe the five approaches to attacking RSA.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> (1) Brute force: trying all possible private keys, feasible only against small keys. (2) Mathematical attacks: several approaches, all equivalent in effort to factoring the product of two primes. (3) Timing attacks: they depend on the running time of the decryption algorithm. (4) Hardware fault-based attacks: inducing hardware faults in the processor generating digital signatures. (5) Chosen ciphertext attacks: exploiting properties of the algorithm, such as malleability. Only the mathematical attack targets the number theory; the rest attack implementation or structure.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
-  <article class="quiz" id="q8">
-    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">For p = 11, q = 17 and e = 7, find the ciphertext for plaintext M = 88. (From the practice quiz.)</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> n = p · q = 11 × 17 = 187. ɸ(n) = (11 − 1)(17 − 1) = 160 (we do not need it here, since e is given, but note e &lt; ɸ(n)). Encrypt: C = M<sup>e</sup> mod n = 88<sup>7</sup> mod 187 = 11. So the ciphertext is 11.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+
+<article class="quiz" id="q8">
+    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">Explain RSA malleability, derive why the attack works, and classify the attack.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Malleability means an attacker can modify a ciphertext in a predictable way so the decrypted plaintext changes predictably, without the private key. Eve intercepts c and sends c' &#8801; c &#183; r^e mod n to the receiver, who decrypts it to r&#183;m. Derivation: (c')^d = (c &#215; r^e)^d = (m^e &#215; r^e)^d = m^(e&#215;d) &#215; r^(e&#215;d) = m &#215; r, since (m^e)^d mod n = m mod n. The result looks valid, so the receiver cannot detect the alteration, and Eve recovers m by dividing by r. This is a chosen ciphertext attack (CCA): it assumes the attacker can get c' decrypted.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
-  <article class="quiz" id="q9">
-    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">In an RSA system the public key is e = 31, n = 3599. What is the private key d? (From the practice quiz.)</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Factor n = 3599 into p = 59 and q = 61 (n = pq). Then ɸ(n) = (59 − 1)(61 − 1) = 58 × 60 = 3480. We need ed ≡ 1 mod ɸ(n), i.e. 31d ≡ 1 mod 3480. Checking the options, 31 × 3031 mod 3480 = 1, so <strong>d = 3031</strong>. (For comparison, 31 × 2412 mod 3480 = 1692, which is not 1.)</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+
+<article class="quiz" id="q9">
+    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">Why does textbook RSA lack semantic security, and how does padding fix it?</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Textbook RSA is deterministic: the same plaintext with the same public key always produces the same ciphertext, and there is no randomness. An adversary can forward-compute likely messages and compare them against a ciphertext, a chosen plaintext attack, so the ciphertext leaks information and the scheme is not semantically secure. The fix is sophisticated padding, which adds randomness on encryption and removes it on decryption, so the same plaintext encrypts differently every time. The modern standard is OAEP (Optimal Asymmetric Encryption Padding).</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
-  <article class="quiz" id="q10">
-    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">State the five possible approaches to attacking RSA, and explain why timing and hardware fault attacks are different in kind from the others.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> (1) Brute force — trying all private keys, feasible only for small keys. (2) Mathematical attacks — all equivalent in effort to factoring n. (3) Timing attacks — depend on the running time of the decryption algorithm. (4) Hardware fault-based attacks — induce faults in the processor generating signatures. (5) Chosen ciphertext attacks — exploit properties like malleability. Timing and hardware fault attacks are side-channel attacks: they exploit how the implementation behaves physically, not weaknesses in the underlying mathematics.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+
+<article class="quiz" id="q10">
+    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">What are RSA's two practical problems, and how does hybrid encryption solve them? Give the four steps.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Problem 1: public-key cryptography is slow, especially with long keys; RSA is roughly 100 to 1000 times slower than AES. Problem 2: it requires a mechanism to map characters to numbers to be practical. Hybrid encryption uses public-key encryption only to establish a symmetric key, then encrypts the data symmetrically. Steps: (1) generate a random symmetric key k; (2) encrypt the message, c_m = Enc_k(m); (3) encrypt the key with the receiver's public key, c_k = Enc_PK(k); (4) send the pair (c_k, c_m). Almost all public-key encryption in practice is hybrid.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
-  <article class="quiz" id="q11">
-    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">Explain RSA malleability with the c′ = c · 2<sup>e</sup> mod n example, and explain why padding is needed.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Malleability means an attacker can modify a ciphertext so the decrypted plaintext changes predictably. Eve intercepts c, computes c′ ≡ c · 2<sup>e</sup> mod n and gets the receiver to decrypt it, obtaining (c′)<sup>d</sup> ≡ (c · 2<sup>e</sup>)<sup>d</sup> ≡ 2m. Because the result is valid-looking rather than random, the receiver cannot detect the tampering, and Eve recovers m by dividing by 2. This is a chosen ciphertext attack, and the scalar can be any number, not just 2. Padding is needed because vanilla RSA is also deterministic — the same plaintext always gives the same ciphertext — so it has no semantic security and is vulnerable to chosen plaintext attacks. Modern RSA uses OAEP padding, which adds randomness on encryption and removes it on decryption.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+
+<article class="quiz" id="q11">
+    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">Describe the Diffie-Hellman exchange, show both sides reach the same key, and explain the person-in-the-middle attack and its fix.</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> Alice and Bob share public p and g. Alice picks private a &lt; p, computes X = g^a mod p and sends X; Bob picks private b &lt; p, computes Y = g^b mod p and sends Y. Alice computes k = Y^a mod p and Bob computes k = X^b mod p; they agree because Y^a = (g^b)^a = g^(ab) = (g^a)^b = X^b. A passive attacker who knows p, g, X, Y must solve the discrete logarithm to find a or b, infeasible for large primes. But an active attacker chooses two key pairs (c, d), sends forged X' = g^c and Y' = g^d, and runs two separate exchanges, sharing one key with each party; this works because DH does not authenticate participants. The fix is digital signatures and public-key certificates (signed Diffie-Hellman).</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
-  <article class="quiz" id="q12">
-    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">Explain hybrid encryption: why it is used, and the four steps of the process.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Public-key cryptography is slow (RSA is 100–1000 times slower than AES) and needs a character-to-number mapping. Hybrid encryption uses RSA only to establish a fast symmetric key. Steps: (1) generate a random symmetric key k; (2) encrypt the actual message as c<sub>m</sub> = Enc<sub>k</sub>(m); (3) encrypt k as c<sub>k</sub> = Enc<sub>PK</sub>(k) using the receiver's public key; (4) send (c<sub>k</sub>, c<sub>m</sub>). The receiver decrypts c<sub>k</sub> with their private key to recover k, then decrypts c<sub>m</sub>. Almost all public-key encryption uses hybrid encryption in practice.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
-  </article>
-  <article class="quiz" id="q13">
-    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">Describe Diffie-Hellman key exchange, show that both parties compute the same key, and explain the person-in-the-middle attack and its fix.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> With prime p and generator g public, Alice picks a &lt; p and computes X = g<sup>a</sup> mod p; Bob picks b &lt; p and computes Y = g<sup>b</sup> mod p. They exchange X and Y. Alice computes Y<sup>a</sup> mod p and Bob computes X<sup>b</sup> mod p. These are equal because Y<sup>a</sup> = (g<sup>b</sup>)<sup>a</sup> = g<sup>ab</sup> = (g<sup>a</sup>)<sup>b</sup> = X<sup>b</sup>, so both share k. A passive attacker knows p, g, X, Y and must solve the DLP, which is infeasible for large primes. But an active person-in-the-middle attacker chooses c and d, computes X′ = g<sup>c</sup> and Y′ = g<sup>d</sup>, sends X′ to Bob and Y′ to Alice, and establishes separate keys k<sub>1</sub> with Alice and k<sub>2</sub> with Bob. The protocol is vulnerable because it does not authenticate the participants. The fix is digital signatures and public-key certificates — signed Diffie-Hellman — where each party signs their public key so the other can verify authenticity.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
-  </article>
-  <article class="quiz" id="q14">
-    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">Why do RSA and ECC need different key sizes for the same security, and how do Shor's and Grover's algorithms change the picture?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> RSA's security rests on the difficulty of factoring n and taking e<sup>th</sup> roots, so it needs very large keys (2048 bits and more). ECC rests on the Elliptic Curve Discrete Logarithm Problem, which is harder per bit than the classical DLP, so ECC achieves the same security with much shorter keys — typically 256 bits (very common) or 384 bits (high security). Quantum computing changes the picture: Shor's algorithm can efficiently factor large numbers and compute discrete logarithms, so RSA, Diffie-Hellman and ECC all become vulnerable. Symmetric cryptography is more resilient — Grover's algorithm gives only a quadratic speedup, halving the effective security of a symmetric key, so a 256-bit key is comparable to a 128-bit key and the fix is to double key sizes. Post-quantum cryptography develops lattice-based, code-based and hash-based algorithms that stay secure.</div>
-    <div class="quiz-actions">
-      <button class="quiz-reveal" type="button">Show answer</button>
-      <label class="mastered"><input type="checkbox"> Mastered</label>
-    </div>
+
+<article class="quiz" id="q12">
+    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">How does ECC differ from classical Diffie-Hellman, and how do Shor's and Grover's algorithms affect asymmetric versus symmetric cryptography? (ECC is non-examinable.)</p></div>
+    <div class="quiz-answer"><strong>Answer:</strong> ECC keeps the same trapdoor idea in a different Abelian group. Instead of the multiplicative group modulo p with repeated multiplication a^k mod p, it uses points on a curve y^2 = x^3 + ax + b over a finite field, with point addition and scalar multiplication kP. The hard problem is the ECDLP (find k given P and Q = kP), harder per bit than the classical DLP, so ECC reaches the same security with much shorter keys, typically 256 or 384 bits versus RSA's 2048. ECDH computes public points n_A G and n_B G and both reach n_A&#183;P_B = n_B&#183;P_A. On quantum threats: Shor's algorithm efficiently factors large numbers and computes discrete logarithms, so RSA, Diffie-Hellman and ECC become vulnerable (Australia plans to retire RSA by 2030). Grover's algorithm gives only a quadratic speedup against symmetric ciphers, halving the effective security level, so a 256-bit key matches 128 bits and doubling key sizes is the mitigation. PQC candidates include lattice-based, code-based and hash-based cryptography.</div>
+    <div class="quiz-actions"><button class="quiz-reveal" type="button">Show answer</button><label class="mastered"><input type="checkbox"> Mastered</label></div>
   </article>
 </section>
-
 <section class="guide-section" id="checklist" data-title="Confidence Check">
-  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
-  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Confidence Check</h2>
+  </div>
+  <p class="section-kicker">Tick each statement only when you could say it aloud, unprompted, without the notes.</p>
   <div class="checklist">
-    <label class="check-item"><input type="checkbox"> I can explain how public-key cryptography differs from symmetric cryptography and why it is called asymmetric.</label>
-    <label class="check-item"><input type="checkbox"> I can describe confidentiality and origin authentication, and say which key is used for encryption and decryption in each.</label>
-    <label class="check-item"><input type="checkbox"> I can state which algorithms provide encryption, signatures and key exchange (RSA, Elliptic Curve, Diffie-Hellman, DSS).</label>
-    <label class="check-item"><input type="checkbox"> I can define a trapdoor one-way function and write the DLP and RSA problem equations.</label>
-    <label class="check-item"><input type="checkbox"> I can explain coprimes, &#8484;*<sub>n</sub>, Euler's totient, and why ɸ(n) = (p − 1)(q − 1) for two primes.</label>
-    <label class="check-item"><input type="checkbox"> I can carry out RSA key generation, encryption and decryption on small numbers (e.g. p = 7, q = 11, e = 13).</label>
-    <label class="check-item"><input type="checkbox"> I can explain why RSA works over &#8484;/n&#8484; and why it can only encrypt numbers smaller than n.</label>
-    <label class="check-item"><input type="checkbox"> I can explain the security of RSA and list its five attack families.</label>
-    <label class="check-item"><input type="checkbox"> I can explain malleability, semantic security, and why OAEP padding is essential.</label>
-    <label class="check-item"><input type="checkbox"> I can describe hybrid encryption and its four steps.</label>
-    <label class="check-item"><input type="checkbox"> I can walk through Diffie-Hellman, prove both sides get the same key, and explain the person-in-the-middle attack and its fix.</label>
-    <label class="check-item"><input type="checkbox"> I can outline ECC, ECDH and EC ElGamal, and explain how Shor's and Grover's algorithms affect asymmetric versus symmetric cryptography.</label>
+    <label class="check-item"><input type="checkbox"> I can explain the key-distribution problem and why public-key cryptography changes the paradigm.</label>
+    <label class="check-item"><input type="checkbox"> I can use a key pair correctly for confidentiality and for origin authentication, and state the practical caveat.</label>
+    <label class="check-item"><input type="checkbox"> I can list the requirements for public-key cryptography and explain the trapdoor one-way function.</label>
+    <label class="check-item"><input type="checkbox"> I can state the discrete logarithm problem and the RSA problem and say which scheme relies on each.</label>
+    <label class="check-item"><input type="checkbox"> I can define coprime numbers, ℤ*ₙ, Euler's totient, and compute ɸ(pq) = (p − 1)(q − 1).</label>
+    <label class="check-item"><input type="checkbox"> I can run RSA key generation and say which values are public, private and destroyed.</label>
+    <label class="check-item"><input type="checkbox"> I can encrypt and decrypt with RSA and explain why (mᵉ)ᵈ ≡ m mod n.</label>
+    <label class="check-item"><input type="checkbox"> I can work the lecture's RSA examples, including recovering d from e and n.</label>
+    <label class="check-item"><input type="checkbox"> I can state what RSA's security rests on and the rules for choosing p and q.</label>
+    <label class="check-item"><input type="checkbox"> I can name and describe the five attacks on RSA.</label>
+    <label class="check-item"><input type="checkbox"> I can explain malleability, why textbook RSA lacks semantic security, and how OAEP fixes it.</label>
+    <label class="check-item"><input type="checkbox"> I can describe hybrid encryption and list its four steps.</label>
+    <label class="check-item"><input type="checkbox"> I can execute Diffie-Hellman, prove both sides agree, and explain the person-in-the-middle attack and its fix.</label>
+    <label class="check-item"><input type="checkbox"> I can sketch ECC, ECDH and EC ElGamal, and contrast ECC key sizes with RSA.</label>
+    <label class="check-item"><input type="checkbox"> I can explain Shor's and Grover's algorithms, their effect on asymmetric versus symmetric cryptography, and name the PQC families.</label>
   </div>
 </section>
   </main>
@@ -1362,6 +1161,7 @@
     <a href="../../../index.html">&#8962; All guides</a>
     <span class="spacer"></span>
     <a href="../week_4/INFO3616_week4_study_guide.html">&#8592; Week 4</a>
+    <span class="spacer"></span>
     <a href="../week_6/INFO3616_week6_study_guide.html">Week 6 &#8594;</a>
   </div>
   <p>INFO3616 Security Engineering &#183; Week 5 &#183; Independent study guide for active recall. Always reconcile with the official lecture material.</p>

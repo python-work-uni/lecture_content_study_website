@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Master cryptographic hashes, MACs, HMAC, authenticated encryption and digital signatures, from preimage resistance to SHA-2, SHA-3, GCM, CCM, RSA and DSA.">
+<meta name="description" content="INFO3616 Week 6 study guide — cryptographic hash functions, collision resistance, MACs, HMAC and digital signatures.">
 <title>INFO3616 Week 6 — Hashes, MACs, and Signatures</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -464,817 +464,822 @@
   </aside>
   <div class="scrim" id="scrim" hidden></div>
 
-  <main class="content" id="content">
-<section class="hero" id="top">
-  <span class="hero-eyebrow">INFO3616 · Week 6 · Cryptographic Hashes, MACs &amp; Signatures</span>
-  <h1 class="hero-title">Hashes, MACs and Signatures: Proving Data Has Not Changed</h1>
-  <p class="hero-sub">This week is about the three tools that answer the question “is this exactly what was sent, and who sent it?”. A <strong>cryptographic hash</strong> gives a short, tamper-evident fingerprint of data. A <strong>message authentication code (MAC)</strong> adds a shared secret so only the two parties can produce that fingerprint. A <strong>digital signature</strong> adds a private key, so anyone can verify who signed and the signer cannot later deny it.</p>
-  <div class="hero-lead"><strong>Read this first:</strong> hold one mental model for the whole week — <em>a hash is a fingerprint, a MAC is a fingerprint stamped with a shared secret, and a signature is a fingerprint stamped with a private key.</em> Everything else is details: how hard fingerprints are to forge (the resistance properties), how the fingerprint is computed (SHA), and how we combine it with encryption (AEAD).</div>
+  <main class="content" id="content"><section class="hero" id="top">
+  <span class="hero-eyebrow">INFO3616 · Week 6 · Hashes, MACs, and Signatures</span>
+  <h1 class="hero-title">Fingerprints, Seals, and Signatures</h1>
+  <p class="hero-sub">How do you know a message is exactly the one that was sent, and that it came from who it claims? A <strong>cryptographic hash</strong> gives a message a tamper-evident fingerprint. A <strong>Message Authentication Code (MAC)</strong> adds a shared secret so the fingerprint also proves origin. A <strong>digital signature</strong> replaces the shared secret with public-key cryptography so anyone can verify and the signer cannot deny it. Along the way: the birthday attack, length extension, HMAC, SHA-2, SHA-3 and authenticated encryption.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> a hash is a <em>fingerprint</em> (integrity only), a MAC is a <em>sealed fingerprint</em> (integrity + origin, but symmetric, so no non-repudiation), and a signature is a <em>notarised fingerprint</em> (integrity + origin + non-repudiation, asymmetric).</div>
   <div class="hero-meta">
-    <span class="meta-chip"><span class="dot"></span>~24 min read</span>
-    <span class="meta-chip">16 teaching sections</span>
+    <span class="meta-chip"><span class="dot"></span>~18 min read</span>
+    <span class="meta-chip">15 teaching sections</span>
     <span class="meta-chip">14 practice questions</span>
     <span class="meta-chip">30 key terms</span>
   </div>
   <div class="hero-outcomes">
     <h2>By the end you will be able to</h2>
     <ul class="outcome-list">
-      <li>Define a cryptographic hash function and explain how it provides data integrity.</li>
-      <li>State the three security requirements — preimage, second preimage and collision resistance — and explain how they relate.</li>
-      <li>Explain the birthday attack and why an output of at least 160 bits is required.</li>
-      <li>Describe the SHA-2 compression function and the SHA-3 sponge construction, including length-extension resistance.</li>
-      <li>Explain why MACs are needed and how HMAC is constructed.</li>
-      <li>Distinguish the four authenticated-encryption orderings and name GCM and CCM.</li>
-      <li>Explain what digital signatures add over MACs, and contrast the RSA and DSA approaches.</li>
-      <li>Choose the right primitive — hash, MAC or signature — for a given security goal.</li>
+      <li>Define a cryptographic hash function and explain why collisions are inevitable but hard to find.</li>
+      <li>State preimage, second preimage and collision resistance and their implications.</li>
+      <li>Reproduce the birthday attack argument and justify the 160-bit minimum output length.</li>
+      <li>Describe SHA-2's Merkle–Damgård chain and SHA-3's sponge, and why SHA-3 resists length extension.</li>
+      <li>Define a MAC, state its requirements, and write the HMAC formula from memory.</li>
+      <li>Explain why MD5 is unsafe for plain hashing yet acceptable inside HMAC.</li>
+      <li>Describe authenticated encryption, the four encrypt/MAC orderings, GCM and CCM.</li>
+      <li>Explain digital signatures, non-repudiation, and the RSA and DSA approaches.</li>
     </ul>
   </div>
 </section>
 
-<section class="guide-section" id="why-hashes" data-title="The Integrity Idea">
+<section class="guide-section" id="hash-basics" data-title="Hash Functions &amp; Integrity">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">The Integrity Idea: A Fingerprint for Data</h2>
+    <h2 class="section-title">Hash Functions and the Integrity Goal</h2>
   </div>
-  <p class="section-kicker">Before we can trust a message, we need a cheap way to tell whether even one bit changed in transit. That is the job of a hash.</p>
-  <p>The <strong>goal of a hash function is integrity</strong> — we want to ascertain that a received message is the same as the one that was sent. Think of a fingerprint: it is tiny compared with the person, but it is a stand-in that changes completely if the identity changes.</p>
-  <p>The core idea is to define a function that creates a <strong>checksum</strong>, called a <strong>hash function</strong>. The classic exchange works like this:</p>
-  <ol class="steps">
-    <li>The <strong>sender applies the hash function to the message</strong> and obtains a checksum, called the <strong>hash value</strong> or simply the <strong>hash</strong>.</li>
-    <li>The sender <strong>encrypts the message</strong> (to protect confidentiality) and sends the ciphertext together with the <strong>hash value of the plaintext</strong>.</li>
-    <li>The <strong>receiver decrypts</strong> the message, <strong>applies the same hash function</strong>, and compares the result with the transmitted hash value.</li>
-    <li>If the two hash values <strong>match</strong>, the plaintext must be correct.</li>
-  </ol>
+  <p class="section-kicker">A hash squashes any input into a fixed-size fingerprint whose first security job is to prove a message arrived unchanged.</p>
+
+  <p>A <strong>hash function</strong> is a <span class="keyterm">one-way function</span>: it takes a variable-length block of data <span class="math">M</span> and produces a fixed-size output <span class="math">h = H(M)</span>. The forward computation is easy; recovering the input from the output is infeasible. The output is called a <strong>digest</strong>, <strong>hash value</strong>, <strong>checksum</strong> or <strong>CRC</strong> depending on context, and a <strong>message digest</strong> when used for authentication.</p>
+
+  <div class="def-card"><span class="dc-term">Hash function</span> — a function mapping an input of arbitrary length to a fixed-length output <span class="math">h = H(M)</span>, easy to compute forward and infeasible to invert.</div>
+
+  <p>Since the input space is vastly larger than the finite output space, two different inputs <em>must</em> map to the same output. A <strong>collision</strong> is exactly that: <span class="math">H(a) = H(b)</span> with <span class="math">a ≠ b</span>. So the design question is never "how do we remove collisions?" but "how do we make finding them hard?" A <strong>good</strong> hash produces outputs that are <strong>evenly distributed</strong> and <strong>emulate randomness</strong>.</p>
+
+  <p class="muted">Collisions are certain, not a bug; cryptographic strength is about the difficulty of finding one, not its existence.</p>
+
+  <h3 class="sub-title">Commonly used hash functions</h3>
+  <p>CRC (CRC-16, CRC-32, …), <strong>MD5</strong> (Message Digest), <strong>SHA-1 / SHA-2 / SHA-3</strong> (Secure Hash Algorithm) and <strong>RIPEMD160</strong>. Two caveats: <strong>CRC</strong> was never designed for cryptography, and <strong>MD5</strong> and <strong>SHA-1</strong> <em>were</em> designed for it but found insufficient. MD5 is no longer used; SHA-1 is in phase-out.</p>
+
+  <h3 class="sub-title">The integrity workflow</h3>
+  <p>The principal objective of hash functions in cryptography is <strong>data integrity</strong>: ascertaining that a received message matches the one sent.</p>
   <div class="flow">
     <span class="flow-step">Message M</span><span class="flow-arrow">→</span>
     <span class="flow-step">Hash H(M)</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Send M (encrypted) + hash</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Receiver recomputes and compares</span>
+    <span class="flow-step">Encrypt + send (M, h)</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Receiver decrypts</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Recompute &amp; compare</span>
   </div>
-  <h3 class="sub-title">What we are trying to prevent</h3>
-  <p>For secure communication we normally want <strong>both confidentiality and integrity</strong>. With hash functions we want to prevent two specific attacks:</p>
-  <ul>
-    <li><strong>Recovering the plaintext from the hash alone.</strong> This does not defeat integrity directly, but it defeats the encryption we are relying on for confidentiality.</li>
-    <li><strong>Finding another bit sequence with the same hash value.</strong> If an attacker can do this, they can swap the plaintext for a different one and the hash will not change — so the tampering goes undetected.</li>
-  </ul>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why “plausibility” is not security:</strong> you might think you could just look at the decrypted text and judge whether it looks sensible. That fails badly — plausibility is not a reliable way to determine integrity. We need a mathematical check, not a judgement call.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If a hash value is only a few dozen bytes but the message is a gigabyte, how many different messages must share that same few-dozen-byte hash? (Hold that thought — it becomes the collision problem in a few sections.)</div></div>
-</section>
-
-<section class="guide-section" id="hash-basics" data-title="Hash Functions Defined">
-  <div class="section-head">
-    <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">What a Hash Function Actually Is</h2>
-  </div>
-  <p class="section-kicker">A hash function squeezes any-length input into a fixed-length output — and the good ones look random while doing it.</p>
-  <div class="def-card"><span class="dc-term">Hash function (H)</span> — a function that takes an input of <strong>variable length</strong> and produces a <strong>fixed-length output</strong> <span class="code">h = H(M)</span>. It is a <strong>one-way function</strong>: you can compute the output from the input, but you cannot practically run it backwards.</div>
-  <p>The output goes by several names depending on context: <strong>digest</strong>, <strong>hash</strong>, <strong>hash value</strong>, <strong>checksum</strong> and <strong>CRC</strong> are all terms you will see. They all point at the same idea — a short stand-in value for a longer piece of data.</p>
-  <h3 class="sub-title">Common hash functions</h3>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Family</th><th>Examples</th><th>Purpose and status</th></tr></thead>
-      <tbody>
-        <tr><td><strong>CRC</strong></td><td>CRC-16, CRC-32, …</td><td>Designed for error detection, <strong>not</strong> for cryptography.</td></tr>
-        <tr><td><strong>MD5</strong></td><td>MD5 (the MD stands for Message Digest)</td><td>Designed for cryptography but found <strong>insufficient</strong>; no longer used.</td></tr>
-        <tr><td><strong>SHA-1</strong></td><td>SHA1 (SHA = Secure Hash Algorithm)</td><td>Also designed for cryptography, but being <strong>phased out</strong> after collision attacks.</td></tr>
-        <tr><td><strong>SHA-2 / SHA-3</strong></td><td>SHA-256, SHA-512, SHA3-256, SHA3-512</td><td>The current cryptographic standards.</td></tr>
-        <tr><td><strong>RIPEMD</strong></td><td>RIPEMD160</td><td>Another cryptographic family (160-bit output).</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>The crucial contrast: <strong>CRC is not designed for cryptography at all</strong>, while <strong>MD5 and SHA-1 were designed for cryptography but were found to be insufficient</strong>. That distinction matters later when we decide what is safe to use.</p>
-  <h3 class="sub-title">What makes a hash “good”</h3>
-  <ul>
-    <li>Given a large set of inputs, the outputs should be <strong>evenly distributed</strong>.</li>
-    <li>The outputs should <strong>emulate randomness</strong> — with no obvious pattern linking inputs to outputs.</li>
-    <li>Because the input space is far larger than the output space, <strong>collisions are inevitable</strong> — two different inputs map to the same output. A good design merely makes them <strong>hard to find</strong>.</li>
-  </ul>
-  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> a hash is a <em>blender</em>. Any fruit goes in, always the same size of smoothie comes out, and you cannot un-blend it back into the original fruit.</div></div>
-</section>
-
-<section class="guide-section" id="applications" data-title="Applications of Hashes">
-  <div class="section-head">
-    <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">What Cryptographic Hashes Are Used For</h2>
-  </div>
-  <p class="section-kicker">Message authentication is the headline use; digital signatures and a cluster of everyday tasks follow.</p>
-  <h3 class="sub-title">Message authentication (integrity)</h3>
-  <p><strong>Message authentication</strong> validates the integrity of a message, and often we also want to confirm the sender’s claimed identity. When a hash function is used for this, the resulting value is commonly called a <strong>message digest</strong>.</p>
   <ol class="steps">
-    <li>The sender sends the message <code>m</code> and its hash <code>h(m)</code>.</li>
-    <li>The receiver uses the same hash function to compute <code>h(m′)</code> on the received message <code>m′</code>.</li>
-    <li>The receiver checks whether <code>h(m) = h(m′)</code>. A mismatch means either the message or the hash was altered.</li>
+    <li><strong>Sender hashes</strong> the message to obtain a checksum, the hash value.</li>
+    <li><strong>Sender encrypts and sends</strong> the message together with the hash value of the plaintext.</li>
+    <li><strong>Receiver decrypts and re-hashes</strong>, then compares with the transmitted value.</li>
+    <li><strong>Match means correct</strong>: if the hashes agree, the plaintext is intact.</li>
   </ol>
-  <h3 class="sub-title">The problem: a person-in-the-middle</h3>
-  <p>Hashing alone is vulnerable to a <strong>person-in-the-middle attack</strong> (also called a man-in-the-middle). An attacker who intercepts the message can <strong>replace the message and recompute the hash to match</strong>, because the hash function is public and keyless. The receiver sees the altered message with a matching hash and detects nothing.</p>
-  <p>This is the problem of <strong>origin authentication</strong> — proving not just that the message is intact, but that it came from the claimed sender. It is closely related to integrity. The standard fix is a <strong>Message Authentication Code (MAC)</strong>, also called a <strong>keyed hash function</strong>.</p>
-  <h3 class="sub-title">Digital signatures</h3>
-  <ul>
-    <li>The <strong>hash value of the message is signed</strong> (encrypted) with the sender’s <strong>Private Key (PR)</strong>.</li>
-    <li>Anyone who knows the sender’s <strong>Public Key (PK)</strong> can verify the message.</li>
-    <li>An attacker would need the sender’s <strong>private key</strong> to alter the message without detection.</li>
-  </ul>
-  <h3 class="sub-title">Other applications</h3>
-  <div class="grid grid-2">
-    <div class="card"><h3 class="card-title">🔑 One-way password files</h3><p>Store the hash of a password rather than the password itself, so a stolen file does not reveal the passwords.</p></div>
-    <div class="card"><h3 class="card-title">🕵️ Intrusion detection</h3><p>Hash critical files and watch for any change that would signal an intruder.</p></div>
-    <div class="card"><h3 class="card-title">🦠 Virus detection</h3><p>Known malware hashes identify infected or altered files.</p></div>
-    <div class="card"><h3 class="card-title">🎲 PRF / PRNG</h3><p>Build a pseudorandom function (PRF) or Pseudorandom Number Generator (PRNG) from the hash.</p></div>
-  </div>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Key takeaway:</strong> a plain hash proves the message was <em>not corrupted</em>, but it cannot prove <em>who sent it</em>. MACs and digital signatures exist to close exactly that gap.</div></div>
+
+  <h3 class="sub-title">Two conditions for this to work</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Condition</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><strong>(a) The message cannot be deduced from the hash</strong></td><td>Otherwise confidentiality is compromised, defeating the encryption (not integrity itself).</td></tr>
+      <tr><td><strong>(b) No substitute plaintext with the same hash</strong></td><td>Otherwise an attacker replaces the plaintext without changing the hash, making the alteration undetectable.</td></tr>
+    </tbody>
+  </table></div>
+  <p>A hash satisfying these criteria is a <span class="keyterm">cryptographic hash function</span>.</p>
+
+  
 </section>
 
-<section class="guide-section" id="security-requirements" data-title="Three Resistance Properties">
+<section class="guide-section" id="crypto-hash" data-title="Cryptographic Hashes">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">From Hash to Cryptographic Hash: Padding and the Length Field</h2>
+  </div>
+  <p class="section-kicker">A cryptographic hash adds structure to the input before hashing, and that structure is itself a security feature.</p>
+
+  <p>A <strong>cryptographic hash function</strong> is a hash suitable for security applications that satisfies the two conditions above; it acts like one-way encryption. Before hashing, the variable-length input is <strong>padded</strong> to an integer multiple of a predetermined fixed length, the <strong>block size</strong>. Padding is not just zeros: it incorporates the <strong>length of the original message in bits</strong>. This <span class="keyterm">length field</span> is a deliberate security measure that makes it harder to produce <span class="math">H(a) = H(b)</span> with <span class="math">a ≠ b</span>.</p>
+
+  <div class="formula"><div class="formula-label">The hashing pipeline</div><div class="math">M (variable length) → pad to multiple of block size (+ length field) → hash → h (fixed length)</div></div>
+
+  <p>The input of variable length is padded to a multiple of the block size and the padding includes the true input length, so length extension becomes worth understanding once we know the Merkle–Damgård chain.</p>
+
+  <h3 class="sub-title">What we are trying to prevent</h3>
+  <p>We want both confidentiality and integrity; with hashes we aim to prevent two things. First, recovering the plaintext from the hash value alone, which defeats our encryption though not integrity itself. Second, finding a bit sequence with the same hash value; decryption of substituted bits may look implausible, but plausibility is not a reliable way to determine integrity.</p>
+
+  <p class="muted">Hashing gives integrity, never confidentiality: hashing a message does not hide it, so if you need privacy you still encrypt.</p>
+
+  
+</section>
+
+<section class="guide-section" id="hash-applications" data-title="Hash Applications">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Applications of Cryptographic Hash Functions</h2>
+  </div>
+  <p class="section-kicker">Hashing alone proves a message was not corrupted but cannot prove who sent it, and that gap opens the door to MACs and signatures.</p>
+
+  <h3 class="sub-title">Message authentication and its weakness</h3>
+  <p><strong>Message authentication</strong> verifies a message's integrity, often with the added requirement of confirming the sender's claimed identity. The sender hashes the message and sends message plus hash; on receipt the receiver re-hashes and compares, and any disparity implies the message or hash was altered.</p>
+  <div class="flow">
+    <span class="flow-step">Alice: m</span><span class="flow-arrow">→</span>
+    <span class="flow-step">h = H(m)</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Send (m, h)</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Bob: H(m′) =? h</span>
+  </div>
+  <p>This is vulnerable to a <strong>person-in-the-middle attack</strong>: an attacker (Darth) intercepts the message, replaces it, and <em>also</em> alters the digest to match. Bob detects nothing. The problem is called <span class="keyterm">origin authentication</span>, closely related to integrity, and the fix is to <strong>protect the digest</strong>.</p>
+
+  <p class="muted">A keyless hash proves "this data was not corrupted in transit" but says nothing about who supplied it, since anyone can hash a forged message.</p>
+
+  <h3 class="sub-title">The two fixes</h3>
+  <p>A <span class="keyterm">MAC</span> (also called a keyed hash function) mixes a <strong>shared secret key</strong> into the hash, so only key-holders can produce it. A <strong>digital signature</strong> instead encrypts the hash with the sender's <strong>private key</strong>, so anyone with the sender's <strong>public key</strong> can verify it. Both are covered in full later.</p>
+
+  <p>Other applications include <strong>one-way password files</strong> (store <span class="math">H(password)</span>, not the password), <strong>intrusion detection</strong> (hash known-good files and flag changes), <strong>virus detection</strong> (fingerprint malicious code), and building a <strong>pseudorandom function (PRF)</strong> or <strong>pseudorandom number generator (PRNG)</strong>. Hashing is also widely used for key derivation.</p>
+
+  <p class="muted">Hashes do integrity; MACs add origin; signatures add non-repudiation.</p>
+</section>
+
+<section class="guide-section" id="resistance" data-title="Resistance Properties">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
     <h2 class="section-title">Preimage, Second Preimage and Collision Resistance</h2>
   </div>
-  <p class="section-kicker">Three formal guarantees turn an ordinary hash into a cryptographic hash function.</p>
-  <p>First, two vocabulary words:</p>
-  <div class="def-card"><span class="dc-term">Preimage</span> — a specific input value (or set of values) that produces a particular output. If <code>h = H(x)</code>, then <code>x</code> is the preimage of <code>h</code>.</div>
-  <div class="def-card"><span class="dc-term">Collision</span> — two different inputs that give the same hash: <code>H(a) = H(b)</code> with <code>a ≠ b</code>.</div>
-  <p>Every hash function has collisions, because it maps a huge input space into a fixed-size output space. The question is only how <strong>hard</strong> they are to find. A hash is called a <strong>cryptographic hash function</strong> when it satisfies all three of the following:</p>
-  <div class="grid grid-3">
-    <div class="card"><h3 class="card-title">1️⃣ Preimage resistance</h3><p>Given a randomly chosen output <code>y</code>, it is <strong>computationally infeasible</strong> to find any <code>x</code> with <code>H(x) = y</code>.</p></div>
-    <div class="card"><h3 class="card-title">2️⃣ Second preimage resistance</h3><p>Given a randomly chosen input <code>x</code>, it is computationally infeasible to find a <strong>different</strong> <code>x′</code> with <code>H(x) = H(x′)</code>.</p></div>
-    <div class="card"><h3 class="card-title">3️⃣ Collision resistance</h3><p>It is computationally infeasible to find <strong>any pair</strong> <code>(x, x′)</code> with <code>x ≠ x′</code> and <code>H(x) = H(x′)</code>.</p></div>
-  </div>
-  <p>Notice the phrase <strong>“computationally infeasible”</strong>, not “impossible”. Brute force is always possible in principle — hash every candidate input until one matches — but a good hash makes that take far too long to be practical.</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Property</th><th>What the attacker is given</th><th>What they must find</th><th>Protected against</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Preimage</strong></td><td>A hash value <code>y</code></td><td>Any input <code>x</code> with <code>H(x) = y</code></td><td>Recovering the original message from its hash</td></tr>
-        <tr><td><strong>Second preimage</strong></td><td>A specific input <code>x</code></td><td>A different <code>x′</code> colliding with <code>x</code></td><td>Swapping a message for a forged one with the same hash</td></tr>
-        <tr><td><strong>Collision</strong></td><td>Nothing (free choice)</td><td>Any two inputs that collide</td><td>Blocking a cheating sender from pre-crafting a pair</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> Preimage = “find <em>a</em> key for this lock”. Second preimage = “find <em>another</em> key for <em>this</em> lock”. Collision = “find <em>any two</em> keys that open the same lock”.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Which is easier for an attacker — breaking second preimage resistance (find a twin for a given message) or collision resistance (find any colliding pair)? The next section tells you why the answer surprises people.</div></div>
-</section>
+  <p class="section-kicker">Three formal properties turn "hard to break" into something precise, differing only in what the attacker starts from.</p>
 
-<section class="guide-section" id="property-relationships" data-title="How the Properties Relate">
-  <div class="section-head">
-    <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">How the Properties Relate — and Pseudo-randomness</h2>
-  </div>
-  <p class="section-kicker">Collision resistance is the strongest of the linked properties; preimage resistance stands off on its own.</p>
-  <ul>
-    <li><strong>Collision resistance implies second preimage resistance.</strong> Any function that is hard to find <em>any</em> collision in is also hard to find a <em>second</em> input matching a given hash. The reverse is not always true.</li>
-    <li><strong>Preimage resistance stands apart.</strong> A function can be preimage resistant without being collision or second-preimage resistant, and vice versa. No strict implication runs between preimage and the other two.</li>
-    <li><strong>Collision resistance is the strongest of the two related properties.</strong> If an attacker can break second-preimage resistance, they have also broken collision resistance. So collision resistance is the hardest to satisfy — and (confusingly) the easiest to attack, as the birthday section shows.</li>
-  </ul>
-  <p>In short: <strong>a successful second-preimage attack implies a successful collision attack</strong>, but not the other way around. And a <strong>successful collision can sometimes be all the attacker needs</strong>.</p>
-  <h3 class="sub-title">Which property does each application need?</h3>
-  <p>Different applications demand different properties. This table is worth memorising because it connects the mathematics to real jobs.</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Application</th><th>Preimage resistant</th><th>Second preimage resistant</th><th>Collision resistant</th></tr></thead>
-      <tbody>
-        <tr><td>Hash + digital signature</td><td>Yes</td><td>Yes</td><td>Yes*</td></tr>
-        <tr><td>Intrusion detection and virus detection</td><td></td><td>Yes</td><td></td></tr>
-        <tr><td>Hash + symmetric encryption</td><td></td><td></td><td></td></tr>
-        <tr><td>One-way password file</td><td>Yes</td><td></td><td></td></tr>
-        <tr><td>MAC</td><td>Yes</td><td>Yes</td><td>Yes*</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p><small>* Collision resistance is required if an attacker is able to mount a chosen-message attack.</small></p>
-  <h3 class="sub-title">Pseudo-randomness</h3>
-  <p><strong>Pseudo-randomness</strong> is the property of a sequence that <em>appears</em> random but is produced by a deterministic process. It is not traditionally listed as a requirement of cryptographic hash functions, but it is <strong>implied</strong>, and the three resistance properties depend on the randomness of the output.</p>
-  <ul>
-    <li>Cryptographic hashes are used for <strong>key derivation</strong> and <strong>pseudorandom number generation</strong>.</li>
-    <li>In integrity applications, effectiveness relies on the output behaving randomly.</li>
-    <li>So it is worth checking that a given hash really produces output that looks pseudo-random.</li>
-  </ul>
-  <div class="formula">
-    <div class="formula-label">Checking pseudo-randomness on the command line</div>
-    <div class="math">echo "CYBERSECURITY ENGINEERING" | sha256sum<br>605d08ba60312b5e8b79105bc4f31ee8c269b956cada4821c9e22876bab917e5<br><br>echo "CYBERSECURITY ENGINEERING" | md5sum<br>ca00a2f980e354eb1ff97c4305aaed2e</div>
-  </div>
-  <p>Same input, two very different-looking outputs — no visible structure, no way to guess the next hash from the last. That apparent randomness is exactly what we want.</p>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why this matters:</strong> a function that fulfilled only the three formal properties but produced patterned, predictable output would be dangerous — patterns leak information and make collisions findable. Pseudo-randomness is the quiet fourth requirement.</div></div>
-</section>
+  <p>Since collisions cannot be eliminated, we ask for three <strong>resistance</strong> properties instead. First, two definitions.</p>
+  <div class="def-card"><span class="dc-term">Preimage</span> — an input value that produces a particular output. For <span class="math">h = H(x)</span>, <span class="math">x</span> is the preimage of <span class="math">h</span>.</div>
+  <div class="def-card"><span class="dc-term">Collision</span> — two different inputs with identical hash values: <span class="math">H(a) = H(b)</span>, <span class="math">a ≠ b</span>.</div>
 
-<section class="guide-section" id="birthday-attack" data-title="The Birthday Attack">
-  <div class="section-head">
-    <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">The Birthday Attack and Output Length</h2>
-  </div>
-  <p class="section-kicker">Collisions are far easier to find than intuition suggests — roughly the square root of the number of possibilities.</p>
-  <h3 class="sub-title">The birthday problem</h3>
-  <p>If there are 365 days in a year, how many people must be in a room before there is a 50% chance that <strong>two of them share a birthday</strong>? The surprising answer is just <strong>23 people</strong> — far fewer than most people expect.</p>
-  <p>Why? We are not asking whether someone matches a <em>specific</em> birthday. We are simply asking whether <strong>any two people match each other</strong>. That gives the attacker vastly more opportunities to find a match.</p>
-  <h3 class="sub-title">The proof sketch</h3>
-  <p>Add people one by one and track the probability <code>P(no match)</code> that all birthdays remain unique:</p>
-  <ul>
-    <li>1st person: no conflict possible, so probability <code>= 365/365 = 1</code>.</li>
-    <li>2nd person: must avoid one date, so probability <code>= 364/365 ≈ 0.99</code>.</li>
-    <li>…and so on, so after <code>k</code> people <code>P(no match) = 1 · (364/365) · … · ((365−k+1)/365)</code>.</li>
-  </ul>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>People (k)</th><th>P(no match)</th></tr></thead>
-      <tbody>
-        <tr><td>20</td><td>58.9%</td></tr>
-        <tr><td>22</td><td>52.4%</td></tr>
-        <tr><td><strong>23</strong></td><td><strong>49.3%</strong> — the 50% threshold is crossed</td></tr>
-        <tr><td>25</td><td>43.1%</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <h3 class="sub-title">From birthdays to hashes</h3>
-  <div class="def-card"><span class="dc-term">Birthday attack</span> — if random variables are chosen from a uniform distribution over the range <code>0</code> to <code>N−1</code>, the probability of encountering a repeated element exceeds 50% after about <code>√N</code> choices.</div>
-  <p>Applied to hashes: a hash with an <code>n</code>-bit output has <code>2ⁿ</code> possible values, so an attacker needs only about <strong><code>2^(n/2)</code> attempts</strong> for a 50% chance of a collision. The <strong>50% threshold is the standard benchmark in cryptanalysis</strong> — better-than-coin-flip odds mean the function is considered practically broken.</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Output length n</th><th>Possible values</th><th>Attempts for 50% collision</th><th>Verdict</th></tr></thead>
-      <tbody>
-        <tr><td>64 bit</td><td>2⁶⁴</td><td>2³²</td><td>Trivially achievable on modern hardware</td></tr>
-        <tr><td>128 bit</td><td>2¹²⁸</td><td>2⁶⁴</td><td>Borderline; feasible for well-resourced attackers</td></tr>
-        <tr><td>≥ 160 bit</td><td>2¹⁶⁰ or more</td><td>2⁸⁰</td><td>Remains computationally infeasible today</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>This is why <strong>output length is a hard security requirement</strong>. The currently accepted minimum output length of a cryptographic hash function is <strong>n ≥ 160 bits</strong>.</p>
+  <h3 class="sub-title">1. Preimage resistance</h3>
+  <p><strong>Goal:</strong> if the attacker knows an output hash value, they cannot find an input that produces it.</p>
+  <div class="formula"><div class="formula-label">Preimage resistance</div><div class="math">Given a randomly chosen y from H's range, it is computationally infeasible to find x such that H(x) = y.</div></div>
+  <p>It is not impossible, since brute force exists, but it must be computationally infeasible. This matters when confidentiality is required: violate it and an attacker can infer the message from the hash.</p>
+
+  <h3 class="sub-title">2. Second preimage resistance</h3>
+  <p><strong>Goal:</strong> given an input value, the attacker cannot find another input with the same output hash.</p>
+  <div class="formula"><div class="formula-label">Second preimage resistance</div><div class="math">Given a randomly chosen x, it is computationally infeasible to find x′ ≠ x such that H(x) = H(x′).</div></div>
+  <p>If compromised, an attacker could substitute a forged message with the same hash. Here the attacker starts from a <em>specific</em> input, which constrains them.</p>
+
+  <h3 class="sub-title">3. Collision resistance</h3>
+  <p><strong>Goal:</strong> the attacker cannot find <em>any two</em> inputs with the same output hash.</p>
+  <div class="formula"><div class="formula-label">Collision resistance</div><div class="math">It is computationally infeasible to find a pair (x, x′), x ≠ x′, such that H(x) = H(x′).</div></div>
+  <p><strong>Note:</strong> collision resistance implies second preimage resistance, but not preimage resistance. A successful second-preimage attack implies a successful collision attack, and a collision can sometimes be all the attacker needs.</p>
+
   <div class="mnemonic">
-    <div class="mnemonic-letters">√N</div>
-    <div class="mnemonic-phrase">"Halve the bits, not the work"</div>
-    <div class="mnemonic-expand">For an n-bit output, collisions arrive after about 2^(n/2) tries — so <strong>every extra bit of output only doubles the collision effort, not the search space</strong>.</div>
+    <div class="mnemonic-letters">P · 2 · C</div>
+    <div class="mnemonic-phrase">"Pick a target, Patch a fixed input, Pair anything"</div>
+    <div class="mnemonic-expand"><strong>P</strong>reimage = recover an input from a given output · <strong>2</strong>nd preimage = find another input for a <em>given</em> input · <strong>C</strong>ollision = find any two that match.</div>
   </div>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> collision resistance is the hardest property to <em>design</em> but the easiest to <em>attack</em>. The attacker needs any two colliding inputs — maximum freedom, no target to hit. That is fundamentally easier than matching one specific given input.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A 256-bit hash gives 2²⁵⁶ possible outputs. How many attempts for a 50% collision chance, and is that feasible? (Answer: 2¹²⁸ — astronomically infeasible today.)</div></div>
+
+  <h3 class="sub-title">Relationships and what applications need</h3>
+  <p><strong>Collision resistance implies second preimage resistance</strong>: any function hard to find collisions in is also hard to find a second input matching a given hash, but not conversely. <strong>Preimage resistance stands apart</strong>: a function can be preimage resistant without being collision or second-preimage resistant, and vice versa. <strong>Collision resistance is the strongest of the two related properties</strong>; breaking second preimage also breaks collision. Yet collisions are the <em>easiest</em> to attack, because the attacker has maximum freedom, needing only <em>any</em> two colliding inputs with no target.</p>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Application</th><th>Preimage</th><th>Second preimage</th><th>Collision</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Hash + digital signature</strong></td><td>Yes</td><td>Yes</td><td>Yes&#8202;<sup>1</sup></td></tr>
+      <tr><td><strong>Intrusion detection and virus detection</strong></td><td></td><td>Yes</td><td></td></tr>
+      <tr><td><strong>Hash + symmetric encryption</strong></td><td></td><td></td><td></td></tr>
+      <tr><td><strong>One-way password file</strong></td><td>Yes</td><td></td><td></td></tr>
+      <tr><td><strong>MAC</strong></td><td>Yes</td><td>Yes</td><td>Yes&#8202;<sup>1</sup></td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted"><sup>1</sup> Required if an attacker can mount a <strong>chosen message attack</strong>.</p>
+
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> do not say "collision resistance means no collisions exist". It means finding one is computationally infeasible. Collisions always exist.</div></div>
+
+  
 </section>
 
-<section class="guide-section" id="sha-family" data-title="The SHA Family">
+<section class="guide-section" id="birthday" data-title="Birthday Attack">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">The SHA Family</h2>
+    <h2 class="section-title">The Birthday Paradox and the Birthday Attack</h2>
   </div>
-  <p class="section-kicker">One family, three generations: SHA-1 (dead), SHA-2 (workhorse) and SHA-3 (sponge-based backup).</p>
-  <p>The <strong>Secure Hash Algorithm (SHA)</strong> is the most prevalent hash function today. It was developed by the <strong>National Institute of Standards and Technology (NIST)</strong> and introduced as a federal information processing standard, <strong>FIPS 180</strong>, in <strong>1993</strong>.</p>
-  <ol class="steps">
-    <li><strong>SHA-0 and SHA-1</strong> produce a <strong>160-bit</strong> hash value. They are <strong>no longer considered secure</strong> because they are susceptible to collisions.</li>
-    <li><strong>SHA-2 family:</strong> NIST introduced <strong>SHA-224, SHA-256, SHA-384 and SHA-512</strong> in <strong>2001</strong> (with the revised standard appearing in 2002). This is the family in wide use today.</li>
-    <li><strong>SHA-3 family:</strong> the latest member, released by NIST in <strong>2015</strong>, with <strong>SHA3-224, SHA3-256, SHA3-384 and SHA3-512</strong>. It uses a completely different internal design.</li>
-  </ol>
-  <h3 class="sub-title">Comparing the SHA parameters</h3>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Algorithm</th><th>Message size</th><th>Block size</th><th>Word size</th><th>Digest size</th></tr></thead>
-      <tbody>
-        <tr><td>SHA-1</td><td>&lt; 2⁶⁴</td><td>512</td><td>32</td><td>160</td></tr>
-        <tr><td>SHA-224</td><td>&lt; 2⁶⁴</td><td>512</td><td>32</td><td>224</td></tr>
-        <tr><td>SHA-256</td><td>&lt; 2⁶⁴</td><td>512</td><td>32</td><td>256</td></tr>
-        <tr><td>SHA-384</td><td>&lt; 2¹²⁸</td><td>1024</td><td>64</td><td>384</td></tr>
-        <tr><td>SHA-512</td><td>&lt; 2¹²⁸</td><td>1024</td><td>64</td><td>512</td></tr>
-        <tr><td>SHA-512/224</td><td>&lt; 2¹²⁸</td><td>1024</td><td>64</td><td>224</td></tr>
-        <tr><td>SHA-512/256</td><td>&lt; 2¹²⁸</td><td>1024</td><td>64</td><td>256</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>The variant names tell you the digest size. <strong>“SHA-512/256” means the SHA-512 engine truncated to a 256-bit digest</strong> — a way to get a short output while keeping SHA-512’s internal strength.</p>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Reading the numbers:</strong> SHA-256 and below use 512-bit blocks and 32-bit words, and accept messages under 2⁶⁴ bits. SHA-384 and SHA-512 use 1024-bit blocks and 64-bit words, and accept much larger messages under 2¹²⁸ bits.</div></div>
+  <p class="section-kicker">Because we ask whether <em>any two</em> hashes match rather than one matching a target, collisions arrive at roughly the square root of the output space.</p>
+
+  <p><strong>Birthday problem:</strong> "If there are 365 days in a year, how many people must be in a room before there is a 50% chance that two share the same birthday?" The answer is just <strong>23</strong>, far fewer than intuition suggests. The surprise comes from asking whether <em>any two</em> people match each other, not whether someone matches a <em>specific</em> date, which gives the attacker vastly more opportunities.</p>
+
+  <p><strong>Sketchy proof.</strong> Add people one by one, tracking the probability that all birthdays stay unique. After <span class="math">k</span> people, <span class="math">P(no match) = 1 · (364/365) · … · ((365 − k + 1)/365)</span>.</p>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>k (people)</th><th>P(no match)</th><th>Interpretation</th></tr></thead>
+    <tbody>
+      <tr><td><strong>20</strong></td><td>58.9%</td><td>Still more likely all birthdays differ.</td></tr>
+      <tr><td><strong>22</strong></td><td>52.4%</td><td>Approaching the tipping point.</td></tr>
+      <tr><td><strong>23</strong></td><td>49.3%</td><td>Below 50%, so a shared birthday is more likely than not.</td></tr>
+      <tr><td><strong>25</strong></td><td>43.1%</td><td>Chance of a match climbs quickly.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="def-card"><span class="dc-term">Generalised birthday attack</span> — if random variables are chosen uniformly from the range 0 through <span class="math">N − 1</span>, the probability of a repeated element exceeds 50% after about <span class="math">√N</span> choices.</div>
+
+  <p>An <span class="math">n</span>-bit hash has <span class="math">2<sup>n</sup></span> possible values, so an attacker needs only about <span class="math">2<sup>n/2</sup></span> attempts for a better-than-50% chance of collision.</p>
+  <div class="formula"><div class="formula-label">The birthday bound</div><div class="math">collision expected after ≈ √(2ⁿ) = 2^(n/2) attempts</div></div>
+
+  <p>For a 64-bit output that is just <span class="math">2<sup>32</sup></span>, trivially achievable on modern hardware. For 160 bits the attacker needs <span class="math">2<sup>80</sup></span>, which remains computationally infeasible today, so the accepted minimum output length is <span class="math">n ≥ 160</span> bits.</p>
+
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> the 50% threshold is the standard cryptanalytic benchmark. Better-than-coin-flip odds means the function is practically broken, so output length is a hard security requirement.</div></div>
+
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> do not confuse <span class="math">2<sup>n</sup></span> (brute-force cost for a preimage) with <span class="math">2<sup>n/2</sup></span> (birthday cost of a collision). Doubling the digest squares the collision effort.</div></div>
+
+  
 </section>
 
-<section class="guide-section" id="sha2-design" data-title="Inside SHA-2">
+<section class="guide-section" id="pseudorandom" data-title="Pseudorandomness">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Inside SHA-2: Padding and the Compression Function</h2>
+    <h2 class="section-title">Pseudorandomness and Why Output Must Look Random</h2>
   </div>
-  <p class="section-kicker">SHA-512 pads the message, splits it into blocks, then churns each block through 80 rounds of mixing.</p>
-  <p>Take <strong>SHA-512</strong> as the worked example. It accepts a message of maximum length less than <strong>2¹²⁸ bits</strong>, processes it in <strong>1024-bit blocks</strong>, and outputs a <strong>512-bit message digest</strong>.</p>
-  <h3 class="sub-title">Padding and length encoding</h3>
+  <p class="section-kicker">Pseudorandomness is not traditionally listed as a requirement, but every resistance property secretly depends on it.</p>
+
+  <p><strong>Pseudo-randomness</strong> is the property of a sequence that appears random but is generated deterministically. A hash always returns the same output for the same input, yet that output should look as if it came from a random source. It is not traditionally listed as a requirement but is implied: hashes are used for <strong>key derivation</strong> and <strong>pseudorandom number generation</strong>, and the three resistance properties depend on the randomness of the output, since predictable or clustered output would make collisions and preimages easy.</p>
+
+  <p class="muted">To verify a hash really looks pseudorandom, hash a fixed string and check the hex digest for obvious structure (there should be none).</p>
+
+  <div class="formula"><div class="formula-label">sha256sum</div><div class="math">echo "CYBERSECURITY ENGINEERING" | sha256sum
+605d08ba60312b5e8b79105bc4f31ee8c269b956cada4821c9e22876bab917e5</div></div>
+  <div class="formula"><div class="formula-label">md5sum</div><div class="math">echo "CYBERSECURITY ENGINEERING" | md5sum
+ca00a2f980e354eb1ff97c4305aaed2e</div></div>
+  <p>The SHA-256 digest is 64 hex characters (256 bits); MD5 is 32 hex characters (128 bits). Neither shows an exploitable pattern. A function that fulfils preimage, second-preimage and collision resistance is a <strong>cryptographic hash function</strong>, giving a feasibility-conditioned guarantee that attackers cannot obtain plaintexts and cannot easily find bogus inputs with the same hash. A few problems remain, and length extension is one.</p>
+
+  
+</section>
+
+<section class="guide-section" id="merkle-damgard" data-title="Iterated Hashing">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Iterated Hashing, Merkle–Damgård and Length Extension</h2>
+  </div>
+  <p class="section-kicker">MD5, SHA-1 and SHA-2 hash long messages by chaining a compression function block by block, and that design has a known weakness.</p>
+
+  <p>How does a fixed block size consume a message of arbitrary length? Via an <strong>iterated construction</strong>, best known as the <span class="keyterm">Merkle–Damgård construction</span>, used by MD5, SHA-1 and SHA-2.</p>
+
   <ol class="steps">
-    <li>The original message of <code>L</code> bits is <strong>padded</strong> with a single <code>1</code> bit followed by enough <code>0</code> bits so the total length is congruent to <strong>896 mod 1024</strong> — that leaves room at the end.</li>
-    <li>A <strong>128-bit encoding of the original length L</strong> is appended, bringing the padded message to an exact multiple of 1024 bits.</li>
-    <li>The padded message is split into <strong>N blocks of 1024 bits each</strong>: <code>M₁, M₂, …, M_t</code>. These are the “plaintext blocks” feeding the compression chain.</li>
-    <li><code>H₀</code> (the initialisation vector, <strong>IV</strong>) is a fixed, <strong>publicly specified 512-bit constant</strong> defined in the standard. It is not secret and not random.</li>
+    <li><strong>Pad the message</strong> to an exact multiple of the block size, always including a length field recording the original bit-length.</li>
+    <li><strong>Split into blocks</strong> <span class="math">M₁, M₂, …, M_t</span>, the "plaintext blocks" feeding the chain.</li>
+    <li><strong>Initialise a chaining value</strong> <span class="math">H₀</span>, the fixed, publicly specified initialisation vector (IV). It is not secret and not random.</li>
+    <li><strong>Compress each block</strong> with a compression function <span class="math">F</span>: <span class="math">H_i = F(H_(i−1), M_i)</span>.</li>
+    <li><strong>Output the final chaining value</strong> <span class="math">H_t</span> as the digest.</li>
   </ol>
-  <div class="formula">
-    <div class="formula-label">The compression chain</div>
-    <div class="math">H_i = F(H_(i−1), M_i) &nbsp;&nbsp; for i = 1 … N &nbsp;&nbsp;→&nbsp;&nbsp; digest = H_N</div>
+
+  <div class="formula"><div class="formula-label">The chaining recurrence</div><div class="math">H_i = F(H_(i−1), M_i),  digest = H_t</div></div>
+
+  <p class="muted">The digest is the <em>final state</em> of a chain, not a one-shot computation over the whole message, so anyone who knows that state can continue the chain.</p>
+
+  <h3 class="sub-title">Length-extension attacks</h3>
+  <p>In SHA-2 (also MD5 and SHA-1), an attacker who knows <span class="math">H(m)</span> can compute <span class="math">H(m ‖ extra)</span> without knowing <span class="math">m</span>. The published hash is the chaining value after the final padded block. If the attacker also knows the <em>length</em> of <span class="math">m</span>, they can reconstruct the appended padding, set the given hash as the new chaining value, and feed in their own extra block. The result is a valid hash of "original message, its padding, and the attacker's data". They never learn <span class="math">m</span>, but they can forge a hash for a related, longer message.</p>
+
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> a naive MAC built as <span class="math">H(K ‖ M)</span> is vulnerable. An attacker who knows <span class="math">H(K ‖ M)</span> can extend it to a valid tag for <span class="math">K ‖ M ‖ padding ‖ extra</span> without knowing <span class="math">K</span>. This is why HMAC uses a nested, padded-key construction.</div></div>
+
+  
+</section>
+
+<section class="guide-section" id="sha" data-title="The SHA Family">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">The Secure Hash Algorithm (SHA) Family</h2>
   </div>
-  <p><strong>F is the compression function.</strong> It takes the previous chaining value and one message block, and produces the next chaining value. Its job is to compress 1024 bits of block plus 512 bits of state down to a new 512-bit state.</p>
-  <h3 class="sub-title">What happens inside F?</h3>
-  <ul>
-    <li>F unpacks <code>H_(i−1)</code> into <strong>eight 64-bit working registers <code>a–h</code></strong>, which are transformed across <strong>80 rounds</strong>.</li>
-    <li>A <strong>message schedule</strong> expands the 1024-bit block <code>M_i</code> into <strong>80 round words <code>W₀–W₇₉</code></strong> — analogous to how the AES key schedule turns one key into many round keys.</li>
-    <li>Each round mixes in <strong>one <code>W_t</code> and one public constant <code>K_t</code></strong>. Six of the eight registers simply shift along, so only <strong>two new values are computed per round</strong>.</li>
-    <li><strong>Davies–Meyer feedforward:</strong> after round 79, the final <code>a–h</code> are added <strong>mod 2⁶⁴</strong> back to the original <code>H_(i−1)</code> (the long bypass lines in the standard diagram).</li>
-    <li>The result of those eight additions is <code>H_i</code>, which is passed to the next block.</li>
-  </ul>
+  <p class="section-kicker">SHA is the most prevalent hash family, developed by NIST and evolved across three generations to keep pace with attacks.</p>
+
+  <p>The <strong>Secure Hash Algorithm (SHA)</strong> was developed by the <strong>National Institute of Standards and Technology (NIST)</strong> and introduced as <strong>FIPS 180</strong> in 1993. The initial iterations, <strong>SHA-0</strong> and <strong>SHA-1</strong> (160-bit output), fell out of favour due to susceptibility to collisions.</p>
   <div class="flow">
-    <span class="flow-step">Pad + length</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Split into 1024-bit blocks</span><span class="flow-arrow">→</span>
-    <span class="flow-step">F: 80 rounds of a–h</span><span class="flow-arrow">→</span>
-    <span class="flow-step">Davies–Meyer add mod 2⁶⁴</span><span class="flow-arrow">→</span>
-    <span class="flow-step">H_i</span>
+    <span class="flow-step">FIPS 180 (1993): SHA-0 / SHA-1</span><span class="flow-arrow">→</span>
+    <span class="flow-step">2001/2002: SHA-2</span><span class="flow-arrow">→</span>
+    <span class="flow-step">2015: SHA-3</span>
   </div>
-  <h3 class="sub-title">Where SHA-2 is used</h3>
-  <ul>
-    <li>Widely implemented in security protocols: <strong>TLS/SSL, SSH, IPSec</strong> and more.</li>
-    <li>Validates and signs <strong>digital certificates and documents</strong>.</li>
-    <li>Verifies transactions in cryptocurrencies — <strong>Bitcoin uses SHA-256</strong>.</li>
-  </ul>
-  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> SHA-512 is an <em>assembly line</em>: pad the block, run it through 80 identical stations, then bolt the finished part back onto the original state (Davies–Meyer) before the next block arrives.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Why include the original message length in the padding? (Because without it, an attacker could craft a different-length message with an identical padded bit sequence — the length field blocks that trick.)</div></div>
+  <p><strong>SHA-2</strong> (NIST, 2001/2002) has variants SHA-224, SHA-256, SHA-384, SHA-512, plus the truncated SHA-512/224 and SHA-512/256. <strong>SHA-3</strong> (NIST, 2015) has variants SHA3-224, SHA3-256, SHA3-384, SHA3-512, and is a different construction rather than a tweak of SHA-2.</p>
+
+  <div class="table-wrap"><table>
+    <thead><tr><th>Algorithm</th><th>Message size</th><th>Block size</th><th>Word size</th><th>Digest size</th></tr></thead>
+    <tbody>
+      <tr><td><strong>SHA-1</strong></td><td>&lt;2<sup>64</sup></td><td>512</td><td>32</td><td>160</td></tr>
+      <tr><td><strong>SHA-224</strong></td><td>&lt;2<sup>64</sup></td><td>512</td><td>32</td><td>224</td></tr>
+      <tr><td><strong>SHA-256</strong></td><td>&lt;2<sup>64</sup></td><td>512</td><td>32</td><td>256</td></tr>
+      <tr><td><strong>SHA-384</strong></td><td>&lt;2<sup>128</sup></td><td>1024</td><td>64</td><td>384</td></tr>
+      <tr><td><strong>SHA-512</strong></td><td>&lt;2<sup>128</sup></td><td>1024</td><td>64</td><td>512</td></tr>
+      <tr><td><strong>SHA-512/224</strong></td><td>&lt;2<sup>128</sup></td><td>1024</td><td>64</td><td>224</td></tr>
+      <tr><td><strong>SHA-512/256</strong></td><td>&lt;2<sup>128</sup></td><td>1024</td><td>64</td><td>256</td></tr>
+    </tbody>
+  </table></div>
+
+  <p class="muted">To infer an algorithm from a digest: two hex characters make a byte, so a 40-character hex string is 20 bytes = 160 bits, which points to <strong>SHA-1</strong>. SHA-224 is 56 characters, SHA-256 is 64, SHA-384 is 96, SHA-512 is 128.</p>
+
+  
 </section>
 
-<section class="guide-section" id="sha3-sponge" data-title="SHA-3 and the Sponge">
+<section class="guide-section" id="sha2" data-title="Inside SHA-2">
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Inside SHA-2: Padding, Compression and Feedforward</h2>
+  </div>
+  <p class="section-kicker">SHA-512 is the worked example: pad, split into 1024-bit blocks, and push each through 80 rounds of a register-based compression function.</p>
+
+  <p><strong>SHA-512</strong> takes a message of maximum length less than <span class="math">2<sup>128</sup></span> bits and produces a 512-bit digest, processing input in <strong>1024-bit blocks</strong>.</p>
+
+  <h3 class="sub-title">The padding procedure</h3>
+  <ol class="steps">
+    <li><strong>Append a 1 and zeros</strong>: pad the message of <span class="math">L</span> bits with a single 1 bit followed by enough 0 bits so the total length is congruent to 896 mod 1024, leaving room at the end.</li>
+    <li><strong>Append the length</strong>: a 128-bit encoding of <span class="math">L</span> brings the padded message to an exact multiple of 1024 bits.</li>
+    <li><strong>Split into blocks</strong> <span class="math">M₁, M₂, …, M_t</span>, the plaintext blocks feeding the chain.</li>
+    <li><strong>Initialise</strong> <span class="math">H₀</span> (the IV), a fixed, publicly specified 512-bit constant. It is not secret and not random.</li>
+  </ol>
+  <div class="formula"><div class="formula-label">SHA-512 padding</div><div class="math">M ‖ 1 ‖ 0…0 ‖ L(128 bits)  →  length ≡ 0 mod 1024</div></div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember:</strong> the 896 mod 1024 rule exists because the last 128 bits are reserved for the length. 1024 − 128 = 896, so the message plus the 1 and zeros stops there.</div></div>
+
+  <h3 class="sub-title">Inside the compression function F</h3>
+  <ul>
+    <li><span class="math">F</span> unpacks <span class="math">H_(i−1)</span> into eight 64-bit registers <span class="math">a–h</span>, transformed across <strong>80 rounds</strong>.</li>
+    <li>The <strong>message schedule</strong> expands the 1024-bit block <span class="math">M_i</span> into 80 round words <span class="math">W₀–W₇₉</span>, analogous to the AES key schedule turning one key into many round keys.</li>
+    <li>Each round mixes one <span class="math">W_t</span> and one public constant <span class="math">K_t</span>. Six of the eight registers just shift along, so only <strong>two new values</strong> are computed per round.</li>
+    <li><strong>Davies–Meyer feedforward:</strong> after round 79, the final <span class="math">a–h</span> are added mod <span class="math">2<sup>64</sup></span> back to the original <span class="math">H_(i−1)</span>. Those eight additions produce <span class="math">H_i</span>, passed to the next block.</li>
+  </ul>
+  <div class="formula"><div class="formula-label">Davies–Meyer feedforward</div><div class="math">H_i = F(H_(i−1), M_i) + H_(i−1)   (mod 2⁶⁴, per register)</div></div>
+
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> adding the input chaining value back to the output makes the compression function hard to invert, the one-way ingredient at the heart of the chain.</div></div>
+
+  <p><strong>Applications:</strong> SHA-2 is implemented in security protocols (TLS/SSL, SSH, IPSec), validates and signs digital certificates and documents, and verifies cryptocurrency transactions, for example Bitcoin's use of SHA-256.</p>
+
+  
+</section>
+
+<section class="guide-section" id="sha3" data-title="SHA-3 Sponge">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
     <h2 class="section-title">SHA-3 and the Sponge Construction</h2>
   </div>
-  <p class="section-kicker">SHA-3 replaces SHA-2’s eight registers with one big state that is absorbed, permuted, then squeezed.</p>
-  <p>SHA-3 uses a <strong>single unified state</strong> of <code>r + c</code> bits passed repeatedly through a permutation <code>f</code>. Instead of SHA-2’s eight working registers, there is one large state that gets permuted again and again. This design is called a <strong>sponge</strong>.</p>
-  <h3 class="sub-title">Absorbing phase</h3>
+  <p class="section-kicker">SHA-3 abandons the register chain for a single permuted state, and its hidden capacity bits give it immunity to length extension.</p>
+
+  <p>SHA-3 uses a <strong>sponge construction</strong> rather than SHA-2's register-based compression. Four ideas define it.</p>
   <ul>
-    <li>Each message block is <strong>XORed into the top <code>r</code> bits</strong> of the state.</li>
-    <li>Then <code>f</code> <strong>scrambles the entire state</strong>.</li>
-    <li>The bottom <code>c</code> bits are <strong>never directly touched by the message input</strong>, which protects the security margin.</li>
+    <li><strong>Single unified state</strong> of <span class="math">r + c</span> bits is passed through a permutation <span class="math">f</span>. Unlike SHA-2's eight registers, there is one big state repeatedly permuted.</li>
+    <li><strong>Absorbing phase:</strong> each message block is XORed into the top <span class="math">r</span> bits of the state, then <span class="math">f</span> scrambles the entire state. The bottom <span class="math">c</span> bits are never directly touched by the message input, protecting the security margin.</li>
+    <li><strong>Squeezing phase:</strong> output is read from the top <span class="math">r</span> bits, with <span class="math">f</span> applied between each read. As many bits as needed can be squeezed out, making SHA-3 naturally an <strong>extendable output function</strong>.</li>
+    <li><strong>Rate <span class="math">r</span> versus capacity <span class="math">c</span></strong> is a tunable tradeoff: larger <span class="math">r</span> means faster hashing but smaller <span class="math">c</span> means lower security. Different SHA-3 variants just change this split.</li>
   </ul>
-  <h3 class="sub-title">Squeezing phase</h3>
-  <ul>
-    <li>Output is read from the <strong>top <code>r</code> bits</strong>; <code>f</code> is applied between each read.</li>
-    <li>You can squeeze out as many bits as needed, making SHA-3 naturally an <strong>extendable output function</strong>.</li>
-  </ul>
-  <div class="compare">
-    <div class="compare-col a">
-      <h3>SHA-2</h3>
-      <ul>
-        <li>Eight 64-bit working registers <code>a–h</code>.</li>
-        <li>Merkle–Damgård chaining over blocks.</li>
-        <li>Vulnerable to length-extension attacks.</li>
-      </ul>
-    </div>
-    <div class="compare-col b">
-      <h3>SHA-3</h3>
-      <ul>
-        <li>One large state of <code>r + c</code> bits.</li>
-        <li>Sponge: absorb, permute, squeeze.</li>
-        <li>No length-extension vulnerability.</li>
-      </ul>
-    </div>
+  <div class="formula"><div class="formula-label">Sponge state</div><div class="math">state = r (rate, absorbed/squeezed) + c (capacity, hidden security margin)</div></div>
+  <div class="flow">
+    <span class="flow-step">Absorb block 1</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Permute f</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Absorb block 2</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Permute f</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Squeeze r bits</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Permute f …</span>
   </div>
-  <h3 class="sub-title">Rate vs capacity</h3>
-  <p><strong>Rate <code>r</code> versus capacity <code>c</code> is a tunable trade-off.</strong> A larger <code>r</code> means <strong>faster hashing</strong> (more bits absorbed per round), but a smaller <code>c</code> means <strong>lower security</strong>. The different SHA-3 variants simply change this split.</p>
-  <h3 class="sub-title">No length-extension vulnerability</h3>
-  <p>In SHA-2, an attacker who knows <code>H(m)</code> can compute <code>H(m ∥ extra)</code> without knowing <code>m</code> — the <strong>length-extension attack</strong>. The sponge structure eliminates this, because the hidden <code>c</code> bits make the full internal state unrecoverable from the output.</p>
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why SHA-3 exists:</strong> it is a safety net. Even if SHA-2 were broken, a structurally different design means the same attack would not automatically carry over. Having two unrelated strong designs is good engineering.</div></div>
+
+  <h3 class="sub-title">Why SHA-3 has no length-extension vulnerability</h3>
+  <p>Recall the SHA-2 problem: knowing <span class="math">H(m)</span> lets an attacker compute <span class="math">H(m ‖ extra)</span>. The sponge eliminates this because the hidden capacity <span class="math">c</span> bits make the full internal state unrecoverable from the output. The attacker only sees the top <span class="math">r</span> bits and cannot reconstruct the rest of the state needed to continue absorbing.</p>
+
+  <p class="muted">SHA-3 was not created because SHA-2 broke; it gives a structurally different alternative so the ecosystem does not rest on one design.</p>
+
+  
 </section>
 
-<section class="guide-section" id="why-macs" data-title="Why MACs?">
+<section class="guide-section" id="mac" data-title="Message Auth Codes">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Why MACs? Keyless Hashes vs Keyed Authentication</h2>
+    <h2 class="section-title">Message Authentication Codes: Keyed Hashes</h2>
   </div>
-  <p class="section-kicker">Hashes are keyless, so anyone can forge a matching hash. A MAC incorporates a secret key and closes that door.</p>
-  <h3 class="sub-title">The problem with plain hashes</h3>
-  <p>Hashes are <strong>keyless</strong>. Anyone, including an attacker, can compute a valid hash for a forged message. So a plain hash proves the message <em>was not corrupted</em> but cannot prove <em>who sent it</em>. A <strong>MAC fixes this by incorporating a secret key into the computation</strong> — think of it as a <strong>keyed hash</strong>.</p>
-  <h3 class="sub-title">Two levels of any authentication mechanism</h3>
-  <p>Any mechanism for message authentication or digital signatures has two levels of functionality:</p>
+  <p class="section-kicker">A MAC is a small tag computed with a shared secret key, proving both integrity and origin to anyone who holds that key.</p>
+
+  <p><strong>Message authentication</strong> verifies that a received message comes from the said source and has not been altered. Every authentication or signature mechanism has two levels: a lower-level function generating an <strong>authenticator</strong> (a value used to authenticate a message), and a higher-level protocol using that primitive.</p>
+
+  <h3 class="sub-title">Three classes of authenticator-generating functions</h3>
   <ul>
-    <li><strong>Lower level:</strong> a function that generates an <strong>authenticator</strong> — a value used to authenticate a message.</li>
-    <li><strong>Higher level:</strong> an authentication <strong>protocol</strong> that uses that function as a primitive, letting a recipient verify a message.</li>
+    <li><strong>Hash function:</strong> a keyless digest. Alone it may not provide authentication, because unprotected hashes are susceptible to person-in-the-middle attacks.</li>
+    <li><strong>Symmetric encryption:</strong> encrypting with the shared key gives confidentiality and lets B confirm the message came from A, since the key is known only to A and B. But an attacker can modify the ciphertext bit pattern without the key; if the original message was a bit sequence, the receiver cannot detect it, because the modified ciphertext still decrypts to a valid bit sequence.</li>
+    <li><strong>Public-key encryption:</strong> straightforward encryption with B's public key gives confidentiality but not authentication, since anyone can encrypt a forged message under B's public key. Encrypting with A's private key gives authentication but not confidentiality (anyone can decrypt with A's public key), and still permits undetected modification if the altered ciphertext maps to a legitimate message.</li>
   </ul>
-  <p>The functions used to generate an authenticator fall into <strong>three classes</strong>:</p>
+
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Context:</strong> to get both confidentiality and authentication with public-key encryption, A encrypts <span class="math">M</span> first with their private key (a signature), then with B's public key. The drawback is cost: the complex public-key algorithm runs <strong>four times</strong> instead of two.</div></div>
+
+  <h3 class="sub-title">Why MACs when we already have hashes?</h3>
+  <p>Hashes are <strong>keyless</strong>. Anyone, including an attacker, can compute a valid hash for a forged message, so they prove the message was not corrupted but cannot prove <em>who</em> sent it. A MAC incorporates a secret key, acting as a <span class="keyterm">keyed hash</span>. A <strong>MAC</strong> is a fixed-size tag generated with a secret key shared between the parties and appended to the message; MACs are also known as <strong>cryptographic checksums</strong>.</p>
+  <div class="formula"><div class="formula-label">MAC definition</div><div class="math">MAC = C(K, M)   M = input message · C = MAC function · K = shared key</div></div>
+
+  <p>The message and MAC are transmitted together as <span class="math">(m, t)</span>. The recipient recomputes the MAC with the shared key and compares. If they match, and assuming the key is known only to sender and receiver, three things follow:</p>
   <ol class="steps">
-    <li><strong>Hash function</strong> — used alone it may not provide authentication, because unprotected hash values are exposed to person-in-the-middle attacks.</li>
-    <li><strong>Message encryption</strong> — symmetric, public-key, or both (see below).</li>
-    <li><strong>Message authentication code (MAC)</strong> — the focus of this week.</li>
+    <li><strong>Integrity</strong>: the message has not been altered. Any alteration without changing the MAC causes a mismatch, and without the key the attacker cannot produce a valid MAC.</li>
+    <li><strong>Origin</strong>: no other party has the secret key required to generate the valid MAC.</li>
+    <li><strong>Sequence integrity</strong>: if the message includes a <strong>sequence number</strong> (as in HDLC, X.25, TCP), the recipient can verify it, because an attacker cannot alter it undetected.</li>
   </ol>
-  <h3 class="sub-title">The four uses of message encryption</h3>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Scheme</th><th>What it provides</th><th>Limitation</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Symmetric encryption</strong></td><td>Confidentiality <em>and</em> authentication (only A and B share the key).</td><td>An attacker can flip ciphertext bits without the key; the result still decrypts to a valid bit sequence, so the change may go undetected.</td></tr>
-        <tr><td><strong>Public-key encryption (plain)</strong></td><td>Confidentiality only.</td><td>Anyone can encrypt a forged message with B’s public key and substitute it; B cannot detect the swap.</td></tr>
-        <tr><td><strong>Public-key with A’s private key</strong></td><td>Authentication and signature (only A could encrypt with the private key).</td><td>No confidentiality — anyone can use A’s public key to read the plaintext; bit-flipping still undetectable.</td></tr>
-        <tr><td><strong>Sign then encrypt</strong></td><td>Confidentiality, authentication and signature.</td><td>The complex public-key algorithm runs <strong>four times</strong> instead of two per communication.</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <h3 class="sub-title">The MAC itself</h3>
-  <div class="def-card"><span class="dc-term">Message Authentication Code (MAC)</span> — a special tag of fixed size, generated using a secret key shared between the communicating parties, that is appended to the original message. Also known as a <strong>cryptographic checksum</strong>.</div>
-  <div class="formula">
-    <div class="formula-label">MAC definition</div>
-    <div class="math">MAC = C(K, M)</div>
-  </div>
-  <p>Here <code>M</code> is the input message, <code>C</code> is the MAC function, <code>K</code> is the shared key and <code>MAC</code> is the resulting code. The message plus its MAC is transmitted; the receiver recomputes the MAC with the shared key and compares. If the MACs match, <strong>and the key is known only to sender and receiver</strong>, three things follow:</p>
-  <ul>
-    <li>The receiver is assured the message <strong>has not been altered</strong> — any change without a matching MAC causes a mismatch, and the attacker cannot produce a valid MAC without the key.</li>
-    <li>The receiver is assured of the <strong>message’s origin</strong> — no other party has the key needed to generate the valid MAC.</li>
-    <li>If the message includes a <strong>sequence number</strong> (as in HDLC, X.25 and TCP), the receiver can verify the <strong>sequence integrity</strong> — an attacker cannot silently change the order.</li>
-  </ul>
-  <p>Note: the basic MAC process does <strong>not</strong> provide confidentiality. That can be added by encrypting either before or after the MAC — the next sections show how.</p>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Alice sends Bob a message and MAC, both computed with a shared key. Can Alice later deny sending it, with Bob as the only witness? (No — Bob could have computed the same MAC himself, so a third party cannot tell. That limitation is why digital signatures exist.)</div></div>
+
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> the MAC process does not provide confidentiality; add it by encrypting before or after the MAC. Also, like hashes, MACs must be irreversible, so do not expect to reverse one.</div></div>
+
+  <h3 class="sub-title">Requirements for a MAC</h3>
+  <ol class="steps">
+    <li><strong>Hash-grade resistance</strong>: the MAC function must have the resistance properties of a cryptographic hash function.</li>
+    <li><strong>Unforgeability</strong>: it must be computationally infeasible to predict a correct MAC <span class="math">t′</span> for <span class="math">m′ ≠ m</span>, even given other <span class="math">(m, t)</span> pairs.</li>
+  </ol>
+  <p>A cryptographic hash satisfies the first; mixing in a secret <span class="math">s</span> addresses the second, provided the resistance properties hold.</p>
+
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Context:</strong> block-cipher MACs such as <strong>CBC-MAC</strong>, and its NIST standardised refinement <strong>CMAC</strong> (used inside CCM), chain ciphertext blocks and use the last block as the tag. This course focuses on hash-derived MACs.</div></div>
+
+  
 </section>
 
-<section class="guide-section" id="mac-and-hmac" data-title="MAC Requirements &amp; HMAC">
+<section class="guide-section" id="hmac" data-title="HMAC Construction">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">MAC Requirements and the HMAC Construction</h2>
+    <h2 class="section-title">HMAC: The Hash-Based Message Authentication Code</h2>
   </div>
-  <p class="section-kicker">A MAC must be a strong hash plus a secret — HMAC mixes that secret in twice with two padding constants.</p>
-  <h3 class="sub-title">Requirements</h3>
-  <p>The intuition: given the MAC <code>t</code> for a message <code>m</code>, an attacker should not be able to generate a valid MAC for a different message. Formally, a function used as a MAC must satisfy:</p>
+  <p class="section-kicker">HMAC folds a secret key into any hash function using two padded constants, and it is the most widely used MAC on the Internet.</p>
+
+  <p>The most widely used way to integrate a secret key into a hash is <strong>HMAC</strong>. Published as <strong>RFC 2104</strong>, it is the obligatory MAC for IP security, is used in Internet protocols including SSL, and is ratified as NIST standard <strong>FIPS 198</strong>.</p>
+  <div class="formula"><div class="formula-label">The HMAC formula</div><div class="math">HMAC(K, M) = H[ (K ⊕ opad) ‖ H[ (K ⊕ ipad) ‖ M ] ]</div></div>
+
+  <p>Read it inside out. The inner hash runs over the key XORed with <em>ipad</em>, concatenated with the message, producing a fixed-length hash. The outer hash runs over the key XORed with <em>opad</em>, concatenated with that inner hash. Here <span class="math">H</span> can be any cryptographic hash function (SHA-3, SHA-2, SHA-1, MD5), <span class="math">K</span> is the shared secret key, <span class="math">M</span> is the message, and <em>ipad</em> and <em>opad</em> are publicly known constant bit strings required for the security proof. Their precise values matter little: <em>ipad</em> is 00110110 (36<sub>16</sub>) and <em>opad</em> is 01011100 (5C<sub>16</sub>), each repeated <span class="math">b/8</span> times (<span class="math">b</span> is the block size in bits).</p>
+
+  <h3 class="sub-title">The HMAC algorithm</h3>
   <ol class="steps">
-    <li>It must have all the <strong>resistance properties of a cryptographic hash function</strong>.</li>
-    <li>It must be <strong>computationally infeasible to predict a correct MAC <code>t′</code> for a message <code>m′ ≠ m</code></strong>, even when the attacker is allowed to know any other combinations of <code>(m, t)</code>.</li>
+    <li><strong>Pad the key</strong>: append zeros to the left of <span class="math">K</span> to create a <span class="math">b</span>-bit string <span class="math">K⁺</span>. If <span class="math">K</span> is 160 bits and <span class="math">b</span> = 512, append 44 zeroes.</li>
+    <li><strong>Inner key block</strong>: XOR <span class="math">K⁺</span> with <em>ipad</em> to produce the <span class="math">b</span>-bit block <span class="math">S_i</span>.</li>
+    <li><strong>Append the message</strong> <span class="math">M</span> to <span class="math">S_i</span>.</li>
+    <li><strong>Hash</strong> the stream from step 3 with <span class="math">H</span>.</li>
+    <li><strong>Outer key block</strong>: XOR <span class="math">K⁺</span> with <em>opad</em> to produce the <span class="math">b</span>-bit block <span class="math">S₀</span>.</li>
+    <li><strong>Append the inner hash</strong> from step 4 to <span class="math">S₀</span>.</li>
+    <li><strong>Hash and output</strong>: apply <span class="math">H</span> to step 6 and output the result.</li>
   </ol>
-  <p>A cryptographic hash function takes care of the first requirement. <strong>Mixing in a secret <code>s</code> addresses the second</strong>, provided the resistance properties hold.</p>
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Scope note:</strong> MACs can also be built from a symmetric block cipher, but in this course we focus only on MACs derived from a cryptographic hash function.</div></div>
-  <h3 class="sub-title">HMAC (Hash-based Message Authentication Code)</h3>
-  <p>Several methods exist for folding a secret key into a hash algorithm, but the most widely used is <strong>HMAC</strong>. It was published as <strong>RFC 2104</strong>, is the obligatory MAC for IP security (IPSec), is used in internet protocols such as <strong>SSL</strong>, and is ratified as the NIST standard <strong>FIPS 198</strong>.</p>
-  <div class="formula">
-    <div class="formula-label">HMAC</div>
-    <div class="math">HMAC(K, M) = H[(K ⊕ opad) ∥ H[(K ⊕ ipad) ∥ M]]</div>
+
+  <div class="flow">
+    <span class="flow-step">K⁺ ⊕ ipad</span><span class="flow-arrow">→</span>
+    <span class="flow-step">‖ M</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Inner hash</span><span class="flow-arrow">→</span>
+    <span class="flow-step">K⁺ ⊕ opad ‖ inner</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Outer hash = MAC</span>
   </div>
-  <ul>
-    <li><code>H</code> can be any cryptographic hash function (e.g. SHA-2, SHA-3, MD5, SHA-1).</li>
-    <li><code>K</code> is the shared secret key; <code>M</code> is the input message.</li>
-    <li><code>opad</code> and <code>ipad</code> are <strong>publicly known constant bit strings</strong>. They are required for HMAC’s security proof to hold, though their precise values matter little.</li>
-    <li><code>ipad = 00110110</code> (hex <code>36</code>) repeated <code>b/8</code> times; <code>opad = 01011100</code> (hex <code>5C</code>) repeated <code>b/8</code> times, where <code>b</code> is the block size in bits.</li>
-  </ul>
-  <h3 class="sub-title">The HMAC algorithm, step by step</h3>
-  <ol class="steps">
-    <li><strong>Pad the key.</strong> Append zeros to the left of <code>K</code> to create a <code>b</code>-bit string <code>K⁺</code>. (If <code>K</code> is 160 bits and <code>b</code> = 512, append 44 zeroes.)</li>
-    <li><strong>Inner pad.</strong> XOR <code>K⁺</code> with <code>ipad</code> to produce the <code>b</code>-bit block <code>S_i</code>.</li>
-    <li><strong>Append the message.</strong> Append <code>M</code> to <code>S_i</code>.</li>
-    <li><strong>Hash once.</strong> Apply <code>H</code> to the stream from step 3.</li>
-    <li><strong>Outer pad.</strong> XOR <code>K⁺</code> with <code>opad</code> to produce the <code>b</code>-bit block <code>S_o</code>.</li>
-    <li><strong>Append the inner hash.</strong> Append the hash result from step 4 to <code>S_o</code>.</li>
-    <li><strong>Hash again</strong> and output the result. That double hashing is the “nested” structure you see in the formula.</li>
-  </ol>
-  <div class="mnemonic">
-    <div class="mnemonic-letters">ipad → H → opad → H</div>
-    <div class="mnemonic-phrase">"Inner first, outer last"</div>
-    <div class="mnemonic-expand">The message is hashed with the key ⊕ <strong>ipad</strong> (inner), then that result is hashed again with the key ⊕ <strong>opad</strong> (outer). Two different key-derived masks stop an attacker from extending or splicing the hash.</div>
-  </div>
-  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> HMAC is a <em>double lock</em>. The inner hash proves the message, the outer hash protects that proof with the key.</div></div>
+
+  <p class="muted"><em>ipad goes in first</em> (inner), <em>opad goes out last</em>; this nesting defeats the length-extension attack that a naive <span class="math">H(K ‖ M)</span> would suffer.</p>
+
+  
 </section>
 
-<section class="guide-section" id="hmac-security" data-title="HMAC Security &amp; Uses">
+<section class="guide-section" id="hmac-security" data-title="HMAC Security">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">HMAC Security, the MD5 Question, and Applications</h2>
+    <h2 class="section-title">Security of HMAC and Its Applications</h2>
   </div>
-  <p class="section-kicker">HMAC’s strength is provably tied to its underlying hash — and because the key is secret, even a weak hash becomes hard to attack online.</p>
-  <p>The security of any MAC based on an embedded hash function depends in some way on the <strong>cryptographic strength of that hash function and the key size</strong>. The appeal of HMAC is that its designers <strong>proved an exact relationship between the strength of the embedded hash function and the strength of HMAC</strong>.</p>
+  <p class="section-kicker">HMAC's strength is provably tied to the embedded hash, and the keyed setting turns MD5's offline collision weakness into an infeasible online attack.</p>
+
+  <p>The security of any MAC based on an embedded hash depends on the cryptographic strength of that hash and on the key size. The <strong>appeal of HMAC</strong> is that its designers proved an <strong>exact relationship</strong> between the strength of the embedded hash function and the strength of HMAC.</p>
+
   <h3 class="sub-title">Can we use MD5 for HMAC?</h3>
-  <p>According to the birthday paradox, <code>2⁶⁴</code> attempts give at least a 50% chance of a collision in MD5 (128-bit output), which looks feasible with today’s technology. So can we use MD5 inside HMAC? <strong>The answer is yes</strong> — and the reason teaches an important lesson.</p>
-  <ul>
-    <li>To attack MD5 directly, the attacker can choose any set of messages and work <strong>offline</strong> on a dedicated machine to find a collision, because the algorithm and the default IV are public.</li>
-    <li>But when attacking HMAC, the attacker <strong>cannot generate (message, code) pairs offline</strong> because they do not know the secret key <code>K</code>.</li>
-    <li>They must instead <strong>observe sequences of messages generated by HMAC under the same key</strong> and attack those known messages.</li>
-    <li>This requires about <strong><code>2⁶⁴</code> observed blocks generated with the same key</strong>. On a <strong>1-Gbps link</strong>, the attacker would need a continuous stream of messages with no key change for about <strong>150,000 years</strong> to succeed.</li>
-  </ul>
-  <p>So attacking HMAC-with-MD5 is infeasible in practice. If speed is a concern, <strong>HMAC-MD5 can be preferred over HMAC-SHA-1</strong>. (That does not mean MD5 is safe for plain hashing — it is not.)</p>
-  <h3 class="sub-title">Applications of HMAC</h3>
-  <p>HMAC is widely used wherever two parties share a secret key and need to verify both the <strong>authenticity and integrity</strong> of a message — not just that it arrived uncorrupted, but that it came from a trusted sender.</p>
-  <div class="grid grid-2">
-    <div class="card"><h3 class="card-title">☁️ API request signing (e.g. AWS Signature V4)</h3><p>The client signs the full request (URL, headers, body, timestamp) with HMAC using a shared secret. The server recomputes the signature independently; a mismatch means the request was tampered with or replayed. This provides integrity and replay protection on top of authentication.</p></div>
-    <div class="card"><h3 class="card-title">🎫 JWT and one-time passwords</h3><p>HMAC is used to sign <strong>JSON Web Tokens (JWT)</strong> and to generate <strong>One-Time Passwords (HOTP/TOTP)</strong>.</p></div>
-  </div>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> HMAC alone does <strong>not</strong> guarantee confidentiality — the message is still readable. In practice this happens over an encrypted TLS connection, which handles confidentiality separately.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Why does a secret key turn a “broken” hash into a safe MAC? (Because the attacker can no longer compute hashes offline — they need real traffic under the secret key, which may take longer than the universe provides.)</div></div>
-</section>
+  <p><strong>Question:</strong> the birthday paradox says <span class="math">2<sup>64</sup></span> attempts give at least a 50% chance of a collision in MD5 (128-bit output), which looks feasible today. Can we use MD5 for HMAC? <strong>Answer: Yes.</strong></p>
 
-<section class="guide-section" id="authenticated-encryption" data-title="Authenticated Encryption">
-  <div class="section-head">
-    <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Authenticated Encryption and the Four Orderings</h2>
-  </div>
-  <p class="section-kicker">Combining encryption and authentication by hand is error-prone — AE bundles them into one operation, but the order still matters.</p>
-  <p>So far we have treated <strong>confidentiality (encryption)</strong> and <strong>authenticity (MAC)</strong> as separate. Combining them correctly is tricky and error-prone, and mistakes such as misordering or misusing the two primitives create vulnerabilities.</p>
-  <div class="def-card"><span class="dc-term">Authenticated Encryption (AE)</span> — provides confidentiality and integrity/authentication in a single primitive. Its security depends on how tightly the two are coupled — ideally, <strong>no plaintext is released until integrity is verified</strong>.</div>
-  <div class="def-card"><span class="dc-term">Authenticated Encryption with Associated Data (AEAD)</span> — extends AE by allowing additional data (the <em>associated data</em>) that is <strong>authenticated but not encrypted</strong>. It is sent in plaintext but included in the integrity check.</div>
-  <p>AE matters because a MAC alone gives integrity and authenticity but not confidentiality, leaving data exposed; and using encryption and MAC separately invites developer mistakes. Integrating them reduces those errors — important for secure messaging and financial transactions.</p>
-  <h3 class="sub-title">The four common approaches</h3>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Approach</th><th>What is computed</th><th>Used in</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Hashing then encryption (H→E)</strong></td><td><code>h = H(M)</code>, then send <code>E(K, (M ∥ h))</code>.</td><td>—</td></tr>
-        <tr><td><strong>Authentication then encryption (A→E)</strong> <br>(MAC-then-Encrypt)</td><td><code>T = MAC(K1, M)</code>, then send <code>E(K2, [M ∥ T])</code>. Requires two keys.</td><td><strong>SSL/TLS</strong></td></tr>
-        <tr><td><strong>Encryption then authentication (E→A)</strong> <br>(Encrypt-then-MAC)</td><td><code>C = E(K2, M)</code>, then send <code>T = MAC(K1, C)</code> as <code>(C, T)</code>. Requires two keys.</td><td><strong>IPSec</strong> — withstands stronger attacks; considered the strongest</td></tr>
-        <tr><td><strong>Independently encrypt and authenticate (E+A)</strong> <br>(MAC-and-Encrypt)</td><td><code>C = E(K2, M)</code>, <code>T = MAC(K1, M)</code>, sent as <code>(C, T)</code>. Operations may happen in either order.</td><td><strong>SSH</strong></td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>The lesson: <strong>all four can be made secure, but only if the construction is carefully specified</strong>. The safest general instinct is <strong>Encrypt-then-MAC</strong>, because integrity is checked on the ciphertext before anything is trusted.</p>
-  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Memory hook:</strong> say the protocol order as “<strong>TLS authenticates first, IPSec encrypts first, SSH does both independently</strong>”.</div></div>
-</section>
-
-<section class="guide-section" id="aead-gcm-ccm" data-title="AEAD: GCM and CCM">
-  <div class="section-head">
-    <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">AEAD in Practice: GCM and CCM</h2>
-  </div>
-  <p class="section-kicker">Two standard AEAD modes: GCM (fast and parallel, but brittle) and CCM (sequential, but ideal for constrained devices).</p>
-  <p>AEAD extends AE by also authenticating data that must stay readable (headers, metadata) but still needs tamper protection. Its MAC tag computation and encryption can be performed <strong>in parallel</strong>, making AEAD schemes efficient. It is defined for both block ciphers and stream ciphers. Two constructions dominate:</p>
-  <h3 class="sub-title">GCM (Galois/Counter Mode)</h3>
-  <ul>
-    <li>Currently the <strong>strongest and most widely used block-cipher AEAD mode</strong>, and highly efficient because it is parallelisable.</li>
-    <li>Follows the <strong>Encrypt-then-MAC</strong> paradigm: the message is encrypted in a variant of CTR mode, and the resulting ciphertext is multiplied with key material and message-length information over <strong>GF(2¹²⁸)</strong> to generate the authenticator tag.</li>
-    <li>The standard also specifies a mode that supplies the MAC only, called <strong>Galois MAC</strong>.</li>
-    <li>Uses two functions: <strong>GHASH</strong>, a keyed hash function, and <strong>GCTR</strong>, CTR mode with counters incremented by one.</li>
-    <li><strong>Very brittle in implementation.</strong> Nonce reuse, for example, can completely break security. Always use a well-vetted library rather than implementing it yourself.</li>
-  </ul>
-  <h3 class="sub-title">CCM (Counter with CBC-MAC)</h3>
-  <ul>
-    <li>Standardised by <strong>NIST</strong> to support the security requirements of <strong>IEEE 802.11 WiFi</strong> networks.</li>
-    <li>A carefully engineered variation of <strong>MAC-and-Encrypt</strong>: it computes <strong>CBC-MAC</strong> over the message to generate a tag, then encrypts both the message and the tag using <strong>CTR mode</strong> — so it is a MAC-then-Encrypt construction.</li>
-    <li><strong>Sequential</strong> (the MAC must complete before encryption begins), making it less efficient than GCM, but widely used in constrained environments such as <strong>IoT and WiFi</strong>.</li>
-    <li>A <strong>single key K</strong> is used for both encryption and MAC. This is safe here for the same reason as GCM: the two uses are carefully separated by the design and accounted for in the security proof.</li>
-  </ul>
   <div class="compare">
-    <div class="compare-col a">
-      <h3>GCM</h3>
-      <ul>
-        <li>Encrypt-then-MAC, parallel.</li>
-        <li>Fast; best throughput and latency.</li>
-        <li>Brittle: nonce reuse is catastrophic.</li>
-      </ul>
-    </div>
-    <div class="compare-col b">
-      <h3>CCM</h3>
-      <ul>
-        <li>MAC-then-Encrypt, sequential.</li>
-        <li>Slower, but simple and safe.</li>
-        <li>Ideal for IoT and 802.11 WiFi.</li>
-      </ul>
-    </div>
+    <div class="compare-col a"><h3>Attacking plain MD5</h3><ul>
+      <li>The attacker chooses any set of messages.</li>
+      <li>They work offline on a dedicated facility to find a collision.</li>
+      <li>They know the algorithm and default IV, so they can hash any message they choose.</li>
+      <li>The birthday attack is realistic.</li>
+    </ul></div>
+    <div class="compare-col b"><h3>Attacking HMAC-MD5</h3><ul>
+      <li>The attacker cannot generate <span class="math">(message, code)</span> pairs offline, because they do not know <span class="math">K</span>.</li>
+      <li>They must observe HMAC-generated messages under the <em>same</em> key.</li>
+      <li>This requires <span class="math">2<sup>64</sup></span> observed blocks (<span class="math">2<sup>72</sup></span> bits) under one key.</li>
+      <li>On a 1-Gbps link with no key change, about <strong>150,000 years</strong>, so infeasible today.</li>
+    </ul></div>
   </div>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> never hand-roll GCM. A single repeated nonce can reveal the key material and destroy all guarantees. Use a standard library.</div></div>
+
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> the secret key removes the attacker's ability to prepare collisions offline. They must wait for the real system to produce colliding data under one key, pushing the cost out of reach. If speed matters, HMAC-MD5 can be used over HMAC-SHA-1.</div></div>
+
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> "MD5 is broken, so HMAC-MD5 is broken" is a tempting but wrong leap. The break applies to plain MD5's collision resistance; inside HMAC the keyed, online setting changes the attack model.</div></div>
+
+  <h3 class="sub-title">Applications of HMAC</h3>
+  <ul>
+    <li><strong>API request signing (AWS Signature V4):</strong> the client signs the full request (URL, headers, body, timestamp) with HMAC using a shared secret. The server recomputes it independently; a mismatch means the request was tampered with or replayed, giving integrity and replay protection on top of standard authentication.</li>
+    <li><strong>Tokens and one-time passwords:</strong> HMAC signs <strong>JSON Web Tokens (JWT)</strong> and generates <strong>One-Time Passwords (HOTP/TOTP)</strong>.</li>
+  </ul>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> HMAC alone does not guarantee confidentiality; the message is still readable. In practice it runs over an encrypted TLS connection, which handles confidentiality separately.</div></div>
+
+  
 </section>
 
-<section class="guide-section" id="digital-signatures" data-title="Digital Signatures">
+<section class="guide-section" id="aead" data-title="Authenticated Encryption">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Digital Signatures: The Need and Basic Operation</h2>
+    <h2 class="section-title">Authenticated Encryption and AEAD (GCM and CCM)</h2>
   </div>
-  <p class="section-kicker">Signatures replace the shared secret with a private key, so anyone can verify and the signer cannot deny.</p>
-  <h3 class="sub-title">Why MACs are not enough</h3>
-  <p>Hashes give us integrity but no notion of <em>who</em> sent the message. MACs give integrity and authenticity, but rely on a <strong>shared secret key</strong> — both Alice and Bob must already have agreed on a key. That creates three fundamental limitations:</p>
-  <ul>
-    <li><strong>Cannot prove to a third party that Alice sent the message.</strong> Bob could have computed the same MAC himself, so a judge or external verifier cannot distinguish who created it.</li>
-    <li><strong>Does not scale.</strong> If Alice wants to communicate securely with 1000 people, she needs 1000 different keys.</li>
-    <li><strong>No non-repudiation.</strong> Alice can later deny sending the message, and there is no way to prove otherwise.</li>
-  </ul>
-  <p><strong>Digital signatures solve this using asymmetric (public-key) cryptography</strong>: Alice signs with her <strong>private key</strong> and anyone can verify with her <strong>public key</strong>.</p>
-  <ul>
-    <li>No shared secret is needed.</li>
-    <li>A third party can verify the signature independently.</li>
-    <li>Alice cannot deny signing — this is <strong>non-repudiation</strong>.</li>
-  </ul>
-  <h3 class="sub-title">The basic operation</h3>
-  <p>Consider Bob sending a message to Alice. Bob does not care about confidentiality, but he wants Alice to be sure the message is from him:</p>
-  <ol class="steps">
-    <li>Bob computes a hash of the message with a secure hash function such as <strong>SHA-512</strong>.</li>
-    <li>He feeds that hash, along with his <strong>private key</strong>, into the signature generation algorithm, producing a short block — the <strong>digital signature</strong>.</li>
-    <li>He sends the message with the signature attached.</li>
-    <li>Alice recomputes the hash of the message and provides it, plus Bob’s <strong>public key</strong>, to the verification algorithm.</li>
-    <li>If the algorithm says the signature is valid, Alice is assured of two things.</li>
-  </ol>
-  <div class="grid grid-2">
-    <div class="card"><h3 class="card-title">✍️ It was signed by Bob</h3><p>No one other than Bob has access to his private key, which is required to create a signature verifiable with his public key.</p></div>
-    <div class="card"><h3 class="card-title">🔒 The message is intact</h3><p>Without access to Bob’s private key, no one can alter the message to produce a hash value that verifies with Bob’s public key.</p></div>
-  </div>
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Critical caveat:</strong> this only works if the verifier can be certain that the public key they hold <em>actually belongs to Bob</em>. A forged or substituted public key breaks every guarantee. This is the problem of <strong>public key authentication</strong>, solved by <strong>PKI (Public Key Infrastructure)</strong> and digital certificates — covered later in the course.</div></div>
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> MACs require a <em>shared</em> key, signatures require a <em>key pair</em>. Which property does the key pair unlock that no shared key ever can? (Non-repudiation — proof to a third party.)</div></div>
+  <p class="section-kicker">Instead of bolting encryption and a MAC together, which is error-prone, authenticated encryption combines them into one primitive.</p>
+
+  <p>Confidentiality (encryption) and authenticity (a MAC) have been separate so far, and combining them correctly is tricky and error-prone. <strong>Authenticated encryption (AE)</strong> simultaneously provides both confidentiality and authenticity (integrity) in a single operation, ensuring data stays private while protected from tampering. A MAC alone does not provide confidentiality, and manual combination risks mistakes such as incorrect ordering or improper implementation. By integrating the two, AE reduces these errors.</p>
+
+  <div class="def-card"><span class="dc-term">AEAD</span> — Authenticated Encryption with Associated Data extends AE by allowing additional data that is authenticated but <strong>not</strong> encrypted, sent in plaintext but included in the integrity check, for example headers or metadata. The tag computation and encryption can run in parallel, making AEAD efficient. It is defined for block and stream ciphers, and its security depends on how tightly the two are coupled; ideally no plaintext is released until integrity is verified.</div>
+
+  <h3 class="sub-title">The four approaches</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Approach</th><th>What you send</th><th>Used by</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Hash then encrypt (H→E)</strong>: <span class="math">h = H(M)</span>, then <span class="math">E(K, (M ‖ h))</span></td><td><span class="math">Enc_k(m, H(m))</span></td><td>—</td></tr>
+      <tr><td><strong>MAC-then-Encrypt (A→E)</strong>: <span class="math">T = MAC(K₁, M)</span>, then <span class="math">E(K₂, [M ‖ T])</span>; two keys</td><td><span class="math">Enc_k1(m, MAC_k2(m))</span></td><td>SSL/TLS</td></tr>
+      <tr><td><strong>Encrypt-then-MAC (E→A)</strong>: <span class="math">C = E(K₂, M)</span>, then <span class="math">T = MAC(K₁, C)</span>; two keys</td><td><span class="math">Enc_k1(m), MAC_k2(Enc_k1(m))</span></td><td>IPSec; strongest</td></tr>
+      <tr><td><strong>MAC-and-Encrypt (E + A)</strong>: <span class="math">C = E(K₂, M)</span> and <span class="math">T = MAC(K₁, M)</span>; either order; two keys</td><td><span class="math">Enc_k1(m), MAC_k2(m)</span></td><td>SSH</td></tr>
+    </tbody>
+  </table></div>
+
+  <p class="muted"><strong>Encrypt-then-MAC (E→A)</strong> is regarded as the strongest because the tag protects the ciphertext itself, so modification is caught before decryption. GCM implements this paradigm.</p>
+
+  <h3 class="sub-title">GCM and CCM</h3>
+  <p><strong>Galois/Counter Mode (GCM)</strong> is parallelizable for high throughput and low latency, following Encrypt-then-MAC: the message is encrypted in a variant of CTR mode, and the ciphertext is multiplied with key material and message-length information over <span class="math">GF(2<sup>128</sup>)</span> to generate the tag (the standard also defines a MAC-only mode, Galois MAC). It uses <strong>GHASH</strong> (a keyed hash) and <strong>GCTR</strong> (CTR with increment-by-one counters). It is the strongest and most widely used block-cipher AEAD mode, but <strong>very brittle</strong>: nonce reuse can completely break security, so use a well-vetted library.</p>
+
+  <p><strong>Counter with CBC-MAC (CCM)</strong>, standardized by NIST for IEEE 802.11 WiFi, is a tightly specified MAC-and-Encrypt: it computes <strong>CMAC</strong> over the message for a tag, then CTR-encrypts message and tag. It is <strong>sequential</strong> (the MAC completes first), so less efficient than GCM, and uses a single key for both uses (safe by design). It is common in constrained environments such as IoT and WiFi.</p>
+
+  
 </section>
 
-<section class="guide-section" id="signature-approaches" data-title="RSA and DSA Approaches">
+<section class="guide-section" id="signatures" data-title="Digital Signatures">
   <div class="section-head">
     <span class="sec-num" aria-hidden="true"></span>
-    <h2 class="section-title">Two Approaches: RSA and DSA</h2>
+    <h2 class="section-title">Digital Signatures: Need, Operation, RSA and DSA</h2>
   </div>
-  <p class="section-kicker">Both hash the message with SHA, but RSA is a general-purpose scheme while DSA is signature-only.</p>
-  <p>There are <strong>two main approaches</strong> for constructing digital signatures. Both use SHA for hashing the message.</p>
-  <h3 class="sub-title">(a) The RSA approach</h3>
-  <p>RSA is a <strong>general-purpose public-key scheme</strong> — it can also be used for encryption and key exchange. In 2013 an expanded version of the standard, <strong>FIPS-186-4</strong>, incorporated RSA-based signature algorithms.</p>
-  <ol class="steps">
-    <li>The message is passed through a hash function to produce a secure, fixed-length hash code.</li>
-    <li>That hash code is <strong>encrypted using the sender’s private key</strong> to form the signature.</li>
-    <li>The message and the signature are transmitted together.</li>
-    <li>The recipient hashes the message, and <strong>decrypts the signature using the sender’s public key</strong>.</li>
-    <li>If the calculated hash matches the decrypted signature, the signature is accepted as valid.</li>
-  </ol>
-  <p>Because only the sender knows the private key, only the sender could have produced a valid signature.</p>
-  <div class="formula">
-    <div class="formula-label">RSA signature (informally)</div>
-    <div class="math">signature = E(PRa, h(m)) &nbsp;&nbsp;·&nbsp;&nbsp; verify: h(m) =? D(PUa, signature)</div>
+  <p class="section-kicker">A signature signs the hash with a private key, so anyone with the public key can verify and the signer cannot deny it, with no shared secret.</p>
+
+  <h3 class="sub-title">The need for digital signatures</h3>
+  <p>Hashes give integrity but no notion of who sent the message. MACs give integrity plus authenticity but rely on a shared secret key, so both parties must already have agreed on a key. That creates a fundamental limitation:</p>
+  <p>Three limitations follow. A MAC <strong>cannot prove to a third party</strong> that Alice sent the message, because Bob could have computed the same MAC himself. It <strong>does not scale</strong>: communicating with 1000 people needs 1000 keys. And it gives <strong>no non-repudiation</strong>, since Alice can deny sending it with no way to prove otherwise.</p>
+  <p>Digital signatures solve this with <strong>asymmetric (public-key) cryptography</strong>: Alice signs with her private key and anyone verifies with her public key. This gives <strong>no shared secret needed</strong>, <strong>independent third-party verification</strong>, and <strong>non-repudiation</strong>, since Alice cannot deny signing.</p>
+
+  <p class="muted">Non-repudiation is what separates signatures from MACs. With a MAC either party could have produced the tag; with a signature only the private-key holder could have, and that is provable to anyone.</p>
+
+  <h3 class="sub-title">Basic operation</h3>
+  <p>Bob wants to assure Alice the message is from him (he does not prioritise confidentiality). He hashes the message with a secure hash function such as SHA-512. The hash value and Bob's private key are input to a <strong>digital signature generation algorithm</strong>, producing a short block, the signature. He sends the message with the attached signature.</p>
+  <div class="flow">
+    <span class="flow-step">Message M</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Hash H(M)</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Sign with private key</span><span class="flow-arrow">→</span>
+    <span class="flow-step">Send (M, signature)</span>
   </div>
-  <h3 class="sub-title">(b) The DSA approach</h3>
-  <p>The <strong>Digital Signature Algorithm (DSA)</strong> was proposed in <strong>1991</strong> and published by NIST via <strong>FIPS 186</strong>. It uses SHA and provides <strong>only the digital signature function</strong>. Unlike RSA, it <strong>cannot be used for encryption or key exchange</strong>. It is derived from the ElGamal signature scheme, and NIST intentionally standardised it as signature-only, excluding the encryption capability ElGamal supports.</p>
+  <p>Alice hashes the message and inputs the hash value and <strong>Bob's public key</strong> to a <strong>digital signature verification algorithm</strong>. If it returns valid:</p>
   <ul>
-    <li>The message is hashed using SHA, producing <code>h(m)</code>.</li>
-    <li>The hash is provided to a signature function, along with a <strong>random number <code>k</code> generated for this particular signature</strong>.</li>
-    <li>The signature function also depends on the sender’s <strong>private key <code>PRa</code></strong> and a set of parameters shared across a group of users — the <strong>global public key <code>PUG</code></strong>.</li>
-    <li>The resulting signature consists of <strong>two components, <code>s</code> and <code>r</code></strong>.</li>
-    <li>At the receiver, the hash of the incoming message is generated and fed, with the signature, into a verification function that depends on <code>PUG</code> and the sender’s <strong>public key <code>PUa</code></strong>. The output equals the component <code>r</code> if the signature is valid.</li>
+    <li>Alice is assured the message was <strong>signed by Bob</strong>, since no one else has his private key, which is needed to create a signature verifiable with his public key.</li>
+    <li>Alice is assured of the message's <strong>integrity</strong>, since without Bob's private key no one can alter the message to produce a hash verifiable with Bob's public key.</li>
   </ul>
-  <div class="def-card"><span class="dc-term">DSA domain parameters</span> — let <code>p</code> be prime, <code>q</code> a prime divisor of <code>(p − 1)</code>, and <code>g</code> an element of order <code>q</code> in <code>ℤp</code>. The global public key <code>PUG = (p, q, g)</code> is shared by all users. The user’s private key is a random number <code>x</code> with <code>0 &lt; x &lt; q</code>, and the public key is derived from it.</div>
-  <p>In the underlying modular-exponentiation setting, parties compute values such as <code>X = g^a mod p</code> and a shared secret <code>k = Y^a mod p = X^b mod p</code>. This is the same discrete-logarithm mathematics that underpins Diffie–Hellman key exchange, and it is where DSA’s global parameters come from.</p>
-  <h3 class="sub-title">Which is which?</h3>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Feature</th><th>RSA</th><th>DSA</th></tr></thead>
-      <tbody>
-        <tr><td>Standard</td><td>FIPS-186-4 (2013)</td><td>FIPS 186 (1991)</td></tr>
-        <tr><td>Scope</td><td>General purpose: signatures, encryption, key exchange</td><td>Signature only — no encryption or key exchange</td></tr>
-        <tr><td>Signature</td><td>Encrypt the hash with the private key; decrypt with the public key to verify</td><td>Two components <code>(s, r)</code>, verified with <code>PUG</code> and <code>PUa</code></td></tr>
-        <tr><td>Extra inputs</td><td>Message hash and key pair</td><td>Per-message random <code>k</code>, global parameters <code>PUG</code>, private key</td></tr>
-        <tr><td>Lineage</td><td>RSA public-key system</td><td>Derived from ElGamal signatures</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Exam guidance:</strong> the detailed DSA arithmetic was not covered in depth in the lecture. The exam expectation is only the <strong>high-level ideas of DSA</strong> — signature-only, uses a global public key, a per-message random <code>k</code>, and produces <code>(s, r)</code>.</div></div>
+
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> this only works if the verifier can be certain the public key actually belongs to Bob. A forged or substituted public key breaks all guarantees. This is <strong>public-key authentication</strong>, solved by PKI and covered later under digital certificates.</div></div>
+
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Key idea:</strong> signatures are computed over the <em>hash</em>, not the raw message (<strong>hash-then-sign</strong>). Hashing first makes signing efficient and ties the signature to collision resistance, so a weak hash weakens the signature scheme.</div></div>
+
+  <h3 class="sub-title">The DSA approach</h3>
+  <p>There are two main approaches, both using SHA for hashing. <strong>DSA</strong> was proposed in 1991 and published by NIST via FIPS 186. It uses SHA and provides <strong>only</strong> the signature function: unlike RSA it cannot be used for encryption or key exchange. It is a dedicated signature-only scheme derived from <strong>ElGamal</strong> signatures, standardised with the encryption capability intentionally excluded.</p>
+  <ol class="steps">
+    <li><strong>Hash the message</strong> <span class="math">M</span> to generate a hash code.</li>
+    <li><strong>Add a random value</strong>: the hash code enters a signature function with a random number <span class="math">k</span> generated for this particular signature.</li>
+    <li><strong>Add the keys</strong>: the function also depends on the sender's private key (<span class="math">PR_a</span>) and a set of parameters known to a group of principals, the <strong>global public key</strong> (<span class="math">PU_G</span>).</li>
+    <li><strong>Produce two components</strong>: the signature is the pair <span class="math">s</span> and <span class="math">r</span>.</li>
+    <li><strong>Verify</strong>: the receiver hashes the message and inputs it to a verification function depending on <span class="math">PU_G</span> and the sender's public key (<span class="math">PU_a</span>). Its output equals the signature component <span class="math">r</span> if valid.</li>
+  </ol>
+  <p>Only the sender, knowing the private key, could have produced a valid signature. In DSA a user computes <span class="math">r</span> and <span class="math">s</span> as functions of the public key components <span class="math">(p, q, g)</span>, the private key <span class="math">x</span>, the hash <span class="math">H(M)</span>, and the random integer <span class="math">k</span>.</p>
+  <div class="formula"><div class="formula-label">DSA domain parameters</div><div class="math">p prime · q a prime divisor of (p − 1) · g an element of order q in ℤp
+PU_G = (p, q, g) shared by all users · private key x with 0 &lt; x &lt; q</div></div>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Context:</strong> the exam expectation is only the high-level ideas of DSA; refer to the textbook (Stallings, Chapter 13) for full detail.</div></div>
+
+  <h3 class="sub-title">The RSA approach</h3>
+  <p>In 2013, FIPS-186-4 was proposed to incorporate signature algorithms based on RSA. The message is hashed to a secure fixed-length hash code; that hash code is <strong>encrypted using the sender's private key</strong> to form the signature; message and signature are transmitted. The recipient hashes the message and <strong>decrypts the signature using the sender's public key</strong>. If the calculated hash matches the decrypted signature, the signature is valid. Because only the sender knows the private key, only the sender could have produced it. RSA is a general-purpose public-key scheme that can also encrypt and exchange keys, whereas DSA is signature-only.</p>
+
+  <h3 class="sub-title">Deterministic versus probabilistic signatures</h3>
+  <p>Note the per-message random number <span class="math">k</span> in DSA. It must be generated randomly or pseudorandomly and be <strong>unique for each signing</strong>, which makes DSA a <strong>probabilistic</strong> scheme: signing the same message twice with the same key yields different <span class="math">(s, r)</span> pairs. The textbook RSA signing procedure is deterministic for the same hash and key. Either way, <span class="math">k</span> must never repeat: reusing a DSA <span class="math">k</span> across signatures leaks the private key.</p>
+
+  <h3 class="sub-title">MAC versus digital signature</h3>
+  <p>A MAC is symmetric: it gives integrity and origin but no third-party proof and no non-repudiation, and it needs a separate key per correspondent. A signature is asymmetric: it gives integrity, origin and non-repudiation, can be verified independently by any third party, and scales by publishing one public key, at the cost of being slower and more expensive.</p>
+
+  
 </section>
 
 <section class="guide-section" id="takeaways" data-title="Key Takeaways">
-  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Key Takeaways</h2></div>
-  <p class="section-kicker">If you remember nothing else, remember this.</p>
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Key Takeaways</h2>
+  </div>
+  <p class="section-kicker">If you remember nothing else from Week 6, remember these twelve points.</p>
+
   <div class="takeaways">
-    <div class="takeaway"><span class="tk-num">1</span><p><strong>A hash function maps variable-length input to a fixed-length output</strong> <code>h = H(M)</code>, is one-way, and is used for <strong>integrity</strong>. Its output is also called a digest, hash value or checksum.</p></div>
-    <div class="takeaway"><span class="tk-num">2</span><p><strong>A plain hash cannot prove origin.</strong> Because it is keyless, an attacker can replace the message and recompute the hash — a person-in-the-middle attack.</p></div>
-    <div class="takeaway"><span class="tk-num">3</span><p><strong>Three resistance properties:</strong> preimage resistance, second preimage resistance and collision resistance. Collision resistance implies second preimage resistance, but not preimage resistance.</p></div>
-    <div class="takeaway"><span class="tk-num">4</span><p><strong>The birthday attack</strong> finds collisions in about <code>2^(n/2)</code> attempts for an n-bit hash, so <strong>output length must be at least 160 bits</strong> (2⁸⁰ attempts).</p></div>
-    <div class="takeaway"><span class="tk-num">5</span><p><strong>SHA is the standard family:</strong> SHA-1 (160-bit, insecure), SHA-2 (SHA-224 to SHA-512, 2001) and SHA-3 (sponge, 2015). Use SHA-2 today, with SHA-3 as a structurally different alternative.</p></div>
-    <div class="takeaway"><span class="tk-num">6</span><p><strong>SHA-512 pads with a 1 bit and the original length</strong>, splits the message into 1024-bit blocks, and runs each through 80 rounds of compression with a Davies–Meyer feedforward.</p></div>
-    <div class="takeaway"><span class="tk-num">7</span><p><strong>SHA-3 uses a sponge</strong> with a state of <code>r + c</code> bits: absorb, permute, squeeze. The hidden capacity bits remove the length-extension vulnerability.</p></div>
-    <div class="takeaway"><span class="tk-num">8</span><p><strong>A MAC is a keyed hash</strong> that adds a shared secret, giving integrity <em>and</em> origin authentication. It does not give confidentiality.</p></div>
-    <div class="takeaway"><span class="tk-num">9</span><p><strong>HMAC(K, M) = H[(K ⊕ opad) ∥ H[(K ⊕ ipad) ∥ M]]</strong>. It is RFC 2104 and FIPS 198, and even HMAC-MD5 is practically safe because the attacker cannot work offline.</p></div>
-    <div class="takeaway"><span class="tk-num">10</span><p><strong>Authenticated encryption</strong> combines confidentiality and integrity. The four orderings are H→E, A→E (TLS), E→A (IPSec, strongest) and E+A (SSH); AEAD adds authenticated associated data, with <strong>GCM</strong> and <strong>CCM</strong> as the main modes.</p></div>
-    <div class="takeaway"><span class="tk-num">11</span><p><strong>Digital signatures use public-key cryptography</strong> — sign with the private key, verify with the public key — adding third-party verifiability and <strong>non-repudiation</strong> that MACs cannot provide.</p></div>
-    <div class="takeaway"><span class="tk-num">12</span><p><strong>RSA is general-purpose; DSA is signature-only.</strong> DSA uses global parameters <code>PUG = (p, q, g)</code>, a per-message random <code>k</code>, and produces a signature <code>(s, r)</code>. Signatures depend on trustworthy public keys (PKI).</p></div>
+    <div class="takeaway"><span class="tk-num">1</span><p><strong>A hash is a fixed-size fingerprint.</strong> It maps variable-length <span class="math">M</span> to fixed-size <span class="math">h = H(M)</span>, is one-way, and its security goal is <strong>integrity</strong>, not confidentiality.</p></div>
+    <div class="takeaway"><span class="tk-num">2</span><p><strong>Collisions are inevitable</strong> because the input space exceeds the output space. Cryptographic hashes make finding them computationally infeasible, not impossible.</p></div>
+    <div class="takeaway"><span class="tk-num">3</span><p><strong>Three resistance properties.</strong> Preimage (given <span class="math">y</span>, find <span class="math">x</span>), second preimage (given <span class="math">x</span>, find another <span class="math">x′</span> with the same hash), collision (find any two colliding). Collision resistance implies second preimage resistance, not preimage resistance.</p></div>
+    <div class="takeaway"><span class="tk-num">4</span><p><strong>The birthday attack halves the exponent.</strong> An <span class="math">n</span>-bit hash needs only about <span class="math">2<sup>n/2</sup></span> attempts for a 50% collision chance, hence the minimum <span class="math">n ≥ 160</span> bits.</p></div>
+    <div class="takeaway"><span class="tk-num">5</span><p><strong>SHA-2 uses Merkle–Damgård chaining:</strong> pad (with a length field), split into blocks, compress each into the next chaining value, with <strong>Davies–Meyer feedforward</strong>.</p></div>
+    <div class="takeaway"><span class="tk-num">6</span><p><strong>Length extension exploits that chain.</strong> Given <span class="math">H(m)</span> you can compute <span class="math">H(m ‖ extra)</span> without knowing <span class="math">m</span>. Never build a MAC as <span class="math">H(K ‖ m)</span>.</p></div>
+    <div class="takeaway"><span class="tk-num">7</span><p><strong>SHA-3 uses a sponge:</strong> absorb blocks into the top <span class="math">r</span> bits, permute with <span class="math">f</span>, then squeeze output. The hidden capacity <span class="math">c</span> gives immunity to length extension.</p></div>
+    <div class="takeaway"><span class="tk-num">8</span><p><strong>A MAC is a keyed hash.</strong> <span class="math">MAC = C(K, M)</span> gives integrity plus origin authentication via a shared secret, and never provides confidentiality on its own.</p></div>
+    <div class="takeaway"><span class="tk-num">9</span><p><strong>HMAC = <span class="math">H[(K ⊕ opad) ‖ H[(K ⊕ ipad) ‖ M]]</span>.</strong> RFC 2104, FIPS 198, the obligatory MAC for IP security, whose nested structure defeats length extension.</p></div>
+    <div class="takeaway"><span class="tk-num">10</span><p><strong>HMAC-MD5 is still usable.</strong> The attacker cannot mount the offline birthday attack without <span class="math">K</span>; the online equivalent needs about 150,000 years on a 1-Gbps link.</p></div>
+    <div class="takeaway"><span class="tk-num">11</span><p><strong>Authenticated encryption combines the two.</strong> Encrypt-then-MAC (IPSec, GCM) is considered strongest; CCM is MAC-then-Encrypt and sequential. Always use vetted libraries.</p></div>
+    <div class="takeaway"><span class="tk-num">12</span><p><strong>Digital signatures add non-repudiation.</strong> Sign the hash with a private key, verify with the public key. RSA is general-purpose; DSA is signature-only and uses a per-message random <span class="math">k</span>. Public-key authenticity depends on PKI.</p></div>
   </div>
 </section>
 
 <section class="guide-section" id="glossary" data-title="Glossary">
-  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Glossary</h2></div>
-  <p class="section-kicker">Every term you need to speak this week’s language.</p>
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Glossary</h2>
+  </div>
+  <p class="section-kicker">Thirty terms from Week 6, filterable by category.</p>
+
   <div class="glossary-tools">
     <button class="chip active" type="button" data-cat="all">All</button>
-    <button class="chip" type="button" data-cat="hash">Hashes &amp; SHA</button>
-    <button class="chip" type="button" data-cat="mac">MACs &amp; HMAC</button>
-    <button class="chip" type="button" data-cat="aead">Authenticated encryption</button>
-    <button class="chip" type="button" data-cat="signature">Signatures</button>
+    <button class="chip" type="button" data-cat="concept">Core concepts</button>
+    <button class="chip" type="button" data-cat="algorithm">Algorithms &amp; constructions</button>
+    <button class="chip" type="button" data-cat="attack">Attacks &amp; limits</button>
+    <button class="chip" type="button" data-cat="method">Methods &amp; modes</button>
   </div>
+
   <div class="terms">
-    <div class="term-card" data-cat="hash"><div class="term-name">Hash function (H)</div><div class="term-meaning">A one-way function that takes an input of variable length and produces a fixed-length output <code>h = H(M)</code>. Used for integrity.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">Digest (hash value)</div><div class="term-meaning">The fixed-size output of a hash function. Also called a hash, checksum or message digest depending on context.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">Collision</div><div class="term-meaning">Two different inputs that produce the same hash value, <code>H(a) = H(b)</code> with <code>a ≠ b</code>. Always possible; a good hash makes them hard to find.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">Preimage</div><div class="term-meaning">An input value that produces a given output: if <code>h = H(x)</code>, then <code>x</code> is the preimage of <code>h</code>.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">Preimage resistance</div><div class="term-meaning">Given a randomly chosen hash value <code>y</code>, it is computationally infeasible to find any <code>x</code> with <code>H(x) = y</code>. Protects confidentiality of the original message.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">Second preimage resistance</div><div class="term-meaning">Given a randomly chosen input <code>x</code>, it is computationally infeasible to find a different <code>x′</code> with <code>H(x) = H(x′)</code>. Prevents substituting a forged message.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">Collision resistance</div><div class="term-meaning">It is computationally infeasible to find any pair <code>(x, x′)</code> with <code>x ≠ x′</code> and <code>H(x) = H(x′)</code>. Implies second preimage resistance; the strongest of the linked properties.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">Birthday attack</div><div class="term-meaning">If values are chosen uniformly from <code>0</code> to <code>N−1</code>, a repeat appears with more than 50% probability after about <code>√N</code> choices. For an n-bit hash, about <code>2^(n/2)</code> attempts suffice.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">Pseudo-randomness</div><div class="term-meaning">The property of appearing random while being produced deterministically. Not formally required of hashes, but implied and relied upon by the resistance properties.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">Length field</div><div class="term-meaning">A security measure: the original message length is encoded into the padding, making it harder for an attacker to produce a different message with the same hash.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">SHA-2</div><div class="term-meaning">NIST’s 2001 family: SHA-224, SHA-256, SHA-384 and SHA-512 (plus SHA-512/224, SHA-512/256). The current workhorse hash family.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">SHA-3</div><div class="term-meaning">NIST’s 2015 family (SHA3-224 to SHA3-512) based on a sponge construction — a structurally different alternative to SHA-2.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">Sponge construction</div><div class="term-meaning">SHA-3’s design: a state of <code>r + c</code> bits that absorbs message blocks, permutes with <code>f</code>, then squeezes output. Rate <code>r</code> trades speed against security capacity <code>c</code>.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">Length-extension vulnerability</div><div class="term-meaning">A SHA-2 weakness: knowing <code>H(m)</code>, an attacker can compute <code>H(m ∥ extra)</code> without knowing <code>m</code>. SHA-3’s hidden capacity bits prevent it.</div></div>
-    <div class="term-card" data-cat="hash"><div class="term-name">Salt &amp; rainbow table</div><div class="term-meaning">A rainbow table is a precomputed lookup of common inputs to hashes. A salt — a random string concatenated with the plaintext before hashing — defeats such lookups.</div></div>
-    <div class="term-card" data-cat="mac"><div class="term-name">Message Authentication Code (MAC)</div><div class="term-meaning">A fixed-size tag generated from a message and a shared secret key, appended to the message. Gives integrity and origin authentication. <code>MAC = C(K, M)</code>.</div></div>
-    <div class="term-card" data-cat="mac"><div class="term-name">Keyed hash function</div><div class="term-meaning">Another name for a MAC — a hash computation that incorporates a secret key.</div></div>
-    <div class="term-card" data-cat="mac"><div class="term-name">HMAC</div><div class="term-meaning">Hash-based MAC: <code>HMAC(K, M) = H[(K ⊕ opad) ∥ H[(K ⊕ ipad) ∥ M]]</code>. RFC 2104; FIPS 198; obligatory for IPSec. The most common form of MAC.</div></div>
-    <div class="term-card" data-cat="mac"><div class="term-name">ipad and opad</div><div class="term-meaning">Publicly known constant bit strings (<code>36</code> and <code>5C</code>) XORed with the padded key in HMAC. Required for its security proof.</div></div>
-    <div class="term-card" data-cat="mac"><div class="term-name">Origin authentication</div><div class="term-meaning">Proving that a message came from the claimed sender, not just that it was uncorrupted. A plain hash cannot do this; a MAC can.</div></div>
-    <div class="term-card" data-cat="aead"><div class="term-name">Authenticated Encryption (AE)</div><div class="term-meaning">A single primitive providing confidentiality and integrity/authentication together, so plaintext is ideally not released until integrity is verified.</div></div>
-    <div class="term-card" data-cat="aead"><div class="term-name">AEAD</div><div class="term-meaning">Authenticated Encryption with Associated Data: extends AE to authenticate additional data (such as headers) that is sent in plaintext but included in the integrity check.</div></div>
-    <div class="term-card" data-cat="aead"><div class="term-name">GCM (Galois/Counter Mode)</div><div class="term-meaning">A fast, parallelisable AEAD block-cipher mode following Encrypt-then-MAC. Uses GHASH and GCTR over GF(2¹²⁸). Brittle: nonce reuse breaks security.</div></div>
-    <div class="term-card" data-cat="aead"><div class="term-name">CCM (Counter with CBC-MAC)</div><div class="term-meaning">A NIST AEAD mode for WiFi (802.11) and IoT. Computes CBC-MAC over the message, then encrypts message and tag in CTR mode — a MAC-then-Encrypt construction.</div></div>
-    <div class="term-card" data-cat="aead"><div class="term-name">GHASH and GCTR</div><div class="term-meaning">GCM’s two building blocks: GHASH is a keyed hash producing the authenticator tag; GCTR is CTR mode with counters incremented by one.</div></div>
-    <div class="term-card" data-cat="signature"><div class="term-name">Digital signature</div><div class="term-meaning">A short block produced by signing a message hash with the sender’s private key. Anyone with the public key can verify it, proving origin and integrity.</div></div>
-    <div class="term-card" data-cat="signature"><div class="term-name">RSA signature approach</div><div class="term-meaning">Hash the message, encrypt the hash with the sender’s private key, and verify by decrypting with the public key and comparing. RSA is general-purpose (also encryption and key exchange).</div></div>
-    <div class="term-card" data-cat="signature"><div class="term-name">DSA (Digital Signature Algorithm)</div><div class="term-meaning">A signature-only scheme proposed in 1991 (FIPS 186), derived from ElGamal. Uses a per-message random <code>k</code> and produces a two-part signature <code>(s, r)</code>.</div></div>
-    <div class="term-card" data-cat="signature"><div class="term-name">Global public key (PUG)</div><div class="term-meaning">The DSA system-wide parameters <code>PUG = (p, q, g)</code>, where <code>p</code> is prime, <code>q</code> divides <code>(p−1)</code>, and <code>g</code> has order <code>q</code> in <code>ℤp</code>. Shared by all users.</div></div>
-    <div class="term-card" data-cat="signature"><div class="term-name">Non-repudiation</div><div class="term-meaning">The guarantee that a signer cannot later deny having signed. Digital signatures provide it; MACs do not, because both parties share the key.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Hash function</div><div class="term-meaning">A one-way function mapping a variable-length input <span class="math">M</span> to a fixed-size value <span class="math">h = H(M)</span>. Also called a digest or checksum.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Cryptographic hash function</div><div class="term-meaning">A hash satisfying preimage, second preimage and collision resistance, suitable for security use. Acts like one-way encryption.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Message digest</div><div class="term-meaning">The hash value produced when a hash function is used for message authentication.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Preimage</div><div class="term-meaning">An input value producing a particular output. For <span class="math">h = H(x)</span>, <span class="math">x</span> is the preimage of <span class="math">h</span>.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Collision</div><div class="term-meaning">Two different inputs producing identical hash values: <span class="math">H(a) = H(b)</span> with <span class="math">a ≠ b</span>. Mathematically inevitable.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Preimage resistance</div><div class="term-meaning">Given a randomly chosen output <span class="math">y</span>, it is infeasible to find <span class="math">x</span> with <span class="math">H(x) = y</span>.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Second preimage resistance</div><div class="term-meaning">Given <span class="math">x</span>, it is infeasible to find <span class="math">x′ ≠ x</span> with <span class="math">H(x) = H(x′)</span>.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Collision resistance</div><div class="term-meaning">Infeasible to find any pair <span class="math">(x, x′)</span>, <span class="math">x ≠ x′</span>, with <span class="math">H(x) = H(x′)</span>. Implies second preimage resistance.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Pseudorandomness</div><div class="term-meaning">A sequence that appears random but is generated deterministically. Implied, though not traditionally listed, as a hash requirement.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">MAC (message authentication code)</div><div class="term-meaning">A fixed-size tag computed with a shared secret key and appended to a message; also called a cryptographic checksum or keyed hash. <span class="math">MAC = C(K, M)</span>.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Authenticated encryption (AE)</div><div class="term-meaning">Encryption that simultaneously provides confidentiality and authenticity in a single operation, avoiding the error-prone manual combination of encryption and MAC.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Digital signature</div><div class="term-meaning">A value formed by encrypting a message hash with the sender's private key, verifiable by anyone with the sender's public key. Provides integrity, origin and non-repudiation.</div></div>
+    <div class="term-card" data-cat="concept"><div class="term-name">Non-repudiation</div><div class="term-meaning">The property that a signer cannot later deny signing. MACs do not provide it; digital signatures do.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">SHA-2</div><div class="term-meaning">NIST family from 2001/2002 with variants SHA-224, SHA-256, SHA-384, SHA-512 (plus SHA-512/224, SHA-512/256). Built on Merkle–Damgård chaining.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">SHA-3</div><div class="term-meaning">NIST family announced in 2015 with variants SHA3-224/256/384/512. Uses a sponge construction and resists length extension.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">Sponge construction</div><div class="term-meaning">SHA-3's design: a state of <span class="math">r + c</span> bits permuted by <span class="math">f</span>, with an absorbing phase (message XORed into the top <span class="math">r</span> bits) and a squeezing phase (output read from the top <span class="math">r</span> bits).</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">HMAC</div><div class="term-meaning">Hash-based MAC: <span class="math">HMAC(K, M) = H[(K ⊕ opad) ‖ H[(K ⊕ ipad) ‖ M]]</span>. RFC 2104 and FIPS 198; the obligatory MAC for IP security.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">ipad / opad</div><div class="term-meaning">Publicly known constants (36<sub>16</sub> and 5C<sub>16</sub>, repeated <span class="math">b/8</span> times) XORed with the padded key in HMAC. Required for its security proof.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">CBC-MAC / CMAC</div><div class="term-meaning">Block-cipher-based MACs. CBC-MAC chains ciphertext blocks and uses the last block as the tag; CMAC is the NIST refinement used inside CCM.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">GCM (Galois/Counter Mode)</div><div class="term-meaning">An AEAD mode following Encrypt-then-MAC: CTR-mode encryption plus a GHASH-based tag over GF(2<sup>128</sup>). Parallelizable but brittle; nonce reuse breaks it.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">CCM (Counter with CBC-MAC)</div><div class="term-meaning">A NIST AEAD mode for IEEE 802.11: computes CMAC over the message, then CTR-encrypts message and tag. Sequential, single key, common in IoT/WiFi.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">DSA (Digital Signature Algorithm)</div><div class="term-meaning">A signature-only scheme proposed in 1991 (FIPS 186), derived from ElGamal and using SHA. Produces a two-part signature <span class="math">(s, r)</span> using a global public key and a per-message random <span class="math">k</span>.</div></div>
+    <div class="term-card" data-cat="algorithm"><div class="term-name">RSA signature</div><div class="term-meaning">A signature formed by encrypting a message hash with the sender's private key; verified by hashing the message and decrypting the signature with the public key. RSA is general-purpose.</div></div>
+    <div class="term-card" data-cat="attack"><div class="term-name">Birthday attack</div><div class="term-meaning">Exploiting the birthday bound: for an <span class="math">n</span>-bit output, only about <span class="math">2<sup>n/2</sup></span> attempts give a 50% chance of a collision.</div></div>
+    <div class="term-card" data-cat="attack"><div class="term-name">Length-extension attack</div><div class="term-meaning">Given <span class="math">H(m)</span>, compute <span class="math">H(m ‖ extra)</span> without knowing <span class="math">m</span>. Possible in SHA-2/MD5/SHA-1 Merkle–Damgård designs; impossible in SHA-3.</div></div>
+    <div class="term-card" data-cat="attack"><div class="term-name">Person-in-the-middle attack</div><div class="term-meaning">An attacker intercepts a message, replaces it, and alters the keyless digest to match, so the receiver detects nothing. Motivates MACs and signatures.</div></div>
+    <div class="term-card" data-cat="attack"><div class="term-name">Rainbow table &amp; salt</div><div class="term-meaning">Precomputed hash lookup tables for common plaintexts, used to reverse weak password hashes. Defeated by salting: concatenating a random string before hashing.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">Merkle–Damgård construction</div><div class="term-meaning">Iterated hashing used by MD5, SHA-1 and SHA-2: pad, split into blocks, and chain <span class="math">H_i = F(H_(i−1), M_i)</span> from a fixed IV. Vulnerable to length extension.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">Encrypt-then-MAC (E→A)</div><div class="term-meaning">Encrypt the message, then MAC the ciphertext: <span class="math">Enc_k1(m), MAC_k2(Enc_k1(m))</span>. Used by IPSec and GCM; considered the strongest ordering.</div></div>
+    <div class="term-card" data-cat="method"><div class="term-name">AEAD</div><div class="term-meaning">Authenticated Encryption with Associated Data: AE that also authenticates (but does not encrypt) associated data such as headers. Defined for block and stream ciphers.</div></div>
   </div>
   <p class="empty-note" id="glossaryEmpty">No terms in this category.</p>
 </section>
 
 <section class="guide-section" id="practice" data-title="Practice Questions">
-  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Practice Questions</h2></div>
-  <p class="section-kicker">Look away from the page first — retrieval is what builds memory.</p>
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Practice Questions</h2>
+  </div>
+  <p class="section-kicker">Fourteen open-ended questions. Answer aloud from memory, then reveal the model answer.</p>
+
   <div class="quiz-toolbar">
-    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick “Mastered”. Your progress is saved.</span>
+    <span class="progress-copy" id="quizProgressCopy">Answer, reveal, then tick "Mastered". Your progress is saved.</span>
     <button class="btn" id="revealAll" type="button">Reveal all</button>
     <button class="btn" id="hideAll" type="button">Hide all</button>
     <button class="btn" id="resetProgress" type="button">Reset</button>
   </div>
+
   <article class="quiz" id="q1">
-    <div class="quiz-head"><span class="quiz-qnum">Q1</span><p class="quiz-q">Define a hash function and explain what “one-way” means. What is its output called?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> A hash function <code>H</code> takes an input of variable length and produces a fixed-length output <code>h = H(M)</code>. “One-way” means you can compute the output from the input, but you cannot practically reverse the process to recover the input. The output is called a hash value, hash, digest, checksum or message digest depending on context. Its principle objective in cryptography is data integrity.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q1</span>
+      <p class="quiz-q">Define a cryptographic hash function and explain why collisions are mathematically inevitable.</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> A one-way function mapping a variable-length input <span class="math">M</span> to a fixed-size <span class="math">h = H(M)</span>, satisfying preimage, second preimage and collision resistance. Collisions are inevitable because the input space is vastly larger than the output space, so by the pigeonhole principle two inputs must share an output. The goal is to make collisions computationally infeasible to find.</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
     </div>
   </article>
+
   <article class="quiz" id="q2">
-    <div class="quiz-head"><span class="quiz-qnum">Q2</span><p class="quiz-q">Why are collisions mathematically guaranteed for any hash function, and what does it mean for a hash to be “good”?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> The input space is effectively infinite while the output space is finite, so many inputs must map to each output — collisions exist by counting alone. The question is only how hard they are to find. A “good” hash distributes outputs evenly and makes them emulate randomness, and it makes collisions computationally infeasible to find.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q2</span>
+      <p class="quiz-q">Distinguish preimage, second preimage and collision resistance, stating what the attacker is given.</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> Preimage: given a random output <span class="math">y</span>, infeasible to find any <span class="math">x</span> with <span class="math">H(x) = y</span>. Second preimage: given a specific input <span class="math">x</span>, infeasible to find a different <span class="math">x′</span> with <span class="math">H(x) = H(x′)</span>. Collision: infeasible to find any pair <span class="math">(x, x′)</span>, <span class="math">x ≠ x′</span>, with equal hashes. Collision resistance implies second preimage resistance but not preimage resistance.</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
     </div>
   </article>
+
   <article class="quiz" id="q3">
-    <div class="quiz-head"><span class="quiz-qnum">Q3</span><p class="quiz-q">Describe hash-based message authentication, then explain the person-in-the-middle attack that defeats it.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> The sender sends the message <code>m</code> with its hash <code>h(m)</code>; the receiver recomputes <code>h(m′)</code> on the received message and compares. If they match, the message is unchanged. But because the hash function is keyless, an attacker who intercepts the message can replace it and recompute a matching hash. The receiver cannot detect the substitution. This is the problem of <strong>origin authentication</strong>, and it is why MACs are needed.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q3</span>
+      <p class="quiz-q">Why can a keyless hash not provide origin authentication, and which mechanisms do?</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> A keyless hash can be computed by anyone. In a person-in-the-middle attack the attacker replaces the message and recomputes the digest so it matches, and the receiver detects nothing. A hash proves only that data was not corrupted, not who sent it. Origin authentication needs a secret only the legitimate parties control: a MAC (shared secret key) or a digital signature (sender's private key).</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
     </div>
   </article>
+
   <article class="quiz" id="q4">
-    <div class="quiz-head"><span class="quiz-qnum">Q4</span><p class="quiz-q">State the three resistance properties of a cryptographic hash function, and distinguish second preimage from collision resistance.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> (1) <strong>Preimage resistance:</strong> given a random output <code>y</code>, it is infeasible to find any <code>x</code> with <code>H(x) = y</code>. (2) <strong>Second preimage resistance:</strong> given a random input <code>x</code>, it is infeasible to find a different <code>x′</code> with <code>H(x) = H(x′)</code>. (3) <strong>Collision resistance:</strong> it is infeasible to find any pair <code>(x, x′)</code>, <code>x ≠ x′</code>, with <code>H(x) = H(x′)</code>. Second preimage fixes the first input for the attacker; collision gives the attacker free choice of both inputs, which is why collisions are easier to find.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q4</span>
+      <p class="quiz-q">Explain the birthday attack and why 160 bits is the accepted minimum output length.</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> It derives from the birthday problem: about 23 people give a better-than-50% chance that two share a birthday, because we ask whether any two match, not whether one matches a specific date. Generalised, draws from a range of size <span class="math">N</span> repeat with >50% probability after about <span class="math">√N</span> draws. An <span class="math">n</span>-bit hash has <span class="math">2<sup>n</sup></span> values, so about <span class="math">2<sup>n/2</sup></span> attempts suffice. For 64 bits that is <span class="math">2<sup>32</sup></span>, trivial; at 160 bits the attacker needs <span class="math">2<sup>80</sup></span>, still infeasible.</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
     </div>
   </article>
+
   <article class="quiz" id="q5">
-    <div class="quiz-head"><span class="quiz-qnum">Q5</span><p class="quiz-q">Explain the relationships among the three properties. Which implies which, and which stands apart?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Collision resistance implies second preimage resistance, but not the reverse. Preimage resistance stands apart — no strict implication links it to the other two, so a function can have it without the others and vice versa. Collision resistance is the strongest of the two linked properties. Equivalently, a successful second-preimage attack implies a successful collision attack.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q5</span>
+      <p class="quiz-q">State the relationships among the three resistance properties and say which is hardest to satisfy yet easiest to attack.</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> Collision resistance implies second preimage resistance (breaking second preimage also breaks collision), but not conversely. Preimage resistance stands apart: a function may be preimage resistant but not collision resistant, and vice versa. Collision resistance is the strongest related property and hardest to satisfy, but easiest to attack, because the attacker needs only <em>any</em> two colliding inputs, with no target constraint, which is what the birthday attack exploits.</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
     </div>
   </article>
+
   <article class="quiz" id="q6">
-    <div class="quiz-head"><span class="quiz-qnum">Q6</span><p class="quiz-q">Explain the birthday attack and use it to justify the 160-bit minimum output length.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> If values are drawn uniformly from <code>0</code> to <code>N−1</code>, a repeat appears with more than 50% chance after about <code>√N</code> choices — the birthday problem (just 23 people give a 50% shared-birthday chance). For an n-bit hash there are <code>2ⁿ</code> outputs, so only about <code>2^(n/2)</code> attempts are needed. A 64-bit output falls to <code>2³²</code>, trivial on modern hardware. At <code>n ≥ 160</code>, the attacker needs <code>2⁸⁰</code> attempts, which remains infeasible. Fifty per cent is the standard benchmark: better-than-coin-flip odds mean the hash is practically broken.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q6</span>
+      <p class="quiz-q">Describe SHA-512's padding procedure and explain the purpose of the length field.</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> The message of <span class="math">L</span> bits is padded with a single 1 bit followed by enough 0 bits so the total length is congruent to 896 mod 1024, then a 128-bit encoding of <span class="math">L</span> is appended, bringing it to a multiple of 1024 bits. It is split into 1024-bit blocks feeding the compression chain from the fixed, public 512-bit IV. The length field binds the true input length into the padded string, raising the difficulty of producing two inputs with the same hash.</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
     </div>
   </article>
+
   <article class="quiz" id="q7">
-    <div class="quiz-head"><span class="quiz-qnum">Q7</span><p class="quiz-q">What is pseudo-randomness, and why does it matter even though it is not formally listed as a hash requirement?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Pseudo-randomness is the property of a sequence that looks random but is produced by a deterministic process. It is implied rather than stipulated: cryptographic hashes are used for key derivation and pseudorandom number generation, and the three resistance properties depend on the output being random. In integrity applications the security relies on outputs behaving randomly, so it is worth verifying that a given hash really does produce apparently random output.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q7</span>
+      <p class="quiz-q">Compare SHA-2's compression function with the SHA-3 sponge, and explain why SHA-3 avoids length extension.</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> SHA-2 unpacks the previous chaining value into eight 64-bit registers, runs 80 rounds mixing message-schedule words and constants, then applies Davies–Meyer feedforward back to the input chaining value. SHA-3 keeps a single <span class="math">r + c</span> state permuted by <span class="math">f</span>, absorbing message blocks into the top <span class="math">r</span> bits and squeezing output from there. Because the bottom capacity <span class="math">c</span> bits are never revealed, an attacker who knows <span class="math">H(m)</span> cannot reconstruct the full state and so cannot compute <span class="math">H(m ‖ extra)</span>. SHA-2, whose digest is the final chaining value, can be extended.</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
     </div>
   </article>
+
   <article class="quiz" id="q8">
-    <div class="quiz-head"><span class="quiz-qnum">Q8</span><p class="quiz-q">You are given the hex string <code>5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8</code>. Which hashing algorithm most likely produced it, and how would rainbow tables recover the plaintext?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> There are 40 hex characters, and two hex characters represent a byte, so the output is 20 bytes = 160 bits. Only SHA-1 among the common algorithms produces a 160-bit digest, so it is <strong>SHA-1</strong>. Rainbow tables precompute hashes of common words into lookup tables; an online lookup returns the plaintext “password”. Defences include <strong>salt</strong> — a random string concatenated with the plaintext before hashing — and using modern hashes rather than MD5 or SHA-1.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q8</span>
+      <p class="quiz-q">Define a MAC, state its two security requirements, and say what it does not provide.</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> A MAC is a fixed-size tag generated with a shared secret key and appended to the message, <span class="math">MAC = C(K, M)</span>. Requirements: (1) it must have the resistance properties of a cryptographic hash function; (2) it must be infeasible to predict a correct MAC <span class="math">t′</span> for <span class="math">m′ ≠ m</span>, even given other <span class="math">(m, t)</span> pairs. It gives integrity, origin and (with a sequence number) sequence integrity, but not confidentiality, and it cannot serve as a signature because both parties share the key.</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
     </div>
   </article>
+
   <article class="quiz" id="q9">
-    <div class="quiz-head"><span class="quiz-qnum">Q9</span><p class="quiz-q">Describe how SHA-512 handles a message from start to finish, including padding and the compression function.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> SHA-512 accepts a message shorter than <code>2¹²⁸</code> bits and outputs a 512-bit digest in 1024-bit blocks. The message of <code>L</code> bits is padded with a single <code>1</code> bit and enough <code>0</code> bits so the length is congruent to 896 mod 1024, then a <strong>128-bit encoding of L</strong> is appended, making the total a multiple of 1024. The padded message is split into blocks <code>M₁ … M_t</code>. The fixed, public 512-bit IV <code>H₀</code> seeds the chain. Inside the compression function F, <code>H_(i−1)</code> is unpacked into eight 64-bit registers <code>a–h</code>; a message schedule expands each block into 80 words <code>W₀–W₇₉</code>; 80 rounds each mix in one <code>W_t</code> and one constant <code>K_t</code>; finally a <strong>Davies–Meyer feedforward</strong> adds the registers mod <code>2⁶⁴</code> back to <code>H_(i−1)</code> to give <code>H_i</code>.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q9</span>
+      <p class="quiz-q">Write the HMAC formula and explain the roles of ipad and opad.</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> <span class="math">HMAC(K, M) = H[(K ⊕ opad) ‖ H[(K ⊕ ipad) ‖ M]]</span>. The key is zero-padded to the block size to give <span class="math">K⁺</span>, XORed with <em>ipad</em> (00110110 repeated <span class="math">b/8</span> times) for the inner hash, and with <em>opad</em> (01011100 repeated <span class="math">b/8</span> times) for the outer hash. Both are public constants whose exact values matter little, but they are required for the security proof; the nesting prevents length extension.</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
     </div>
   </article>
+
   <article class="quiz" id="q10">
-    <div class="quiz-head"><span class="quiz-qnum">Q10</span><p class="quiz-q">Explain SHA-3’s sponge construction and why it resists length-extension attacks.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> SHA-3 keeps a single state of <code>r + c</code> bits and repeatedly applies a permutation <code>f</code>. In the <strong>absorbing phase</strong>, each message block is XORed into the top <code>r</code> (rate) bits and <code>f</code> scrambles the whole state; the bottom <code>c</code> (capacity) bits are never directly touched by the message. In the <strong>squeezing phase</strong>, output is read from the top <code>r</code> bits, applying <code>f</code> between reads, so it is naturally an extendable output function. Rate versus capacity is a trade-off: larger <code>r</code> is faster, smaller <code>c</code> is less secure. Because <code>H(m)</code> does not reveal the hidden capacity bits, an attacker cannot reconstruct the full state to compute <code>H(m ∥ extra)</code> — so the SHA-2 length-extension weakness is gone.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q10</span>
+      <p class="quiz-q">MD5 is vulnerable to collisions. Why is it still acceptable inside HMAC?</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> Against plain MD5 the attacker chooses messages and works offline because they know the algorithm and default IV, so the <span class="math">2<sup>64</sup></span> birthday attack is realistic. Against HMAC-MD5 they do not know <span class="math">K</span>, so they cannot generate <span class="math">(message, code)</span> pairs offline and must observe messages under the same key, requiring <span class="math">2<sup>64</sup></span> observed blocks (<span class="math">2<sup>72</sup></span> bits). On a 1-Gbps link with no key change that is about 150,000 years. If speed matters, HMAC-MD5 can be used over HMAC-SHA-1.</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
     </div>
   </article>
+
   <article class="quiz" id="q11">
-    <div class="quiz-head"><span class="quiz-qnum">Q11</span><p class="quiz-q">Why do we need MACs when we already have hashes? State the two requirements a MAC function must satisfy and the three assurances a matching MAC gives.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Hashes are keyless, so an attacker can compute a valid hash for a forged message — they prove the message was not corrupted but not who sent it. A MAC mixes in a secret key, so it is a keyed hash. Requirements: (1) it must have all the resistance properties of a cryptographic hash function, and (2) it must be computationally infeasible to predict a correct MAC <code>t′</code> for a different message <code>m′ ≠ m</code>, even knowing other <code>(m, t)</code> pairs. A matching recomputed MAC assures the receiver that (a) the message was not altered, (b) the message came from the claimed origin, and (c) any sequence number is intact. MACs alone do not provide confidentiality.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q11</span>
+      <p class="quiz-q">Contrast MACs and digital signatures across keys, verification and non-repudiation.</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> Keys: a MAC uses one shared symmetric key; a signature uses a private key to sign and a public key to verify. Verification: a MAC can only be checked by a key-holder, so it cannot be proven to a third party (Bob could have computed the same MAC); a signature can be checked by anyone with the public key, including a judge. Non-repudiation: a MAC gives none, since both parties could produce the tag; a signature gives it, since only the private-key holder could sign. MACs also need a key per correspondent, while signatures scale by publishing one public key.</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
     </div>
   </article>
+
   <article class="quiz" id="q12">
-    <div class="quiz-head"><span class="quiz-qnum">Q12</span><p class="quiz-q">Write the HMAC formula, explain its parts, and answer: can we use MD5 for HMAC?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> <code>HMAC(K, M) = H[(K ⊕ opad) ∥ H[(K ⊕ ipad) ∥ M]]</code>. <code>H</code> is any cryptographic hash; <code>K</code> is the shared secret; <code>M</code> is the message; <code>ipad</code> (<code>36</code>) and <code>opad</code> (<code>5C</code>) are public constants required for the security proof. The message is hashed with the key XOR <code>ipad</code>, then that result is hashed with the key XOR <code>opad</code>. <strong>Yes, MD5 can be used inside HMAC.</strong> A direct MD5 attacker can find collisions offline, but against HMAC they do not know the key, so they cannot generate (message, code) pairs offline. They would need to observe about <code>2⁶⁴</code> blocks under the same key — roughly 150,000 years on a 1-Gbps link. HMAC-MD5 may be chosen over HMAC-SHA-1 if speed matters.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q12</span>
+      <p class="quiz-q">Describe how an RSA digital signature is generated and verified.</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> Generation: hash the message to a fixed-length hash code, then encrypt that hash code with the sender's private key to form the signature, and transmit message plus signature. Verification: the recipient hashes the received message and decrypts the signature with the sender's public key; if the calculated hash matches the decrypted signature, it is valid. Only the sender knows the private key, so only the sender could have produced it. RSA is general-purpose and can also encrypt and exchange keys; FIPS-186-4 added RSA signatures.</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
     </div>
   </article>
+
   <article class="quiz" id="q13">
-    <div class="quiz-head"><span class="quiz-qnum">Q13</span><p class="quiz-q">Name the four approaches to authenticated encryption, say which protocol uses each, and describe GCM and CCM.</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> Four approaches: (1) <strong>Hashing then encryption (H→E):</strong> send <code>E(K, (M ∥ H(M)))</code>. (2) <strong>Authentication then encryption (A→E, MAC-then-Encrypt):</strong> <code>E(K2, [M ∥ MAC(K1, M)])</code> — used by SSL/TLS. (3) <strong>Encryption then authentication (E→A, Encrypt-then-MAC):</strong> send <code>(E(K2, M), MAC(K1, C))</code> — used by IPSec and considered strongest. (4) <strong>MAC-and-Encrypt (E+A):</strong> <code>(E(K2, M), MAC(K1, M))</code> — used by SSH. <strong>GCM</strong> is an Encrypt-then-MAC AEAD mode: it encrypts in a CTR variant, then authenticates over GF(2¹²⁸) using GHASH and GCTR; it is fast and parallel but brittle, so nonce reuse is catastrophic and libraries must be used. <strong>CCM</strong> is a MAC-then-Encrypt mode: it computes a CBC-MAC tag, then encrypts message and tag in CTR mode; it is sequential and slower but ideal for WiFi (802.11) and IoT. AEAD additionally authenticates associated data that stays in plaintext.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q13</span>
+      <p class="quiz-q">Explain the DSA approach at a high level, including the roles of the global public key, the private key x, and the per-message value k.</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> DSA hashes the message and passes the hash code to a signature function with a random number <span class="math">k</span> generated for that signature. The function also depends on the sender's private key <span class="math">PR_a</span> and a global public key <span class="math">PU_G</span>, the domain parameters <span class="math">(p, q, g)</span> shared by all users. The signature is the pair <span class="math">(s, r)</span>. Verification uses the hash, <span class="math">PU_G</span> and the sender's public key <span class="math">PU_a</span>, and its output equals <span class="math">r</span> when valid. The private key is <span class="math">x</span> with <span class="math">0 &lt; x &lt; q</span>; <span class="math">k</span> is the fresh per-message secret. DSA is signature-only, derived from ElGamal; only high-level ideas are examinable.</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
     </div>
   </article>
+
   <article class="quiz" id="q14">
-    <div class="quiz-head"><span class="quiz-qnum">Q14</span><p class="quiz-q">What do digital signatures add over MACs, and how do the RSA and DSA approaches differ?</p></div>
-    <div class="quiz-answer"><strong>Answer:</strong> MACs need a shared secret, so they cannot prove to a third party who sent a message, do not scale (n keys for n people) and give no non-repudiation. Signatures use asymmetric cryptography — sign with the private key, verify with the public key — so anyone can verify, no shared secret is needed, and the signer cannot deny signing. A forged or substituted public key would break this, which is why PKI and digital certificates matter. Both approaches hash the message with SHA. <strong>RSA</strong> (FIPS-186-4, 2013) is general-purpose: the hash is encrypted with the sender’s private key to form the signature, and verified by decrypting with the public key and comparing. <strong>DSA</strong> (FIPS 186, 1991, derived from ElGamal) is signature-only — no encryption or key exchange. It uses global public parameters <code>PUG = (p, q, g)</code> shared by all users, the sender’s private key, and a per-message random <code>k</code>, producing a two-part signature <code>(s, r)</code> verified with <code>PUG</code> and <code>PUa</code>.</div>
+    <div class="quiz-head">
+      <span class="quiz-qnum">Q14</span>
+      <p class="quiz-q">List the four authenticated-encryption approaches, state which is strongest, and compare GCM with CCM.</p>
+    </div>
+    <div class="quiz-answer"><strong>Answer:</strong> Hash-then-Encrypt (H→E): <span class="math">Enc_k(m, H(m))</span>. MAC-then-Encrypt (A→E): <span class="math">Enc_k1(m, MAC_k2(m))</span>, used in SSL/TLS. Encrypt-then-MAC (E→A): <span class="math">Enc_k1(m), MAC_k2(Enc_k1(m))</span>, used in IPSec and considered strongest. MAC-and-Encrypt (E + A): <span class="math">Enc_k1(m), MAC_k2(m)</span>, used in SSH. GCM is Encrypt-then-MAC, parallelizable and fast (GHASH and GCTR over <span class="math">GF(2<sup>128</sup>)</span>) but brittle: nonce reuse breaks it. CCM is a tightly specified MAC-then-Encrypt using CMAC then CTR mode; it is sequential and uses a single key, common in WiFi and IoT.</div>
     <div class="quiz-actions">
       <button class="quiz-reveal" type="button">Show answer</button>
       <label class="mastered"><input type="checkbox"> Mastered</label>
@@ -1283,20 +1288,28 @@
 </section>
 
 <section class="guide-section" id="checklist" data-title="Confidence Check">
-  <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Confidence Check</h2></div>
-  <p class="section-kicker">Tick only what you could explain out loud to a teammate.</p>
+  <div class="section-head">
+    <span class="sec-num" aria-hidden="true"></span>
+    <h2 class="section-title">Confidence Check</h2>
+  </div>
+  <p class="section-kicker">Tick each statement only when you could say it aloud without notes.</p>
+
   <div class="checklist">
-    <label class="check-item"><input type="checkbox"> I can define a hash function, state its output names, and explain how it provides integrity.</label>
-    <label class="check-item"><input type="checkbox"> I can explain the person-in-the-middle attack on plain hashing and why it needs a MAC.</label>
-    <label class="check-item"><input type="checkbox"> I can state preimage, second preimage and collision resistance, and describe how they relate.</label>
-    <label class="check-item"><input type="checkbox"> I can calculate the birthday-attack effort for an n-bit hash and justify the 160-bit minimum.</label>
-    <label class="check-item"><input type="checkbox"> I can list the SHA family generations with their year, output sizes and security status.</label>
-    <label class="check-item"><input type="checkbox"> I can describe SHA-512 padding and the 80-round compression function with Davies–Meyer feedforward.</label>
-    <label class="check-item"><input type="checkbox"> I can explain the SHA-3 sponge (absorb and squeeze) and why it resists length extension.</label>
-    <label class="check-item"><input type="checkbox"> I can write the HMAC formula, name ipad/opad, and explain why HMAC-MD5 is safe in practice.</label>
-    <label class="check-item"><input type="checkbox"> I can list the four authenticated-encryption orderings with their protocols, and compare GCM with CCM.</label>
-    <label class="check-item"><input type="checkbox"> I can explain what digital signatures add over MACs, including non-repudiation.</label>
-    <label class="check-item"><input type="checkbox"> I can contrast the RSA and DSA signature approaches, including DSA’s PUG and (s, r) signature.</label>
+    <label class="check-item"><input type="checkbox"> I can define a hash function and explain why collisions are inevitable but must be hard to find.</label>
+    <label class="check-item"><input type="checkbox"> I can state the two conditions a hash must satisfy to be a cryptographic hash function.</label>
+    <label class="check-item"><input type="checkbox"> I can write formal definitions of preimage, second preimage and collision resistance from memory.</label>
+    <label class="check-item"><input type="checkbox"> I can explain the implication map (collision implies second preimage, preimage stands apart).</label>
+    <label class="check-item"><input type="checkbox"> I can reproduce the birthday attack argument and derive why 160 bits is the minimum output length.</label>
+    <label class="check-item"><input type="checkbox"> I can describe the Merkle–Damgård pipeline and the role of the IV and compression function.</label>
+    <label class="check-item"><input type="checkbox"> I can explain length extension and why a naive <span class="math">H(K ‖ M)</span> MAC is unsafe.</label>
+    <label class="check-item"><input type="checkbox"> I can list the SHA family generations and read a hex digest length to infer the algorithm.</label>
+    <label class="check-item"><input type="checkbox"> I can describe SHA-512's padding, message schedule, 80 rounds and Davies–Meyer feedforward.</label>
+    <label class="check-item"><input type="checkbox"> I can explain the SHA-3 sponge (absorb/squeeze, rate vs capacity) and why it resists length extension.</label>
+    <label class="check-item"><input type="checkbox"> I can define a MAC, give <span class="math">MAC = C(K, M)</span>, and state its requirements and guarantees.</label>
+    <label class="check-item"><input type="checkbox"> I can write the HMAC formula and explain the roles of ipad, opad and the padded key.</label>
+    <label class="check-item"><input type="checkbox"> I can argue why HMAC-MD5 remains usable and quote the 150,000-year figure.</label>
+    <label class="check-item"><input type="checkbox"> I can list the four authenticated-encryption approaches and compare GCM with CCM.</label>
+    <label class="check-item"><input type="checkbox"> I can explain digital signatures, non-repudiation, and the RSA and DSA approaches.</label>
   </div>
 </section>
   </main>
@@ -1307,6 +1320,7 @@
     <a href="../../../index.html">&#8962; All guides</a>
     <span class="spacer"></span>
     <a href="../week_5/INFO3616_week5_study_guide.html">&#8592; Week 5</a>
+    <span class="spacer"></span>
     <a href="../week_7/INFO3616_week7_study_guide.html">Week 7 &#8594;</a>
   </div>
   <p>INFO3616 Security Engineering &#183; Week 6 &#183; Independent study guide for active recall. Always reconcile with the official lecture material.</p>
