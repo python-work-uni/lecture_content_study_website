@@ -468,8 +468,8 @@
 <section class="hero" id="top">
   <span class="hero-eyebrow">ENGG2112 · Week 4 · Data Pre-Processing &amp; Classical ML</span>
   <h1 class="hero-title">Clean the Data, Then Learn From It</h1>
-  <p class="hero-sub">Before any model can predict anything, the data has to be trustworthy. This week covers how to clean a raw table, then how three classical (non-neural-network) methods actually make predictions: Gaussian Naïve Bayes, Random Forest and K-Nearest Neighbours.</p>
-  <div class="hero-lead"><strong>Read this first:</strong> Machine learning is a pipeline. Pre-processing decides what the model is allowed to see; the algorithm decides how it turns that into a decision. Most real-world failures happen in the first half — missing values, skewed classes, mismatched scales and text features — so this lecture spends just as long on cleaning as on modelling.</div>
+  <p class="hero-sub">This week: clean a raw table, then see how three classical classifiers predict.</p>
+  <div class="hero-lead"><strong>Read this first:</strong> ML is a pipeline: pre-processing decides what the model may see, the algorithm what it does with it. Most failures come first.</div>
   <div class="hero-meta">
     <span class="meta-chip"><span class="dot"></span>~24 min read</span>
     <span class="meta-chip">16 teaching sections</span>
@@ -479,25 +479,21 @@
   <div class="hero-outcomes">
     <h2>By the end you will be able to</h2>
     <ul class="outcome-list">
-      <li>Clean a messy dataset: spot and handle missing values, class imbalance and mismatched feature scales.</li>
-      <li>Convert categorical features into numbers with one-hot encoding, and explain why a 0/1/2 code is dangerous.</li>
-      <li>Derive the MAP decision rule and explain how Gaussian Naïve Bayes turns it into a working classifier.</li>
-      <li>Describe how a Random Forest builds and randomises decision trees, and separate parameters from hyper-parameters.</li>
-      <li>Run KNN and Weighted KNN by hand, including the inverse-distance vote and probability estimates.</li>
-      <li>Validate and test a model honestly with K-fold cross-validation and the standard scikit-learn workflow.</li>
+      <li>Clean a dataset: missing values, imbalance, mismatched scales.</li>
+      <li>One-hot encode categories; say why 0/1/2 is dangerous.</li>
+      <li>Derive the MAP rule and show Gaussian Naïve Bayes using it.</li>
+      <li>Explain Random Forest randomisation; tell parameters from hyper-parameters.</li>
+      <li>Run KNN and Weighted KNN by hand, with the inverse-distance vote.</li>
+      <li>Validate and test with K-fold cross-validation.</li>
     </ul>
   </div>
 </section>
 
 <section class="guide-section" id="big-picture" data-title="The Big Picture">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">The Big Picture</h2></div>
-  <p class="section-kicker">A model is only as good as the data you feed it, and the journey from a raw table to a trustworthy prediction has a fixed shape.</p>
-  <p>You already have the vocabulary: data lives in a table where each <span class="keyterm">row</span> is one sample and each <span class="keyterm">column</span> is one property. The columns you use as inputs are the <span class="keyterm">features</span> (the lecture counts <span class="math">K</span> of them), and the column you want to predict is the <span class="keyterm">label</span>. A model is just a function that maps a row of features to a label or a number.</p>
-  <p>The lecture agenda lists a lot at once — data pre-processing (cleaning), stochastic gradient descent, and classical machine learning methods (K-Nearest Neighbours, random forest, naïve Bayes), plus training, parameters versus hyper-parameters, and Python implementation. <span class="hl">Stochastic gradient descent</span> is the optimisation engine that many models use to learn; it appears on the agenda as context, while this deck spends its time on cleaning data and the three classical classifiers.</p>
-  <p><strong>Classical machine learning</strong> is the lecture's shorthand for <em>everything but neural networks</em>. The three methods below — Gaussian Naïve Bayes, Random Forest and K-Nearest Neighbours — are older, lighter and easier to reason about than deep networks, yet they still power real systems and they are the groundwork for the neural networks coming next week.</p>
-
-  <h3 class="sub-title">The pipeline you should picture</h3>
-  <p>Every ML project follows roughly the same sequence. Notice how much of it happens <em>before</em> the model is trained — that is the whole point of "Let's keep it clean!".</p>
+  <p class="section-kicker">Raw table to trustworthy prediction has a fixed shape.</p>
+  <p>Data is a table: each <span class="keyterm">row</span> a sample, each <span class="keyterm">column</span> a property. Inputs are <span class="keyterm">features</span> (<span class="math">K</span>); the predicted column is the <span class="keyterm">label</span>.</p>
+  <p>The agenda: pre-processing, stochastic gradient descent, classical ML, training, parameters vs hyper-parameters, Python. <strong>Classical ML</strong> = <em>everything but neural networks</em>.</p>
   <div class="flow">
     <span class="flow-step">Import data</span><span class="flow-arrow">→</span>
     <span class="flow-step">Handle missing values</span><span class="flow-arrow">→</span>
@@ -508,265 +504,173 @@
     <span class="flow-step">Validate</span><span class="flow-arrow">→</span>
     <span class="flow-step">Test</span>
   </div>
-
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Garbage in, garbage out. A perfectly tuned classifier fed blank cells, lopsided classes and unscaled features will happily learn the wrong thing — and it will look successful while doing it.</div></div>
-
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> Before reading on, name three things that could be wrong with a raw spreadsheet of sensor readings. Then check your list against the sections that follow.</div></div>
-
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Coming up next week:</strong> the deck previews neural networks — the most important class of AI/ML model in use today. It will cover basic concepts, the different sorts of neural networks, why <strong>differentiability is key</strong>, and example applications.</div></div>
+  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> garbage in, garbage out — bad inputs make a model learn the wrong thing while looking successful.</div></div>
 </section>
 
 <section class="guide-section" id="preprocessing-overview" data-title="Data Pre-Processing">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Data Pre-Processing</h2></div>
-  <p class="section-kicker">Pre-processing is the deliberate set of decisions that turns a raw table into something an algorithm can actually learn from.</p>
-  <p>Recall that we have a table of data — rows of samples, columns of features or labels. Some items might be missing, some columns might be text, some might be enormous time-series signals. The lecture's framing question is blunt: <em>what do we do?</em> The answer is a checklist of fixes applied before training.</p>
-
-  <div class="def-card"><span class="dc-term">Data pre-processing</span> — also called data cleaning: every transformation applied to raw data so that a learning algorithm receives usable inputs. It covers missing values, feature scaling, categorical encoding, class balance and signal handling. It is not optional polish; it changes what the model can learn.</div>
-
+  <p class="section-kicker">Pre-processing turns a raw table into learnable inputs.</p>
+  <p>Cells may be missing, text, or huge time-series; apply a checklist of fixes before training.</p>
+  <div class="def-card"><span class="dc-term">Data pre-processing</span> (data cleaning) — every transformation of raw data so a learner gets usable inputs: missing values, scaling, categorical encoding, class balance, signals.</div>
   <div class="grid grid-2">
     <div class="card">
       <h3 class="card-title">🗂️ What "raw" looks like</h3>
       <ul>
-        <li><strong>Missing cells</strong> — data that was not recorded properly.</li>
-        <li><strong>Categorical text</strong> — airport names, airlines, gender.</li>
-        <li><strong>Signals</strong> — measurements at regular time intervals.</li>
-        <li><strong>Class imbalance</strong> — one label dominates the table.</li>
-        <li><strong>Mismatched scale</strong> — one feature spans thousands, another spans 0–1.</li>
+        <li><strong>Missing cells.</strong></li>
+        <li><strong>Categorical text</strong> — names, airlines, gender.</li>
+        <li><strong>Signals</strong> — regular time-interval measurements.</li>
+        <li><strong>Class imbalance</strong> — one label dominates.</li>
+        <li><strong>Mismatched scale</strong> — thousands versus 0–1.</li>
       </ul>
     </div>
     <div class="card">
       <h3 class="card-title"><span class="tag">recall</span> Features &amp; labels</h3>
-      <p>Each column is a <strong>feature</strong> (an input) except the one you predict, which is the <strong>label</strong>. If a table has <span class="math">K</span> feature columns, a single sample is a vector of <span class="math">K</span> numbers (once cleaned and encoded).</p>
+      <p>Each column is a <strong>feature</strong> except the predicted <strong>label</strong>; a cleaned sample is a vector of <span class="math">K</span> numbers.</p>
     </div>
   </div>
-
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Key idea:</strong> Importing data is step one, but it is rarely clean. pandas is the tool of choice, and its default behaviour for a blank cell is important enough to have its own section next.</div></div>
 </section>
 
 <section class="guide-section" id="missing-data" data-title="Handling Missing Data">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Handling Missing Data</h2></div>
-  <p class="section-kicker">Blank cells are the most common defect in real data, and the way you fill or drop them quietly shapes every prediction that follows.</p>
-  <p>When analysing real data, we very often encounter missing data: some cells are blank because the value was not recorded properly. You cannot just ignore them, because arithmetic on a blank is undefined. pandas solves this by giving every missing entry a marker.</p>
-
-  <div class="def-card"><span class="dc-term">NaN (Not a Number)</span> — the placeholder pandas inserts for any missing value when it loads a file. It is a specific floating-point sentinel, not the number zero, but many operations treat it as if it were zero — for example summing or averaging a column may silently skip or zero-out NaNs. The lecture warns this "may or may not be sensible", so you must decide deliberately.</div>
-
-  <h3 class="sub-title">The pandas toolkit</h3>
+  <p class="section-kicker">Blank cells are common, and how you fill them shapes every prediction.</p>
+  <p>Arithmetic on a blank is undefined, so pandas marks every missing entry.</p>
+  <div class="def-card"><span class="dc-term">NaN (Not a Number)</span> — pandas' marker for a missing value: a sentinel, not zero, yet sums/averages may skip or zero-out NaNs. Decide deliberately if that is sensible.</div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Function</th><th>What it does</th><th>When to use it</th></tr></thead>
+      <thead><tr><th>Function</th><th>What it does</th></tr></thead>
       <tbody>
-        <tr><td><code>isna()</code></td><td>Reports which entries are missing (returns True/False).</td><td>To <em>find</em> the gaps before deciding.</td></tr>
-        <tr><td><code>notna()</code></td><td>The exact opposite of <code>isna()</code> — True where data exists.</td><td>To keep or count the valid entries.</td></tr>
-        <tr><td><code>dropna()</code></td><td>Removes any row that contains a missing value.</td><td>When a partial row is useless to you.</td></tr>
-        <tr><td><code>fillna()</code></td><td>Replaces missing values with a chosen value or method.</td><td>When the row still carries useful information.</td></tr>
+        <tr><td><code>isna()</code></td><td>Reports missing entries; <code>notna()</code> is the opposite.</td></tr>
+        <tr><td><code>dropna()</code></td><td>Removes any row containing a missing value.</td></tr>
+        <tr><td><code>fillna()</code></td><td>Replaces missing values with a chosen value or method.</td></tr>
       </tbody>
     </table>
   </div>
-
   <h3 class="sub-title">Four strategies for a blank cell</h3>
   <ol class="steps">
-    <li><strong>Drop the row.</strong> Call <code>dropna()</code> to ignore any row with missing data. Simple and safe, but you lose data — and if the blanks cluster in a rare class, you can delete exactly the examples you needed.</li>
-    <li><strong>Fill with a constant.</strong> Call <code>fillna()</code> with a fixed value. The lecture's worked example fills the NaN values in the <code>Power(kW)</code> column with <code>200</code>.</li>
-    <li><strong>Forward fill.</strong> Carry the last known value forward into the gap — sensible for a signal that changes slowly.</li>
-    <li><strong>Backward fill.</strong> Carry the next known value backward into the gap.</li>
+    <li><strong>Drop the row</strong> with <code>dropna()</code> — you may lose rare-class examples.</li>
+    <li><strong>Fill with a constant</strong> — the example fills <code>Power(kW)</code> with <code>200</code>.</li>
+    <li><strong>Forward or backward fill</strong> — carry the last known (or next known) value into the gap.</li>
   </ol>
-
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> Filling a power reading with <code>200</code> asserts that every missing reading really was 200 kW — usually false. Forward fill asserts the signal did not change since the last reading, which is better for steady signals but wrong across a sudden step. There is no free lunch; each choice is an assumption.</div></div>
-
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> filling with <code>200</code> asserts the reading was 200 kW; forward fill asserts no change. Each choice is an assumption.</div></div>
   <div class="mnemonic">
     <div class="mnemonic-letters">D · F · F</div>
-    <div class="mnemonic-phrase">“Drop, Fill, Forward”</div>
-    <div class="mnemonic-expand">Drop the row, Fill with a constant, or Forward/backward Fill. (Add "Find" first — use <code>isna</code>/<code>notna</code> to locate the gaps.)</div>
+    <div class="mnemonic-phrase">"Drop, Fill, Forward"</div>
+    <div class="mnemonic-expand">Drop the row, Fill a constant, or Forward/backward Fill. (Add "Find" first — <code>isna</code>/<code>notna</code> locate gaps.)</div>
   </div>
-
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A temperature sensor logs one reading per minute and drops out for ten minutes. Would you drop those rows, fill with 200, or forward-fill? What does each choice assume about the sensor?</div></div>
+  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> a sensor drops out for ten minutes — drop, fill with 200, or forward-fill? What does each assume?</div></div>
 </section>
 
 <section class="guide-section" id="feature-engineering" data-title="Signals &amp; Feature Engineering">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Signals &amp; Feature Engineering</h2></div>
-  <p class="section-kicker">Raw signals are huge and awkward; feature engineering is the craft of squeezing the few numbers that actually separate the classes.</p>
-  <p>Engineering data often arrives not as tidy columns but as <span class="keyterm">signals measured at regular intervals of time</span> — vibration traces, voltages, audio. The important information is often not in the raw time-domain shape but in the <span class="keyterm">frequency domain</span>, where the main differences between two classes show up as <span class="keyterm">frequency artefacts</span>. So it is common to <em>transform</em> between the time domain and the frequency domain using the <span class="keyterm">Fourier transform</span> (or some other transform).</p>
-  <p>A long sequence is also broken into short, appropriately sized <span class="keyterm">windows</span>, because analysing the whole recording at once is both unwieldy and wasteful. The lecture is candid that extracting dominant features from signals to differentiate classes is <em>"more an art than a science"</em>, and that using the entire signal is inefficient — we can often reduce dimensionality through feature engineering.</p>
-
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> <strong>Feature engineering is often the step that takes the most time in an ML project.</strong> Better features usually beat a fancier model, and fewer features make every later step faster.</div></div>
-
+  <p class="section-kicker">Raw signals are huge; feature engineering keeps the few numbers that matter.</p>
+  <p>Data often arrives as <span class="keyterm">signals measured at regular time intervals</span> (vibration, voltage, audio). The useful information is often in the <span class="keyterm">frequency domain</span>, where class differences appear as <span class="keyterm">frequency artefacts</span>, so we transform domains with the <span class="keyterm">Fourier transform</span>. Long sequences are cut into short <span class="keyterm">windows</span>. Extracting features is <em>"more an art than a science"</em>.</p>
   <h3 class="sub-title">Five ways to engineer features</h3>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Technique</th><th>What it does</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Feature selection</strong></td><td>Picking the best inputs — looking for the highest correlation with the output.</td></tr>
-        <tr><td><strong>Variance threshold</strong></td><td>Removing nearly-constant features, which carry almost no information.</td></tr>
-        <tr><td><strong>Decision Tree / Random Forest first</strong></td><td>Using a tree model to reveal which features actually separate the classes during training.</td></tr>
-        <tr><td><strong>PCA (Principal Component Analysis)</strong></td><td>Projecting the data onto new directions that capture maximum variance.</td></tr>
-        <tr><td><strong>Manual feature engineering</strong></td><td>Using human insight into the data to construct meaningful new features.</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="def-card"><span class="dc-term">Feature engineering</span> — turning raw, high-dimensional data into informative, lower-dimensional inputs. It ranges from automatic methods (variance threshold, PCA) to purely human design based on domain knowledge.</div>
+  <ul>
+    <li><strong>Feature selection</strong> — pick inputs most correlated with the output.</li>
+    <li><strong>Variance threshold</strong> — remove nearly-constant features.</li>
+    <li><strong>Decision Tree / Random Forest first</strong> — reveal which features separate classes.</li>
+    <li><strong>PCA</strong> — project onto directions capturing maximum variance.</li>
+    <li><strong>Manual engineering</strong> — use domain insight to build features.</li>
+  </ul>
+  <div class="def-card"><span class="dc-term">Feature engineering</span> — turning high-dimensional data into informative, lower-dimensional inputs: automatic (variance threshold, PCA) or human design.</div>
 </section>
 
 <section class="guide-section" id="imbalanced-data" data-title="Imbalanced Datasets">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Imbalanced Datasets</h2></div>
-  <p class="section-kicker">When one class vastly outnumbers the others, a model can score highly by learning nothing at all.</p>
-  <p>Sometimes one class is much more prevalent than the others, which skews training. <strong>This is called imbalanced data.</strong> The trained model becomes <span class="keyterm">optimised for finding the majority case</span>, because that is the cheapest way to reduce the average error.</p>
-
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>The classic example:</strong> if 95% of the data is "blue" and the performance metric is <strong>accuracy</strong>, a model can output "blue" for every single input and score 95%. It has learned nothing, yet it looks excellent. Therefore we need to prevent that.</div></div>
-
-  <p>This is why accuracy alone is a poor judge on imbalanced data. You have to change either the data or the cost of mistakes.</p>
-
+  <p class="section-kicker">When one class dominates, a model can score highly by learning nothing.</p>
+  <p>With one dominant class the model becomes <span class="keyterm">optimised for the majority case</span> — the cheapest way to cut average error.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Classic example:</strong> with 95% "blue" data, always predicting "blue" scores 95% accuracy while learning nothing.</div></div>
   <h3 class="sub-title">Resampling methods</h3>
   <ul>
-    <li><strong>Oversampling the minority class</strong> — replicate minority-class samples, or synthesise new ones. The lecture names <span class="keyterm">SMOTE</span> (Synthetic Minority Oversampling Technique).</li>
-    <li><strong>Undersampling the majority class</strong> — discard some majority samples so the classes are more even.</li>
+    <li><strong>Oversampling the minority class</strong> — replicate or synthesise minority samples; the lecture names <span class="keyterm">SMOTE</span>.</li>
+    <li><strong>Undersampling the majority class</strong> — discard majority samples to even the classes.</li>
   </ul>
-
   <h3 class="sub-title">Other ways to handle imbalance</h3>
   <div class="grid grid-2">
     <div class="card">
       <h3 class="card-title">⚖️ Cost-Sensitive Learning</h3>
       <ul>
-        <li>Assign higher penalties to costly errors during training.</li>
-        <li>Define a new <strong>loss function</strong> that reflects the relative costs of a <strong>false positive (FP)</strong> and a <strong>false negative (FN)</strong>.</li>
-        <li>The model adapts by <strong>shifting its decision boundary</strong> to reduce the more expensive error.</li>
-        <li>Goal: <strong>minimise overall cost</strong>, not just improve accuracy.</li>
+        <li>Penalise costly errors more during training.</li>
+        <li>Define a new <strong>loss function</strong> from the costs of a <strong>false positive (FP)</strong> and <strong>false negative (FN)</strong>.</li>
+        <li>Shift the <strong>decision boundary</strong> to cut the costlier error, <strong>minimising overall cost</strong>.</li>
       </ul>
     </div>
     <div class="card">
       <h3 class="card-title">🧪 Data Augmentation</h3>
-      <p>Create <strong>synthetic but realistic</strong> minority-class data. Unlike blind replication, augmentation aims to add genuinely new, plausible examples so the minority class is better represented.</p>
+      <p>Create <strong>synthetic but realistic</strong> minority data, not blind copies.</p>
     </div>
   </div>
-
   <div class="mnemonic">
     <div class="mnemonic-letters">S · M · O · T · E</div>
-    <div class="mnemonic-phrase">“Synthetic Minority Oversampling TEchnique”</div>
-    <div class="mnemonic-expand">It makes <em>new</em> minority points, not just copies — and it fixes the imbalance by growing the small class rather than shrinking the big one.</div>
+    <div class="mnemonic-phrase">"Synthetic Minority Oversampling TEchnique"</div>
+    <div class="mnemonic-expand">It makes <em>new</em> minority points, not copies — growing the small class rather than shrinking the big one.</div>
   </div>
-
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> A fraud detector flags 0.1% of transactions. It reports 99.9% accuracy. What is it probably doing, and which of the fixes above would you reach for first?</div></div>
 </section>
 
 <section class="guide-section" id="one-hot-encoding" data-title="One-Hot Encoding">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">One-Hot Encoding</h2></div>
-  <p class="section-kicker">Most algorithms can only multiply numbers, so text categories must become numeric — but the obvious way to number them is a trap.</p>
-  <p>Features may not be numerical: airport names, airlines, or a category like gender. Most ML algorithms expect numerical inputs though — otherwise you cannot multiply, add or compute distances. The most basic method for converting a categorical variable into a numeric representation is <span class="keyterm">one-hot encoding</span>.</p>
-
+  <p class="section-kicker">Text categories must become numbers — but the obvious numbering is a trap.</p>
+  <p>Algorithms need numbers to multiply, add and compute distances, so categorical features must be converted — by <span class="keyterm">one-hot encoding</span>.</p>
   <ol class="steps">
-    <li><strong>Count the categories.</strong> Look at how many values the categorical variable can take — call it <span class="math">M</span>.</li>
-    <li><strong>Create M − 1 dummy variables.</strong> Each is a 0/1 column, with a 1 in the position corresponding to the category.</li>
-    <li><strong>Encode each row.</strong> A sample gets a 1 in its own dummy column, and 0 elsewhere; the leftover all-zeros row represents the final category.</li>
+    <li><strong>Count the categories</strong> — call it <span class="math">M</span>.</li>
+    <li><strong>Create M − 1 dummy variables</strong>, each a 0/1 column.</li>
+    <li><strong>Encode each row:</strong> 1 in its own dummy, 0 elsewhere; the all-zeros row is the final category.</li>
   </ol>
-
   <div class="formula">
     <div class="formula-label">Number of dummies</div>
     <div class="math">M categories → M − 1 dummy 0/1 variables</div>
   </div>
-
   <h3 class="sub-title">Worked example: encoding Gender</h3>
-  <p>Suppose Gender is one of the features and its allowable values are <strong>Male / Female / Not Given</strong>. The problem is to estimate the amount spent in a given shop, using gender as one of the features. Because <span class="math">M = 3</span>, we generate two dummy variables, <span class="math">x_1</span> for Male and <span class="math">x_2</span> for Female. There is no need for a third dummy, because <span class="math">x_1 = x_2 = 0</span> already means Gender is in the third category (Not Given).</p>
-  <p>In the lecture's table, customers 1 and 2 are male, 3 and 4 are female, and 5 is unknown:</p>
-  <div class="table-wrap">
-    <table>
-      <thead><tr><th>Customer</th><th>x_1 (Male)</th><th>x_2 (Female)</th><th>Meaning</th></tr></thead>
-      <tbody>
-        <tr><td>1</td><td>1</td><td>0</td><td>Male</td></tr>
-        <tr><td>2</td><td>1</td><td>0</td><td>Male</td></tr>
-        <tr><td>3</td><td>0</td><td>1</td><td>Female</td></tr>
-        <tr><td>4</td><td>0</td><td>1</td><td>Female</td></tr>
-        <tr><td>5</td><td>0</td><td>0</td><td>Not Given</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p>With this, we can now perform regression or classification using the new dummy variables.</p>
-
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>The lecture's question:</strong> could we simply have assigned 0 to Male, 1 to Female and 2 to Unknown? <strong>Answer: No</strong> — that would be risky and imply an <strong>ordinal relationship</strong> between the genders, i.e. Male &lt; Female &lt; Unknown. A model reading those numbers as distances would treat "Unknown" as more than "Female", which is meaningless.</div></div>
-
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Dummy variable trap:</strong> using all <span class="math">M</span> dummies makes one column perfectly predictable from the others (it is redundant). Dropping one category — the <span class="math">M − 1</span> rule — avoids the redundancy, and the omitted category is recovered from the all-zero row.</div></div>
-
-  <h3 class="sub-title">One-hot encoding in Python</h3>
-  <ul>
-    <li>The <code>sklearn</code> implementation uses the function <code>OneHotEncoder</code>. It returns results in a NumPy array, which can be converted into a pandas DataFrame if necessary.</li>
-    <li>A second implementation uses pandas directly to create a DataFrame with one-hot encoded columns.</li>
-  </ul>
+  <p>For <strong>Male / Female / Not Given</strong> (<span class="math">M = 3</span>), two dummies suffice: Male → <span class="math">(x_1, x_2) = (1, 0)</span>, Female → <span class="math">(0, 1)</span>, Not Given → <span class="math">(0, 0)</span>.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Assign 0 Male, 1 Female, 2 Unknown? No</strong> — that invents an <strong>ordinal relationship</strong> (Male &lt; Female &lt; Unknown) a distance-based model treats as real.</div></div>
+  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Dummy variable trap:</strong> all <span class="math">M</span> dummies make one column predictable from the others; the <span class="math">M − 1</span> rule avoids it (the omitted category is all-zero). <code>sklearn</code>'s <code>OneHotEncoder</code> or pandas do the job.</div></div>
 </section>
 
 <section class="guide-section" id="probabilistic-foundations" data-title="Probability Foundations">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Probability Foundations</h2></div>
-  <p class="section-kicker">Underneath every classifier is one question: given what I have seen, which output is most probable?</p>
-  <p>Classical machine learning starts from probability. Assume we don't know the relationship between the input <span class="math">x</span> and the output <span class="math">y</span> — otherwise the model would already be known! For a given input <span class="math">x</span>, there is some chance that the output <span class="math">y</span> takes a certain value.</p>
-  <p>Consider the lecture's language example: <span class="math">x</span> encodes the words "The quick brown fox", and <span class="math">y</span> is the next word in the sentence. We might have:</p>
+  <p class="section-kicker">Every classifier asks: given what I have seen, which output is most probable?</p>
+  <p>Classical ML starts from probability. In the language example, <span class="math">x</span> encodes "The quick brown fox" and <span class="math">y</span> is the next word:</p>
   <div class="formula">
     <div class="formula-label">Conditional probabilities of the next word</div>
     <div class="math">P[y = "jumps" | x] = 0.4&nbsp;&nbsp;·&nbsp;&nbsp;P[y = "walks" | x] = 0.1&nbsp;&nbsp;·&nbsp;&nbsp;P[y = "is" | x] = 0.05</div>
   </div>
-  <p>If we knew these conditional probabilities, which output <span class="math">y</span> would we choose if forced to choose only one? Clearly, a detector that knows <span class="math">P[y | x]</span> can output the <span class="math">y</span> that maximises this function. In detection theory this is known as the <span class="keyterm">maximum a posteriori (MAP) detector</span>.</p>
-
-  <div class="def-card"><span class="dc-term">Maximum a posteriori (MAP) detector</span> — the rule that outputs the label <span class="math">y</span> which maximises the posterior probability <span class="math">P[y | x]</span>. For discrete <span class="math">y</span> (classification), MAP minimises the probability of making a decision error — that is, it <strong>maximises accuracy</strong>.</div>
-
+  <p>Pick the <span class="math">y</span> maximising <span class="math">P[y | x]</span> — the <span class="keyterm">maximum a posteriori (MAP) detector</span>.</p>
+  <div class="def-card"><span class="dc-term">Maximum a posteriori (MAP) detector</span> — outputs the label <span class="math">y</span> maximising the posterior <span class="math">P[y | x]</span>; for discrete <span class="math">y</span> it <strong>maximises accuracy</strong>.</div>
   <div class="formula">
-    <div class="formula-label">MAP decision rule</div>
+    <div class="formula-label">MAP rule</div>
     <div class="math">ŷ = argmax_y P(y | x)</div>
   </div>
-
-  <h3 class="sub-title">Bayes' rule: how to compute it</h3>
-  <p>The posterior is computed from the likelihood, the prior and a normalising constant:</p>
   <div class="formula">
     <div class="formula-label">Bayes' rule</div>
     <div class="math">P(y | x) = P(x | y) · P(y) / P(x)</div>
   </div>
-  <p>For a fixed observed <span class="math">x</span>, the denominator <span class="math">P(x)</span> is the same for every candidate label, so it is just a normalising constant — we can compare only <span class="math">P(x | y) · P(y)</span> across labels and pick the largest.</p>
-
+  <p>For fixed <span class="math">x</span> the denominator <span class="math">P(x)</span> is the same for every label, so compare only <span class="math">P(x | y) · P(y)</span>.</p>
   <h3 class="sub-title">Where does P(x | y) come from?</h3>
-  <p>Either it must be learned from training data, or derived mathematically from knowledge or assumptions about the system being modelled.</p>
-  <div class="compare">
-    <div class="compare-col a">
-      <h3>From a physical model</h3>
-      <p>Consider transmitting a bit over a noisy channel. The bit value is 0 or 1 and is received as 0 or 1, but there is a probability of bit error <span class="math">p</span>:</p>
-      <p class="math">P[0 received | 1 transmitted] = P[1 received | 0 transmitted] = p</p>
-      <p>If <span class="math">p</span> is known through measurements, we already have the required conditional distribution.</p>
-    </div>
-    <div class="compare-col b">
-      <h3>Learned from data</h3>
-      <p>In many applications — especially those mimicking human cognitive ability — we don't understand the underlying process well enough to design a simple, accurate model.</p>
-      <p>That is why we have general AI/ML models that (sort of) work in many scenarios, and learn <span class="math">P(x | y)</span> from training data instead.</p>
-    </div>
-  </div>
-
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Did probability shape AI design? Short answer: yes.</strong> It is applied <em>explicitly</em> in the Naïve Bayes model, which is basically computing the MAP decision with several major simplifying assumptions. It is manifested <em>indirectly</em> in the "soft" outputs created by the <strong>softmax</strong> function — a function that turns a model's raw scores into probabilities that sum to 1. The long answer is more nuanced: AI/ML was also developed from a computer-science algorithms angle, as we will see with random forest and K-Nearest Neighbours — but even those are designed to output probabilities.</div></div>
-
-  <div class="reflect"><span class="ri" aria-hidden="true">🤔</span><div><strong>Pause &amp; predict:</strong> If two next words have posteriors 0.4 and 0.35, what does MAP pick? Does the value of the denominator P(x) change your answer?</div></div>
+  <p>Either from a physical model — for a noisy channel with bit-error probability <span class="math">p</span>, <span class="math">P[0 received | 1 transmitted] = P[1 received | 0 transmitted] = p</span> — or learned from training data when we cannot hand-design the model.</p>
 </section>
 
 <section class="guide-section" id="gaussian-naive-bayes" data-title="Gaussian Naïve Bayes">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Gaussian Naïve Bayes</h2></div>
-  <p class="section-kicker">Gaussian Naïve Bayes is MAP detection made practical by two bold assumptions that collapse an impossible estimation problem into simple averages.</p>
-  <p>Assume <span class="math">K</span> features <span class="math">x_1, …, x_K</span> and one discrete label <span class="math">y</span> — this is a classification problem. Bayes' rule applied here says the posterior is proportional to the likelihood times the prior. For a given vector of observed features, we want to calculate the distribution of the label <span class="math">y</span> and then pick the value that maximises it. The denominator is irrelevant (just a normalising constant), and <span class="math">p(y)</span> can be found from the training data.</p>
-  <p>The hard part is <span class="math">p(x_1, …, x_K | y)</span>, the <strong>joint distribution</strong> of the features given the label. In theory we would have to estimate the relative frequency of every possible feature combination. If the features are binary, there are <span class="math">2^K</span> such relative frequencies — and there is usually not enough data to get good estimates. That is the wall Naïve Bayes breaks through.</p>
-
+  <p class="section-kicker">MAP detection plus two bold assumptions makes an impossible problem easy.</p>
+  <p>Assume <span class="math">K</span> features <span class="math">x_1, …, x_K</span> and one discrete label <span class="math">y</span>. The posterior is proportional to likelihood times prior; the denominator is a constant and <span class="math">p(y)</span> comes from training data. The hard part is the <strong>joint distribution</strong> <span class="math">p(x_1, …, x_K | y)</span> — binary features give <span class="math">2^K</span> combinations.</p>
   <h3 class="sub-title">The two "naïve" assumptions</h3>
   <div class="grid grid-2">
     <div class="card">
       <h3 class="card-title"><span class="tag">assumption a</span> Conditional independence</h3>
-      <p>All features are <strong>conditionally independent</strong> given the label. This lets the joint factorise into a product of one-dimensional pieces:</p>
+      <p>Features are <strong>conditionally independent</strong> given the label, so the joint factorises:</p>
       <p class="math">p(x_1, …, x_K | y) = ∏_{i=1}^{K} p(x_i | y)</p>
-      <p>So instead of one enormous K-dimensional distribution, we only need <span class="math">K</span> simple ones.</p>
     </div>
     <div class="card">
       <h3 class="card-title"><span class="tag">assumption b</span> Gaussian features</h3>
-      <p>Each individual conditional feature distribution <span class="math">p(x_i | y)</span> is <strong>Gaussian</strong>. A Gaussian is fully specified by its mean and variance, so finding those for each feature conditioned on <span class="math">y</span> gives us its distribution.</p>
+      <p>Each <span class="math">p(x_i | y)</span> is <strong>Gaussian</strong>, fixed by its mean and variance.</p>
     </div>
   </div>
-
   <div class="formula">
     <div class="formula-label">Gaussian conditional density</div>
     <div class="math">p(x_i | y) = K · exp( −(x_i − μ_{i,y})² / (2 σ²_{i,y}) )</div>
   </div>
-  <p class="muted">Here <span class="math">μ_{i,y}</span> and <span class="math">σ²_{i,y}</span> are the mean and variance of feature <span class="math">i</span> conditioned on class <span class="math">y</span>, and the leading constant (written <span class="math">K</span> on the slide) is just the normalising factor — not the number of features.</p>
-
   <h3 class="sub-title">Worked example: estimating the means</h3>
-  <p>For each class <span class="math">y ∈ S_y</span>, find the mean and variance of each corresponding feature. If <span class="math">y ∈ {0, 1}</span>, we may have:</p>
+  <p>Average each feature within each class. With <span class="math">y ∈ {0, 1}</span>:</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>y</th><th>x_1</th><th>x_2</th></tr></thead>
@@ -779,252 +683,165 @@
       </tbody>
     </table>
   </div>
-  <p>Averaging each column within each class gives the conditional means:</p>
   <div class="formula">
     <div class="formula-label">Conditional means</div>
     <div class="math">μ_{1,0} = −0.2&nbsp;&nbsp;μ_{2,0} = 1.05&nbsp;&nbsp;μ_{1,1} = 2.77&nbsp;&nbsp;μ_{2,1} = −1.0</div>
   </div>
-  <p>Conditional variances can be estimated from the data too. Thus we have the Gaussian distributions needed for inference.</p>
-
-  <h3 class="sub-title">Training, parameters and Python</h3>
-  <ul>
-    <li><strong>Training:</strong> from the training data, estimate the conditional means and variances of every feature conditioned on each class label. These are the <strong>parameters</strong> of the Gaussian NB model.</li>
-    <li><strong>No hyper-parameters:</strong> the structure of the Gaussian NB model is entirely determined by the number of features and the number of classes the label can take — there is nothing for a human to tune.</li>
-  </ul>
-  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>The scikit-learn pattern:</strong> <code>from sklearn.naive_bayes import GaussianNB</code>, then <code>nb = GaussianNB()</code> to name the model, <code>nb.fit(X_train, y_train)</code> to train on training data, and <code>y_pred = nb.predict(X_test)</code> to generate predictions from test data. That's it really — in scikit-learn, almost all ML models are trained using <code>&lt;xyz&gt;.fit</code> and make inference using <code>&lt;xyz&gt;.predict</code>, where <code>&lt;xyz&gt;</code> is your model's name. On first definition, <code>&lt;xyz&gt;</code> needs the right hyper-parameter values — in Gaussian NB there happen to be none.</div></div>
-
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> Gaussian NB is fast, needs no tuning and is a strong baseline. But if features are strongly correlated, the independence assumption is false and its probability estimates become poor — it may still classify well while its probabilities mislead you.</div></div>
+  <p>Training estimates these per-class means and variances — the <strong>parameters</strong>; Gaussian NB has <strong>no hyper-parameters</strong>. Correlated features break independence, so probabilities mislead though classification may hold.</p>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>scikit-learn:</strong> <code>GaussianNB().fit(X_train, y_train)</code>, then <code>.predict(X_test)</code>.</div></div>
 </section>
 
 <section class="guide-section" id="random-forest" data-title="Random Forests">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Random Forests</h2></div>
-  <p class="section-kicker">A Random Forest grows many deliberately different decision trees and lets them vote — a computer-science idea that beats any single tree.</p>
-  <p>Unlike Gaussian Naïve Bayes, the random forest is a model derived from a <strong>computer-science perspective</strong>. It is built on the concept of a <span class="keyterm">decision tree</span>.</p>
-
-  <h3 class="sub-title">The decision tree concept</h3>
-  <ul>
-    <li>At each level of the tree, we ask a question that splits the data into two parts.</li>
-    <li>For a given data sample, traversing the whole tree from the top (<span class="keyterm">root</span>) to the bottom (<span class="keyterm">leaf</span>) yields the final decision at the leaf node.</li>
-    <li>In a <strong>random forest</strong>, we run a number of trees <em>in parallel</em>, then take a <strong>majority decision</strong>.</li>
-  </ul>
-
-  <h3 class="sub-title">Specifications: who sets what</h3>
+  <p class="section-kicker">Many deliberately different trees vote — a computer-science idea that beats one tree.</p>
+  <p>Unlike Gaussian NB, the random forest is a computer-science idea, built on the <span class="keyterm">decision tree</span>: each level splits the data in two, and traversing from the top (<span class="keyterm">root</span>) to the bottom (<span class="keyterm">leaf</span>) gives the decision. A forest runs many trees <em>in parallel</em> and takes a <strong>majority decision</strong>.</p>
   <div class="compare">
     <div class="compare-col a">
-      <h3>Hyper-parameters — set by us humans</h3>
+      <h3>Hyper-parameters — set by humans</h3>
       <ul>
-        <li><code>max_depth</code> — the maximum depth (number of levels) of the tree.</li>
-        <li><code>max_features</code> — how many features to choose from at each node.</li>
-        <li><code>criterion</code> — the quality measure used in splitting.</li>
+        <li><code>max_depth</code> — maximum levels.</li>
+        <li><code>max_features</code> — features considered per node.</li>
+        <li><code>criterion</code> — splitting quality measure.</li>
       </ul>
     </div>
     <div class="compare-col b">
       <h3>Parameters — optimised by the machine</h3>
       <ul>
         <li>Which feature to split on at each node.</li>
-        <li>The threshold value to use for the split at each node.</li>
+        <li>The threshold value for that split.</li>
       </ul>
     </div>
   </div>
-
-  <p>The main idea: at each node, the <strong>ideal split</strong> results in only one class label per branch — in that case, no further splitting is needed. We just need to find which feature and which threshold would bring us as "close" to that ideal as possible. The measure of closeness is the <code>criterion</code> hyper-parameter — either a <span class="keyterm">Gini impurity</span> or <span class="keyterm">entropy</span>. The lecture illustrates this in class with a worked example.</p>
-
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>Two criteria, one job:</strong> both <strong>Gini impurity</strong> and <strong>entropy</strong> measure how mixed the classes are in a node. Lower is purer. Gini comes from probability, entropy from information theory — in practice they often give similar trees.</div></div>
-
-  <h3 class="sub-title">Randomisation is key</h3>
-  <p>The problem with relying on a single tree is that it may <span class="keyterm">overfit</span> the training data — performing very well on the training data but failing to generalise. A random forest avoids this by using many decision trees, each one <strong>randomised</strong> (and so different from the others) in two ways:</p>
+  <p>The <strong>ideal split</strong> leaves one class label per branch; the <code>criterion</code> — <span class="keyterm">Gini impurity</span> or <span class="keyterm">entropy</span> — measures closeness to it (lower is purer).</p>
+  <p>A single tree may <span class="keyterm">overfit</span>. A random forest randomises its trees two ways:</p>
   <ul>
     <li><strong>Bagging (bootstrap sampling)</strong> — each tree trains on a different resampled dataset.</li>
-    <li><strong>Random feature subsets at each split</strong> — every node is allowed to investigate only <span class="math">m</span> out of <span class="math">p</span> features, chosen randomly and independently.</li>
+    <li><strong>Random feature subsets</strong> — each node considers only <span class="math">m</span> of <span class="math">p</span> features, independently.</li>
   </ul>
-  <p>The randomisation prevents different trees from turning out the same as each other, which would defeat the purpose of introducing multiple trees. The lecture calls this "rather clever!".</p>
-
   <div class="mnemonic">
     <div class="mnemonic-letters">BAG · FS</div>
-    <div class="mnemonic-phrase">“Bag rows, subset features”</div>
-    <div class="mnemonic-expand">Bagging samples <em>rows</em> with replacement; random feature subsets sample <em>columns</em> at each node. Random Forest does both.</div>
+    <div class="mnemonic-phrase">"Bag rows, subset features"</div>
+    <div class="mnemonic-expand">Bagging samples <em>rows</em> with replacement; random feature subsets sample <em>columns</em> at each node.</div>
   </div>
-
-  <h3 class="sub-title">Random Forest in Python</h3>
-  <p>Create the model with your chosen hyper-parameters, fit it, then predict:</p>
-  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><code>from sklearn.ensemble import RandomForestClassifier</code><br><code>RF = RandomForestClassifier(n_estimators = 100, max_depth = 5)</code><br><code>RF.fit(X_train, y_train)</code>&nbsp;→ train with training data<br><code>Y_pred = RF.predict(X_test)</code>&nbsp;→ infer labels on test data<br>Then compute performance, plot charts, etc.</div></div>
-  <p class="muted">Here <code>n_estimators = 100</code> means 100 trees, and <code>max_depth = 5</code> caps each tree at 5 levels.</p>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Python:</strong> <code>RandomForestClassifier(n_estimators = 100, max_depth = 5)</code>, then <code>fit</code> and <code>predict</code>.</div></div>
 </section>
 
 <section class="guide-section" id="knn" data-title="K-Nearest Neighbours">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">K-Nearest Neighbours</h2></div>
-  <p class="section-kicker">KNN classifies a new point by asking its K closest training neighbours to vote — no equation, just proximity.</p>
-  <p>We have <strong>N training samples</strong> <span class="math">(x_i, y_i)</span> for <span class="math">i = 1 … N</span>. The <span class="math">y_i</span> are <span class="keyterm">class labels</span>: they take on a limited number of possible values. In the lecture's illustration, each point belongs to a category such as "bee," "cat," or "dragonfly." The <span class="math">x_i</span> are <span class="keyterm">feature vectors</span>; in this case each has <strong>two dimensions</strong>, so we can represent them on a 2D Cartesian plane.</p>
-
+  <p class="section-kicker">Classify a new point by its K closest neighbours' vote — no equation, just proximity.</p>
+  <p>We have <strong>N training samples</strong> <span class="math">(x_i, y_i)</span>: the <span class="math">y_i</span> are <span class="keyterm">class labels</span> from a limited set; the <span class="math">x_i</span> are two-dimensional <span class="keyterm">feature vectors</span> (e.g. "bee," "cat," "dragonfly").</p>
   <h3 class="sub-title">The algorithm, step by step</h3>
   <ol class="steps">
-    <li>Set the parameter <span class="math">K</span> to an <strong>odd value</strong>, say 5 — an odd K avoids tied votes.</li>
-    <li>Denote the training feature vectors by <span class="math">x_i^m</span>, where <span class="math">m ∈ M</span> is the class label (or category) and <span class="math">i</span> is the sample index.</li>
-    <li>For a new feature vector <span class="math">x</span>, compute the <span class="math">N</span> distances, where <span class="math">N</span> is the number of training data records.</li>
-    <li>Sort from smallest to largest, and note the <span class="math">K</span> smallest values and their class labels.</li>
-    <li>The classifier output is the class label with the highest count.</li>
+    <li>Set <span class="math">K</span> to an <strong>odd value</strong>, say 5 — avoids tied votes.</li>
+    <li>Write training vectors <span class="math">x_i^m</span>, with <span class="math">m ∈ M</span> the class and <span class="math">i</span> the sample index.</li>
+    <li>For a new vector <span class="math">x</span>, compute the <span class="math">N</span> distances.</li>
+    <li>Take the <span class="math">K</span> smallest and output the class label with the highest count.</li>
   </ol>
-
   <div class="formula">
     <div class="formula-label">Distance from the new point to each training point</div>
     <div class="math">d_i(x) = ‖x − x_i^m‖₂,&nbsp;&nbsp;i = 1, …, N</div>
   </div>
-
   <h3 class="sub-title">Choosing K (and why it is fiddly)</h3>
   <ul>
-    <li>In the illustrated example, when <span class="math">K = 3</span> the classifier output is "triangle"; but when <span class="math">K = 5</span> the output is "square". The same test point flips class depending on K.</li>
-    <li>Choice of <span class="math">K</span> is important, but there is <strong>no formulaic way</strong> to choose it well for any given data set.</li>
-    <li><span class="math">K</span> does <strong>not</strong> impact computational complexity — we always have to compute all <span class="math">N</span> distances. It does impact <strong>classifier accuracy</strong>.</li>
-    <li>As complexity grows with <span class="math">N</span>, it is best not to use "too many" training samples.</li>
+    <li><span class="math">K = 3</span> outputs "triangle" but <span class="math">K = 5</span> outputs "square" — the same point flips class with K.</li>
+    <li>There is <strong>no formulaic way</strong> to choose <span class="math">K</span> well.</li>
+    <li><span class="math">K</span> does <strong>not</strong> affect complexity — all <span class="math">N</span> distances are computed regardless; it affects <strong>accuracy</strong>. Complexity grows with <span class="math">N</span>.</li>
   </ul>
-
-  <h3 class="sub-title">Distance need not be Euclidean</h3>
-  <p>The distance measure need not be <span class="math">L2</span> (Euclidean). It may also be <span class="keyterm">Hamming</span> distance (= the number of positions where two vectors differ), <span class="math">L1</span>, etc. Your choice of distance defines what "near" means.</p>
-
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> KNN is sensitive to feature scale, because raw distance is dominated by whichever feature has the largest numeric range. Always normalise before KNN — see the Feature Normalisation section.</div></div>
+  <p>The metric may be <span class="math">L2</span> (Euclidean), <span class="keyterm">Hamming</span> (differing positions) or <span class="math">L1</span>.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> KNN is sensitive to feature scale — raw distance is dominated by the largest-range feature. Always normalise first.</div></div>
 </section>
 
 <section class="guide-section" id="weighted-knn" data-title="Weighted KNN">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Weighted KNN &amp; Probabilities</h2></div>
-  <p class="section-kicker">Plain KNN lets many far-away majority points outvote a few very close minority points; weighting by distance fixes that bias.</p>
-  <p>KNN has an imbalanced-data problem: one class can dominate the training set. For example, 90% of the training data may be class 0 and only 10% class 1. Suppose the test feature is the <span class="hl">yellow triangle</span> — though visually it looks like it sits in the orange class, KNN may return an output of <strong>blue</strong>, simply because there are more blue neighbours around it.</p>
-  <p><strong>The solution:</strong> give nearer neighbours higher "weight" in the count. That is Weighted Nearest Neighbour (WNN).</p>
-
-  <h3 class="sub-title">Weighted Nearest Neighbour, precisely</h3>
+  <p class="section-kicker">Weighting neighbours by distance stops far majority points outvoting close minority ones.</p>
+  <p>With 90% class-0 and 10% class-1 data, the <span class="hl">yellow triangle</span> looks orange but KNN may return <strong>blue</strong>, because more blue neighbours surround it. <strong>The fix:</strong> Weighted Nearest Neighbour (WNN).</p>
   <ol class="steps">
-    <li>Find the <span class="math">K</span> training points closest to the test point and their distances to the test point, <span class="math">d_i(x)</span> for <span class="math">i ∈ I_K(x)</span>, where <span class="math">I_K(x)</span> is the set of K training indices having the smallest distance to <span class="math">x</span>.</li>
-    <li>Group those K points according to class. For class <span class="math">n</span>, compute the sum of inverse distances — summing only over the points in class <span class="math">n</span>.</li>
-    <li>The classifier output is the value of <span class="math">n</span> that maximises <span class="math">N_n</span>.</li>
+    <li>Find the <span class="math">K</span> closest points and their distances <span class="math">d_i(x)</span>, <span class="math">i ∈ I_K(x)</span>.</li>
+    <li>Group them by class; for class <span class="math">n</span>, sum the inverse distances over its points.</li>
+    <li>Output the <span class="math">n</span> maximising <span class="math">N_n</span>.</li>
   </ol>
-
   <div class="formula">
     <div class="formula-label">Weighted neighbour score for class n</div>
     <div class="math">N_n = Σ_{i ∈ class n} 1 / d_i(x)</div>
   </div>
-
   <h3 class="sub-title">Worked example (K = 5)</h3>
-  <p>Suppose <span class="math">K = 5</span>, and the distances from the test point to the 5 nearest neighbours are as follows:</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Point</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr></thead>
       <tbody>
         <tr><td><strong>Class</strong></td><td>0</td><td>0</td><td>1</td><td>1</td><td>1</td></tr>
         <tr><td><strong>Distance</strong></td><td>0.5</td><td>0.4</td><td>1.0</td><td>0.8</td><td>1.5</td></tr>
-        <tr><td><strong>Inverse of distance</strong></td><td>2.0</td><td>2.5</td><td>1.0</td><td>1.25</td><td>0.67</td></tr>
+        <tr><td><strong>1/distance</strong></td><td>2.0</td><td>2.5</td><td>1.0</td><td>1.25</td><td>0.67</td></tr>
       </tbody>
     </table>
   </div>
   <ul>
-    <li><strong>KNN:</strong> <span class="math">N_0 = 2</span>; <span class="math">N_1 = 3</span> ∴ output class = <strong>1</strong>.</li>
-    <li><strong>WNN:</strong> <span class="math">N_0 = 2 + 2.5 = 4.5</span>; <span class="math">N_1 = 1 + 1.25 + 0.67 = 2.92</span> ∴ output class = <strong>0</strong>.</li>
+    <li><strong>KNN:</strong> <span class="math">N_0 = 2</span>, <span class="math">N_1 = 3</span> ∴ class <strong>1</strong>.</li>
+    <li><strong>WNN:</strong> <span class="math">N_0 = 4.5</span>, <span class="math">N_1 = 2.92</span> ∴ class <strong>0</strong>.</li>
   </ul>
-  <p>The closer class-0 points earn larger weights, so WNN flips the answer to class 0 — even though class 1 has more neighbours.</p>
-
   <h3 class="sub-title">Turning neighbours into probabilities</h3>
-  <p>We are also interested in the probability that a given input belongs in each possible class. More formally, we would like to know <span class="math">P[C_i | x]</span>, where <span class="math">C_i</span> denotes the i-th class and <span class="math">x</span> is the vector of input features. This is read as <em>"the probability of the correct class being <span class="math">C_i</span> <strong>given</strong> that the observed features are <span class="math">x</span>"</em>. It is what is called a <span class="keyterm">conditional probability</span>. In both KNN and WNN we can argue that:</p>
+  <p>For probabilities, <span class="math">P[C_i | x]</span> is the <span class="keyterm">conditional probability</span> of class <span class="math">C_i</span> given features <span class="math">x</span>, with <span class="math">N_i</span> the neighbour count:</p>
   <div class="formula">
     <div class="formula-label">Class probability estimate</div>
     <div class="math">P[C_i | x] = N_i / Σ_k N_k</div>
   </div>
-  <p>where <span class="math">N_i</span> is either the weighted or unweighted count of the nearest neighbours in class <span class="math">C_i</span>.</p>
-  <p>Continuing the worked example, the <strong>WNN</strong> estimates are <span class="math">P[C_0 | x] = 4.5 / (4.5 + 2.92) = 0.606</span> and <span class="math">P[C_1 | x] = 0.394</span>. The <strong>KNN</strong> estimates of the same events are <span class="math">P_{knn}[C_0 | x] = 2/5 = 0.4</span> and <span class="math">P_{knn}[C_1 | x] = 3/5 = 0.6</span>.</p>
-
-  <div class="callout c-info"><div class="callout-icon" aria-hidden="true">ℹ️</div><div class="callout-body"><strong>These are estimates, not truth.</strong> If we use some other classifier, the estimated probabilities will be different again, and it is hard to argue that one result is more accurate than another. The value of KNN/WNN probabilities is that they are cheap and intuitive, not that they are calibrated.</div></div>
+  <p>WNN gives <span class="math">P[C_0 | x] = 4.5 / 7.42 = 0.606</span>, <span class="math">P[C_1 | x] = 0.394</span>; KNN gives <span class="math">0.4</span> and <span class="math">0.6</span>.</p>
 </section>
 
 <section class="guide-section" id="normalisation" data-title="Feature Normalisation">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Feature Normalisation</h2></div>
-  <p class="section-kicker">When one feature spans thousands and another spans single digits, distance-based models only hear the loud one.</p>
-  <p>Another problem is that the dynamic range of one feature may be vastly different from that of another. The lecture's examples:</p>
-  <ol>
-    <li>Engine capacity (in cc) versus model year.</li>
-    <li>Age (in years) versus height (in cm).</li>
-    <li>Bit rate (in bps) versus transmitted power (in mW).</li>
-  </ol>
-  <p>In each pair the units and magnitudes are wildly mismatched, so a raw distance calculation would be dominated by the larger-range feature. So we should normalise to a standard scale, e.g. <span class="keyterm">min-max normalisation</span>.</p>
-
+  <p class="section-kicker">When one feature spans thousands and another single digits, models only hear the loud one.</p>
+  <p>Dynamic ranges differ wildly, e.g. engine capacity (cc) versus model year, age versus height, or bit rate versus power. Raw distance would be dominated by the larger-range feature, so normalise — <span class="keyterm">min-max normalisation</span>.</p>
   <div class="formula">
     <div class="formula-label">Min-max normalisation</div>
     <div class="math">x′ = (x − min) / (max − min)</div>
   </div>
-  <p>This maps the original values to a new range, usually between 0 and 1. The lecture notes the function <code>preprocessing.sklearnnormalize</code> implements this normalisation algorithm. In modern scikit-learn the equivalent is the <code>preprocessing.MinMaxScaler</code>.</p>
-
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> fit the scaler on the <em>training</em> set only, then apply the same min and max to validation and test data. If you compute the range over all data, information leaks from test into training.</div></div>
-
-  <h3 class="sub-title">KNN and WNN in Python</h3>
-  <p>In <strong>sklearn</strong>, we can easily execute KNN and WNN using the <code>KNeighborsClassifier</code> function. The workflow is always: import the required libraries, define the classifier object, then fit the model on training data and test it on test data.</p>
-  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><code>from sklearn.neighbors import KNeighborsClassifier</code><br><code>knn = KNeighborsClassifier(n_neighbors = 5)</code>&nbsp;→ plain KNN<br><code>wnn = KNeighborsClassifier(n_neighbors = 5, weights = "distance")</code>&nbsp;→ weighted KNN<br><code>knn.fit(X_train, y_train)</code>&nbsp;then&nbsp;<code>knn.predict(X_test)</code></div></div>
+  <p>This maps values to 0–1. The lecture notes <code>preprocessing.sklearnnormalize</code>; the modern equivalent is <code>preprocessing.MinMaxScaler</code>.</p>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> fit the scaler on the <em>training</em> set only, then apply the same min and max to validation and test data — otherwise test information leaks into training.</div></div>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>Python:</strong> <code>KNeighborsClassifier(n_neighbors = 5)</code> for plain KNN; add <code>weights = "distance"</code> for weighted KNN.</div></div>
 </section>
 
 <section class="guide-section" id="parameters-hyperparameters" data-title="Parameters vs Hyper-Parameters">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Parameters vs Hyper-Parameters</h2></div>
-  <p class="section-kicker">One set of numbers is learned by the machine; the other is chosen by you before learning starts — mixing them up is a classic exam slip.</p>
-  <p>Remember that an ML model is a function <span class="math">f_θ(x)</span> that outputs the class label corresponding to the input variables <span class="math">x</span>, where <span class="math">θ</span> is the parameter vector.</p>
-  <p>In KNN and WNN, there are <strong>no obvious parameters to optimise</strong>. Instead, the training data is used to create <span class="keyterm">decision regions</span>, and we can consider the <span class="keyterm">decision boundaries</span> (the borders between adjacent decision regions) to be the "parameters". The parameter <span class="math">K</span> (number of nearest neighbours) is a <strong>hyper-parameter</strong> that determines the exact form of the model.</p>
-
-  <div class="def-card"><span class="dc-term">Hyper-parameters</span> — values that are <strong>not learned or updated</strong> during the optimisation process. They are set before training begins, and are fixed values that determine the overall architecture and behaviour of the model. <em>Examples:</em> K in KNN, <code>max_depth</code> and <code>n_estimators</code> in a Random Forest.</div>
-  <div class="def-card"><span class="dc-term">Parameters</span> — values <strong>learned from the training data</strong> during fitting. <em>Examples:</em> the means and variances in Gaussian NB, or the split feature and threshold at each Random Forest node.</div>
-
+  <p class="section-kicker">One set of numbers is learned; the other you choose before learning starts.</p>
+  <p>A model is a function <span class="math">f_θ(x)</span> with parameter vector <span class="math">θ</span>. KNN and WNN have <strong>no obvious parameters to optimise</strong>: training data creates <span class="keyterm">decision regions</span>, whose borders (the <span class="keyterm">decision boundaries</span>) act as the "parameters". <span class="math">K</span> is a <strong>hyper-parameter</strong>.</p>
+  <div class="def-card"><span class="dc-term">Hyper-parameters</span> — <strong>not learned</strong>; set before training, they determine the architecture. <em>Examples:</em> K in KNN; <code>max_depth</code>, <code>n_estimators</code> in Random Forest.</div>
+  <div class="def-card"><span class="dc-term">Parameters</span> — <strong>learned from training data</strong> during fitting. <em>Examples:</em> Gaussian NB means and variances; split feature and threshold at each Random Forest node.</div>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Model</th><th>Parameters (learned)</th><th>Hyper-parameters (chosen)</th></tr></thead>
       <tbody>
-        <tr><td><strong>Gaussian NB</strong></td><td>Conditional means and variances per feature per class</td><td>None — structure is fixed by K and the number of classes</td></tr>
+        <tr><td><strong>Gaussian NB</strong></td><td>Conditional means and variances per feature per class</td><td>None</td></tr>
         <tr><td><strong>Random Forest</strong></td><td>Split feature and threshold at each node</td><td><code>max_depth</code>, <code>max_features</code>, <code>criterion</code>, <code>n_estimators</code></td></tr>
-        <tr><td><strong>KNN / WNN</strong></td><td>Decision boundaries / decision regions (stored training data)</td><td><span class="math">K</span> (and the distance measure / weighting)</td></tr>
+        <tr><td><strong>KNN / WNN</strong></td><td>Decision boundaries / regions</td><td><span class="math">K</span> (and distance / weighting)</td></tr>
       </tbody>
     </table>
   </div>
-
-  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember:</strong> <em>Hyper</em> = set by hand, before training, controls the architecture. <em>Parameter</em> = found by the machine, during training, controls the fit. If you could compute it from the training data, it is a parameter.</div></div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember:</strong> <em>Hyper</em> = set by hand before training, controls architecture. <em>Parameter</em> = found during training, controls fit.</div></div>
 </section>
 
 <section class="guide-section" id="validation-testing" data-title="Validation &amp; Testing">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">Validation &amp; Testing</h2></div>
-  <p class="section-kicker">Training tells you what the model memorised; validation tells you how to tune it; only testing tells you what to expect in the real world.</p>
-  <p>Data is split three ways: <strong>training</strong>, <strong>validation</strong> and <strong>testing</strong>. Each has a different job, and confusing them is the most common way to fool yourself about performance.</p>
-
-  <h3 class="sub-title">Validation</h3>
+  <p class="section-kicker">Training shows what was memorised; validation tunes; only testing shows real-world performance.</p>
+  <p>Data splits three ways — <strong>training</strong>, <strong>validation</strong>, <strong>testing</strong>; confusing them is the commonest way to fool yourself.</p>
   <ul>
-    <li>In this step, labelled data that has <strong>not</strong> been used in training is used to determine how good the current model is.</li>
-    <li>The hyper-parameters of the model, and even the model itself, are adjusted and iterated in a <strong>training–validation cycle</strong> until the designer is satisfied.</li>
-    <li>Often validation is not done just once for each setting — instead, performance is averaged over multiple validation steps, called <span class="keyterm">cross-validation</span>.</li>
-    <li>Most commonly we use <strong>K-fold cross-validation</strong> (the lecture illustrates five-fold): train on K−1 folds, validate on the held-out fold, and repeat so every fold is validated once.</li>
+    <li><strong>Validation:</strong> held-out data measures model quality. Hyper-parameters, and even the model, are adjusted in a <strong>training–validation cycle</strong>, averaged over splits — <span class="keyterm">cross-validation</span>. Most commonly <strong>K-fold</strong> (five-fold illustrated): train on K−1 folds, validate on the held-out fold.</li>
+    <li><strong>Testing:</strong> the chosen model is tested once on the unused <span class="keyterm">test set</span>; that performance is <strong>what should be reported</strong> as expected post-deployment performance.</li>
   </ul>
-  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>In scikit-learn:</strong> <code>from sklearn.model_selection import StratifiedKFold</code> then <code>cv = StratifiedKFold(n_splits = 5)</code>. The <em>stratified</em> version keeps the class proportions in each fold, which matters for imbalanced data.</div></div>
-
-  <h3 class="sub-title">Testing after validation</h3>
-  <ul>
-    <li>Once the right model is chosen after validation, the final step is to test it on the final set of data that has not been used — the <span class="keyterm">test set</span>.</li>
-    <li>The performance of the trained and validated model on the test dataset is <strong>what should be reported</strong>.</li>
-    <li>This is the performance we expect after deployment, when data that has not been seen in training or validation is presented to the model.</li>
-  </ul>
-
-  <div class="compare">
-    <div class="compare-col a">
-      <h3>Validation</h3>
-      <p>Uses held-out labelled data <em>repeatedly</em> to tune hyper-parameters and choose the model. It is part of the design loop, so it can influence the final model.</p>
-    </div>
-    <div class="compare-col b">
-      <h3>Testing</h3>
-      <p>Used <em>once</em>, at the very end, on data untouched by training or validation. It estimates post-deployment performance and is the number you report.</p>
-    </div>
-  </div>
-
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> a single validation split has high variance, so K-fold averaging is far more stable. And if you tune on the test set, it is no longer an honest estimate — you have quietly turned it into a validation set.</div></div>
+  <div class="callout c-tip"><div class="callout-icon" aria-hidden="true">✅</div><div class="callout-body"><strong>scikit-learn:</strong> <code>StratifiedKFold(n_splits = 5)</code> — stratified keeps class proportions per fold.</div></div>
+  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Common trap:</strong> a single validation split is high-variance, so K-fold averaging is more stable. Tune on the test set and it is no longer honest — you have made it a validation set.</div></div>
 </section>
 
 <section class="guide-section" id="sklearn-workflow" data-title="Scikit-Learn Workflow">
   <div class="section-head"><span class="sec-num" aria-hidden="true"></span><h2 class="section-title">The Scikit-Learn Workflow</h2></div>
-  <p class="section-kicker">Almost every supervised model in scikit-learn follows the same five steps, so learning one model teaches you the interface for all of them.</p>
+  <p class="section-kicker">Nearly every scikit-learn model follows the same five steps.</p>
   <ol class="steps">
-    <li><strong>Create an object</strong> for the desired ML algorithm using the appropriate class — this is where you set the hyper-parameters.</li>
-    <li><strong>Use the <code>fit</code> method</strong> to train the model.</li>
-    <li><strong>Use the <code>predict</code> method</strong> to estimate the class of the test data samples.</li>
-    <li><strong>Use the <code>predict_proba</code> method</strong> to estimate the probability of each class given the input features.</li>
-    <li><strong>Test the accuracy</strong> of the algorithm using one or more of the <code>metrics</code>.</li>
+    <li><strong>Create an object</strong> for the algorithm using the appropriate class — where you set hyper-parameters.</li>
+    <li><strong>Use <code>fit</code></strong> to train the model.</li>
+    <li><strong>Use <code>predict</code></strong> to estimate test-sample classes.</li>
+    <li><strong>Use <code>predict_proba</code></strong> to estimate each class's probability.</li>
+    <li><strong>Test accuracy</strong> with one or more <code>metrics</code>.</li>
   </ol>
-
   <div class="flow">
     <span class="flow-step">Create object</span><span class="flow-arrow">→</span>
     <span class="flow-step">.fit(X_train, y_train)</span><span class="flow-arrow">→</span>
@@ -1032,12 +849,7 @@
     <span class="flow-step">.predict_proba(X_test)</span><span class="flow-arrow">→</span>
     <span class="flow-step">metrics</span>
   </div>
-
-  <div class="callout c-why"><div class="callout-icon" aria-hidden="true">💡</div><div class="callout-body"><strong>Why it matters:</strong> this uniform interface lets you swap Gaussian NB, Random Forest or KNN by changing only the class name and hyper-parameters. The <code>fit</code> / <code>predict</code> / <code>predict_proba</code> pattern is the same for almost all models.</div></div>
-
-  <div class="callout c-warn"><div class="callout-icon" aria-hidden="true">⚠️</div><div class="callout-body"><strong>Know the difference:</strong> <code>predict</code> returns hard labels; <code>predict_proba</code> returns per-class probabilities. Accuracy uses labels, but thresholding and cost-sensitive decisions need the probabilities.</div></div>
-
-  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember:</strong> "Create, fit, predict, proba, metrics." Every classical model this week plugs into that same five-step loop.</div></div>
+  <div class="callout c-memory"><div class="callout-icon" aria-hidden="true">🧠</div><div class="callout-body"><strong>Remember:</strong> <code>predict</code> returns hard labels; <code>predict_proba</code> returns per-class probabilities. "Create, fit, predict, proba, metrics."</div></div>
 </section>
 
 <section class="guide-section" id="exam-focus" data-title="Exam &amp; Assignment Focus">
