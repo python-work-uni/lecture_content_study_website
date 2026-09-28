@@ -59,7 +59,10 @@ document as the shared spec, not an ENGG2112-only artifact.
 
 ## 3. Technical foundation
 
-- **One file per guide.** No external CSS/JS. Only external dependency: Google Fonts.
+- **One file per guide.** A guide embeds its own CSS and JS. The only shared external
+  assets are Google Fonts and the optional `assets/tts.js` "read aloud" control — the sole
+  exceptions to the no-external-assets rule. `tts.js` injects its own markup and styles, so
+  adding it to a guide is a one-line `<script>` before `</body>` and no other edits.
 - **HTML5**, `lang="en"`, `data-theme="light"` on `<html>` by default.
 - **Vanilla ES5-style JavaScript** in a single IIFE (`"use strict"`), no libraries, no build.
 - **Theming** via CSS custom properties on `:root` and `html[data-theme="dark"]`.
@@ -159,7 +162,7 @@ Global layout constants are hard-coded (not tokens): topbar height `62px`, layou
 <body>
   a.skip-link                      → "Skip to content"
   .progress-track > .progress-fill → fixed 3px reading-progress bar
-  header.topbar                    → menu toggle · brand · search · theme toggle
+  header.topbar                    → menu toggle · brand · search · read aloud · theme toggle
   .layout                          → grid: [ .sidebar | main.content ]
     aside.sidebar                  → recall progress · TOC · quick links
     .scrim                         → mobile nav overlay
@@ -553,6 +556,16 @@ All behaviour lives in one IIFE at the end of `<body>`. Order of concerns:
    results, renders `.suggest a` links; a document click outside `.search` closes the panel.
 8. **Checklist persistence** — saves each checkbox by index.
 
+Behaviour injected by `assets/tts.js` (kept out of the per-guide IIFE so it can be updated
+once for every guide):
+
+9. **Read aloud** — feature-detects `window.speechSynthesis`, then inserts a control into
+   `.topbar-tools` before `#themeToggle`. It reads the hero and each `.guide-section` in
+   order, skipping chrome/nav, hidden `.quiz-answer`s, and `.math`/`<code>` chips. Prose is
+   chunked at sentence boundaries; the section being spoken is marked `[data-tts-active]`
+   and scrolled into view. Reuses the `.btn` / `.icon-btn` classes and re-injects a small
+   `<style>` block built from the existing design tokens, so it themes with the guide.
+
 ### LocalStorage keys
 
 | Key | Scope |
@@ -560,6 +573,8 @@ All behaviour lives in one IIFE at the end of `<body>`. Order of concerns:
 | `engg2112-theme` | Shared across all guides (`light` \| `dark`). |
 | `engg2112-{week}-mastery:{quizId}` | Per quiz, per week. |
 | `engg2112-{week}-check-{index}` | Per checklist item, per week. |
+| `tts-rate` | Shared across all guides; read-aloud speed. |
+| `tts-voice` | Shared across all guides; preferred voice by name. |
 
 > When cloning the template to a new week, update the two `{week}` literals in the script. All
 > other JS and CSS should remain untouched.
@@ -636,7 +651,9 @@ term, update the chip and the outcomes list.
 
 - **New week:** copy an existing guide, replace content, and update exactly two script literals
   (`engg2112-N-mastery`, `engg2112-N-check-`) plus the week label in the topbar, title, hero, and
-  footer links. Do not restyle.
+  footer links. Do not restyle. Keep the shared `assets/tts.js` include immediately before
+  `</body>`, using a relative path that matches the guide's depth (`../../../assets/tts.js` for
+  `Course/type/week_N/`, `../../assets/tts.js` one level up).
 - **New component:** add CSS only if it reuses existing tokens (`--surface*`, `--ink*`, `--line*`,
   `--radius*`, `--shadow*`, `--ease`). Prefer composing existing primitives (callout, card, flow,
   steps) before inventing a new one.
