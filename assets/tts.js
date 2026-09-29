@@ -140,9 +140,11 @@
         '</div>' +
         '<label class="tts-field">Speed' +
           '<select class="tts-rate" id="ttsRate" name="tts-rate">' +
-            '<option value="0.75">0.75\u00d7</option>' +
             '<option value="1" selected>1\u00d7</option>' +
-            '<option value="1.25">1.25\u00d7</option>' +
+            '<option value="1.1">1.1\u00d7</option>' +
+            '<option value="1.2">1.2\u00d7</option>' +
+            '<option value="1.3">1.3\u00d7</option>' +
+            '<option value="1.4">1.4\u00d7</option>' +
             '<option value="1.5">1.5\u00d7</option>' +
           '</select>' +
         '</label>' +
